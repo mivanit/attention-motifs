@@ -67,10 +67,10 @@ lint = [
 default-groups = ["dev", "lint"]
 
 [project.urls]
-Homepage = "https://miv.name/python-project-makefile-template"
-Documentation = "https://miv.name/python-project-makefile-template"
-Repository = "https://github.com/mivanit/python-project-makefile-template"
-Issues = "https://github.com/mivanit/python-project-makefile-template/issues"
+Homepage = "https://miv.name/attention-motifs"
+Documentation = "https://miv.name/attention-motifs"
+Repository = "https://github.com/mivanit/attention-motifs"
+Issues = "https://github.com/mivanit/attention-motifs/issues"
 
 [build-system]
 requires = ["hatchling"]
