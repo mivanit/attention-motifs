@@ -48,6 +48,9 @@ ipywidgets==8.1.5
 jaxtyping==0.2.36
 jedi==0.19.2
 jinja2==3.1.5
+joblib==1.4.2
+juliacall==0.9.23
+juliapkg==0.1.15
 jupyter-client==8.6.3
 jupyter-core==5.7.2
 jupyterlab-widgets==3.0.13
@@ -104,6 +107,7 @@ pydantic==2.10.4
 pydantic-core==2.27.2
 pygments==2.18.0
 pyparsing==3.2.1
+pysr==1.3.1
 pytest==8.3.4
 pytest-cov==6.0.0
 python-dateutil==2.9.0.post0
@@ -116,7 +120,9 @@ requests==2.32.3
 rich==13.9.4
 ruff==0.8.6
 safetensors==0.5.0
+scikit-learn==1.6.0
 scipy==1.15.0
+semver==3.0.2
 sentencepiece==0.2.0
 sentry-sdk==2.19.2
 setproctitle==1.3.4
@@ -127,6 +133,7 @@ smmap==5.0.2
 stack-data==0.6.3
 sympy==1.13.1
 termcolor==2.5.0
+threadpoolctl==3.5.0
 tokenizers==0.21.0
 tomlkit==0.13.2
 torch==2.5.1
