@@ -1,5 +1,9 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# demo output - lots of npz files and images
 docs/demo/**
+# pysr/juliacall will dump pickle files and csvs in here
+notebooks/outputs/**
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Byte-compiled / optimized / DLL files
 __pycache__/
