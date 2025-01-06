@@ -672,3 +672,42 @@ help: help-targets info
 # custom targets
 # ==================================================
 # (put them down here, or delimit with ~~~~~)
+
+
+
+DEMO_MODEL ?= pythia-14m,tiny-stories-1M
+DEMO_PROMPTS ?= data/pile_100.jsonl
+DEMO_N_SAMPLES ?= 100
+DEMO_ARGS ?= --min-chars 128 --max-chars 256
+DEMO_DATA ?= docs/demo
+
+
+.PHONY: demo-clean
+demo-clean:
+	rm -rf $(DEMO_DATA)
+
+.PHONY: demo-activations
+demo-activations:
+	$(PYTHON) -m pattern_lens.activations --model $(DEMO_MODEL) --prompts $(DEMO_PROMPTS) --raw-prompts --save-path $(DEMO_DATA) --n-samples $(DEMO_N_SAMPLES) $(DEMO_ARGS)
+
+.PHONY: demo-figures
+demo-figures:
+	$(PYTHON) -m attention_motifs.figure_funcs --model $(DEMO_MODEL) --save-path $(DEMO_DATA)
+
+.PHONY: demo-server
+demo-server:
+	$(PYTHON) -m pattern_lens.server --rewrite-index --path $(DEMO_DATA)
+
+.PHONY: demo
+demo: demo-clean demo-activations demo-figures demo-server
+	@echo "generate demo"
+
+.PHONY: demo-docs
+demo-docs: demo-clean demo-activations demo-figures
+	@echo "generate demo for docs (no server)"
+
+
+.PHONY: summary
+summary:
+	@echo "write docs/summary.md using lmcat"
+	py -m lmcat -o docs/summary.md

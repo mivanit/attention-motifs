@@ -73,7 +73,7 @@ nvidia-nvtx-cu12==12.4.127 ; platform_machine == 'x86_64' and sys_platform == 'l
 packaging==24.2
 pandas==2.2.3
 parso==0.8.4
-pattern-lens==0.1.0
+pattern-lens @ git+https://github.com/mivanit/pattern-lens@2b580dc0245fad369808b4e0b28a47ef5b3df4ca
 pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
 pillow==11.1.0
 platformdirs==4.3.6

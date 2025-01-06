@@ -32,7 +32,9 @@ dependencies = [
     # this TL dep not listed? is this in an extra?
     "typeguard>=4.4.1",
 	# pattern-lens
-	"pattern-lens>=0.1.0",
+	# "pattern-lens>=0.1.0",
+	# pattern-lens from git
+	"pattern-lens @ git+https://github.com/mivanit/pattern-lens",
 ]
 
 [project.optional-dependencies]
@@ -42,7 +44,7 @@ cli = [
 ]
 
 [dependency-groups]
-dev = [
+dev = [	
 	# lmcat
     "lmcat>=0.0.1",
 	# test
@@ -83,6 +85,9 @@ exclude = ["__pycache__"]
 [tool.ruff.format]
 indent-style = "tab"
 skip-magic-trailing-comma = false
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 # Custom export configurations
 [tool.uv-exports]
