@@ -103,6 +103,16 @@ if __name__ == "__main__":
             default=False,
         )
 
+        # parallel processing
+        arg_parser.add_argument(
+            "--parallel",
+            "-p",
+            type=int,
+            required=False,
+            help="Use parallel processing",
+            default=1,
+        )
+
         args: argparse.Namespace = arg_parser.parse_args()
 
     print(f"args parsed: {args}")
@@ -123,6 +133,7 @@ if __name__ == "__main__":
             save_path=args.save_path,
             n_samples=args.n_samples,
             force=args.force,
+            parallel=bool(args.parallel),
         )
 
     print(DIVIDER_S1)

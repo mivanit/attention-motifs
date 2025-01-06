@@ -692,7 +692,7 @@ demo-activations:
 
 .PHONY: demo-figures
 demo-figures:
-	$(PYTHON) -m attention_motifs.figure_funcs --model $(DEMO_MODEL) --save-path $(DEMO_DATA)
+	$(PYTHON) -m attention_motifs.figure_funcs --model $(DEMO_MODEL) --save-path $(DEMO_DATA) --parallel 0
 
 .PHONY: demo-server
 demo-server:
