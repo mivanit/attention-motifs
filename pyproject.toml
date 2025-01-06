@@ -83,6 +83,8 @@ build-backend = "hatchling.build"
 # ruff config
 [tool.ruff]
 exclude = ["__pycache__"]
+# ignore F722
+ignore = ["F722"]
 
 [tool.ruff.format]
 indent-style = "tab"
