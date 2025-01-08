@@ -29,6 +29,7 @@ dependencies = [
     # custom utils
     "muutils>=0.6.19",
 	"zanj>=0.3.1",
+	"trnbl>=0.0.2",
     # TL
     "transformer-lens>=2.10.0",
     # this TL dep not listed? is this in an extra?

@@ -140,6 +140,7 @@ dependencies = [
     { name = "torch" },
     { name = "tqdm" },
     { name = "transformer-lens" },
+    { name = "trnbl" },
     { name = "typeguard" },
     { name = "zanj" },
 ]
@@ -181,6 +182,7 @@ requires-dist = [
     { name = "torch", specifier = ">=2.5.1" },
     { name = "tqdm", specifier = ">=4.66.5" },
     { name = "transformer-lens", specifier = ">=2.10.0" },
+    { name = "trnbl", specifier = ">=0.0.2" },
     { name = "typeguard", specifier = ">=4.4.1" },
     { name = "zanj", specifier = ">=0.3.1" },
 ]
@@ -2399,6 +2401,20 @@ dependencies = [
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/78/eb/65f5ba83c2a123f6498a3097746607e5b2f16add29e36765305e4ac7fdd8/triton-3.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c8182f42fd8080a7d39d666814fa36c5e30cc00ea7eeeb1a2983dbb4c99a0fdc", size = 209551444 },
+]
+
+[[package]]
+name = "trnbl"
+version = "0.0.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "muutils" },
+    { name = "pyyaml" },
+    { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7a/29/fd0ab27506739ad4609089bc3abb5dc2b567a17a42bb8282c6d5b461792b/trnbl-0.0.2.tar.gz", hash = "sha256:caab016a97ace82f890666ae90d915af601ca499655d32e48a9f88c9d7b1e8a8", size = 60144 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3b/a3/b0ee22485bdc772d6997788c7b23aa1576c762aba33475c8a0200d337bf2/trnbl-0.0.2-py3-none-any.whl", hash = "sha256:3eb06f6a5f8b80926a652983c5a2736f2ff385cf2290e0425d96dd5d17a4e193", size = 63309 },
 ]
 
 [[package]]
