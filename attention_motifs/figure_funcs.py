@@ -1,3 +1,5 @@
+import functools
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.fft import fft2
@@ -18,12 +20,38 @@ from pattern_lens.figures import figures_main
 # gram matrices and FFTs
 
 
+"""
+	gram = pattern @ pattern.T
+	fft = fft2(gram)
+	fft_shifted = np.fft.fftshift(fft)
+	data: dict = {
+		"Pattern": pattern,
+		"Gram": gram,
+		"FFT (abs)": np.abs(fft),
+		"FFT (log abs)": np.log(np.abs(fft)),
+		"FFT (angle)": np.angle(fft),
+		"FFT (real)": np.real(fft),
+		"FFT (log abs real)": np.log(np.abs(np.real(fft))),
+		"FFT (imag)": np.imag(fft),
+		"Shifted FFT (abs)": np.abs(fft_shifted),
+		"Shifted FFT (log abs)": np.log(np.abs(fft_shifted)),
+		"Shifted FFT (angle)": np.angle(fft_shifted),
+		"Shifted FFT (real)": np.real(fft_shifted),
+		"Shifted FFT (log abs real)": np.log(np.abs(np.real(fft_shifted))),
+		"Shifted FFT (imag)": np.imag(fft_shifted),
+"""
+
 @register_attn_figure_func
 @save_matrix_wrapper(fmt="png", normalize=True)
 def fft(attn_matrix: AttentionMatrix) -> Matrix2D:
-	"2D fft of raw attention matrix"
-	fft_result = np.abs(fft2(attn_matrix))
-	return np.fft.fftshift(fft_result)
+	"abs of 2D fft of raw attention matrix"
+	return fft2(attn_matrix)
+
+@register_attn_figure_func
+@save_matrix_wrapper(fmt="png", normalize=True)
+def fft_abs(attn_matrix: AttentionMatrix) -> Matrix2D:
+	"abs of 2D fft of raw attention matrix"
+	return np.abs(fft2(attn_matrix))
 
 
 @register_attn_figure_func
