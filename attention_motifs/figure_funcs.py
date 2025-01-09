@@ -98,6 +98,17 @@ def gram_hist(attn_matrix: AttentionMatrix, ax: plt.Axes) -> None:
 	# ax.legend()
 
 
+@register_attn_figure_func
+@matplotlib_figure_saver(fmt="svgz")
+def degree_dist(attn_matrix: AttentionMatrix, ax: plt.Axes) -> None:
+	"sum each column, plot histogram"
+	degrees_ax0 = np.sum(attn_matrix, axis=0)
+	ax.hist(degrees_ax0, bins=50, density=True, alpha=0.7, label="Ax0")
+	degrees_ax1 = np.sum(attn_matrix, axis=1)
+	ax.hist(degrees_ax1, bins=50, density=True, alpha=0.7, label="Ax1")
+	ax.legend()
+	ax.set_title("Histogram of Node Degrees")
+
 if __name__ == "__main__":
 	import argparse
 

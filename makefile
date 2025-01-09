@@ -699,7 +699,7 @@ demo-server:
 	$(PYTHON) -m pattern_lens.server --rewrite-index --path $(DEMO_DATA)
 
 .PHONY: demo
-demo: demo-clean demo-activations demo-figures demo-server
+demo: demo-activations demo-figures demo-server
 	@echo "generate demo"
 
 .PHONY: demo-docs
