@@ -172,7 +172,7 @@ requires-dist = [
     { name = "ipywidgets", specifier = ">=8.1.5" },
     { name = "jaxtyping", specifier = ">=0.2.33" },
     { name = "matplotlib", specifier = ">=3.8.0" },
-    { name = "muutils", specifier = ">=0.6.19" },
+    { name = "muutils", specifier = ">=0.6.21" },
     { name = "numpy", specifier = ">=1.26.1,<2.0.0" },
     { name = "pandas", specifier = ">=2.2.2" },
     { name = "pattern-lens", specifier = ">=0.2.0" },
@@ -182,7 +182,7 @@ requires-dist = [
     { name = "torch", specifier = ">=2.5.1" },
     { name = "tqdm", specifier = ">=4.66.5" },
     { name = "transformer-lens", specifier = ">=2.10.0" },
-    { name = "trnbl", specifier = ">=0.0.2" },
+    { name = "trnbl", specifier = ">=0.1.0" },
     { name = "typeguard", specifier = ">=4.4.1" },
     { name = "zanj", specifier = ">=0.3.1" },
 ]
@@ -1170,11 +1170,11 @@ wheels = [
 
 [[package]]
 name = "muutils"
-version = "0.6.19"
+version = "0.6.21"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/43/f3/97f51371e8427f276bc24fdc38ab6235c4f782cf9ac2a8cd121a3d574711/muutils-0.6.19.tar.gz", hash = "sha256:2b24c7b92a13539a39f25c5a683744ed2db0c38c653c1b12995aa184970840e9", size = 2120112 }
+sdist = { url = "https://files.pythonhosted.org/packages/c8/c4/2fd7d9676618d785602f4b115d2269d70fac8a09b76d9bbb5552769c7d67/muutils-0.6.21.tar.gz", hash = "sha256:7ba2c9a5e0d8299bd642fa12bf42e6a1520a5d5cd1cb000446a36506ae7817b9", size = 2212610 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/93/20/77750365beaa748e801f010c496c291ed31a5a8b2fa628ce205c9e9a2b68/muutils-0.6.19-py3-none-any.whl", hash = "sha256:a22a782ea5eeceb267a2aa08359f542faf5fbf4ecbca2e23c42fcfc2e9301de9", size = 102562 },
+    { url = "https://files.pythonhosted.org/packages/6b/79/c73abcc9a532460b8898e0ad5eebb094cbaeaefe25bd0ea788c68dd548bb/muutils-0.6.21-py3-none-any.whl", hash = "sha256:6f2fbd483890d41131ede2f9dcf396e9b874e227c5917342a738b37c56f4b689", size = 104363 },
 ]
 
 [package.optional-dependencies]
@@ -2409,16 +2409,16 @@ wheels = [
 
 [[package]]
 name = "trnbl"
-version = "0.0.2"
+version = "0.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "muutils" },
     { name = "pyyaml" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7a/29/fd0ab27506739ad4609089bc3abb5dc2b567a17a42bb8282c6d5b461792b/trnbl-0.0.2.tar.gz", hash = "sha256:caab016a97ace82f890666ae90d915af601ca499655d32e48a9f88c9d7b1e8a8", size = 60144 }
+sdist = { url = "https://files.pythonhosted.org/packages/ac/92/8717b359c0bf61c2732c4da655ab2204804edb17e73504054ff9982ce38d/trnbl-0.1.0.tar.gz", hash = "sha256:d9a9373efce810e91b785ddb255f25434acfadd9b7f5d42c27079f334891d797", size = 4011862 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3b/a3/b0ee22485bdc772d6997788c7b23aa1576c762aba33475c8a0200d337bf2/trnbl-0.0.2-py3-none-any.whl", hash = "sha256:3eb06f6a5f8b80926a652983c5a2736f2ff385cf2290e0425d96dd5d17a4e193", size = 63309 },
+    { url = "https://files.pythonhosted.org/packages/27/76/f09f5442c54956e4c1556e184086c1504cb5eccbb1bb11966e7b754ef22a/trnbl-0.1.0-py3-none-any.whl", hash = "sha256:bd4036f8c773819d29fb878ccdcdd738b7dd9ae9b9a54ac469a037b52be93553", size = 64343 },
 ]
 
 [[package]]
