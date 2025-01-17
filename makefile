@@ -2,7 +2,7 @@
 # configuration & variables
 # ==================================================
 
-PACKAGE_NAME := attention-motifs
+PACKAGE_NAME := attention_motifs
 
 # for checking you are on the right branch when publishing
 PUBLISH_BRANCH := main
