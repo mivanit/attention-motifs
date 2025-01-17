@@ -1,4 +1,3 @@
-import functools
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -41,11 +40,13 @@ from pattern_lens.figures import figures_main
 		"Shifted FFT (imag)": np.imag(fft_shifted),
 """
 
+
 @register_attn_figure_func
 @save_matrix_wrapper(fmt="png", normalize=True)
 def fft(attn_matrix: AttentionMatrix) -> Matrix2D:
 	"abs of 2D fft of raw attention matrix"
 	return fft2(attn_matrix)
+
 
 @register_attn_figure_func
 @save_matrix_wrapper(fmt="png", normalize=True)
@@ -108,6 +109,7 @@ def degree_dist(attn_matrix: AttentionMatrix, ax: plt.Axes) -> None:
 	ax.hist(degrees_ax1, bins=50, density=True, alpha=0.7, label="Ax1")
 	ax.legend()
 	ax.set_title("Histogram of Node Degrees")
+
 
 if __name__ == "__main__":
 	import argparse
