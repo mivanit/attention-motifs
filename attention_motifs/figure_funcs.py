@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.fft import fft2
+from scipy.fft import fft2  # type: ignore[import-untyped]
 
 from muutils.spinner import SpinnerContext
 
