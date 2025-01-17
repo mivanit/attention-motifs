@@ -141,7 +141,7 @@ class AttnAE(ConfiguredModel[AttnAEConfig]):
 			]
 		)
 
-		self.decoder_conv: nn.Module = nn.Sequential(*decoder_layers)
+		self.decoder_conv: nn.ModuleList = nn.ModuleList(decoder_layers)
 
 	def encode(
 		self, x: Float[Tensor, "batch 1 n n"]
@@ -251,9 +251,10 @@ def train(
 	 - `ContrastiveAutoencoder` : Trained model
 	 - `LocalLogger` : Logger with training history
 	"""
-	model: AttnAE = model.to(device)
+	model = model.to(device)
 	optimizer: torch.optim.Optimizer = model.config.optimizer(
-		model.parameters(), lr=learning_rate
+		model.parameters(),
+		lr=learning_rate,
 	)
 
 	# setup logger
@@ -268,7 +269,7 @@ def train(
 			"val/contrast_loss",
 		],
 		train_config=dict(
-			model_config=model.zanj_model_config.to_dict(),
+			model_config=model.zanj_model_config.serialize(),
 			learning_rate=learning_rate,
 			recon_weight=recon_weight,
 			contrast_weight=contrast_weight,
