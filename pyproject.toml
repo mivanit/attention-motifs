@@ -35,9 +35,9 @@ dependencies = [
     # this TL dep not listed? is this in an extra?
     "typeguard>=4.4.1",
 	# pattern-lens
-	# "pattern-lens>=0.1.0",
+	"pattern-lens>=0.2.0",
 	# pattern-lens from git
-	"pattern-lens @ git+https://github.com/mivanit/pattern-lens",
+	# "pattern-lens @ git+https://github.com/mivanit/pattern-lens",
 ]
 
 [project.optional-dependencies]
