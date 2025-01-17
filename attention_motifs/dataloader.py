@@ -118,31 +118,6 @@ class FPSubsampleDataset(Dataset):
 		return self.samples[fpsample_idx].get((i, j))
 
 
-class FPSubsampleDataset(Dataset):
-	...
-
-	def __init__(self, samples: list[FPSample]) -> None:
-		...
-		self._shapes: list[tuple[int, int]] = []
-
-		for fpsample_idx, fpsample in enumerate(samples):
-			L, H, n, n_ = fpsample.data.shape
-			# store (n, n) once
-			shape_ij = (n, n_)
-			for i in range(L):
-				for j in range(H):
-					self._index_map.append((fpsample_idx, i, j))
-					self._shapes.append(shape_ij)
-
-	...
-
-	def get_subsample_shape(self, idx: int) -> tuple[int, int]:
-		"""Return (n,n) shape for sub-sample at dataset index = idx."""
-		return self._shapes[idx]
-
-
-
-
 class ShapeBucketingSampler(Sampler[list[int]]):
 	"""
 	Groups dataset indices by shape, yields mini-batches of uniform shape.
@@ -186,8 +161,6 @@ class ShapeBucketingSampler(Sampler[list[int]]):
 	def __len__(self) -> int:
 		# number of mini-batches total
 		return len(self.batches)
-
-
 
 
 def stack_collate_fn(

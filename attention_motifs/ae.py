@@ -188,8 +188,8 @@ class AttnAE(ConfiguredModel[AttnAEConfig]):
 		self,
 		z1: Float[Tensor, "batch latent_dim"],
 		z2: Float[Tensor, "batch latent_dim"],
-		idx1: tuple[Int[Tensor, "batch"], ...],
-		idx2: tuple[Int[Tensor, "batch"], ...],
+		idx1: tuple[Int[Tensor, " batch"], ...],
+		idx2: tuple[Int[Tensor, " batch"], ...],
 	) -> Float[Tensor, ""]:
 		"""Compute contrastive loss between pairs of embeddings"""
 		distances = F.pairwise_distance(z1, z2)
