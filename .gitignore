@@ -3,6 +3,8 @@
 docs/demo/**
 # pysr/juliacall will dump pickle files and csvs in here
 notebooks/outputs/**
+# tests temp dir
+tests/_temp/**
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Byte-compiled / optimized / DLL files
