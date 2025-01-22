@@ -61,8 +61,8 @@ def test_dataloader_properties():
 	dummy_config = APGenerationConfig(
 		prompts_path=Path("fake.jsonl"),
 		model_names=["modelA", "modelB"],
-		min_length=5,
-		max_length=100,
+		chars_len_min=5,
+		char_len_max=100,
 		prompt_token_len_tolerance=2,
 	)
 	loader = CollectedAttentionPatternDataloader(
@@ -91,7 +91,7 @@ def test_config_load_empty_file():
 	empty_file = TEMP_DIR / "empty_prompts.jsonl"
 	empty_file.write_text("")  # no lines
 	cfg = APGenerationConfig(
-		prompts_path=empty_file, model_names=[], min_length=None, max_length=None
+		prompts_path=empty_file, model_names=[], chars_len_min=None, char_len_max=None
 	)
 	data = cfg.load_text_data()
 	assert data == []
@@ -105,8 +105,8 @@ def test_config_load_all_filtered():
 	cfg = APGenerationConfig(
 		prompts_path=big_file,
 		model_names=[],
-		min_length=100,  # larger than length
-		max_length=None,
+		chars_len_min=100,  # larger than length
+		char_len_max=None,
 	)
 	data = cfg.load_text_data()
 	assert data == []
@@ -120,7 +120,7 @@ def test_config_splitting_behavior():
 	splitted_file.write_text(json.dumps({"text": text_50}) + "\n")
 
 	cfg = APGenerationConfig(
-		prompts_path=splitted_file, model_names=[], min_length=10, max_length=20
+		prompts_path=splitted_file, model_names=[], chars_len_min=10, char_len_max=20
 	)
 	data = cfg.load_text_data()
 	# original is length=50
@@ -151,8 +151,8 @@ def test_dataloader_negative_batch_size():
 	dummy_config = APGenerationConfig(
 		prompts_path=Path("fake.jsonl"),
 		model_names=[],
-		min_length=None,
-		max_length=None,
+		chars_len_min=None,
+		char_len_max=None,
 	)
 	ds = AttentionPatternDataset(
 		n_ctx=3, n_patterns=0, patterns=torch.empty((0, 3, 3)), metadata=[]
@@ -184,8 +184,8 @@ def test_dataloader_iteration():
 	dummy_config = APGenerationConfig(
 		prompts_path=Path("fake.jsonl"),
 		model_names=["modelA"],
-		min_length=5,
-		max_length=100,
+		chars_len_min=5,
+		char_len_max=100,
 	)
 
 	loader = CollectedAttentionPatternDataloader(
@@ -212,8 +212,8 @@ def test_dataloader_empty_datasets():
 	dummy_config = APGenerationConfig(
 		prompts_path=Path("fake.jsonl"),
 		model_names=[],
-		min_length=None,
-		max_length=None,
+		chars_len_min=None,
+		char_len_max=None,
 	)
 	loader = CollectedAttentionPatternDataloader(
 		config=dummy_config, prompts=[], datasets=[], batch_size=2

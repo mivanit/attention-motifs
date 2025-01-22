@@ -40,8 +40,8 @@ def test_integration_generate_save_read(model_name: str, sample_prompts_file: Pa
 	config = APGenerationConfig(
 		prompts_path=sample_prompts_file,
 		model_names=[model_name],
-		min_length=5,  # filter out 'Short'
-		max_length=50,  # won't actually chunk, just used as an example
+		chars_len_min=5,  # filter out 'Short'
+		char_len_max=50,  # won't actually chunk, just used as an example
 		prompt_token_len_tolerance=2,
 	)
 
@@ -94,8 +94,8 @@ def test_integration_multiple_models(model_names: list[str], sample_prompts_file
 	config = APGenerationConfig(
 		prompts_path=sample_prompts_file,
 		model_names=model_names,
-		min_length=5,
-		max_length=50,
+		chars_len_min=5,
+		char_len_max=50,
 		prompt_token_len_tolerance=2,
 	)
 	dl = CollectedAttentionPatternDataloader.generate(config)
@@ -114,8 +114,8 @@ def test_integration_missing_metadata(sample_prompts_file: Path):
 	config = APGenerationConfig(
 		prompts_path=sample_prompts_file,
 		model_names=["gpt2"],
-		min_length=5,
-		max_length=20,
+		chars_len_min=5,
+		char_len_max=20,
 		prompt_token_len_tolerance=2,
 	)
 	dl = CollectedAttentionPatternDataloader.generate(config)
@@ -135,8 +135,8 @@ def test_integration_missing_dataset_files(sample_prompts_file: Path):
 	config = APGenerationConfig(
 		prompts_path=sample_prompts_file,
 		model_names=["gpt2"],
-		min_length=5,
-		max_length=20,
+		chars_len_min=5,
+		char_len_max=20,
 		prompt_token_len_tolerance=2,
 	)
 	dl = CollectedAttentionPatternDataloader.generate(config)
@@ -158,8 +158,8 @@ def test_integration_dummy_training_loop(sample_prompts_file: Path):
 	config = APGenerationConfig(
 		prompts_path=sample_prompts_file,
 		model_names=["gpt2"],
-		min_length=5,
-		max_length=30,
+		chars_len_min=5,
+		char_len_max=30,
 		prompt_token_len_tolerance=2,
 	)
 	dl = CollectedAttentionPatternDataloader.generate(config, batch_size=2)
