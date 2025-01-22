@@ -225,7 +225,9 @@ class CollectedAttentionPatternDataloader:
 
 	@classmethod
 	def read(
-		cls, path: Path, z: Optional[ZANJ] = None,
+		cls,
+		path: Path,
+		z: Optional[ZANJ] = None,
 	) -> "CollectedAttentionPatternDataloader":
 		"""Read the dataset from a directory.
 
@@ -273,7 +275,9 @@ class CollectedAttentionPatternDataloader:
 
 	@classmethod
 	def generate(
-		cls, config: APGenerationConfig, z: Optional[ZANJ] = None,
+		cls,
+		config: APGenerationConfig,
+		z: Optional[ZANJ] = None,
 	) -> "CollectedAttentionPatternDataloader":
 		"""Generate attention patterns for each prompt, for each model in config,
 		without adding any padding tokens. Instead, within each bin:
