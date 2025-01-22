@@ -61,13 +61,17 @@ class APGenerationConfig(SerializableDataclass):
 		```
 		"""
 		data_raw: list[dict] = []
-		with open(self.prompts_path, "r") as f:
-			for line in f:
-				line_str = line.strip()
+		# open the prompts file
+		with open(self.prompts_path, "r") as f_in:  # type: TextIO
+			line: str
+			for line in f_in:
+				line_str: str = line.strip()
 				if line_str:
-					data_raw.append(json.loads(line_str))
+					parsed: dict = json.loads(line_str)
+					data_raw.append(parsed)
 
 		# add fname metadata
+		d: dict
 		for d in data_raw:
 			d["source_fname"] = self.prompts_path.as_posix()
 
@@ -81,7 +85,8 @@ class APGenerationConfig(SerializableDataclass):
 			for d in data_raw:
 				d_text: str = d["text"]
 				while len(d_text) > self.max_length:
-					data_new.append({**d, "text": d_text[: self.max_length]})
+					truncated_dict: dict = {**d, "text": d_text[: self.max_length]}
+					data_new.append(truncated_dict)
 					d_text = d_text[self.max_length :]
 				data_new.append({**d, "text": d_text})
 			data_raw = data_new
@@ -99,7 +104,7 @@ class CollectedAttentionPatternDataloader:
 	# Usage in a training loop:
 	```python
 	dl = CollectedAttentionPatternDataloader.generate(cfg)
-	for patterns_batch, meta_batch in dl:
+	for patterns_batch, meta_batch in dl.batches(batch_size=32):
 	    # patterns_batch: [batch_size, n_ctx, n_ctx]
 	    # meta_batch: list of metadata objects
 	    ...
@@ -111,7 +116,6 @@ class CollectedAttentionPatternDataloader:
 		config: APGenerationConfig,
 		prompts: list[dict],
 		datasets: list[AttentionPatternDataset],
-		batch_size: int = 1,
 	):
 		"""
 		# Parameters:
@@ -121,13 +125,10 @@ class CollectedAttentionPatternDataloader:
 		    A list of prompt data (each has "text" and "hash", etc.)
 		 - `datasets : list[AttentionPatternDataset]`
 		    The list of attention-pattern datasets
-		 - `batch_size : int`
-		    The number of items to yield per iteration
 		"""
-		self.config = config
-		self.prompts = prompts
-		self.datasets = datasets
-		self.batch_size = batch_size
+		self.config: APGenerationConfig = config
+		self.prompts: list[dict] = prompts
+		self.datasets: list[AttentionPatternDataset] = datasets
 
 	@property
 	def model_names(self) -> list[str]:
@@ -151,8 +152,9 @@ class CollectedAttentionPatternDataloader:
 		# how many patterns exist per sequence length
 		# (each dataset has a single n_ctx)
 		out: dict[int, int] = {}
-		for d in self.datasets:
-			out[d.n_ctx] = out.get(d.n_ctx, 0) + len(d)
+		ds: AttentionPatternDataset
+		for ds in self.datasets:
+			out[ds.n_ctx] = out.get(ds.n_ctx, 0) + len(ds)
 		return out
 
 	def __iter__(
@@ -169,18 +171,26 @@ class CollectedAttentionPatternDataloader:
 		all_items: list[
 			tuple[Float[torch.Tensor, "n_ctx n_ctx"], AttentionPatternMetadata]
 		] = []
+		ds: AttentionPatternDataset
 		for ds in self.datasets:
+			i: int
 			for i in range(len(ds)):
 				all_items.append(ds[i])
 
 		# chunk them by batch_size
+		i: int
 		for i in range(0, len(all_items), self.batch_size):
-			chunk = all_items[i : i + self.batch_size]
-			pat_list = [x[0] for x in chunk]
-			meta_list = [x[1] for x in chunk]
+			chunk: list[
+				tuple[Float[torch.Tensor, "n_ctx n_ctx"], AttentionPatternMetadata]
+			] = all_items[i : i + self.batch_size]
+
+			pat_list: list[Float[torch.Tensor, "n_ctx n_ctx"]] = [x[0] for x in chunk]
+			meta_list: list[AttentionPatternMetadata] = [x[1] for x in chunk]
 
 			# stack patterns into a single tensor
-			patterns_batch = torch.stack(pat_list, dim=0)
+			patterns_batch: Float[torch.Tensor, "batch n_ctx n_ctx"] = torch.stack(
+				pat_list, dim=0
+			)
 			yield patterns_batch, meta_list
 
 	def save(self, path: Path, z: Optional[ZANJ] = None) -> None:
@@ -194,7 +204,6 @@ class CollectedAttentionPatternDataloader:
 		"""
 		z = z or ZANJ()
 
-		# save metadata
 		obj_metadata: dict[str, Any] = dict(
 			config=self.config.serialize(),
 			dataset_metadata=self.dataset_metadata,
@@ -203,18 +212,20 @@ class CollectedAttentionPatternDataloader:
 		z.save(obj_metadata, path / "metadata.zanj")
 
 		# save prompts
-		with z.open(path / "prompts.jsonl", "w") as f:
+		with z.open(path / "prompts.jsonl", "w") as f_out:  # type: TextIO
+			prompt: dict
 			for prompt in self.prompts:
-				json.dump(prompt, f)
-				f.write("\n")
+				json.dump(prompt, f_out)
+				f_out.write("\n")
 
-		# save datasets
+		i: int
+		dataset: AttentionPatternDataset
 		for i, dataset in enumerate(self.datasets):
 			z.save(dataset, path / f"dataset_{i}.zanj")
 
 	@classmethod
 	def read(
-		cls, path: Path, z: Optional[ZANJ] = None, batch_size: int = 1
+		cls, path: Path, z: Optional[ZANJ] = None,
 	) -> "CollectedAttentionPatternDataloader":
 		"""Read the dataset from a directory.
 
@@ -226,39 +237,43 @@ class CollectedAttentionPatternDataloader:
 		    - dataset_0.zanj, dataset_1.zanj, ...
 		 - `z : Optional[ZANJ]`
 		    Instance of ZANJ to handle loading
-		 - `batch_size : int`
-		    How large a mini-batch you want for iteration
 
 		# Returns:
 		 - `CollectedAttentionPatternDataloader`
 		"""
 		z = z or ZANJ()
 
-		obj_metadata: dict = z.read(path / "metadata.zanj")
-		config = APGenerationConfig.deserialize(obj_metadata["config"])
+		obj_metadata: dict[str, Any] = z.read(path / "metadata.zanj")
+		config: APGenerationConfig = APGenerationConfig.load(obj_metadata["config"])
 
 		# read prompts
 		prompts: list[dict] = []
-		with z.open(path / "prompts.jsonl", "r") as f:
-			for line in f:
-				line_str = line.strip()
+		with open(path / "prompts.jsonl", "r") as f_in:
+			line: str
+			for line in f_in:
+				line_str: str = line.strip()
 				if line_str:
-					prompts.append(json.loads(line_str))
+					parsed_line: dict = json.loads(line_str)
+					prompts.append(parsed_line)
 
-		# read datasets
-		dataset_meta = obj_metadata["dataset_metadata"]
+		dataset_meta: list[dict[str, Any]] = obj_metadata["dataset_metadata"]
 		datasets: list[AttentionPatternDataset] = []
+		i: int
 		for i in range(len(dataset_meta)):
-			ds = z.read(path / f"dataset_{i}.zanj")
+			ds_path: Path = path / f"dataset_{i}.zanj"
+			ds: AttentionPatternDataset = z.read(ds_path)
 			datasets.append(ds)
 
-		return cls(
-			config=config, prompts=prompts, datasets=datasets, batch_size=batch_size
+		loader: CollectedAttentionPatternDataloader = cls(
+			config=config,
+			prompts=prompts,
+			datasets=datasets,
 		)
+		return loader
 
 	@classmethod
 	def generate(
-		cls, config: APGenerationConfig, z: Optional[ZANJ] = None, batch_size: int = 1
+		cls, config: APGenerationConfig, z: Optional[ZANJ] = None,
 	) -> "CollectedAttentionPatternDataloader":
 		"""Generate attention patterns for each prompt, for each model in config,
 		without adding any padding tokens. Instead, within each bin:
@@ -273,8 +288,6 @@ class CollectedAttentionPatternDataloader:
 		    The config specifying model names, path to prompts, etc.
 		 - `z : Optional[ZANJ]`
 		    Not used for generation here (unless you want to do something custom).
-		 - `batch_size : int`
-		    How large a mini-batch you want for iteration
 
 		# Returns:
 		 - `CollectedAttentionPatternDataloader`
@@ -282,27 +295,27 @@ class CollectedAttentionPatternDataloader:
 		_z: ZANJ = z or ZANJ()
 		prompts_raw: list[dict] = config.load_text_data()
 
-		# ensure each prompt has a stable hash
+		pr: dict
 		for pr in prompts_raw:
-			h = hashlib.md5(pr["text"].encode("utf-8")).hexdigest()
+			h: str = hashlib.md5(pr["text"].encode("utf-8")).hexdigest()
 			pr["hash"] = h
 
 		datasets: list[AttentionPatternDataset] = []
 
-		# For each model
+		model_name: str
 		for model_name in config.model_names:
-			model = HookedTransformer.from_pretrained(model_name)
+			model: HookedTransformer = HookedTransformer.from_pretrained(model_name)
 			bins_by_len: dict[int, list[int]] = {}
 
-			# 1) Assign each prompt to a bin by approximate length
-			#    (abs(b - token_len) <= tolerance).
-			for idx, pr in enumerate(prompts_raw):
-				tokens_no_pad = model.to_tokens(
-					pr["text"], prepend_bos=False, pad_to_longest=False
+			idx: int
+			for idx, pr_data in enumerate(prompts_raw):
+				tokens_no_pad: Float[torch.Tensor, "1 length"] = model.to_tokens(
+					pr_data["text"], prepend_bos=False, pad_to_longest=False
 				)
-				token_len = tokens_no_pad.shape[1]
+				token_len: int = tokens_no_pad.shape[1]
 
 				found_bin: Optional[int] = None
+				b: int
 				for b in bins_by_len:
 					if abs(b - token_len) <= config.prompt_token_len_tolerance:
 						found_bin = b
@@ -314,26 +327,26 @@ class CollectedAttentionPatternDataloader:
 				else:
 					bins_by_len[found_bin].append(idx)
 
-			# 2) For each bin, gather all prompts, find the minimal length,
-			#    then truncate any that are longer, skip any that are shorter.
+			bin_center_len: int
+			idx_list: list[int]
 			for bin_center_len, idx_list in bins_by_len.items():
-				# find the minimal length among all prompts in this bin
-				lengths_in_bin = []
+				lengths_in_bin: list[int] = []
+				i_prompt: int
 				for i_prompt in idx_list:
-					t = model.to_tokens(
+					t_check: Float[torch.Tensor, "1 length"] = model.to_tokens(
 						prompts_raw[i_prompt]["text"],
 						prepend_bos=False,
 						pad_to_longest=False,
 					)
-					lengths_in_bin.append(t.shape[1])
-				bin_len = min(lengths_in_bin)  # no padding -> use the smallest length
+					lengths_in_bin.append(t_check.shape[1])
 
-				# actually gather + truncate
-				all_tokens_list: list[torch.Tensor] = []
+				bin_len: int = min(lengths_in_bin)
+
+				all_tokens_list: list[Float[torch.Tensor, "1 length"]] = []
 				valid_indices: list[int] = []
 
 				for i_prompt in idx_list:
-					t = model.to_tokens(
+					t: Float[torch.Tensor, "1 length"] = model.to_tokens(
 						prompts_raw[i_prompt]["text"],
 						prepend_bos=False,
 						pad_to_longest=False,
@@ -341,8 +354,7 @@ class CollectedAttentionPatternDataloader:
 					if t.shape[1] < bin_len:
 						# skip (can't pad, user wants no padding at all)
 						continue
-					# truncate to bin_len
-					truncated = t[:, :bin_len]
+					truncated: Float[torch.Tensor, "1 bin_len"] = t[:, :bin_len]
 					all_tokens_list.append(truncated)
 					valid_indices.append(i_prompt)
 
@@ -350,28 +362,37 @@ class CollectedAttentionPatternDataloader:
 					# no data left => skip
 					continue
 
-				# cat them into a single batch: shape [batch_size_texts, bin_len]
-				tokens = torch.cat(all_tokens_list, dim=0)
+				tokens: Float[torch.Tensor, "batch_size_texts bin_len"] = torch.cat(
+					all_tokens_list, dim=0
+				)
 				with torch.no_grad():
 					_, cache = model.run_with_cache(tokens)
 
+				batch_size_texts: int
+				seq_len: int
 				batch_size_texts, seq_len = tokens.shape
-				n_layers = model.cfg.n_layers
-				n_heads = model.cfg.n_heads
+				n_layers: int = model.cfg.n_layers
+				n_heads: int = model.cfg.n_heads
 
 				list_patterns: list[Float[torch.Tensor, "n_ctx n_ctx"]] = []
 				list_metadata: list[AttentionPatternMetadata] = []
 
-				# gather all layer-head patterns
+				layer_idx: int
 				for layer_idx in range(n_layers):
-					# shape = [batch_size_texts, n_heads, seq_len, seq_len]
-					layer_pattern = cache["pattern", layer_idx]
+					layer_pattern: Float[
+						torch.Tensor, "batch_size_texts n_heads seq_len seq_len"
+					] = cache["pattern", layer_idx]
+					head_idx: int
 					for head_idx in range(n_heads):
-						# [batch_size_texts, seq_len, seq_len]
-						head_pattern = layer_pattern[:, head_idx, :, :]
+						head_pattern: Float[
+							torch.Tensor, "batch_size_texts seq_len seq_len"
+						] = layer_pattern[:, head_idx, :, :]
+						i_in_batch: int
 						for i_in_batch in range(batch_size_texts):
-							single_pattern = head_pattern[i_in_batch, :, :]
-							pm = AttentionPatternMetadata(
+							single_pattern: Float[torch.Tensor, "seq_len seq_len"] = (
+								head_pattern[i_in_batch, :, :]
+							)
+							pm: AttentionPatternMetadata = AttentionPatternMetadata(
 								model_name=model_name,
 								idx_layer=layer_idx,
 								idx_head=head_idx,
@@ -383,8 +404,10 @@ class CollectedAttentionPatternDataloader:
 							list_patterns.append(single_pattern)
 							list_metadata.append(pm)
 
-				patterns_tensor = torch.stack(list_patterns, dim=0)
-				ds = AttentionPatternDataset(
+				patterns_tensor: Float[torch.Tensor, "n_patterns seq_len seq_len"] = (
+					torch.stack(list_patterns, dim=0)
+				)
+				ds: AttentionPatternDataset = AttentionPatternDataset(
 					n_ctx=seq_len,
 					n_patterns=patterns_tensor.shape[0],
 					patterns=patterns_tensor,
@@ -392,11 +415,9 @@ class CollectedAttentionPatternDataloader:
 				)
 				datasets.append(ds)
 
-		# build the loader
-		loader = cls(
+		loader: CollectedAttentionPatternDataloader = cls(
 			config=config,
 			prompts=prompts_raw,
 			datasets=datasets,
-			batch_size=batch_size,
 		)
 		return loader
