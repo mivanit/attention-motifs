@@ -1,5 +1,6 @@
 import hashlib
 import base64
+from pathlib import Path
 from typing import NamedTuple
 
 
@@ -116,6 +117,15 @@ class Prompt(SerializableDataclass):
 	def __hash__(self) -> int:
 		return self.hash_int
 
+@serializable_dataclass
+class PromptDatasetConfig(SerializableDataclass):
+	source_path: Path = serializable_field(
+		serialization_fn=lambda p: p.as_posix(),
+		deserialize_fn=lambda data: Path(data),
+	)
+	source_info: dict[str, JSONitem]
+	chars_len_min: int|None = serializable_field(default=None)
+
 
 @serializable_dataclass
 class PromptDataset(SerializableDataclass):
@@ -133,7 +143,7 @@ class PromptDataset(SerializableDataclass):
 	we avoid storing the prompts in a dict to preserve order, and also to eventually dump them into a jsonl file
 	"""	
 	prompts: list[Prompt] = serializable_field(
-		serialization_fn=lambda self: [p.serialize() for p in self.prompts],
+		serialization_fn=lambda p_lst: [p.serialize() for p in p_lst],
 		deserialize_fn=lambda data: [Prompt.load(p) for p in data],
 	)
 	hash_map: dict[str, int]

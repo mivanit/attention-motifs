@@ -25,7 +25,6 @@ from attention_motifs.dataset_util import (
 )
 
 
-
 @serializable_dataclass
 class APGenerationConfig(SerializableDataclass):
 	prompts_path: Path
