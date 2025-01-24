@@ -5,7 +5,7 @@ import hashlib
 from typing import Any, Iterator, Optional
 
 import torch
-from jaxtyping import Float, Int
+from jaxtyping import Float
 from transformer_lens import HookedTransformer
 
 # custom utils
@@ -16,9 +16,13 @@ from muutils.json_serialize import (
 )
 from zanj import ZANJ
 
-from attention_motifs.consts import AttentionPattern, AttentionPatternBatch, TokenSequence, TokenSequenceBatch
-from attention_motifs.dataset_util import tokenize_and_bin_prompts, AttentionPatternMetadata
-
+from attention_motifs.consts import (
+	AttentionPatternBatch,
+)
+from attention_motifs.dataset_util import (
+	tokenize_and_bin_prompts,
+	AttentionPatternMetadata,
+)
 
 
 @serializable_dataclass
@@ -283,8 +287,6 @@ class CollectedAttentionPatternDataloader:
 		)
 		return loader
 
-
-
 	@classmethod
 	def _create_dataset(
 		cls,
@@ -312,9 +314,7 @@ class CollectedAttentionPatternDataloader:
 		meta_list: list[AttentionPatternMetadata] = [m for _, m in patterns_and_meta]
 
 		# stack patterns
-		patterns_tensor: AttentionPatternBatch = torch.stack(
-			patterns_list, dim=0
-		)
+		patterns_tensor: AttentionPatternBatch = torch.stack(patterns_list, dim=0)
 
 		# create and return dataset
 		return AttentionPatternDataset(

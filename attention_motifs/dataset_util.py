@@ -1,76 +1,70 @@
 from collections import defaultdict
-from pathlib import Path
-import json
-import hashlib
-from typing import Any, Iterator, Optional
 
 import torch
-from jaxtyping import Float, Int
+from jaxtyping import Float
 from transformer_lens import HookedTransformer
 
 # custom utils
-from muutils.json_serialize import (
-	SerializableDataclass,
-	serializable_dataclass,
-	serializable_field,
+
+from attention_motifs.consts import (
+	AttentionPatternBatch,
+	TokenSequence,
+	AttentionPatternMetadata,
 )
-from zanj import ZANJ
-
-from attention_motifs.consts import AttentionPattern, AttentionPatternBatch, TokenSequence, TokenSequenceBatch
-
-
 
 
 def tokenize_and_bin_prompts(
-		model: HookedTransformer,
-		prompts: list[dict],
-		token_len_min: int,
-		tolerance: int,
-	) -> dict[int, list[tuple[dict, list[int]]]]:
-		"""Tokenize prompts and bin them by sequence length.
+	model: HookedTransformer,
+	prompts: list[dict],
+	token_len_min: int,
+	tolerance: int,
+) -> dict[int, list[tuple[dict, list[int]]]]:
+	"""Tokenize prompts and bin them by sequence length.
 
-		# Parameters:
-		- `model : HookedTransformer`
-			Model to use for tokenization
-		- `prompts : list[dict]`
-			List of prompt dictionaries
-		- `token_len_min : int`
-			Minimum token length to consider
-		- `tolerance : int`
-			anything longer than but within `tolerance` of the bin size will be truncated to the bin size
+	# Parameters:
+	- `model : HookedTransformer`
+		Model to use for tokenization
+	- `prompts : list[dict]`
+		List of prompt dictionaries
+	- `token_len_min : int`
+		Minimum token length to consider
+	- `tolerance : int`
+		anything longer than but within `tolerance` of the bin size will be truncated to the bin size
 
-		# Returns:
-		- `dict[int, list[tuple[dict, list[int]]]]`
-			Mapping from bin centers to list of (prompt, tokens) pairs
-		"""
-		# tokenize all prompts
-		tokenized_prompts: list[tuple[dict, TokenSequence]] = [
-			(p, model.to_tokens(p["text"]))
-			for p in prompts
-		]
+	# Returns:
+	- `dict[int, list[tuple[dict, list[int]]]]`
+		Mapping from bin centers to list of (prompt, tokens) pairs
+	"""
+	# tokenize all prompts
+	tokenized_prompts: list[tuple[dict, TokenSequence]] = [
+		(p, model.to_tokens(p["text"])) for p in prompts
+	]
 
-		# group by rounded length
-		bins_by_len: defaultdict[
-			int,
-			list[tuple[
-				dict,          # prompt and metadata
-				TokenSequence, # tokenized sequence
-			]]
-		] = defaultdict(list)
-		for prompt, tokens in tokenized_prompts:
-			# skip if too short
-			if len(tokens) >= token_len_min:
-				desired_len: int = len(tokens) - len(tokens) % tolerance
-				tokens_truncated: TokenSequence = tokens[:desired_len]
-				bins_by_len[desired_len].append((prompt, tokens_truncated))
+	# group by rounded length
+	bins_by_len: defaultdict[
+		int,
+		list[
+			tuple[
+				dict,  # prompt and metadata
+				TokenSequence,  # tokenized sequence
+			]
+		],
+	] = defaultdict(list)
+	for prompt, tokens in tokenized_prompts:
+		# skip if too short
+		if len(tokens) >= token_len_min:
+			desired_len: int = len(tokens) - len(tokens) % tolerance
+			tokens_truncated: TokenSequence = tokens[:desired_len]
+			bins_by_len[desired_len].append((prompt, tokens_truncated))
 
-		return bins_by_len
+	return bins_by_len
+
 
 def process_length_bin(
 	model: HookedTransformer,
 	bin_contents: list[tuple[dict, TokenSequence]],
 	model_name: str,
-	max_batch_size: int|None = None,
+	max_batch_size: int | None = None,
 ) -> tuple[AttentionPatternBatch, list[AttentionPatternMetadata]]:
 	"""Process a single bin of same-length sequences.
 
