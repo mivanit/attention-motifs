@@ -25,21 +25,6 @@ from attention_motifs.dataset_util import (
 )
 
 
-@serializable_dataclass
-class AttentionPatternDataset(SerializableDataclass):
-	n_ctx: int
-	n_patterns: int
-	patterns: AttentionPatternBatch
-	metadata: list[AttentionPatternMetadata]
-
-	def __len__(self) -> int:
-		return self.n_patterns
-
-	def __getitem__(
-		self, idx: int
-	) -> tuple[Float[torch.Tensor, "n_ctx n_ctx"], AttentionPatternMetadata]:
-		return self.patterns[idx], self.metadata[idx]
-
 
 @serializable_dataclass
 class APGenerationConfig(SerializableDataclass):
