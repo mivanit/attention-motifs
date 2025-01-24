@@ -18,11 +18,11 @@ from zanj import ZANJ
 
 from attention_motifs.consts import (
 	AttentionPatternBatch,
+)
+from attention_motifs.dataset_util import (
 	PromptDatasetConfig,
 	PromptDataset,
 	AttentionPatternDataset,
-)
-from attention_motifs.dataset_util import (
 	tokenize_and_bin_prompts,
 	AttentionPatternMetadata,
 )
