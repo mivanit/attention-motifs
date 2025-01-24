@@ -5,7 +5,7 @@ import hashlib
 from typing import Any, Iterator, Optional
 
 import torch
-from jaxtyping import Float
+from jaxtyping import Float, Int
 from transformer_lens import HookedTransformer
 
 # custom utils
@@ -16,21 +16,16 @@ from muutils.json_serialize import (
 )
 from zanj import ZANJ
 
+from attention_motifs.consts import AttentionPattern, AttentionPatternBatch, TokenSequence, TokenSequenceBatch
+from attention_motifs.dataset_util import tokenize_and_bin_prompts, AttentionPatternMetadata
 
-@serializable_dataclass
-class AttentionPatternMetadata(SerializableDataclass):
-	model_name: str
-	idx_layer: int
-	idx_head: int
-	prompt_hash: str
-	n_ctx: int
 
 
 @serializable_dataclass
 class AttentionPatternDataset(SerializableDataclass):
 	n_ctx: int
 	n_patterns: int
-	patterns: Float[torch.Tensor, "n_patterns n_ctx n_ctx"]
+	patterns: AttentionPatternBatch
 	metadata: list[AttentionPatternMetadata]
 
 	def __len__(self) -> int:
@@ -288,6 +283,47 @@ class CollectedAttentionPatternDataloader:
 		)
 		return loader
 
+
+
+	@classmethod
+	def _create_dataset(
+		cls,
+		n_ctx: int,
+		patterns_and_meta: list[
+			tuple[Float[torch.Tensor, "n_ctx n_ctx"], AttentionPatternMetadata]
+		],
+	) -> AttentionPatternDataset:
+		"""Create a dataset from patterns of the same sequence length.
+
+		# Parameters:
+		- `n_ctx : int`
+			Sequence length for this dataset
+		- `patterns_and_meta : list[tuple[tensor, metadata]]`
+			List of (pattern, metadata) pairs to include
+
+		# Returns:
+		- `AttentionPatternDataset`
+			Dataset containing all patterns and metadata
+		"""
+		# separate patterns and metadata
+		patterns_list: list[Float[torch.Tensor, "n_ctx n_ctx"]] = [
+			p for p, _ in patterns_and_meta
+		]
+		meta_list: list[AttentionPatternMetadata] = [m for _, m in patterns_and_meta]
+
+		# stack patterns
+		patterns_tensor: AttentionPatternBatch = torch.stack(
+			patterns_list, dim=0
+		)
+
+		# create and return dataset
+		return AttentionPatternDataset(
+			n_ctx=n_ctx,
+			n_patterns=len(patterns_list),
+			patterns=patterns_tensor,
+			metadata=meta_list,
+		)
+
 	@classmethod
 	def generate(
 		cls,
@@ -317,134 +353,53 @@ class CollectedAttentionPatternDataloader:
 		# load the text data
 		prompts_raw: list[dict] = config.load_text_data()
 
-		# create a list of the raw patterns and metadata
+		# collect patterns by sequence length
 		data_raw_binned: defaultdict[
 			int,
-			list[
-				tuple[
-					Float[torch.Tensor, "batch n_ctx n_ctx"], AttentionPatternMetadata
-				]
-			],
+			list[tuple[Float[torch.Tensor, "n_ctx n_ctx"], AttentionPatternMetadata]],
 		] = defaultdict(list)
-		datasets: list[AttentionPatternDataset] = []
 
-		# for each model
+		# process each model
 		model_name: str
 		for model_name in config.model_names:
-			# load the model
+			# load model
 			model: HookedTransformer = HookedTransformer.from_pretrained(model_name)
 
-			# tokenize and bin prompts
-			tokenized_prompts: list[tuple[dict, list[int]]] = [
-				(
-					p,
-					model.to_tokens(p["text"]).tolist()[0],
-				)  # [0] to get inner list from batch
-				for p in prompts_raw
-			]
-
-			# group by rounded length to nearest token_len_min
-			bins_by_len: defaultdict[int, list[tuple[dict, list[int]]]] = defaultdict(
-				list
-			)
-			prompt_and_tokens: tuple[dict, list[int]]
-			for prompt_and_tokens in tokenized_prompts:
-				tokens: list[int] = prompt_and_tokens[1]
-				bin_center: int = (
-					(len(tokens) + config.prompt_token_len_tolerance // 2)
-					// config.token_len_min
-					* config.token_len_min
+			# bin prompts by length
+			bins_by_len: dict[int, list[tuple[dict, list[int]]]] = (
+				tokenize_and_bin_prompts(
+					model,
+					prompts_raw,
+					config.token_len_min,
+					config.prompt_token_len_tolerance,
 				)
-				if len(tokens) >= config.token_len_min:
-					bins_by_len[bin_center].append(prompt_and_tokens)
+			)
 
 			# process each bin
 			bin_center: int
 			bin_contents: list[tuple[dict, list[int]]]
 			for bin_center, bin_contents in bins_by_len.items():
-				# find shortest length in bin that's >= token_len_min
-				min_len: int = min(len(tokens) for _, tokens in bin_contents)
-				min_len = max(min_len, config.token_len_min)
-
-				# truncate all sequences to min_len
-				truncated_tokens: list[list[int]] = [
-					tokens[:min_len] for _, tokens in bin_contents
-				]
-
-				# batch process through model
-				tokens_tensor: Float[torch.Tensor, "batch n_ctx"] = torch.tensor(
-					truncated_tokens, device=model.cfg.device
+				patterns_and_meta: list[
+					tuple[Float[torch.Tensor, "n_ctx n_ctx"], AttentionPatternMetadata]
+				] = cls._process_length_bin(
+					model, bin_contents, model_name, config.token_len_min
 				)
 
-				# run model and get attention patterns
-				_, cache = model.run_with_cache(
-					tokens_tensor,
-					return_type=None,
-					names_filter=lambda n: n.endswith("pattern"),
-				)
+				# get actual sequence length for this bin
+				n_ctx: int = patterns_and_meta[0][0].shape[0]
 
-				# extract patterns for each layer and head
-				n_layers: int = model.cfg.n_layers
-				n_heads: int = model.cfg.n_heads
-
-				layer: int
-				head: int
-				for layer in range(n_layers):
-					for head in range(n_heads):
-						# get patterns for this head
-						patterns: Float[torch.Tensor, "batch n_ctx n_ctx"] = cache[
-							f"blocks.{layer}.attn.hook_pattern"
-						][:, head, :, :]
-
-						# create metadata for each pattern
-						meta_list: list[AttentionPatternMetadata] = [
-							AttentionPatternMetadata(
-								model_name=model_name,
-								idx_layer=layer,
-								idx_head=head,
-								prompt_hash=p["hash"],
-								n_ctx=min_len,
-							)
-							for p, _ in bin_contents
-						]
-
-						# add to binned data
-						i: int
-						for i in range(len(patterns)):
-							data_raw_binned[min_len].append((patterns[i], meta_list[i]))
+				# add to binned data
+				data_raw_binned[n_ctx].extend(patterns_and_meta)
 
 		# create datasets from binned data
-		n_ctx: int
-		patterns_and_meta: list[
-			tuple[Float[torch.Tensor, "n_ctx n_ctx"], AttentionPatternMetadata]
+		datasets: list[AttentionPatternDataset] = [
+			cls._create_dataset(n_ctx, patterns_and_meta)
+			for n_ctx, patterns_and_meta in data_raw_binned.items()
 		]
-		for n_ctx, patterns_and_meta in data_raw_binned.items():
-			# separate patterns and metadata
-			patterns_list: list[Float[torch.Tensor, "n_ctx n_ctx"]] = [
-				p for p, _ in patterns_and_meta
-			]
-			meta_list: list[AttentionPatternMetadata] = [
-				m for _, m in patterns_and_meta
-			]
-
-			# stack patterns
-			patterns_tensor: Float[torch.Tensor, "n_patterns n_ctx n_ctx"] = (
-				torch.stack(patterns_list, dim=0)
-			)
-
-			# create dataset
-			dataset: AttentionPatternDataset = AttentionPatternDataset(
-				n_ctx=n_ctx,
-				n_patterns=len(patterns_list),
-				patterns=patterns_tensor,
-				metadata=meta_list,
-			)
-			datasets.append(dataset)
 
 		# create and return the loader
-		loader: CollectedAttentionPatternDataloader = cls(
+		return cls(
 			config=config,
 			prompts=prompts_raw,
 			datasets=datasets,
 		)
-		return loader
