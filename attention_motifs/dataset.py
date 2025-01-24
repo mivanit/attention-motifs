@@ -18,6 +18,9 @@ from zanj import ZANJ
 
 from attention_motifs.consts import (
 	AttentionPatternBatch,
+	PromptDatasetConfig,
+	PromptDataset,
+	AttentionPatternDataset,
 )
 from attention_motifs.dataset_util import (
 	tokenize_and_bin_prompts,
@@ -27,10 +30,8 @@ from attention_motifs.dataset_util import (
 
 @serializable_dataclass
 class APGenerationConfig(SerializableDataclass):
-	prompts_path: Path
+	prompts_config: PromptDatasetConfig
 	model_names: list[str]
-	chars_len_min: Optional[int]
-	char_len_max: Optional[int]
 	token_len_min: int = serializable_field(default=5)
 	prompt_token_len_tolerance: int = serializable_field(default=5)
 

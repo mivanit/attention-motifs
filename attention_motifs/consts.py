@@ -1,5 +1,6 @@
 import hashlib
 import base64
+import json
 from pathlib import Path
 from typing import NamedTuple
 
@@ -104,6 +105,16 @@ class Prompt(SerializableDataclass):
 			# anything else is in the metadata dict
 			meta={k: v for k, v in data.items() if k not in PROMPT_SPECIAL_KEYS},
 		)
+	
+	@classmethod
+	def from_text(cls, text: str) -> "Prompt":
+		hash_int, hash_str = compute_text_hashes(text)
+		return cls(
+			text=text,
+			hash_int=hash_int,
+			hash_str=hash_str,
+			meta={},
+		)
 
 	def __getitem__(self, key: str) -> JSONitem:
 		match key:
@@ -119,12 +130,23 @@ class Prompt(SerializableDataclass):
 
 @serializable_dataclass
 class PromptDatasetConfig(SerializableDataclass):
+	"""holds the config for a prompt dataset"""
+	name: str
 	source_path: Path = serializable_field(
 		serialization_fn=lambda p: p.as_posix(),
 		deserialize_fn=lambda data: Path(data),
 	)
 	source_info: dict[str, JSONitem]
-	chars_len_min: int|None = serializable_field(default=None)
+
+	@classmethod
+	def from_source_path(cls, source_path: Path) -> "PromptDatasetConfig":
+		return cls(
+			name=source_path.stem,
+			source_path=source_path,
+			source_info={
+				"source_path": source_path.as_posix(),
+			},
+		)
 
 
 @serializable_dataclass
@@ -142,39 +164,57 @@ class PromptDataset(SerializableDataclass):
 
 	we avoid storing the prompts in a dict to preserve order, and also to eventually dump them into a jsonl file
 	"""	
+	config: PromptDatasetConfig
 	prompts: list[Prompt] = serializable_field(
 		serialization_fn=lambda p_lst: [p.serialize() for p in p_lst],
 		deserialize_fn=lambda data: [Prompt.load(p) for p in data],
 	)
 	hash_map: dict[str, int]
 
+	@classmethod
+	def from_config(cls, config: PromptDatasetConfig) -> "PromptDataset":
+		"""create a dataset from a config by loading the prompts from the source path"""
+		if not config.source_path.exists():
+			raise FileNotFoundError(f"Prompt dataset source path does not exist: {config.source_path = }")
+		# load the prompts from the source path
+		prompts: list[Prompt] = []
+		with open(config.source_path, "r") as f:
+			for line in f:
+				prompts.append(Prompt.from_dict(json.loads(line)))
+
+		return cls.from_prompts(config=config, prompts=prompts)
+
+	@classmethod
+	def from_prompts(cls, config: PromptDatasetConfig, prompts: list[Prompt]) -> "PromptDataset":
+		"""create a dataset from a config and prompts by building the hash map"""		
+		hash_map: dict[str, int] = {p.hash_str: i for i, p in enumerate(prompts)}
+		return cls(config=config, prompts=prompts, hash_map=hash_map)
+
 	def __len__(self) -> int:
 		return len(self.prompts)
 
 	def index_get(self, idx: int) -> Prompt:
+		"get a prompt by it's index in the prompts list"
 		return self.prompts[idx]
 	
 	def hash_str_get(self, hash_str: str) -> Prompt:
+		"get a prompt by what the text hashes to (base64 encoded string)"
 		return self.prompts[self.hash_map[hash_str]]
 	
 	def hash_int_get(self, hash_int: int) -> Prompt:
+		"get a prompt by what the text hashes to (raw integer)"
 		# convert to string
 		hash_str: str = b64encode(hash_int)
 		return self.prompts[self.hash_map[hash_str]]
 	
 	def hash_get(self, hash: int | str) -> Prompt:
+		"get a prompt by what the text hashes to"
 		if isinstance(hash, int):
 			return self.hash_int_get(hash)
 		elif isinstance(hash, str):
 			return self.hash_str_get(hash)
 		else:
 			raise TypeError(f"hash must be int or str, not {type(hash) = }, {hash = }")
-		
-
-	
-
-	def from_raw_prompts
-
 
 
 
@@ -187,8 +227,16 @@ class AttentionPatternDataset(SerializableDataclass):
 
 	def __len__(self) -> int:
 		return self.n_patterns
+	
+
+	def shuffle(self) -> None:
+		"shuffle the dataset in-place"
+		perm: Int[torch.Tensor, "n_patterns"] = torch.randperm(self.n_patterns)
+		self.patterns = self.patterns[perm]
+		self.metadata = [self.metadata[i] for i in perm]
 
 	def __getitem__(
-		self, idx: int
-	) -> tuple[Float[torch.Tensor, "n_ctx n_ctx"], AttentionPatternMetadata]:
+		self,
+		idx: int|slice,
+	) -> tuple[AttentionPattern, AttentionPatternMetadata]:		
 		return self.patterns[idx], self.metadata[idx]
