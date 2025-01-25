@@ -21,7 +21,6 @@ from attention_motifs.consts import (
 )
 from attention_motifs.dataset_util import (
 	PromptDatasetConfig,
-	PromptDataset,
 	AttentionPatternDataset,
 	tokenize_and_bin_prompts,
 	AttentionPatternMetadata,
