@@ -1,9 +1,8 @@
 import hashlib
 import base64
-from typing import Iterable, Iterator, Sequence, TypeVar, Iter
+from typing import Iterable, Iterator, TypeVar
 
 
-import numpy as np
 import torch
 from jaxtyping import Float, Int, Array
 from itertools import islice
@@ -30,20 +29,22 @@ def compute_text_hashes(text: str) -> tuple[int, str]:
 	return hash_int, hash_str
 
 
-
 T_Sample = TypeVar("T_Sample")
+
+
 def batches(
-        it: Iterable,
-        batch_size: int,
-		allow_last_incomplete: bool = True,
-	) -> Iterator[list[T_Sample]]:
-    """Yield successive batches from an iterator."""
-    # https://stackoverflow.com/a/61435714
-    iterator: Iterator = iter(it)
-    while chunk := list(islice(iterator, batch_size)):
-        if not allow_last_incomplete and len(chunk) < batch_size:
-            break
-        yield chunk
+	it: Iterable,
+	batch_size: int,
+	allow_last_incomplete: bool = True,
+) -> Iterator[list[T_Sample]]:
+	"""Yield successive batches from an iterator."""
+	# https://stackoverflow.com/a/61435714
+	iterator: Iterator = iter(it)
+	while chunk := list(islice(iterator, batch_size)):
+		if not allow_last_incomplete and len(chunk) < batch_size:
+			break
+		yield chunk
+
 
 def tensor_batches(
 	arr: Float[Array, " n_samples *data_dims"],
@@ -53,7 +54,7 @@ def tensor_batches(
 	"""Yield successive batches from a tensor."""
 	idx: int = 0
 	while idx < len(arr):
-		arr_slice: Float[Array, " batch_size *data_dims"] = arr[idx:idx + batch_size]
+		arr_slice: Float[Array, " batch_size *data_dims"] = arr[idx : idx + batch_size]
 		if not allow_last_incomplete and len(arr_slice) < batch_size:
 			assert idx + batch_size >= len(arr), "this state should be inaccesible"
 			break

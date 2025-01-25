@@ -216,9 +216,9 @@ class PromptDataset(SerializableDataclass):
 		else:
 			raise TypeError(f"hash must be int or str, not {type(hash) = }, {hash = }")
 
-
 	def __iter__(self):
 		return iter(self.prompts)
+
 
 @serializable_dataclass
 class AttentionPatternDataset(SerializableDataclass):
@@ -268,8 +268,7 @@ def tokenize_and_bin_prompts(
 	# tokenize all prompts
 	# keep only hash_str, we can recover the text from the dataset
 	tokenized_prompts: list[tuple[str, TokenSequence]] = [
-		(p.hash_str, model.to_tokens(p.text))
-		for p in prompts
+		(p.hash_str, model.to_tokens(p.text)) for p in prompts
 	]
 
 	# group by rounded length
