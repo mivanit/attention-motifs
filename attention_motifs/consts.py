@@ -61,6 +61,7 @@ def tensor_batches(
 		idx += batch_size
 		yield arr_slice
 
+
 def tensor_batches_indexed(
 	arr: Float[Array, " n_samples *data_dims"],
 	batch_size: int,
@@ -73,10 +74,12 @@ def tensor_batches_indexed(
 		idx_end: int = idx_start + batch_size
 		idx_end = min(idx_end, len(arr))
 		# get slice
-		arr_slice: Float[Array, " batch_size *data_dims"] = arr[idx_start : idx_end]
+		arr_slice: Float[Array, " batch_size *data_dims"] = arr[idx_start:idx_end]
 		# throw away last incomplete batch if not allowed
 		if not allow_last_incomplete and len(arr_slice) < batch_size:
-			assert idx_start + batch_size >= len(arr), "this state should be inaccesible"
+			assert idx_start + batch_size >= len(
+				arr
+			), "this state should be inaccesible"
 			break
 		# yield (start, end, slice)
 		yield idx_start, idx_end, arr_slice

@@ -27,7 +27,6 @@ from attention_motifs.consts import (
 	TokenSequenceBatch,
 	b64encode,
 	compute_text_hashes,
-	tensor_batches,
 	tensor_batches_indexed,
 )
 
@@ -321,7 +320,9 @@ def process_length_bin(
 	tokens_list: list[TokenSequence]
 	prompt_hashes: list[str]
 	prompt_hashes, tokens_list = zip(*bin_contents)
-	tokens_tensor: TokenSequenceBatch = torch.tensor(tokens_list, device=model.cfg.device)
+	tokens_tensor: TokenSequenceBatch = torch.tensor(
+		tokens_list, device=model.cfg.device
+	)
 	assert tokens_tensor.shape[0] == len(bin_contents)
 	assert tokens_tensor.shape[1] == n_ctx
 
@@ -329,8 +330,9 @@ def process_length_bin(
 	output_metadata: list[AttentionPatternMetadata] = list()
 
 	# batch process through model
-	for idx_start, idx_end, tokens_batch in tensor_batches_indexed(tokens_tensor, max_batch_size):
-
+	for idx_start, idx_end, tokens_batch in tensor_batches_indexed(
+		tokens_tensor, max_batch_size
+	):
 		# get attention patterns
 		_, cache = model.run_with_cache(
 			tokens_tensor,
@@ -339,7 +341,7 @@ def process_length_bin(
 		)
 
 		# extract patterns for each layer and head
-		
+
 		layer: int
 		head: int
 		for layer in range(model.cfg.n_layers):
