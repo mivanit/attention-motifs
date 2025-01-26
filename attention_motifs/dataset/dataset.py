@@ -422,6 +422,6 @@ class CollectedAttentionPatternDataloader:
 		# create and return the loader
 		return cls(
 			config=config,
-			prompts=prompts_raw,
+			prompts=prompts,
 			datasets=datasets,
 		)

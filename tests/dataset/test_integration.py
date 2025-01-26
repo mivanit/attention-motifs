@@ -39,7 +39,9 @@ def test_integration_generate_save_read(model_name: str, sample_prompts_file: Pa
 	# We'll use an actual model name "gpt2" by default for the test.
 
 	config = APGenerationConfig(
-		prompts_config=PromptDatasetConfig.from_source_path(source_path=sample_prompts_file),
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=sample_prompts_file
+		),
 		model_names=[model_name],
 		prompt_token_len_tolerance=2,
 	)
@@ -81,7 +83,6 @@ def test_integration_generate_save_read(model_name: str, sample_prompts_file: Pa
 			assert m1.n_ctx == m2.n_ctx
 
 
-
 @pytest.mark.parametrize(
 	"model_names",
 	[
@@ -92,7 +93,9 @@ def test_integration_generate_save_read(model_name: str, sample_prompts_file: Pa
 def test_integration_multiple_models(model_names: list[str], sample_prompts_file: Path):
 	"""Check the behavior with zero or multiple model names."""
 	config = APGenerationConfig(
-		prompts_config=PromptDatasetConfig.from_source_path(source_path=sample_prompts_file),
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=sample_prompts_file
+		),
 		model_names=model_names,
 		prompt_token_len_tolerance=2,
 	)
@@ -110,7 +113,9 @@ def test_integration_multiple_models(model_names: list[str], sample_prompts_file
 def test_integration_missing_metadata(sample_prompts_file: Path):
 	"""Check read() if metadata.zanj is missing => should raise FileNotFoundError."""
 	config = APGenerationConfig(
-		prompts_config=PromptDatasetConfig.from_source_path(source_path=sample_prompts_file),
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=sample_prompts_file
+		),
 		model_names=["gpt2"],
 		prompt_token_len_tolerance=2,
 	)
@@ -129,7 +134,9 @@ def test_integration_missing_metadata(sample_prompts_file: Path):
 def test_integration_missing_dataset_files(sample_prompts_file: Path):
 	"""Check read() if one dataset file is missing => should raise FileNotFoundError."""
 	config = APGenerationConfig(
-		prompts_config=PromptDatasetConfig.from_source_path(source_path=sample_prompts_file),
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=sample_prompts_file
+		),
 		model_names=["gpt2"],
 		prompt_token_len_tolerance=2,
 	)
@@ -150,11 +157,15 @@ def test_integration_missing_dataset_files(sample_prompts_file: Path):
 def test_integration_dummy_training_loop(sample_prompts_file: Path):
 	"""A full pipeline, ending with a trivial training loop on the attention patterns."""
 	config = APGenerationConfig(
-		prompts_config=PromptDatasetConfig.from_source_path(source_path=sample_prompts_file),
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=sample_prompts_file
+		),
 		model_names=["gpt2"],
 		prompt_token_len_tolerance=2,
 	)
-	dl: CollectedAttentionPatternDataloader = CollectedAttentionPatternDataloader.generate(config)
+	dl: CollectedAttentionPatternDataloader = (
+		CollectedAttentionPatternDataloader.generate(config)
+	)
 	# We'll do a trivial "training" step: each step we compute a "loss" from the batch.
 	# This ensures iteration and shapes are correct. We won't do actual backprop on a real model.
 

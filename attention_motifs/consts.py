@@ -57,6 +57,7 @@ def batches(
 
 T_Tensor = TypeVar("T_Tensor", torch.Tensor, np.ndarray)
 
+
 def tensor_batches(
 	arr: Float[T_Tensor, " n_samples *data_dims"],
 	batch_size: int,
@@ -65,7 +66,9 @@ def tensor_batches(
 	"""Yield successive batches from a tensor."""
 	idx: int = 0
 	while idx < len(arr):
-		arr_slice: Float[T_Tensor, " batch_size *data_dims"] = arr[idx : idx + batch_size]
+		arr_slice: Float[T_Tensor, " batch_size *data_dims"] = arr[
+			idx : idx + batch_size
+		]
 		if not allow_last_incomplete and len(arr_slice) < batch_size:
 			assert idx + batch_size >= len(arr), "this state should be inaccesible"
 			break

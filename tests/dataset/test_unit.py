@@ -60,7 +60,9 @@ def test_dataloader_properties():
 		metadata=ds_meta,
 	)
 	dummy_config = APGenerationConfig(
-		prompts_config=PromptDatasetConfig.from_source_path(source_path=Path("fake.jsonl")),
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=Path("fake.jsonl")
+		),
 		model_names=["modelA", "modelB"],
 		prompt_token_len_tolerance=2,
 	)
@@ -148,7 +150,9 @@ def test_attention_pattern_dataset_zero_length():
 def test_dataloader_negative_batch_size():
 	"""Dataloader should raise ValueError if batch_size < 1."""
 	dummy_config = APGenerationConfig(
-		prompts_config=PromptDatasetConfig.from_source_path(source_path=Path("fake.jsonl")),
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=Path("fake.jsonl")
+		),
 		model_names=[],
 	)
 	ds = AttentionPatternDataset(
@@ -156,7 +160,9 @@ def test_dataloader_negative_batch_size():
 	)
 	with pytest.raises(ValueError):
 		_ = CollectedAttentionPatternDataloader(
-			config=dummy_config, prompts=[], datasets=[ds],
+			config=dummy_config,
+			prompts=[],
+			datasets=[ds],
 		)
 
 
@@ -179,12 +185,16 @@ def test_dataloader_iteration():
 	)
 
 	dummy_config = APGenerationConfig(
-		prompts_config=PromptDatasetConfig.from_source_path(source_path=Path("fake.jsonl")),
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=Path("fake.jsonl")
+		),
 		model_names=["modelA"],
 	)
 
 	loader = CollectedAttentionPatternDataloader(
-		config=dummy_config, prompts=[], datasets=[ds1, ds2],
+		config=dummy_config,
+		prompts=[],
+		datasets=[ds1, ds2],
 	)
 
 	# total of 5 items => batch_size=2 => iteration yields 3 times
@@ -205,11 +215,15 @@ def test_dataloader_iteration():
 def test_dataloader_empty_datasets():
 	"""If we pass an empty dataset list, iteration yields nothing."""
 	dummy_config = APGenerationConfig(
-		prompts_config=PromptDatasetConfig.from_source_path(source_path=Path("fake.jsonl")),
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=Path("fake.jsonl")
+		),
 		model_names=[],
 	)
 	loader = CollectedAttentionPatternDataloader(
-		config=dummy_config, prompts=[], datasets=[],
+		config=dummy_config,
+		prompts=[],
+		datasets=[],
 	)
 	all_batches = list(loader.batches(batch_size=2))
 	assert all_batches == []
