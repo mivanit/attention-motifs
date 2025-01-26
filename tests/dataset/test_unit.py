@@ -156,7 +156,7 @@ def test_dataloader_negative_batch_size():
 	)
 	with pytest.raises(ValueError):
 		_ = CollectedAttentionPatternDataloader(
-			config=dummy_config, prompts=[], datasets=[ds], batch_size=0
+			config=dummy_config, prompts=[], datasets=[ds],
 		)
 
 
@@ -184,11 +184,11 @@ def test_dataloader_iteration():
 	)
 
 	loader = CollectedAttentionPatternDataloader(
-		config=dummy_config, prompts=[], datasets=[ds1, ds2], batch_size=2
+		config=dummy_config, prompts=[], datasets=[ds1, ds2],
 	)
 
 	# total of 5 items => batch_size=2 => iteration yields 3 times
-	all_yields = list(loader)
+	all_yields = list(loader.batches(batch_size=2))
 	assert len(all_yields) == 3
 
 	# first two yields => batch_size=2
@@ -209,7 +209,7 @@ def test_dataloader_empty_datasets():
 		model_names=[],
 	)
 	loader = CollectedAttentionPatternDataloader(
-		config=dummy_config, prompts=[], datasets=[], batch_size=2
+		config=dummy_config, prompts=[], datasets=[],
 	)
-	all_batches = list(loader)
+	all_batches = list(loader.batches(batch_size=2))
 	assert all_batches == []

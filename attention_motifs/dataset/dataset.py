@@ -32,7 +32,7 @@ from attention_motifs.dataset.util import (
 	AttentionPatternMetadata,
 )
 
-from attention_motifs.dataset.prompts import PromptDatasetConfig
+from attention_motifs.dataset.prompts import PromptDataset, PromptDatasetConfig
 
 
 @serializable_dataclass
@@ -351,7 +351,7 @@ class CollectedAttentionPatternDataloader:
 		_z: ZANJ = z or ZANJ()
 
 		# load the text data
-		prompts_raw: list[dict] = config.load_text_data()
+		prompts: PromptDataset = PromptDataset.from_config(config.prompts_config)
 
 		# collect patterns by sequence length
 		data_raw_binned: defaultdict[
@@ -366,19 +366,19 @@ class CollectedAttentionPatternDataloader:
 			print(f"Processing model: {model_name}")
 			print(DIVIDER_S2)
 			# load model
-			with SpinnerContext(f"Loading model {model_name}"):
+			with SpinnerContext(message=f"Loading model {model_name}"):
 				model: HookedTransformer = HookedTransformer.from_pretrained(model_name)
 			print(f"\tloaded {model_name} with {model.cfg.n_params} parameters")
 
 			# bin prompts by length
-			with SpinnerContext("Tokenizing and binning prompts"):
+			with SpinnerContext(message="Tokenizing and binning prompts"):
 				bins_by_len: dict[
 					int, tuple[list[PromptHashStr], TokenSequenceBatch]
 				] = tokenize_and_bin_prompts(
-					model,
-					prompts_raw,
-					config.token_len_min,
-					config.prompt_token_len_tolerance,
+					model=model,
+					prompts=prompts,
+					token_len_min=config.token_len_min,
+					tolerance=config.prompt_token_len_tolerance,
 				)
 
 			total_tokens: int = sum(
@@ -397,12 +397,21 @@ class CollectedAttentionPatternDataloader:
 					patterns: AttentionPatternBatch
 					metadata: list[AttentionPatternMetadata]
 					patterns, metadata = process_length_bin(
-						model, bin_contents, model_name, config.token_len_min
+						# model, bin_contents, model_name, config.token_len_min
+						model=model,
+						n_ctx=n_ctx,
+						prompt_hashes=bin_contents[0],
+						tokens_tensor=bin_contents[1],
+						raw_scores=False,
+						model_name=model_name,
+						max_batch_size=None,
 					)
 
 					# add to binned data
 					data_raw_binned[n_ctx][0].extend(metadata)
 					data_raw_binned[n_ctx][1].append(patterns)
+
+					pbar.update(len(metadata))
 
 		# create datasets from binned data
 		datasets: list[AttentionPatternDataset] = [

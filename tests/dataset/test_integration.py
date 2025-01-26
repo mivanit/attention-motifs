@@ -44,7 +44,7 @@ def test_integration_generate_save_read(model_name: str, sample_prompts_file: Pa
 		prompt_token_len_tolerance=2,
 	)
 
-	dl = CollectedAttentionPatternDataloader.generate(config=config, batch_size=2)
+	dl = CollectedAttentionPatternDataloader.generate(config=config)
 
 	# we expect at least one dataset
 	assert dl.n_datasets >= 1
@@ -62,7 +62,7 @@ def test_integration_generate_save_read(model_name: str, sample_prompts_file: Pa
 	tmp_path = Path(TEMP_DIR / "test_integration_generate_save_read")
 	dl.save(tmp_path)
 
-	dl2 = CollectedAttentionPatternDataloader.read(tmp_path, batch_size=2)
+	dl2 = CollectedAttentionPatternDataloader.read(tmp_path)
 	assert dl2.n_datasets == dl.n_datasets
 	# the set of prompts should match
 	assert len(dl2.prompts) == len(dl.prompts)
@@ -154,12 +154,12 @@ def test_integration_dummy_training_loop(sample_prompts_file: Path):
 		model_names=["gpt2"],
 		prompt_token_len_tolerance=2,
 	)
-	dl = CollectedAttentionPatternDataloader.generate(config, batch_size=2)
+	dl: CollectedAttentionPatternDataloader = CollectedAttentionPatternDataloader.generate(config)
 	# We'll do a trivial "training" step: each step we compute a "loss" from the batch.
 	# This ensures iteration and shapes are correct. We won't do actual backprop on a real model.
 
 	# Just do 1 "epoch"
-	for patterns_batch, meta_batch in dl:
+	for patterns_batch, meta_batch in dl.batches(batch_size=2):
 		# patterns_batch is shape [B, n_ctx, n_ctx]
 		# trivial "loss": the mean of the patterns + 1, squared
 		if patterns_batch.numel() > 0:

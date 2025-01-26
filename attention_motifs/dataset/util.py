@@ -14,6 +14,7 @@ from jaxtyping import Int
 from muutils.json_serialize import (
 	SerializableDataclass,
 	serializable_dataclass,
+	serializable_field,
 )
 
 from attention_motifs.consts import (
@@ -62,7 +63,7 @@ class AttentionPatternDataset(SerializableDataclass):
 	n_patterns: int
 	patterns: AttentionPatternBatch
 	metadata: list[AttentionPatternMetadata]
-	raw_scores: bool
+	raw_scores: bool = serializable_field(default=False)
 
 	def __len__(self) -> int:
 		return self.n_patterns
@@ -115,7 +116,7 @@ def tokenize_and_bin_prompts(
 			list[PromptHashStr],  # prompt hash, can look it up in the dataset
 			list[TokenSequence],  # tokenized sequence
 		],
-	] = defaultdict(default_factory=lambda: ([], []))
+	] = defaultdict(lambda: ([], []))
 
 	# iterare over all tokenized prompts
 	for prompt_hash, tokens in tokenized_prompts:
