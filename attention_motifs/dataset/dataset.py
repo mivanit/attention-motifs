@@ -16,6 +16,7 @@ from muutils.json_serialize import (
 	serializable_field,
 )
 from muutils.spinner import SpinnerContext
+from muutils.dictmagic import condense_tensor_dict
 from zanj import ZANJ
 
 from attention_motifs.consts import (
@@ -118,21 +119,33 @@ class CollectedAttentionPatternDataloader:
 	def __init__(
 		self,
 		config: APGenerationConfig,
-		prompts: list[dict],
+		prompts: PromptDataset,
 		datasets: list[AttentionPatternDataset],
 	):
 		"""
 		# Parameters:
 		 - `config : APGenerationConfig`
 		    The config used to generate or load this dataloader
-		 - `prompts : list[dict]`
-		    A list of prompt data (each has "text" and "hash", etc.)
+		 - `prompts : PromptDataset`
+		    The dataset of prompts
 		 - `datasets : list[AttentionPatternDataset]`
 		    The list of attention-pattern datasets
 		"""
 		self.config: APGenerationConfig = config
-		self.prompts: list[dict] = prompts
+		self.prompts: PromptDataset = prompts
 		self.datasets: list[AttentionPatternDataset] = datasets
+
+
+	def summary(self):
+		return dict(
+			model_names=self.model_names,
+			dataset_metadata=self.dataset_metadata,
+			n_datasets=self.n_datasets,
+			n_total_samples=self.n_total_samples,
+			n_ctx_counts=self.n_ctx_counts,
+			config=self.config.serialize(),
+			prompts=self.prompts.summary(),
+		)
 
 	@property
 	def model_names(self) -> list[str]:
@@ -183,10 +196,10 @@ class CollectedAttentionPatternDataloader:
 
 		# chunk them by batch_size
 		i: int
-		for i in range(0, len(all_items), self.batch_size):
+		for i in range(0, len(all_items), batch_size):
 			chunk: list[
 				tuple[Float[torch.Tensor, "n_ctx n_ctx"], AttentionPatternMetadata]
-			] = all_items[i : i + self.batch_size]
+			] = all_items[i : i + batch_size]
 
 			pat_list: list[Float[torch.Tensor, "n_ctx n_ctx"]] = [x[0] for x in chunk]
 			meta_list: list[AttentionPatternMetadata] = [x[1] for x in chunk]
@@ -208,6 +221,7 @@ class CollectedAttentionPatternDataloader:
 		"""
 		z = z or ZANJ()
 
+		# save metadata
 		obj_metadata: dict[str, Any] = dict(
 			config=self.config.serialize(),
 			dataset_metadata=self.dataset_metadata,
@@ -216,12 +230,9 @@ class CollectedAttentionPatternDataloader:
 		z.save(obj_metadata, path / "metadata.zanj")
 
 		# save prompts
-		with z.open(path / "prompts.jsonl", "w") as f_out:  # type: TextIO
-			prompt: dict
-			for prompt in self.prompts:
-				json.dump(prompt, f_out)
-				f_out.write("\n")
+		z.save(self.prompts, path / "prompts.zanj")
 
+		# save datasets
 		i: int
 		dataset: AttentionPatternDataset
 		for i, dataset in enumerate(self.datasets):
@@ -254,14 +265,7 @@ class CollectedAttentionPatternDataloader:
 		config: APGenerationConfig = APGenerationConfig.load(obj_metadata["config"])
 
 		# read prompts
-		prompts: list[dict] = []
-		with open(path / "prompts.jsonl", "r") as f_in:
-			line: str
-			for line in f_in:
-				line_str: str = line.strip()
-				if line_str:
-					parsed_line: dict = json.loads(line_str)
-					prompts.append(parsed_line)
+		prompts: PromptDataset = z.read(path / "prompts.zanj")
 
 		# read datasets of patterns
 		dataset_meta: list[dict[str, Any]] = obj_metadata["dataset_metadata"]
@@ -371,16 +375,20 @@ class CollectedAttentionPatternDataloader:
 			print(f"\tloaded {model_name} with {model.cfg.n_params} parameters")
 
 			# bin prompts by length
-			with SpinnerContext(message="Tokenizing and binning prompts"):
-				bins_by_len: dict[
-					int, tuple[list[PromptHashStr], TokenSequenceBatch]
-				] = tokenize_and_bin_prompts(
-					model=model,
-					prompts=prompts,
-					token_len_min=config.token_len_min,
-					tolerance=config.prompt_token_len_tolerance,
-				)
-
+			# with SpinnerContext(message="Tokenizing and binning prompts"):
+			bins_by_len: dict[
+				int, tuple[list[PromptHashStr], TokenSequenceBatch]
+			] = tokenize_and_bin_prompts(
+				model=model,
+				prompts=prompts,
+				token_len_min=config.token_len_min,
+				tolerance=config.prompt_token_len_tolerance,
+			)
+			print(f"\t{len(bins_by_len)} bins created: {bins_by_len = }")
+			bins_tensors: dict[str, TokenSequenceBatch] = {
+				str(n_ctx): bin_contents[1] for n_ctx, bin_contents in bins_by_len.items()
+			}
+			print(condense_tensor_dict(bins_tensors, fmt="yaml"))
 			total_tokens: int = sum(
 				len(bin_contents[1]) for bin_contents in bins_by_len.values()
 			)

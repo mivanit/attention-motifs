@@ -78,10 +78,12 @@ def tensor_batches(
 
 def tensor_batches_indexed(
 	arr: Float[T_Tensor, " n_samples *data_dims"],
-	batch_size: int,
+	batch_size: int|None = None,
 	allow_last_incomplete: bool = True,
 ) -> Iterator[tuple[int, int, Float[T_Tensor, " batch_size *data_dims"]]]:
 	"""Yield successive batches from a tensor."""
+	if batch_size is None:
+		batch_size = len(arr)
 	idx_start: int = 0
 	while idx_start < len(arr):
 		# compute end index

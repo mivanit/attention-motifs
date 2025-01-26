@@ -106,8 +106,10 @@ def tokenize_and_bin_prompts(
 	# tokenize all prompts
 	# keep only hash_str, we can recover the text from the dataset
 	tokenized_prompts: list[tuple[str, TokenSequence]] = [
-		(p.hash_str, model.to_tokens(p.text)) for p in prompts
+		(p.hash_str, model.to_tokens(p.text)[0]) for p in prompts
 	]
+
+	print(f"Tokenized {len(tokenized_prompts)} prompts")
 
 	# group by rounded length
 	bins_by_len: defaultdict[
@@ -128,11 +130,21 @@ def tokenize_and_bin_prompts(
 
 			bins_by_len[desired_len][0].append(prompt_hash)
 			bins_by_len[desired_len][1].append(tokens_truncated)
+			# print(bins_by_len)
+		else:
+			pass
+			# print(f"Skipping prompt with too few tokens: {len(tokens) = }, {token_len_min = }, {tokens = }")
+
+	print(f"Grouped into {len(bins_by_len)} bins")
+
+	print({k: (len(v1), len(v2)) for k, (v1, v2) in bins_by_len.items()})
 
 	output: dict[int, tuple[list[PromptHashStr], TokenSequenceBatch]] = {
-		n_ctx: (prompt_hash, torch.tensor(token_seqs_list))
+		n_ctx: (prompt_hash, torch.stack(token_seqs_list, dim=0))
 		for n_ctx, (prompt_hash, token_seqs_list) in bins_by_len.items()
 	}
+
+	print({k : (len(v1), v2.shape) for k, (v1, v2) in output.items()})
 
 	return output
 

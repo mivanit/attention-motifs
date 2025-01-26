@@ -94,6 +94,7 @@ class PromptDatasetConfig(SerializableDataclass):
 
 	@classmethod
 	def from_source_path(cls, source_path: Path) -> "PromptDatasetConfig":
+		source_path = Path(source_path)
 		return cls(
 			name=source_path.stem,
 			source_path=source_path,
@@ -150,6 +151,17 @@ class PromptDataset(SerializableDataclass):
 			p.hash_str: i for i, p in enumerate(prompts)
 		}
 		return cls(config=config, prompts=prompts, hash_map=hash_map)
+
+	def summary(self) -> JSONitem:
+		example_hash_str: PromptHashStr = self.prompts[0].hash_str
+		return dict(
+			config=self.config.serialize(),
+			prompt_count=len(self),
+			example={
+				"prompts[0]": self.prompts[0].serialize(),
+				f"hash_map[{example_hash_str}]": self.hash_map[example_hash_str],
+			}
+		)
 
 	def __len__(self) -> int:
 		return len(self.prompts)
