@@ -1,17 +1,8 @@
-from collections import defaultdict
-from typing import Callable
-
-import torch
-from jaxtyping import Float
-from transformer_lens import HookedTransformer
-
 # custom utils
 
 import json
 from pathlib import Path
 
-
-from jaxtyping import Int
 
 # custom utils
 from muutils.json_serialize import (
@@ -22,14 +13,9 @@ from muutils.json_serialize import (
 )
 
 from attention_motifs.consts import (
-	AttentionPattern,
-	AttentionPatternBatch,
-	TokenSequence,
-	TokenSequenceBatch,
 	PromptHashStr,
 	b64encode,
 	compute_text_hashes,
-	tensor_batches_indexed,
 )
 
 PROMPT_SPECIAL_KEYS: set[str] = {"text", "hash_int", "hash_str"}

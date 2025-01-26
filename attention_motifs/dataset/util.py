@@ -7,9 +7,6 @@ from transformer_lens import HookedTransformer
 
 # custom utils
 
-import json
-from pathlib import Path
-
 
 from jaxtyping import Int
 
@@ -17,8 +14,6 @@ from jaxtyping import Int
 from muutils.json_serialize import (
 	SerializableDataclass,
 	serializable_dataclass,
-	serializable_field,
-	JSONitem,
 )
 
 from attention_motifs.consts import (
@@ -27,10 +22,11 @@ from attention_motifs.consts import (
 	TokenSequence,
 	TokenSequenceBatch,
 	PromptHashStr,
-	b64encode,
 	compute_text_hashes,
 	tensor_batches_indexed,
 )
+
+from attention_motifs.dataset.prompt import PromptDataset
 
 
 @serializable_dataclass
@@ -59,7 +55,6 @@ class AttentionPatternMetadata(SerializableDataclass):
 	def __hash__(self) -> int:
 		return self.hash_int()
 
-	
 
 @serializable_dataclass
 class AttentionPatternDataset(SerializableDataclass):
@@ -147,50 +142,54 @@ def process_length_bin(
 	prompt_hashes: list[PromptHashStr],
 	tokens_tensor: TokenSequenceBatch,
 	raw_scores: bool,
-	model_name: str|None = None,
+	model_name: str | None = None,
 	max_batch_size: int | None = None,
 ) -> tuple[AttentionPatternBatch, list[AttentionPatternMetadata]]:
 	"""Process a single bin of same-length sequences.
-	
+
 	# Parameters:
-	 - `model : HookedTransformer`   
+	 - `model : HookedTransformer`
 	   Model to extract patterns from
-	 - `n_ctx : int`   
+	 - `n_ctx : int`
 	   expected context length
-	 - `prompt_hashes : list[PromptHashStr]`   
+	 - `prompt_hashes : list[PromptHashStr]`
 	   List of prompt hashes (in order)
-	 - `tokens : TokenSequenceBatch`   
+	 - `tokens : TokenSequenceBatch`
 	   tensor of tokenized sequences
-	 - `model_name : str | None`   
+	 - `model_name : str | None`
 	   name of model for metadata (if `None`, will be set to `model.cfg.model_name`)
-	   (defaults to `None`)	   
-	 - `max_batch_size : int | None`   
+	   (defaults to `None`)
+	 - `max_batch_size : int | None`
 	   max batch size for feeding into the model
 	   (defaults to `None`)
 	 - `raw_scores : bool`
 	   returns raw scores if `True` or processed lower-triangular row-stochastic patterns if `False`
 	   (defaults to `False`)
-	
+
 	# Returns:
-	
-	`tuple[AttentionPatternBatch, list[AttentionPatternMetadata]]` 
-	
+
+	`tuple[AttentionPatternBatch, list[AttentionPatternMetadata]]`
+
 	- `AttentionPatternBatch`
 		Batch of attention patterns
 	- `list[AttentionPatternMetadata]`
 		List of metadata for each pattern (in order)
-	"""	
+	"""
 	# set model name
 	if model_name is None:
 		model_name = model.cfg.model_name
 
 	# set up filter and key format
-	names_filter: Callable[[str], bool] = ( # noqa: E731
+	names_filter: Callable[[str], bool] = (  # noqa: E731
 		lambda s: s.endswith("scores")
-		if raw_scores else
-		lambda s: s.endswith("pattern")
+		if raw_scores
+		else lambda s: s.endswith("pattern")
 	)
-	key_format: str = "blocks.{layer}.attn.hook_attn_scores" if raw_scores else "blocks.{layer}.attn.hook_pattern"
+	key_format: str = (
+		"blocks.{layer}.attn.hook_attn_scores"
+		if raw_scores
+		else "blocks.{layer}.attn.hook_pattern"
+	)
 
 	# allocate output
 	output_patterns: list[AttentionPatternBatch] = list()

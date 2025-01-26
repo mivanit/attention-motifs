@@ -19,10 +19,8 @@ from muutils.spinner import SpinnerContext
 from zanj import ZANJ
 
 from attention_motifs.consts import (
-	AttentionPattern,
 	AttentionPatternBatch,
 	PromptHashStr,
-	TokenSequence,
 	TokenSequenceBatch,
 	DIVIDER_S1,
 	DIVIDER_S2,
@@ -34,7 +32,6 @@ from attention_motifs.dataset.util import (
 	tokenize_and_bin_prompts,
 	AttentionPatternMetadata,
 )
-
 
 
 @serializable_dataclass
@@ -286,7 +283,7 @@ class CollectedAttentionPatternDataloader:
 		cls,
 		n_ctx: int,
 		metadata: list[AttentionPatternMetadata],
-		patterns: list[AttentionPatternBatch]|AttentionPatternBatch,
+		patterns: list[AttentionPatternBatch] | AttentionPatternBatch,
 		scores: bool = True,
 	) -> AttentionPatternDataset:
 		"""Create a dataset from patterns of the same sequence length.
@@ -366,19 +363,28 @@ class CollectedAttentionPatternDataloader:
 
 			# bin prompts by length
 			with SpinnerContext("Tokenizing and binning prompts"):
-				bins_by_len: dict[int, tuple[list[PromptHashStr], TokenSequenceBatch]] = (
-					tokenize_and_bin_prompts(
-						model,
-						prompts_raw,
-						config.token_len_min,
-						config.prompt_token_len_tolerance,
-					)
+				bins_by_len: dict[
+					int, tuple[list[PromptHashStr], TokenSequenceBatch]
+				] = tokenize_and_bin_prompts(
+					model,
+					prompts_raw,
+					config.token_len_min,
+					config.prompt_token_len_tolerance,
 				)
 
-			total_tokens: int = sum(len(bin_contents[1]) for bin_contents in bins_by_len.values())
-			with tqdm.tqdm(total=total_tokens, desc="Tokens to attention patterns", unit="tok", unit_scale=True) as pbar:
+			total_tokens: int = sum(
+				len(bin_contents[1]) for bin_contents in bins_by_len.values()
+			)
+			with tqdm.tqdm(
+				total=total_tokens,
+				desc="Tokens to attention patterns",
+				unit="tok",
+				unit_scale=True,
+			) as pbar:
 				for n_ctx, bin_contents in bins_by_len.items():
-					pbar.set_description(f"Tokens to attention patterns (bin of sequences length {n_ctx})")
+					pbar.set_description(
+						f"Tokens to attention patterns (bin of sequences length {n_ctx})"
+					)
 					patterns: AttentionPatternBatch
 					metadata: list[AttentionPatternMetadata]
 					patterns, metadata = process_length_bin(

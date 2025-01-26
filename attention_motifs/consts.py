@@ -22,6 +22,7 @@ TokenSequenceBatch = Int[torch.Tensor, "batch n_ctx"]
 
 PromptHashStr = str
 
+
 def b64encode(data: bytes) -> str:
 	return base64.b64encode(data, altchars=b"_-").decode("utf-8")
 
