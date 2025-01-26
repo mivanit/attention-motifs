@@ -6,6 +6,8 @@ notebooks/outputs/**
 # tests temp dir
 tests/_temp/**
 notebooks/test.ipynb
+data/activations/**
+notebooks/*.zanj
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Byte-compiled / optimized / DLL files
