@@ -9,11 +9,18 @@ from itertools import islice
 
 # custom utils
 
+DIVIDER_S1: str = "=" * 70
+"divider string for separating sections"
+
+DIVIDER_S2: str = "-" * 50
+"divider string for separating subsections"
+
 AttentionPattern = Float[torch.Tensor, "n_ctx n_ctx"]
 AttentionPatternBatch = Float[torch.Tensor, "batch n_ctx n_ctx"]
 TokenSequence = Int[torch.Tensor, "n_ctx"]
 TokenSequenceBatch = Int[torch.Tensor, "batch n_ctx"]
 
+PromptHashStr = str
 
 def b64encode(data: bytes) -> str:
 	return base64.b64encode(data, altchars=b"_-").decode("utf-8")

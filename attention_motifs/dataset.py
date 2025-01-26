@@ -6,6 +6,7 @@ from typing import Any, Iterator, Optional
 
 import torch
 from jaxtyping import Float
+import tqdm
 from transformer_lens import HookedTransformer
 
 # custom utils
@@ -14,17 +15,26 @@ from muutils.json_serialize import (
 	serializable_dataclass,
 	serializable_field,
 )
+from muutils.spinner import SpinnerContext
 from zanj import ZANJ
 
 from attention_motifs.consts import (
+	AttentionPattern,
 	AttentionPatternBatch,
+	PromptHashStr,
+	TokenSequence,
+	TokenSequenceBatch,
+	DIVIDER_S1,
+	DIVIDER_S2,
 )
 from attention_motifs.dataset_util import (
 	PromptDatasetConfig,
 	AttentionPatternDataset,
+	process_length_bin,
 	tokenize_and_bin_prompts,
 	AttentionPatternMetadata,
 )
+
 
 
 @serializable_dataclass
@@ -275,28 +285,28 @@ class CollectedAttentionPatternDataloader:
 	def _create_dataset(
 		cls,
 		n_ctx: int,
-		patterns_and_meta: list[
-			tuple[Float[torch.Tensor, "n_ctx n_ctx"], AttentionPatternMetadata]
-		],
+		metadata: list[AttentionPatternMetadata],
+		patterns: list[AttentionPatternBatch]|AttentionPatternBatch,
+		scores: bool = True,
 	) -> AttentionPatternDataset:
 		"""Create a dataset from patterns of the same sequence length.
 
 		# Parameters:
 		- `n_ctx : int`
 			Sequence length for this dataset
-		- `patterns_and_meta : list[tuple[tensor, metadata]]`
-			List of (pattern, metadata) pairs to include
+		- `metadata : list[AttentionPatternMetadata]`
+			Metadata for each pattern
+		- `patterns : list[AttentionPatternBatch]|AttentionPatternBatch`
+			Patterns for this dataset (maybe batched, will concatenate)
+		- `scores : bool`
+			Whether the contents are raw scores or LT row-stoch patterns
+			(default: `True`)
 
 		# Returns:
 		- `AttentionPatternDataset`
 			Dataset containing all patterns and metadata
 		"""
 		# separate patterns and metadata
-		patterns_list: list[Float[torch.Tensor, "n_ctx n_ctx"]] = [
-			p for p, _ in patterns_and_meta
-		]
-		meta_list: list[AttentionPatternMetadata] = [m for _, m in patterns_and_meta]
-
 		# stack patterns
 		patterns_tensor: AttentionPatternBatch = torch.stack(patterns_list, dim=0)
 
@@ -340,40 +350,44 @@ class CollectedAttentionPatternDataloader:
 		# collect patterns by sequence length
 		data_raw_binned: defaultdict[
 			int,
-			list[tuple[Float[torch.Tensor, "n_ctx n_ctx"], AttentionPatternMetadata]],
-		] = defaultdict(list)
+			tuple[list[AttentionPatternMetadata], list[AttentionPatternBatch]],
+		] = defaultdict(lambda: ([], []))
 
 		# process each model
 		model_name: str
 		for model_name in config.model_names:
+			print(DIVIDER_S1)
+			print(f"Processing model: {model_name}")
+			print(DIVIDER_S2)
 			# load model
-			model: HookedTransformer = HookedTransformer.from_pretrained(model_name)
+			with SpinnerContext(f"Loading model {model_name}"):
+				model: HookedTransformer = HookedTransformer.from_pretrained(model_name)
+			print(f"\tloaded {model_name} with {model.cfg.n_params} parameters")
 
 			# bin prompts by length
-			bins_by_len: dict[int, list[tuple[dict, list[int]]]] = (
-				tokenize_and_bin_prompts(
-					model,
-					prompts_raw,
-					config.token_len_min,
-					config.prompt_token_len_tolerance,
-				)
-			)
-
-			# process each bin
-			bin_center: int
-			bin_contents: list[tuple[dict, list[int]]]
-			for bin_center, bin_contents in bins_by_len.items():
-				patterns_and_meta: list[
-					tuple[Float[torch.Tensor, "n_ctx n_ctx"], AttentionPatternMetadata]
-				] = cls._process_length_bin(
-					model, bin_contents, model_name, config.token_len_min
+			with SpinnerContext("Tokenizing and binning prompts"):
+				bins_by_len: dict[int, tuple[list[PromptHashStr], TokenSequenceBatch]] = (
+					tokenize_and_bin_prompts(
+						model,
+						prompts_raw,
+						config.token_len_min,
+						config.prompt_token_len_tolerance,
+					)
 				)
 
-				# get actual sequence length for this bin
-				n_ctx: int = patterns_and_meta[0][0].shape[0]
+			total_tokens: int = sum(len(bin_contents[1]) for bin_contents in bins_by_len.values())
+			with tqdm.tqdm(total=total_tokens, desc="Tokens to attention patterns", unit="tok", unit_scale=True) as pbar:
+				for n_ctx, bin_contents in bins_by_len.items():
+					pbar.set_description(f"Tokens to attention patterns (bin of sequences length {n_ctx})")
+					patterns: AttentionPatternBatch
+					metadata: list[AttentionPatternMetadata]
+					patterns, metadata = process_length_bin(
+						model, bin_contents, model_name, config.token_len_min
+					)
 
-				# add to binned data
-				data_raw_binned[n_ctx].extend(patterns_and_meta)
+					# add to binned data
+					data_raw_binned[n_ctx][0].extend(metadata)
+					data_raw_binned[n_ctx][1].append(patterns)
 
 		# create datasets from binned data
 		datasets: list[AttentionPatternDataset] = [
