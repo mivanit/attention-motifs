@@ -26,7 +26,7 @@ from attention_motifs.consts import (
 	tensor_batches_indexed,
 )
 
-from attention_motifs.dataset.prompt import PromptDataset
+from attention_motifs.dataset.prompts import PromptDataset
 
 
 @serializable_dataclass

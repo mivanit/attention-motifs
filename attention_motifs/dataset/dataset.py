@@ -284,7 +284,7 @@ class CollectedAttentionPatternDataloader:
 		n_ctx: int,
 		metadata: list[AttentionPatternMetadata],
 		patterns: list[AttentionPatternBatch] | AttentionPatternBatch,
-		scores: bool = True,
+		raw_scores: bool,
 	) -> AttentionPatternDataset:
 		"""Create a dataset from patterns of the same sequence length.
 
@@ -295,24 +295,31 @@ class CollectedAttentionPatternDataloader:
 			Metadata for each pattern
 		- `patterns : list[AttentionPatternBatch]|AttentionPatternBatch`
 			Patterns for this dataset (maybe batched, will concatenate)
-		- `scores : bool`
+		- `raw_scores : bool`
 			Whether the contents are raw scores or LT row-stoch patterns
-			(default: `True`)
 
 		# Returns:
 		- `AttentionPatternDataset`
 			Dataset containing all patterns and metadata
 		"""
-		# separate patterns and metadata
 		# stack patterns
-		patterns_tensor: AttentionPatternBatch = torch.stack(patterns_list, dim=0)
+		patterns_tensor: AttentionPatternBatch
+		if isinstance(patterns, list):
+			patterns_tensor = torch.cat(patterns, dim=0)
+		else:
+			patterns_tensor = patterns
+
+		# shapes
+		n_patterns: int = len(metadata)
+		assert tuple(patterns_tensor.shape) == (n_patterns, n_ctx, n_ctx)
 
 		# create and return dataset
 		return AttentionPatternDataset(
 			n_ctx=n_ctx,
-			n_patterns=len(patterns_list),
+			n_patterns=n_patterns,
 			patterns=patterns_tensor,
-			metadata=meta_list,
+			metadata=metadata,
+			raw_scores=raw_scores,
 		)
 
 	@classmethod
