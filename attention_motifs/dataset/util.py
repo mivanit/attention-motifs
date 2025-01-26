@@ -2,7 +2,7 @@ from collections import defaultdict
 from typing import Callable
 
 import torch
-from jaxtyping import Float
+from jaxtyping import Float, Int64
 from transformer_lens import HookedTransformer
 
 # custom utils
@@ -29,6 +29,8 @@ from attention_motifs.consts import (
 
 from attention_motifs.dataset.prompts import PromptDataset
 
+AttentionPatternMetadataTuple = tuple[str, int, int, PromptHashStr, int]
+
 
 @serializable_dataclass
 class AttentionPatternMetadata(SerializableDataclass):
@@ -38,13 +40,23 @@ class AttentionPatternMetadata(SerializableDataclass):
 	prompt_hash: PromptHashStr
 	n_ctx: int
 
-	def tuple(self) -> tuple[str, int, int, PromptHashStr, int]:
+	def tuple(self) -> AttentionPatternMetadataTuple:
 		return (
 			self.model_name,
 			self.idx_layer,
 			self.idx_head,
 			self.prompt_hash,
 			self.n_ctx,
+		)
+	
+	@classmethod
+	def from_tuple(cls, tup: AttentionPatternMetadataTuple) -> "AttentionPatternMetadata":
+		return cls(
+			model_name=tup[0],
+			idx_layer=tup[1],
+			idx_head=tup[2],
+			prompt_hash=tup[3],
+			n_ctx=tup[4],
 		)
 
 	def hash_int(self) -> int:
@@ -58,11 +70,19 @@ class AttentionPatternMetadata(SerializableDataclass):
 
 
 @serializable_dataclass
+class AttentionPatternMetadataArray(SerializableDataclass):
+	model_names_map: list[str]
+	data: Int64[]
+
+@serializable_dataclass
 class AttentionPatternDataset(SerializableDataclass):
 	n_ctx: int
 	n_patterns: int
 	patterns: AttentionPatternBatch
-	metadata: list[AttentionPatternMetadata]
+	metadata: list[AttentionPatternMetadata] = serializable_field(
+		serialization_fn=lambda x: [m.tuple() for m in x],
+		deserialize_fn=lambda x: [AttentionPatternMetadata.from_tuple(t) for t in x],
+	)
 	raw_scores: bool = serializable_field(default=False)
 
 	def __len__(self) -> int:
