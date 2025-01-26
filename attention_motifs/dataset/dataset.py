@@ -15,7 +15,7 @@ from muutils.json_serialize import (
 	serializable_dataclass,
 	serializable_field,
 )
-from muutils.spinner import SpinnerContext
+from muutils.spinner import SpinnerContext, NoOpContextManager
 from muutils.dictmagic import condense_tensor_dict
 from zanj import ZANJ
 
@@ -146,6 +146,9 @@ class CollectedAttentionPatternDataloader:
 			config=self.config.serialize(),
 			prompts=self.prompts.summary(),
 		)
+	
+	def __str__(self) -> str:
+		return json.dumps(self.summary(), indent=2)
 
 	@property
 	def model_names(self) -> list[str]:
@@ -210,7 +213,12 @@ class CollectedAttentionPatternDataloader:
 			)
 			yield patterns_batch, meta_list
 
-	def save(self, path: Path, z: Optional[ZANJ] = None) -> None:
+	def save(
+			self,
+			path: Path,
+			z: Optional[ZANJ] = None,
+			verbose: bool = False,
+		) -> None:
 		"""Save the dataset to ZANJ-based files.
 
 		# Parameters:
@@ -219,23 +227,36 @@ class CollectedAttentionPatternDataloader:
 		 - `z : Optional[ZANJ]`
 		    Instance of ZANJ to handle the saving
 		"""
+		# setup
+		path = Path(path)
 		z = z or ZANJ()
 
-		# save metadata
-		obj_metadata: dict[str, Any] = dict(
-			config=self.config.serialize(),
-			dataset_metadata=self.dataset_metadata,
-		)
+		spinner = SpinnerContext if verbose else NoOpContextManager
 
-		z.save(obj_metadata, path / "metadata.zanj")
+
+		# save metadata
+		with spinner(message="Saving metadata"):
+			obj_metadata: dict[str, Any] = dict(
+				config=self.config.serialize(),
+				dataset_metadata=self.dataset_metadata,
+			)
+
+			z.save(obj_metadata, path / "metadata.zanj")
 
 		# save prompts
-		z.save(self.prompts, path / "prompts.zanj")
+		with spinner(message="Saving prompts"):
+			z.save(self.prompts, path / "prompts.zanj")
 
 		# save datasets
 		i: int
 		dataset: AttentionPatternDataset
-		for i, dataset in enumerate(self.datasets):
+		for i, dataset in tqdm.tqdm(
+			enumerate(self.datasets),
+			total=len(self.datasets),
+			desc="Saving datasets",
+			unit="dataset",
+			disable=not verbose,
+		):
 			z.save(dataset, path / f"dataset_{i}.zanj")
 
 	@classmethod
@@ -290,7 +311,7 @@ class CollectedAttentionPatternDataloader:
 		n_ctx: int,
 		metadata: list[AttentionPatternMetadata],
 		patterns: list[AttentionPatternBatch] | AttentionPatternBatch,
-		raw_scores: bool,
+		raw_scores: bool = False,
 	) -> AttentionPatternDataset:
 		"""Create a dataset from patterns of the same sequence length.
 
@@ -384,7 +405,7 @@ class CollectedAttentionPatternDataloader:
 				token_len_min=config.token_len_min,
 				tolerance=config.prompt_token_len_tolerance,
 			)
-			print(f"\t{len(bins_by_len)} bins created: {bins_by_len = }")
+			print(f"\t{len(bins_by_len)} bins created")
 			bins_tensors: dict[str, TokenSequenceBatch] = {
 				str(n_ctx): bin_contents[1] for n_ctx, bin_contents in bins_by_len.items()
 			}
@@ -423,8 +444,8 @@ class CollectedAttentionPatternDataloader:
 
 		# create datasets from binned data
 		datasets: list[AttentionPatternDataset] = [
-			cls._create_dataset(n_ctx, patterns_and_meta)
-			for n_ctx, patterns_and_meta in data_raw_binned.items()
+			cls._create_dataset(n_ctx, metadata, patterns)
+			for n_ctx, (metadata, patterns) in data_raw_binned.items()
 		]
 
 		# create and return the loader

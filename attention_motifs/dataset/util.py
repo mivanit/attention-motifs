@@ -154,7 +154,7 @@ def process_length_bin(
 	n_ctx: int,
 	prompt_hashes: list[PromptHashStr],
 	tokens_tensor: TokenSequenceBatch,
-	raw_scores: bool,
+	raw_scores: bool = False,
 	model_name: str | None = None,
 	max_batch_size: int | None = None,
 ) -> tuple[AttentionPatternBatch, list[AttentionPatternMetadata]]:
@@ -236,10 +236,10 @@ def process_length_bin(
 						model_name=model_name,
 						idx_layer=layer,
 						idx_head=head,
-						prompt_hash=p["hash"],
+						prompt_hash=p,
 						n_ctx=n_ctx,
 					)
-					for p, _ in prompt_hashes[idx_start:idx_end]
+					for p in prompt_hashes[idx_start:idx_end]
 				]
 
 				# append to output
