@@ -4,7 +4,7 @@ import torch
 import pytest
 import json
 
-from attention_motifs.dataset import (
+from attention_motifs.dataset.dataset import (
 	APGenerationConfig,
 	AttentionPatternDataset,
 	AttentionPatternMetadata,

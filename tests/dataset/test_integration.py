@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from attention_motifs.dataset import (
+from attention_motifs.dataset.dataset import (
 	APGenerationConfig,
 	CollectedAttentionPatternDataloader,
 )
@@ -80,6 +80,7 @@ def test_integration_generate_save_read(model_name: str, sample_prompts_file: Pa
 			assert m1.prompt_hash == m2.prompt_hash
 			assert m1.model_name == m2.model_name
 			assert m1.n_ctx == m2.n_ctx
+
 
 
 @pytest.mark.parametrize(
