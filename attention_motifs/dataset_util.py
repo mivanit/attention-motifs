@@ -6,11 +6,6 @@ from transformer_lens import HookedTransformer
 
 # custom utils
 
-from attention_motifs.consts import (
-	AttentionPatternBatch,
-	TokenSequence,
-)
-
 import json
 from pathlib import Path
 
@@ -27,8 +22,13 @@ from muutils.json_serialize import (
 
 from attention_motifs.consts import (
 	AttentionPattern,
+	AttentionPatternBatch,
+	TokenSequence,
+	TokenSequenceBatch,
 	b64encode,
 	compute_text_hashes,
+	tensor_batches,
+	tensor_batches_indexed,
 )
 
 
@@ -295,6 +295,7 @@ def tokenize_and_bin_prompts(
 
 def process_length_bin(
 	model: HookedTransformer,
+	n_ctx: int,
 	bin_contents: list[tuple[str, TokenSequence]],
 	model_name: str,
 	max_batch_size: int | None = None,
@@ -306,6 +307,7 @@ def process_length_bin(
 		Model to extract patterns from
 	- `bin_contents : list[tuple[str, TokenSequence]]`
 		List of (prompt_hash_str, tokens) pairs in this bin
+		note that all token sequences are the same length
 	- `model_name : str`
 		Name of the model (for metadata)
 
@@ -315,47 +317,54 @@ def process_length_bin(
 	- `list[AttentionPatternMetadata]`
 		List of metadata for each pattern (in order)
 	"""
+	# concatenate tokens
+	tokens_list: list[TokenSequence]
+	prompt_hashes: list[str]
+	prompt_hashes, tokens_list = zip(*bin_contents)
+	tokens_tensor: TokenSequenceBatch = torch.tensor(tokens_list, device=model.cfg.device)
+	assert tokens_tensor.shape[0] == len(bin_contents)
+	assert tokens_tensor.shape[1] == n_ctx
+
+	output_patterns: list[AttentionPatternBatch] = list()
+	output_metadata: list[AttentionPatternMetadata] = list()
+
 	# batch process through model
-	tokens_list: list[TokenSequence] = [tokens for _, tokens in bin_contents]
-	tokens_tensor: Float[torch.Tensor, "batch n_ctx"] = torch.tensor(
-		truncated_tokens, device=model.cfg.device
-	)
+	for idx_start, idx_end, tokens_batch in tensor_batches_indexed(tokens_tensor, max_batch_size):
 
-	# get attention patterns
-	_, cache = model.run_with_cache(
-		tokens_tensor,
-		return_type=None,
-		names_filter=lambda n: n.endswith("pattern"),
-	)
+		# get attention patterns
+		_, cache = model.run_with_cache(
+			tokens_tensor,
+			return_type=None,
+			names_filter=lambda n: n.endswith("scores"),
+		)
 
-	# extract patterns for each layer and head
-	patterns_and_meta: list[
-		tuple[Float[torch.Tensor, "n_ctx n_ctx"], AttentionPatternMetadata]
-	] = []
-	layer: int
-	head: int
-	for layer in range(model.cfg.n_layers):
-		for head in range(model.cfg.n_heads):
-			# get patterns for this head
-			patterns: Float[torch.Tensor, "batch n_ctx n_ctx"] = cache[
-				f"blocks.{layer}.attn.hook_pattern"
-			][:, head, :, :]
-
-			# create metadata for each pattern
-			meta_list: list[AttentionPatternMetadata] = [
-				AttentionPatternMetadata(
-					model_name=model_name,
-					idx_layer=layer,
-					idx_head=head,
-					prompt_hash=p["hash"],
-					n_ctx=min_len,
-				)
-				for p, _ in bin_contents
+		# extract patterns for each layer and head
+		
+		layer: int
+		head: int
+		for layer in range(model.cfg.n_layers):
+			layer_patterns: Float[torch.Tensor, "batch head_idx n_ctx n_ctx"] = cache[
+				f"blocks.{layer}.attn.hook_attn_scores"
 			]
+			for head in range(model.cfg.n_heads):
+				# get patterns for this head
+				head_patterns: AttentionPatternBatch = layer_patterns[:, head]
 
-			# add all patterns from this head
-			i: int
-			for i in range(len(patterns)):
-				patterns_and_meta.append((patterns[i], meta_list[i]))
+				# create metadata for each pattern
+				meta_list: list[AttentionPatternMetadata] = [
+					AttentionPatternMetadata(
+						model_name=model_name,
+						idx_layer=layer,
+						idx_head=head,
+						prompt_hash=p["hash"],
+						n_ctx=n_ctx,
+					)
+					for p, _ in bin_contents
+				]
 
-	return patterns_and_meta
+				# append to output
+				output_patterns.append(head_patterns)
+				output_metadata.extend(meta_list)
+
+	output_patterns_tensor: AttentionPatternBatch = torch.cat(output_patterns, dim=0)
+	return output_patterns_tensor, output_metadata
