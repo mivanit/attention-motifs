@@ -5,6 +5,7 @@ docs/demo/**
 notebooks/outputs/**
 # tests temp dir
 tests/_temp/**
+notebooks/test.ipynb
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Byte-compiled / optimized / DLL files
