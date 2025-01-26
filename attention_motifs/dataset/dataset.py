@@ -27,7 +27,7 @@ from attention_motifs.consts import (
 	DIVIDER_S1,
 	DIVIDER_S2,
 )
-from attention_motifs.dataset_util import (
+from attention_motifs.dataset.util import (
 	PromptDatasetConfig,
 	AttentionPatternDataset,
 	process_length_bin,
