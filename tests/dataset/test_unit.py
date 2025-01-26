@@ -10,6 +10,7 @@ from attention_motifs.dataset.dataset import (
 	AttentionPatternMetadata,
 	CollectedAttentionPatternDataloader,
 )
+from attention_motifs.dataset.prompts import PromptDatasetConfig
 
 TEMP_DIR: Path = Path("tests/_temp")
 
@@ -59,10 +60,8 @@ def test_dataloader_properties():
 		metadata=ds_meta,
 	)
 	dummy_config = APGenerationConfig(
-		prompts_path=Path("fake.jsonl"),
+		prompts_config=PromptDatasetConfig.from_source_path(source_path=Path("fake.jsonl")),
 		model_names=["modelA", "modelB"],
-		chars_len_min=5,
-		char_len_max=100,
 		prompt_token_len_tolerance=2,
 	)
 	loader = CollectedAttentionPatternDataloader(
@@ -91,7 +90,8 @@ def test_config_load_empty_file():
 	empty_file = TEMP_DIR / "empty_prompts.jsonl"
 	empty_file.write_text("")  # no lines
 	cfg = APGenerationConfig(
-		prompts_path=empty_file, model_names=[], chars_len_min=None, char_len_max=None
+		prompts_config=PromptDatasetConfig.from_source_path(source_path=empty_file),
+		model_names=[],
 	)
 	data = cfg.load_text_data()
 	assert data == []
@@ -103,10 +103,8 @@ def test_config_load_all_filtered():
 	# single line with short text
 	big_file.write_text(json.dumps({"text": "Short prompt"}) + "\n")
 	cfg = APGenerationConfig(
-		prompts_path=big_file,
+		prompts_config=PromptDatasetConfig.from_source_path(source_path=big_file),
 		model_names=[],
-		chars_len_min=100,  # larger than length
-		char_len_max=None,
 	)
 	data = cfg.load_text_data()
 	assert data == []
@@ -120,7 +118,8 @@ def test_config_splitting_behavior():
 	splitted_file.write_text(json.dumps({"text": text_50}) + "\n")
 
 	cfg = APGenerationConfig(
-		prompts_path=splitted_file, model_names=[], chars_len_min=10, char_len_max=20
+		prompts_config=PromptDatasetConfig.from_source_path(source_path=splitted_file),
+		model_names=[],
 	)
 	data = cfg.load_text_data()
 	# original is length=50
@@ -149,10 +148,8 @@ def test_attention_pattern_dataset_zero_length():
 def test_dataloader_negative_batch_size():
 	"""Dataloader should raise ValueError if batch_size < 1."""
 	dummy_config = APGenerationConfig(
-		prompts_path=Path("fake.jsonl"),
+		prompts_config=PromptDatasetConfig.from_source_path(source_path=Path("fake.jsonl")),
 		model_names=[],
-		chars_len_min=None,
-		char_len_max=None,
 	)
 	ds = AttentionPatternDataset(
 		n_ctx=3, n_patterns=0, patterns=torch.empty((0, 3, 3)), metadata=[]
@@ -182,10 +179,8 @@ def test_dataloader_iteration():
 	)
 
 	dummy_config = APGenerationConfig(
-		prompts_path=Path("fake.jsonl"),
+		prompts_config=PromptDatasetConfig.from_source_path(source_path=Path("fake.jsonl")),
 		model_names=["modelA"],
-		chars_len_min=5,
-		char_len_max=100,
 	)
 
 	loader = CollectedAttentionPatternDataloader(
@@ -210,10 +205,8 @@ def test_dataloader_iteration():
 def test_dataloader_empty_datasets():
 	"""If we pass an empty dataset list, iteration yields nothing."""
 	dummy_config = APGenerationConfig(
-		prompts_path=Path("fake.jsonl"),
+		prompts_config=PromptDatasetConfig.from_source_path(source_path=Path("fake.jsonl")),
 		model_names=[],
-		chars_len_min=None,
-		char_len_max=None,
 	)
 	loader = CollectedAttentionPatternDataloader(
 		config=dummy_config, prompts=[], datasets=[], batch_size=2

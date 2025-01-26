@@ -57,6 +57,7 @@ class APGenerationConfig(SerializableDataclass):
 		>>> len(processed)  # might differ from the raw file lines
 		```
 		"""
+		raise DeprecationWarning("Use `PromptDatasetConfig` instead.")
 		data_raw: list[dict] = []
 		# open the prompts file
 		with open(self.prompts_path, "r") as f_in:  # type: TextIO
