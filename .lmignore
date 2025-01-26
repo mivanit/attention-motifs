@@ -1,0 +1,10 @@
+docs/**
+.github/requirements/**
+.git/**
+!data/pile_5.jsonl
+data/pile_100.jsonl
+data/pile_1k.jsonl
+uv.lock
+# temp
+notebooks/**
+makefile
