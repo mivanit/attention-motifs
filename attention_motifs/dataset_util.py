@@ -361,7 +361,7 @@ def process_length_bin(
 						prompt_hash=p["hash"],
 						n_ctx=n_ctx,
 					)
-					for p, _ in bin_contents
+					for p, _ in prompt_hashes[idx_start:idx_end]
 				]
 
 				# append to output
@@ -369,4 +369,5 @@ def process_length_bin(
 				output_metadata.extend(meta_list)
 
 	output_patterns_tensor: AttentionPatternBatch = torch.cat(output_patterns, dim=0)
+	assert output_patterns_tensor.shape[0] == len(output_metadata)
 	return output_patterns_tensor, output_metadata
