@@ -211,6 +211,7 @@ class CollectedAttentionPatternDataloader:
 			obj_metadata: dict[str, Any] = dict(
 				config=self.config.serialize(),
 				dataset_metadata=self.dataset_metadata,
+				summary=self.summary(),
 			)
 
 			z.save(obj_metadata, path / "metadata.zanj")
@@ -397,6 +398,7 @@ class CollectedAttentionPatternDataloader:
 		print(DIVIDER_S1)
 
 		# create datasets from binned data
+		# TODO: save them incrementally. not enough dedidated wam
 		with SpinnerContext(message="assembling datasets"):
 			datasets: dict[int, AttentionPatternDataset] = {
 				n_ctx: AttentionPatternDataset(
