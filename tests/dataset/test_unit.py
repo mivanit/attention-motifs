@@ -21,6 +21,7 @@ def setup_temp_dir():
 	TEMP_DIR.mkdir(exist_ok=True, parents=True)
 	yield
 
+
 def test_attention_pattern_dataset_basic():
 	"""Unit test for the basic indexing and length of AttentionPatternDataset."""
 	dummy_patterns = torch.zeros((5, 3, 3))  # n_patterns=5, n_ctx=3
@@ -177,7 +178,7 @@ def test_dataloader_iteration():
 
 	ds2_patterns = torch.rand((3, 5, 5))
 	ds2_meta = [
-		AttentionPatternMetadata("modelA", 1, i, f"hash{i+2}", 5) for i in range(3)
+		AttentionPatternMetadata("modelA", 1, i, f"hash{i + 2}", 5) for i in range(3)
 	]
 	ds2 = AttentionPatternDataset(
 		n_ctx=5, n_patterns=3, patterns=ds2_patterns, metadata=ds2_meta
@@ -192,7 +193,9 @@ def test_dataloader_iteration():
 
 	loader = CollectedAttentionPatternDataloader(
 		config=dummy_config,
-		prompts=PromptDataset(config=dummy_config.prompts_config, prompts=[], hash_map={}),
+		prompts=PromptDataset(
+			config=dummy_config.prompts_config, prompts=[], hash_map={}
+		),
 		datasets={4: ds1, 5: ds2},
 	)
 
@@ -221,7 +224,9 @@ def test_dataloader_empty_datasets():
 	)
 	loader = CollectedAttentionPatternDataloader(
 		config=dummy_config,
-		prompts=PromptDataset(config=dummy_config.prompts_config, prompts=[], hash_map={}),
+		prompts=PromptDataset(
+			config=dummy_config.prompts_config, prompts=[], hash_map={}
+		),
 		datasets={},
 	)
 	all_batches = list(loader.batches(batch_size=2))

@@ -341,7 +341,9 @@ def process_length_bin(
 		del cache
 
 	# concatenate patterns
-	output_patterns_tensor: AttentionPatternBatch = torch.cat(output_patterns, dim=0).to(storage_device)
+	output_patterns_tensor: AttentionPatternBatch = torch.cat(
+		output_patterns, dim=0
+	).to(storage_device)
 
 	# tensor shape sanity check
 	assert tuple(output_patterns_tensor.shape) == (

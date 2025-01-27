@@ -45,6 +45,7 @@ except Exception as e:
 		f"Failed to get Hugging Face token -- info about certain models will be limited\n{e}"
 	)
 
+
 def b64encode(data: bytes) -> str:
 	return base64.b64encode(data, altchars=b"_-").decode("utf-8")
 
@@ -132,9 +133,9 @@ def tensor_batches_indexed(
 		arr_slice: Float[T_Tensor, " batch_size *data_dims"] = arr[idx_start:idx_end]
 		# throw away last incomplete batch if not allowed
 		if not allow_last_incomplete and len(arr_slice) < batch_size:
-			assert idx_start + batch_size >= len(
-				arr
-			), "this state should be inaccesible"
+			assert idx_start + batch_size >= len(arr), (
+				"this state should be inaccesible"
+			)
 			break
 		# yield (start, end, slice)
 		yield idx_start, idx_end, arr_slice

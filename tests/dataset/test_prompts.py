@@ -166,9 +166,9 @@ def test_prompt_dataset_config_from_source_path(ensure_temp_dir, example_prompts
 
 	# Now create the config
 	config = PromptDatasetConfig.from_source_path(jsonl_path)
-	assert (
-		config.name == jsonl_path.stem
-	), "Expect the config name to match the file stem"
+	assert config.name == jsonl_path.stem, (
+		"Expect the config name to match the file stem"
+	)
 	assert config.source_path == jsonl_path
 	assert config.source_info["source_path"] == jsonl_path.as_posix()
 

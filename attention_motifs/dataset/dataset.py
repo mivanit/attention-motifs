@@ -17,7 +17,6 @@ from muutils.json_serialize import (
 )
 from muutils.statcounter import StatCounter
 from muutils.spinner import SpinnerContext, NoOpContextManager
-from muutils.dictmagic import condense_tensor_dict
 from muutils.misc import shorten_numerical_to_str
 from zanj import ZANJ
 
@@ -28,7 +27,6 @@ from attention_motifs.consts import (
 	TokenSequenceBatch,
 	DIVIDER_S1,
 	DIVIDER_S2,
-	HF_TOKEN,
 )
 from attention_motifs.dataset.util import (
 	AttentionPatternDataset,
@@ -48,7 +46,6 @@ class APGenerationConfig(SerializableDataclass):
 	token_len_min: int = serializable_field(default=64)
 	prompt_token_len_tolerance: int = serializable_field(default=64)
 	raw_scores: bool = serializable_field(default=False)
-
 
 	def summary(self) -> dict[str, JSONitem]:
 		return dict(
@@ -104,7 +101,7 @@ class CollectedAttentionPatternDataloader:
 			config=self.config.serialize(),
 			prompts=self.prompts.summary(),
 		)
-	
+
 	def summary_short(self):
 		return dict(
 			n_total_samples=self.n_total_samples,
@@ -284,7 +281,9 @@ class CollectedAttentionPatternDataloader:
 	def generate(
 		cls,
 		config: APGenerationConfig,
-		model_device: torch.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"),
+		model_device: torch.device = torch.device("cuda")
+		if torch.cuda.is_available()
+		else torch.device("cpu"),
 		storage_device: torch.device = torch.device("cpu"),
 		max_batch_size: Optional[int] = None,
 		z: Optional[ZANJ] = None,
@@ -331,32 +330,31 @@ class CollectedAttentionPatternDataloader:
 					device=model_device,
 				)
 				model.eval()
-			print(f"#\tloaded {model_name} with {model.cfg.n_params} ({shorten_numerical_to_str(model.cfg.n_params)}) parameters")
+			print(
+				f"#\tloaded {model_name} with {model.cfg.n_params} ({shorten_numerical_to_str(model.cfg.n_params)}) parameters"
+			)
 			model_devices: set[torch.device] = {p.device for p in model.parameters()}
 			print(f"#\tmodel devices: {model_devices}")
 
-
-			with SpinnerContext(message=f"tokenizing and binning prompts"):
+			with SpinnerContext(message="tokenizing and binning prompts"):
 				# bin prompts by length
 				# with SpinnerContext(message="Tokenizing and binning prompts"):
-				bins_by_len: dict[int, tuple[PromptHashIntSequence, TokenSequenceBatch]] = (
-					tokenize_and_bin_prompts(
-						model=model,
-						prompts=prompts,
-						token_len_min=config.token_len_min,
-						tolerance=config.prompt_token_len_tolerance,
-						storage_device=storage_device,
-					)
+				bins_by_len: dict[
+					int, tuple[PromptHashIntSequence, TokenSequenceBatch]
+				] = tokenize_and_bin_prompts(
+					model=model,
+					prompts=prompts,
+					token_len_min=config.token_len_min,
+					tolerance=config.prompt_token_len_tolerance,
+					storage_device=storage_device,
 				)
 				total_sequences: int = sum(
-					len(bin_contents[1]) 
-					for bin_contents in bins_by_len.values()
+					len(bin_contents[1]) for bin_contents in bins_by_len.values()
 				)
 
-			bin_shapes: str = ", ".join([
-				str(tuple(x[1].shape))
-				for x in bins_by_len.values()
-			])
+			bin_shapes: str = ", ".join(
+				[str(tuple(x[1].shape)) for x in bins_by_len.values()]
+			)
 			print(f"#\tshapes of each bin contents (n_seqs, n_ctx): [ {bin_shapes} ]")
 
 			print("# getting attention patterns:")
@@ -397,8 +395,7 @@ class CollectedAttentionPatternDataloader:
 		print(DIVIDER_S1)
 
 		# create datasets from binned data
-		with SpinnerContext(message=f"assembling datasets"):
-
+		with SpinnerContext(message="assembling datasets"):
 			datasets: dict[int, AttentionPatternDataset] = {
 				n_ctx: AttentionPatternDataset(
 					n_ctx=n_ctx,
@@ -409,7 +406,6 @@ class CollectedAttentionPatternDataloader:
 				)
 				for n_ctx, (metadata, patterns_list) in data_raw_binned.items()
 			}
-
 
 		# create and return the loader
 		output: CollectedAttentionPatternDataloader = cls(
