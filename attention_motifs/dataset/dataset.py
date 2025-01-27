@@ -48,6 +48,16 @@ class APGenerationConfig(SerializableDataclass):
 	raw_scores: bool = serializable_field(default=False)
 
 
+	def summary(self) -> dict[str, JSONitem]:
+		return dict(
+			prompts_config=self.prompts_config.summary(),
+			model_names=self.model_names,
+			token_len_min=self.token_len_min,
+			prompt_token_len_tolerance=self.prompt_token_len_tolerance,
+			raw_scores=self.raw_scores,
+		)
+
+
 class CollectedAttentionPatternDataloader:
 	"""Collected dataset of `AttentionPatternDataset` objects, returning a batch of patterns and metadata.
 
@@ -91,6 +101,15 @@ class CollectedAttentionPatternDataloader:
 			n_ctx_stats=self.n_ctx_stats.summary(),
 			config=self.config.serialize(),
 			prompts=self.prompts.summary(),
+		)
+	
+	def summary_short(self):
+		return dict(
+			n_total_samples=self.n_total_samples,
+			n_prompts=len(self.prompts),
+			n_datasets=self.n_datasets,
+			config=self.config.summary(),
+			dataset_shapes_summary=self.dataset_shapes_summary,
 		)
 
 	def __str__(self) -> str:
@@ -361,21 +380,32 @@ class CollectedAttentionPatternDataloader:
 
 					pbar.update(n_sequences)
 
+		print(DIVIDER_S1)
+
 		# create datasets from binned data
-		datasets: dict[int, AttentionPatternDataset] = {
-			n_ctx: AttentionPatternDataset(
-				n_ctx=n_ctx,
-				n_patterns=len(metadata),
-				patterns=torch.cat(patterns_list, dim=0).type(PATTERN_DTYPE),
-				metadata=AttentionPatternMetadataArray.from_list(metadata),
-				raw_scores=config.raw_scores,
-			)
-			for n_ctx, (metadata, patterns_list) in data_raw_binned.items()
-		}
+		with SpinnerContext(message=f"assembling datasets"):
+
+			datasets: dict[int, AttentionPatternDataset] = {
+				n_ctx: AttentionPatternDataset(
+					n_ctx=n_ctx,
+					n_patterns=len(metadata),
+					patterns=torch.cat(patterns_list, dim=0).type(PATTERN_DTYPE),
+					metadata=AttentionPatternMetadataArray.from_list(metadata),
+					raw_scores=config.raw_scores,
+				)
+				for n_ctx, (metadata, patterns_list) in data_raw_binned.items()
+			}
+
 
 		# create and return the loader
-		return cls(
+		output: CollectedAttentionPatternDataloader = cls(
 			config=config,
 			prompts=prompts,
 			datasets=datasets,
 		)
+
+		print("done generating datasets! summary:")
+		print(json.dumps(output.summary_short(), indent=2))
+		
+
+		return output

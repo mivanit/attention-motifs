@@ -116,6 +116,14 @@ class PromptDatasetConfig(SerializableDataclass):
 			char_len_min=char_len_min,
 			char_len_max=char_len_max,
 		)
+	
+	def summary(self) -> JSONitem:
+		return dict(
+			name=self.name,
+			source_path=self.source_path.as_posix(),
+			char_len_min=self.char_len_min,
+			char_len_max=self.char_len_max,
+		)
 
 
 @serializable_dataclass
