@@ -291,8 +291,8 @@ def process_length_bin(
 	for idx_start, idx_end, tokens_batch in tensor_batches_indexed(
 		tokens_tensor, max_batch_size
 	):
-		print(f"Processing batch {idx_start=}, {idx_end=}")
-		print(f"{tokens_batch.shape=}")
+		# print(f"Processing batch {idx_start=}, {idx_end=}")
+		# print(f"{tokens_batch.shape=}")
 		# get attention patterns
 		cache: dict[str, MHABatched]
 		with torch.no_grad():
@@ -302,7 +302,7 @@ def process_length_bin(
 				names_filter=names_filter,
 				return_cache_object=False,
 			)
-		print(f"\tforwards done")
+		# print(f"\tforwards done")
 
 		# extract patterns for each layer and head
 		layer: int
