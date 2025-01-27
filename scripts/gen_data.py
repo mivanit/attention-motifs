@@ -8,17 +8,17 @@ from attention_motifs.dataset.dataset import (
 
 d = CollectedAttentionPatternDataloader.generate(
 	config=APGenerationConfig(
-		prompts_config=PromptDatasetConfig.from_source_path("data/pile_5.jsonl"),
+		prompts_config=PromptDatasetConfig.from_source_path("data/pile_50.jsonl"),
 		model_names=[
-			# "meta-llama/Llama-3.2-1B",
+			"meta-llama/Llama-3.2-1B",
 			"gpt2-small",
-			# "pythia-14m",
+			"pythia-14m",
 		],
 	),
 	max_batch_size=8,
 )
 
-d.save("data/activations/pile_1k", verbose=True)
+d.save("data/activations/pile_50", verbose=True)
 
 
 for x in d.batches(2):
