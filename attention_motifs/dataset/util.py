@@ -306,7 +306,7 @@ def process_length_bin(
 			for head in range(model.cfg.n_heads):
 				# get patterns for this head
 				head_patterns: AttentionPatternBatch = layer_patterns[:, head]
-				
+
 				# TODO: create AttentionPatternMetadataArray here instead, then concatenate them all at the end
 				# will require messing around with the model index, maybe make that a hash?
 

@@ -22,7 +22,6 @@ from zanj import ZANJ
 from attention_motifs.consts import (
 	PATTERN_DTYPE,
 	AttentionPatternBatch,
-	PromptHashStr,
 	PromptHashIntSequence,
 	TokenSequenceBatch,
 	DIVIDER_S1,
@@ -121,7 +120,7 @@ class CollectedAttentionPatternDataloader:
 		for ds in self.datasets.values():
 			out[ds.n_ctx] = out.get(ds.n_ctx, 0) + len(ds)
 		return out
-	
+
 	@property
 	def n_ctx_stats(self) -> StatCounter:
 		return StatCounter(self.n_ctx_counts)
