@@ -81,7 +81,7 @@ class AttentionPatternMetadataArray(SerializableDataclass):
 		return self.n_samples
 
 	def __getitem__(self, idx: int) -> AttentionPatternMetadata:
-		model_name_idx, layer, head, n_ctx = self.data[:, idx]
+		model_name_idx, layer, head, n_ctx = self.data[idx]
 		return AttentionPatternMetadata(
 			model_name=self.model_names_map[model_name_idx],
 			idx_layer=layer,

@@ -10,7 +10,7 @@ from attention_motifs.dataset.dataset import (
 	AttentionPatternMetadata,
 	CollectedAttentionPatternDataloader,
 )
-from attention_motifs.dataset.prompts import PromptDatasetConfig
+from attention_motifs.dataset.prompts import PromptDataset, PromptDatasetConfig
 
 TEMP_DIR: Path = Path("tests/_temp")
 
@@ -20,8 +20,6 @@ def setup_temp_dir():
 	"""Fixture to ensure the tests/_temp directory exists before tests run."""
 	TEMP_DIR.mkdir(exist_ok=True, parents=True)
 	yield
-	# We do not remove it; you might want to do so in a real test environment.
-
 
 def test_attention_pattern_dataset_basic():
 	"""Unit test for the basic indexing and length of AttentionPatternDataset."""
@@ -31,7 +29,7 @@ def test_attention_pattern_dataset_basic():
 			model_name="dummy-model",
 			idx_layer=0,
 			idx_head=i,
-			prompt_hash=f"hash_{i}",
+			prompt_hash=i,
 			n_ctx=3,
 		)
 		for i in range(5)
@@ -68,7 +66,7 @@ def test_dataloader_properties():
 	)
 	loader = CollectedAttentionPatternDataloader(
 		config=dummy_config,
-		prompts=[{"text": "A", "hash": "hash0"}],
+		prompts=PromptDataset.from_config(dummy_config),
 		datasets=[ds],
 		batch_size=2,
 	)
@@ -91,12 +89,12 @@ def test_config_load_empty_file():
 	"""Test APGenerationConfig on an empty file -> should return []."""
 	empty_file = TEMP_DIR / "empty_prompts.jsonl"
 	empty_file.write_text("")  # no lines
-	cfg = APGenerationConfig(
-		prompts_config=PromptDatasetConfig.from_source_path(source_path=empty_file),
-		model_names=[],
+	cfg: PromptDatasetConfig = PromptDatasetConfig.from_source_path(
+		source_path=empty_file,
 	)
-	data = cfg.load_text_data()
-	assert data == []
+
+	data: PromptDataset = PromptDataset.from_config(cfg)
+	assert len(data) == 0
 
 
 def test_config_load_all_filtered():
@@ -104,12 +102,13 @@ def test_config_load_all_filtered():
 	big_file = TEMP_DIR / "big_min_length.jsonl"
 	# single line with short text
 	big_file.write_text(json.dumps({"text": "Short prompt"}) + "\n")
-	cfg = APGenerationConfig(
-		prompts_config=PromptDatasetConfig.from_source_path(source_path=big_file),
-		model_names=[],
+	cfg: PromptDatasetConfig = PromptDatasetConfig.from_source_path(
+		source_path=big_file,
+		char_len_min=1024,
 	)
-	data = cfg.load_text_data()
-	assert data == []
+
+	data: PromptDataset = PromptDataset.from_config(cfg)
+	assert len(data) == 0
 
 
 def test_config_splitting_behavior():
@@ -119,16 +118,16 @@ def test_config_splitting_behavior():
 	text_50 = "x" * 50
 	splitted_file.write_text(json.dumps({"text": text_50}) + "\n")
 
-	cfg = APGenerationConfig(
-		prompts_config=PromptDatasetConfig.from_source_path(source_path=splitted_file),
-		model_names=[],
+	cfg: PromptDatasetConfig = PromptDatasetConfig.from_source_path(
+		source_path=splitted_file,
+		char_len_max=20,
 	)
-	data = cfg.load_text_data()
+	data: PromptDataset = PromptDataset.from_config(cfg)
 	# original is length=50
 	# splitted into segments of length=20,20,10
 	# after split, each is >= min_length=10, so we keep all 3
 	assert len(data) == 3
-	lengths = [len(d["text"]) for d in data]
+	lengths = [len(d.text) for d in data]
 	assert lengths == [20, 20, 10]
 
 
@@ -176,12 +175,12 @@ def test_dataloader_iteration():
 		n_ctx=4, n_patterns=2, patterns=ds1_patterns, metadata=ds1_meta
 	)
 
-	ds2_patterns = torch.rand((3, 4, 4))
+	ds2_patterns = torch.rand((3, 5, 5))
 	ds2_meta = [
-		AttentionPatternMetadata("modelA", 1, i, f"hash{i+2}", 4) for i in range(3)
+		AttentionPatternMetadata("modelA", 1, i, f"hash{i+2}", 5) for i in range(3)
 	]
 	ds2 = AttentionPatternDataset(
-		n_ctx=4, n_patterns=3, patterns=ds2_patterns, metadata=ds2_meta
+		n_ctx=5, n_patterns=3, patterns=ds2_patterns, metadata=ds2_meta
 	)
 
 	dummy_config = APGenerationConfig(
@@ -193,8 +192,8 @@ def test_dataloader_iteration():
 
 	loader = CollectedAttentionPatternDataloader(
 		config=dummy_config,
-		prompts=[],
-		datasets=[ds1, ds2],
+		prompts=PromptDataset(config=dummy_config.prompts_config, prompts=[], hash_map={}),
+		datasets={4: ds1, 5: ds2},
 	)
 
 	# total of 5 items => batch_size=2 => iteration yields 3 times
@@ -222,8 +221,8 @@ def test_dataloader_empty_datasets():
 	)
 	loader = CollectedAttentionPatternDataloader(
 		config=dummy_config,
-		prompts=[],
-		datasets=[],
+		prompts=PromptDataset(config=dummy_config.prompts_config, prompts=[], hash_map={}),
+		datasets={},
 	)
 	all_batches = list(loader.batches(batch_size=2))
 	assert all_batches == []

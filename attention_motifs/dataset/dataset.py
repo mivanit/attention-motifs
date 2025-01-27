@@ -13,6 +13,7 @@ from muutils.json_serialize import (
 	SerializableDataclass,
 	serializable_dataclass,
 	serializable_field,
+	JSONitem,
 )
 from muutils.statcounter import StatCounter
 from muutils.spinner import SpinnerContext, NoOpContextManager
@@ -82,10 +83,11 @@ class CollectedAttentionPatternDataloader:
 	def summary(self):
 		return dict(
 			model_names=self.model_names,
-			dataset_metadata=self.dataset_metadata,
+			# dataset_metadata=self.dataset_metadata,
+			dataset_shapes_summary=self.dataset_shapes_summary,
 			n_datasets=self.n_datasets,
 			n_total_samples=self.n_total_samples,
-			n_ctx_counts=self.n_ctx_counts,
+			# n_ctx_counts=self.n_ctx_counts,
 			n_ctx_stats=self.n_ctx_stats.summary(),
 			config=self.config.serialize(),
 			prompts=self.prompts.summary(),
@@ -99,9 +101,14 @@ class CollectedAttentionPatternDataloader:
 		return self.config.model_names
 
 	@property
-	def dataset_metadata(self) -> list[dict[str, Any]]:
+	def dataset_metadata(self) -> list[dict[str, JSONitem]]:
 		"""Return metadata about each sub-dataset."""
 		return [dict(n_ctx=d.n_ctx, n_patterns=len(d)) for d in self.datasets.values()]
+
+	@property
+	def dataset_shapes_summary(self) -> dict[int, str]:
+		"""Return a summary of the shapes of the patterns in each sub-dataset."""
+		return [str(tuple(d.patterns.shape)) for d in self.datasets.values()]
 
 	@property
 	def n_datasets(self) -> int:
@@ -351,7 +358,7 @@ class CollectedAttentionPatternDataloader:
 			n_ctx: AttentionPatternDataset(
 				n_ctx=n_ctx,
 				n_patterns=len(metadata),
-				patterns=torch.stack(patterns_list, dim=0).type(PATTERN_DTYPE),
+				patterns=torch.cat(patterns_list, dim=0).type(PATTERN_DTYPE),
 				metadata=AttentionPatternMetadataArray.from_list(metadata),
 				raw_scores=config.raw_scores,
 			)
