@@ -232,7 +232,6 @@ class CollectedAttentionPatternDataloader:
 		# read datasets of patterns
 		dataset_meta: list[dict[str, Any]] = obj_metadata["dataset_metadata"]
 		datasets: dict[int, AttentionPatternDataset] = []
-		i: int
 		for d_m in dataset_meta:
 			n_ctx: int = d_m["n_ctx"]
 			ds_path: Path = path / f"dataset_n{n_ctx}.zanj"
