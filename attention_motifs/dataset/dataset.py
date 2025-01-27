@@ -42,68 +42,9 @@ from attention_motifs.dataset.prompts import PromptDataset, PromptDatasetConfig
 class APGenerationConfig(SerializableDataclass):
 	prompts_config: PromptDatasetConfig
 	model_names: list[str]
-	token_len_min: int = serializable_field(default=5)
-	prompt_token_len_tolerance: int = serializable_field(default=5)
+	token_len_min: int = serializable_field(default=64)
+	prompt_token_len_tolerance: int = serializable_field(default=64)
 	raw_scores: bool = serializable_field(default=False)
-
-	def load_text_data(self) -> list[dict]:
-		"""Split prompts from `prompts_path` into more reasonable sizes (by string length, not token count).
-
-		# Returns:
-		 - `list[dict]`
-		    New, processed list of prompts. Each prompt has a `"text"` key with a string value,
-		    and some metadata. This is not guaranteed to be the same length as the input list!
-
-		# Usage:
-		```python
-		>>> cfg = APGenerationConfig(Path("some_prompts.jsonl"), ["gpt2"], 10, 100)
-		>>> processed = cfg.load_text_data()
-		>>> len(processed)  # might differ from the raw file lines
-		```
-		"""
-		raise DeprecationWarning("Use `PromptDatasetConfig` instead.")
-		data_raw: list[dict] = []
-		# open the prompts file
-		with open(self.prompts_path, "r") as f_in:  # type: TextIO
-			line: str
-			for line in f_in:
-				line_str: str = line.strip()
-				if line_str:
-					parsed: dict = json.loads(line_str)
-					data_raw.append(parsed)
-
-		# add fname metadata
-		d: dict
-		for d in data_raw:
-			d["source_fname"] = self.prompts_path.as_posix()
-
-		# trim too-short samples
-		if self.chars_len_min is not None:
-			data_raw = [d for d in data_raw if len(d["text"]) >= self.chars_len_min]
-
-		# split up too-long samples
-		if self.char_len_max is not None:
-			data_new: list[dict] = []
-			for d in data_raw:
-				d_text: str = d["text"]
-				while len(d_text) > self.char_len_max:
-					truncated_dict: dict = {**d, "text": d_text[: self.char_len_max]}
-					data_new.append(truncated_dict)
-					d_text = d_text[self.char_len_max :]
-				data_new.append({**d, "text": d_text})
-			data_raw = data_new
-
-		# trim too-short samples again
-		if self.chars_len_min is not None:
-			data_raw = [d for d in data_raw if len(d["text"]) >= self.chars_len_min]
-
-		# add hash metadata
-		pr: dict
-		for pr in data_raw:
-			h: str = hashlib.md5(pr["text"].encode("utf-8")).hexdigest()
-			pr["hash"] = h
-
-		return data_raw
 
 
 class CollectedAttentionPatternDataloader:

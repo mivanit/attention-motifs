@@ -16,6 +16,7 @@ from attention_motifs.consts import (
 	PromptHashStr,
 	b64encode,
 	compute_text_hashes,
+	str_batches,
 )
 
 PROMPT_SPECIAL_KEYS: set[str] = {"text", "hash_int", "hash_str"}
@@ -81,6 +82,9 @@ class Prompt(SerializableDataclass):
 		return self.hash_int
 
 
+DEFAULT_CHAR_LEN_MIN: int|None = 64
+DEFAULT_CHAR_LEN_MAX: int|None = 1024
+
 @serializable_dataclass
 class PromptDatasetConfig(SerializableDataclass):
 	"""holds the config for a prompt dataset"""
@@ -91,9 +95,16 @@ class PromptDatasetConfig(SerializableDataclass):
 		deserialize_fn=lambda data: Path(data),
 	)
 	source_info: dict[str, JSONitem]
+	char_len_min: int|None = serializable_field(default=DEFAULT_CHAR_LEN_MIN)
+	char_len_max: int|None = serializable_field(default=DEFAULT_CHAR_LEN_MAX)
 
 	@classmethod
-	def from_source_path(cls, source_path: Path) -> "PromptDatasetConfig":
+	def from_source_path(
+		cls,
+		source_path: Path,
+		char_len_min: int|None = DEFAULT_CHAR_LEN_MIN,
+		char_len_max: int|None = DEFAULT_CHAR_LEN_MAX,
+	) -> "PromptDatasetConfig":
 		source_path = Path(source_path)
 		return cls(
 			name=source_path.stem,
@@ -101,6 +112,8 @@ class PromptDatasetConfig(SerializableDataclass):
 			source_info={
 				"source_path": source_path.as_posix(),
 			},
+			char_len_min=char_len_min,
+			char_len_max=char_len_max,
 		)
 
 
@@ -137,8 +150,36 @@ class PromptDataset(SerializableDataclass):
 		# load the prompts from the source path
 		prompts: list[Prompt] = []
 		with open(config.source_path, "r") as f:
-			for line in f:
-				prompts.append(Prompt.from_dict(json.loads(line)))
+			for line_idx, line in enumerate(f):
+				# add fname metadata
+				d_raw: dict = json.loads(line)
+				d_raw["source_fname"] = config.source_path.as_posix()
+				d_raw["source_line"] = line_idx
+
+				# trim too-short samples
+				if config.char_len_min is not None:
+					if len(d_raw["text"]) < config.char_len_min:
+						continue
+
+				# split up too-long samples
+				if config.char_len_max is not None:
+					# grab the original text
+					d_text: str = d_raw["text"]
+					text_slices: list[str] = list(str_batches(
+						text=d_text,
+						batch_size=config.char_len_max,
+						allow_last_incomplete=True,
+					))
+					# cut last if it's too short
+					if len(text_slices[-1]) < config.char_len_min:
+						text_slices.pop()
+
+					# add em all
+					for i, text_slice in enumerate(text_slices):
+						prompts.append(Prompt.from_dict({**d_raw, "text": text_slice, "text_idx": i}))
+				else:
+					# add the prompt if no length constraints
+					prompts.append(Prompt.from_dict(d_raw))
 
 		return cls.from_prompts(config=config, prompts=prompts)
 
