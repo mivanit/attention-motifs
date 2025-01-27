@@ -399,7 +399,7 @@ dep: get-cuda-info
 	
 	@if [ "$(CUDA_PRESENT)" = "1" ]; then \
 		echo "CUDA is present, installing torch with CUDA $(CUDA_VERSION)"; \
-		uv pip install torch --compile-bytecode --index https://download.pytorch.org/whl/cu$(CUDA_VERSION_SHORT); \
+		uv pip install torch --compile-bytecode --upgrade --index https://download.pytorch.org/whl/cu$(CUDA_VERSION_SHORT); \
 	fi
 	
 
