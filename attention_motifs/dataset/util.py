@@ -160,6 +160,7 @@ def tokenize_and_bin_prompts(
 	prompts: PromptDataset,
 	token_len_min: int,
 	tolerance: int,
+	storage_device: torch.device,
 ) -> dict[int, tuple[list[PromptHashInt], TokenSequenceBatch]]:
 	"""Tokenize prompts and bin them by sequence length.
 
@@ -180,7 +181,11 @@ def tokenize_and_bin_prompts(
 	# tokenize all prompts
 	# keep only hash_str, we can recover the text from the dataset
 	tokenized_prompts: list[tuple[PromptHashInt, TokenSequence]] = [
-		(p.hash_int, model.to_tokens(p.text)[0]) for p in prompts
+		(
+			p.hash_int,
+			model.to_tokens(p.text)[0].to(storage_device),
+		)
+		for p in prompts
 	]
 
 	# group by rounded length
@@ -210,7 +215,7 @@ def tokenize_and_bin_prompts(
 	output: dict[int, tuple[list[PromptHashInt], TokenSequenceBatch]] = {
 		n_ctx: (
 			prompt_hashes,
-			torch.stack(token_seqs_list, dim=0),
+			torch.stack(token_seqs_list, dim=0).to(storage_device),
 		)
 		for n_ctx, (prompt_hashes, token_seqs_list) in bins_by_len.items()
 	}
@@ -218,11 +223,16 @@ def tokenize_and_bin_prompts(
 	return output
 
 
+MHABatched = Float[torch.Tensor, "batch head_idx n_ctx n_ctx"]
+
+
 def process_length_bin(
 	model: HookedTransformer,
 	n_ctx: int,
 	prompt_hashes: PromptHashIntSequence,
 	tokens_tensor: TokenSequenceBatch,
+	model_device: torch.device,
+	storage_device: torch.device,
 	raw_scores: bool = False,
 	model_name: str | None = None,
 	max_batch_size: int | None = None,
@@ -281,20 +291,26 @@ def process_length_bin(
 	for idx_start, idx_end, tokens_batch in tensor_batches_indexed(
 		tokens_tensor, max_batch_size
 	):
+		print(f"Processing batch {idx_start=}, {idx_end=}")
+		print(f"{tokens_batch.shape=}")
 		# get attention patterns
-		_, cache = model.run_with_cache(
-			tokens_tensor,
-			return_type=None,
-			names_filter=names_filter,
-		)
+		cache: dict[str, MHABatched]
+		with torch.no_grad():
+			_, cache = model.run_with_cache(
+				tokens_batch.to(model_device),
+				return_type=None,
+				names_filter=names_filter,
+				return_cache_object=False,
+			)
+		print(f"\tforwards done")
 
 		# extract patterns for each layer and head
 		layer: int
 		head: int
 		for layer in range(model.cfg.n_layers):
-			layer_patterns: Float[torch.Tensor, "batch head_idx n_ctx n_ctx"] = cache[
-				key_format.format(layer=layer)
-			]
+			layer_key: str = key_format.format(layer=layer)
+			layer_patterns: MHABatched = cache[layer_key]
+			layer_patterns.to(storage_device)
 			for head in range(model.cfg.n_heads):
 				# get patterns for this head
 				head_patterns: AttentionPatternBatch = layer_patterns[:, head]
@@ -315,11 +331,17 @@ def process_length_bin(
 				]
 
 				# append to output
-				output_patterns.append(head_patterns)
+				output_patterns.append(head_patterns.to(storage_device))
 				output_metadata.extend(meta_list)
 
+			del layer_patterns
+			del cache[layer_key]
+
+		# delete cache to free up memory
+		del cache
+
 	# concatenate patterns
-	output_patterns_tensor: AttentionPatternBatch = torch.cat(output_patterns, dim=0)
+	output_patterns_tensor: AttentionPatternBatch = torch.cat(output_patterns, dim=0).to(storage_device)
 
 	# tensor shape sanity check
 	assert tuple(output_patterns_tensor.shape) == (

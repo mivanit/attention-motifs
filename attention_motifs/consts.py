@@ -1,7 +1,8 @@
 import hashlib
 import base64
 from typing import Iterable, Iterator, TypeVar
-
+import os
+import warnings
 
 import numpy as np
 import torch
@@ -32,6 +33,17 @@ PROMPT_HASH_MAX: int = 2**PROMPT_HASH_BITS
 
 PATTERN_DTYPE: torch.dtype = torch.float16
 
+
+try:
+	with open(".hf-token", "r") as hf_tok_f:
+		os.environ["HF_TOKEN"] = hf_tok_f.read().strip()
+	HF_TOKEN = os.environ.get("HF_TOKEN", "")
+	if not HF_TOKEN.startswith("hf_"):
+		raise ValueError("Invalid Hugging Face token")
+except Exception as e:
+	warnings.warn(
+		f"Failed to get Hugging Face token -- info about certain models will be limited\n{e}"
+	)
 
 def b64encode(data: bytes) -> str:
 	return base64.b64encode(data, altchars=b"_-").decode("utf-8")

@@ -28,6 +28,7 @@ from attention_motifs.consts import (
 	TokenSequenceBatch,
 	DIVIDER_S1,
 	DIVIDER_S2,
+	HF_TOKEN,
 )
 from attention_motifs.dataset.util import (
 	AttentionPatternDataset,
@@ -285,6 +286,7 @@ class CollectedAttentionPatternDataloader:
 		config: APGenerationConfig,
 		model_device: torch.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"),
 		storage_device: torch.device = torch.device("cpu"),
+		max_batch_size: Optional[int] = None,
 		z: Optional[ZANJ] = None,
 	) -> "CollectedAttentionPatternDataloader":
 		"""Generate attention patterns for each prompt, for each model in config,
@@ -324,7 +326,11 @@ class CollectedAttentionPatternDataloader:
 			print(DIVIDER_S2)
 			# load model
 			with SpinnerContext(message=f"Loading model {model_name}"):
-				model: HookedTransformer = HookedTransformer.from_pretrained(model_name, device=model_device)
+				model: HookedTransformer = HookedTransformer.from_pretrained(
+					model_name,
+					device=model_device,
+				)
+				model.eval()
 			print(f"#\tloaded {model_name} with {model.cfg.n_params} ({shorten_numerical_to_str(model.cfg.n_params)}) parameters")
 			model_devices: set[torch.device] = {p.device for p in model.parameters()}
 			print(f"#\tmodel devices: {model_devices}")
@@ -339,6 +345,7 @@ class CollectedAttentionPatternDataloader:
 						prompts=prompts,
 						token_len_min=config.token_len_min,
 						tolerance=config.prompt_token_len_tolerance,
+						storage_device=storage_device,
 					)
 				)
 				total_sequences: int = sum(
@@ -374,7 +381,9 @@ class CollectedAttentionPatternDataloader:
 						tokens_tensor=bin_contents[1],
 						raw_scores=False,
 						model_name=model_name,
-						max_batch_size=None,
+						max_batch_size=max_batch_size,
+						model_device=model_device,
+						storage_device=storage_device,
 					)
 					n_patterns: int = len(metadata)
 					assert len(patterns) == n_patterns
