@@ -20,6 +20,7 @@ from muutils.dictmagic import condense_tensor_dict
 from zanj import ZANJ
 
 from attention_motifs.consts import (
+	PATTERN_DTYPE,
 	AttentionPatternBatch,
 	PromptHashStr,
 	TokenSequenceBatch,
@@ -28,6 +29,7 @@ from attention_motifs.consts import (
 )
 from attention_motifs.dataset.util import (
 	AttentionPatternDataset,
+	AttentionPatternMetadataArray,
 	process_length_bin,
 	tokenize_and_bin_prompts,
 	AttentionPatternMetadata,
@@ -42,6 +44,7 @@ class APGenerationConfig(SerializableDataclass):
 	model_names: list[str]
 	token_len_min: int = serializable_field(default=5)
 	prompt_token_len_tolerance: int = serializable_field(default=5)
+	raw_scores: bool = serializable_field(default=False)
 
 	def load_text_data(self) -> list[dict]:
 		"""Split prompts from `prompts_path` into more reasonable sizes (by string length, not token count).
@@ -120,7 +123,7 @@ class CollectedAttentionPatternDataloader:
 		self,
 		config: APGenerationConfig,
 		prompts: PromptDataset,
-		datasets: list[AttentionPatternDataset],
+		datasets: dict[int, AttentionPatternDataset],
 	):
 		"""
 		# Parameters:
@@ -133,7 +136,7 @@ class CollectedAttentionPatternDataloader:
 		"""
 		self.config: APGenerationConfig = config
 		self.prompts: PromptDataset = prompts
-		self.datasets: list[AttentionPatternDataset] = datasets
+		self.datasets: dict[int, AttentionPatternDataset] = datasets
 
 
 	def summary(self):
@@ -157,7 +160,7 @@ class CollectedAttentionPatternDataloader:
 	@property
 	def dataset_metadata(self) -> list[dict[str, Any]]:
 		"""Return metadata about each sub-dataset."""
-		return [dict(n_ctx=d.n_ctx, n_patterns=len(d)) for d in self.datasets]
+		return [dict(n_ctx=d.n_ctx, n_patterns=len(d)) for d in self.datasets.values()]
 
 	@property
 	def n_datasets(self) -> int:
@@ -165,7 +168,7 @@ class CollectedAttentionPatternDataloader:
 
 	@property
 	def n_total_samples(self) -> int:
-		return sum(len(d) for d in self.datasets)
+		return sum(len(d) for d in self.datasets.values())
 
 	@property
 	def n_ctx_counts(self) -> dict[int, int]:
@@ -192,7 +195,7 @@ class CollectedAttentionPatternDataloader:
 			tuple[Float[torch.Tensor, "n_ctx n_ctx"], AttentionPatternMetadata]
 		] = []
 		ds: AttentionPatternDataset
-		for ds in self.datasets:
+		for ds in self.datasets.values():
 			i: int
 			for i in range(len(ds)):
 				all_items.append(ds[i])
@@ -232,7 +235,6 @@ class CollectedAttentionPatternDataloader:
 		z = z or ZANJ()
 
 		spinner = SpinnerContext if verbose else NoOpContextManager
-
 
 		# save metadata
 		with spinner(message="Saving metadata"):
@@ -290,12 +292,13 @@ class CollectedAttentionPatternDataloader:
 
 		# read datasets of patterns
 		dataset_meta: list[dict[str, Any]] = obj_metadata["dataset_metadata"]
-		datasets: list[AttentionPatternDataset] = []
+		datasets: dict[int, AttentionPatternDataset] = []
 		i: int
-		for i in range(len(dataset_meta)):
-			ds_path: Path = path / f"dataset_{i}.zanj"
+		for d_m in dataset_meta:
+			n_ctx: int = d_m["n_ctx"]
+			ds_path: Path = path / f"dataset_n{n_ctx}.zanj"
 			ds: AttentionPatternDataset = z.read(ds_path)
-			datasets.append(ds)
+			datasets[n_ctx] = ds
 
 		# create the object and return
 		loader: CollectedAttentionPatternDataloader = cls(
@@ -304,50 +307,6 @@ class CollectedAttentionPatternDataloader:
 			datasets=datasets,
 		)
 		return loader
-
-	@classmethod
-	def _create_dataset(
-		cls,
-		n_ctx: int,
-		metadata: list[AttentionPatternMetadata],
-		patterns: list[AttentionPatternBatch] | AttentionPatternBatch,
-		raw_scores: bool = False,
-	) -> AttentionPatternDataset:
-		"""Create a dataset from patterns of the same sequence length.
-
-		# Parameters:
-		- `n_ctx : int`
-			Sequence length for this dataset
-		- `metadata : list[AttentionPatternMetadata]`
-			Metadata for each pattern
-		- `patterns : list[AttentionPatternBatch]|AttentionPatternBatch`
-			Patterns for this dataset (maybe batched, will concatenate)
-		- `raw_scores : bool`
-			Whether the contents are raw scores or LT row-stoch patterns
-
-		# Returns:
-		- `AttentionPatternDataset`
-			Dataset containing all patterns and metadata
-		"""
-		# stack patterns
-		patterns_tensor: AttentionPatternBatch
-		if isinstance(patterns, list):
-			patterns_tensor = torch.cat(patterns, dim=0)
-		else:
-			patterns_tensor = patterns
-
-		# shapes
-		n_patterns: int = len(metadata)
-		assert tuple(patterns_tensor.shape) == (n_patterns, n_ctx, n_ctx)
-
-		# create and return dataset
-		return AttentionPatternDataset(
-			n_ctx=n_ctx,
-			n_patterns=n_patterns,
-			patterns=patterns_tensor,
-			metadata=metadata,
-			raw_scores=raw_scores,
-		)
 
 	@classmethod
 	def generate(
@@ -443,10 +402,16 @@ class CollectedAttentionPatternDataloader:
 					pbar.update(len(metadata))
 
 		# create datasets from binned data
-		datasets: list[AttentionPatternDataset] = [
-			cls._create_dataset(n_ctx, metadata, patterns)
-			for n_ctx, (metadata, patterns) in data_raw_binned.items()
-		]
+		datasets: dict[int, AttentionPatternDataset] = {
+			n_ctx: AttentionPatternDataset(
+				n_ctx=n_ctx,
+				n_patterns=len(metadata),
+				patterns=torch.stack(patterns_list, dim=0).type(PATTERN_DTYPE),
+				metadata=AttentionPatternMetadataArray.from_list(metadata),
+				raw_scores=config.raw_scores,
+			)
+			for n_ctx, (metadata, patterns_list) in data_raw_binned.items()
+		}
 
 		# create and return the loader
 		return cls(

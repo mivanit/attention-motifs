@@ -1,14 +1,11 @@
 from collections import defaultdict
 from typing import Callable
 
+import numpy as np
 import torch
-from jaxtyping import Float, Int64
+from jaxtyping import Float, UInt64, UInt8, Int, UInt16, UInt32
 from transformer_lens import HookedTransformer
 
-# custom utils
-
-
-from jaxtyping import Int
 
 # custom utils
 from muutils.json_serialize import (
@@ -29,7 +26,7 @@ from attention_motifs.consts import (
 
 from attention_motifs.dataset.prompts import PromptDataset
 
-AttentionPatternMetadataTuple = tuple[str, int, int, PromptHashStr, int]
+AttentionPatternMetadataTuple = tuple[str, int, int, int, int]
 
 
 @serializable_dataclass
@@ -37,16 +34,16 @@ class AttentionPatternMetadata(SerializableDataclass):
 	model_name: str
 	idx_layer: int
 	idx_head: int
-	prompt_hash: PromptHashStr
 	n_ctx: int
+	prompt_hash: int
 
 	def tuple(self) -> AttentionPatternMetadataTuple:
 		return (
 			self.model_name,
 			self.idx_layer,
 			self.idx_head,
-			self.prompt_hash,
 			self.n_ctx,
+			self.prompt_hash,
 		)
 	
 	@classmethod
@@ -55,8 +52,8 @@ class AttentionPatternMetadata(SerializableDataclass):
 			model_name=tup[0],
 			idx_layer=tup[1],
 			idx_head=tup[2],
-			prompt_hash=tup[3],
-			n_ctx=tup[4],
+			n_ctx=tup[3],
+			prompt_hash=tup[4],
 		)
 
 	def hash_int(self) -> int:
@@ -72,17 +69,66 @@ class AttentionPatternMetadata(SerializableDataclass):
 @serializable_dataclass
 class AttentionPatternMetadataArray(SerializableDataclass):
 	model_names_map: list[str]
-	data: Int64[]
+	data: UInt16[np.ndarray, " model_name/idx_layer/idx_head/n_ctx=4 n_patterns"]
+	prompt_hash: UInt64[np.ndarray, " n_patterns"]
+	n_samples: int
+
+	def __len__(self) -> int:
+		return self.n_samples
+	
+	def __getitem__(self, idx: int) -> AttentionPatternMetadata:
+		model_name_idx, layer, head, n_ctx = self.data[:, idx]
+		return AttentionPatternMetadata(
+			model_name=self.model_names_map[model_name_idx],
+			idx_layer=layer,
+			idx_head=head,
+			n_ctx=n_ctx,
+			prompt_hash=self.prompt_hash[idx],
+		)
+	
+	@classmethod
+	def from_list(
+		cls,
+		metadata: list[AttentionPatternMetadata],
+	) -> "AttentionPatternMetadataArray":
+		model_names: set[str] = {m.model_name for m in metadata}
+		model_names_map: list[str] = sorted(list(model_names))
+		model_names_map_inv: dict[str, int] = {m: i for i, m in enumerate(model_names_map)}
+
+		# allocate output
+		n_samples: int = len(metadata)
+		data: UInt16[np.ndarray, " model_name/idx_layer/idx_head/n_ctx=4 n_patterns"] = np.full(
+			(n_samples, 4), fill_value=0, dtype=np.uint16
+		)
+		prompt_hash: UInt64[np.ndarray, " n_patterns"] = np.zeros(n_samples, dtype=np.uint64)
+
+		# fill in data
+		for idx, m in enumerate(metadata):
+			data[idx] = np.array(
+				[
+					model_names_map_inv[m.model_name],
+					m.idx_layer,
+					m.idx_head,
+					m.n_ctx,
+				],
+				dtype=np.uint16,
+			)
+			prompt_hash[idx] = m.prompt_hash
+
+		return cls(
+			model_names_map=model_names_map,
+			data=data,
+			prompt_hash=prompt_hash,
+			n_samples=n_samples,
+		)
+
 
 @serializable_dataclass
 class AttentionPatternDataset(SerializableDataclass):
 	n_ctx: int
 	n_patterns: int
 	patterns: AttentionPatternBatch
-	metadata: list[AttentionPatternMetadata] = serializable_field(
-		serialization_fn=lambda x: [m.tuple() for m in x],
-		deserialize_fn=lambda x: [AttentionPatternMetadata.from_tuple(t) for t in x],
-	)
+	metadata: AttentionPatternMetadataArray
 	raw_scores: bool = serializable_field(default=False)
 
 	def __len__(self) -> int:
