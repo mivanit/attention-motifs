@@ -392,6 +392,8 @@ class CollectedAttentionPatternDataloader:
 
 					pbar.update(n_sequences)
 
+			del model
+
 		print(DIVIDER_S1)
 
 		# create datasets from binned data
