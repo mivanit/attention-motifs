@@ -34,6 +34,9 @@ dependencies = [
     "transformer-lens>=2.10.0",
     # this TL dep not listed? is this in an extra?
     "typeguard>=4.4.1",
+	# wandb is horrible
+	"wandb>=0.10.0,<0.19.4",
+	"pydantic<2.10.5", # see https://github.com/pydantic/pydantic/issues/11348
 	# pattern-lens
 	"pattern-lens>=0.2.0",
 	# pattern-lens from git

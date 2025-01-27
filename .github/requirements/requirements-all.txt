@@ -103,7 +103,7 @@ pure-eval==0.2.3
 pyarrow==19.0.0
 pycln==2.5.0
 pycparser==2.22 ; implementation_name == 'pypy'
-pydantic==2.10.6
+pydantic==2.10.4
 pydantic-core==2.27.2
 pygments==2.19.1
 pyparsing==3.2.1
@@ -149,7 +149,7 @@ typer==0.15.1
 typing-extensions==4.12.2
 tzdata==2025.1
 urllib3==2.3.0
-wandb==0.19.4
+wandb==0.19.3
 wcmatch==10.0
 wcwidth==0.2.13
 widgetsnbextension==4.0.13
