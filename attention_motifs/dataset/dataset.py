@@ -305,23 +305,32 @@ class CollectedAttentionPatternDataloader:
 				model: HookedTransformer = HookedTransformer.from_pretrained(model_name)
 			print(f"\tloaded {model_name} with {model.cfg.n_params} parameters")
 
-			# bin prompts by length
-			# with SpinnerContext(message="Tokenizing and binning prompts"):
-			bins_by_len: dict[int, tuple[PromptHashIntSequence, TokenSequenceBatch]] = (
-				tokenize_and_bin_prompts(
-					model=model,
-					prompts=prompts,
-					token_len_min=config.token_len_min,
-					tolerance=config.prompt_token_len_tolerance,
+
+			with SpinnerContext(message=f"tokenizing and binning prompts"):
+				# bin prompts by length
+				# with SpinnerContext(message="Tokenizing and binning prompts"):
+				bins_by_len: dict[int, tuple[PromptHashIntSequence, TokenSequenceBatch]] = (
+					tokenize_and_bin_prompts(
+						model=model,
+						prompts=prompts,
+						token_len_min=config.token_len_min,
+						tolerance=config.prompt_token_len_tolerance,
+					)
 				)
-			)
-			total_tokens: int = sum(
-				len(bin_contents[1]) 
-				for bin_contents in bins_by_len.values()
-			)
-			print(f"{total_tokens = } tokens in {len(bins_by_len) = } bins")
+				total_sequences: int = sum(
+					len(bin_contents[1]) 
+					for bin_contents in bins_by_len.values()
+				)
+
+			bin_shapes: str = ", ".join([
+				str(tuple(x[1].shape))
+				for x in bins_by_len.values()
+			])
+			print(f"\tshapes of each bin contents (n_seqs, n_ctx): [ {bin_shapes} ]")
+
+			print("getting attention patterns:")
 			with tqdm.tqdm(
-				total=total_tokens,
+				total=total_sequences,
 				desc="",
 				unit="Seq",
 				unit_scale=True,
@@ -330,6 +339,7 @@ class CollectedAttentionPatternDataloader:
 					pbar.set_description(
 						f"{n_ctx = }",
 					)
+					n_sequences: int = len(bin_contents[1])
 					patterns: AttentionPatternBatch
 					metadata: list[AttentionPatternMetadata]
 					patterns, metadata = process_length_bin(
@@ -342,14 +352,14 @@ class CollectedAttentionPatternDataloader:
 						model_name=model_name,
 						max_batch_size=None,
 					)
-					n_samples: int = len(metadata)
-					assert len(patterns) == n_samples
+					n_patterns: int = len(metadata)
+					assert len(patterns) == n_patterns
 
 					# add to binned data
 					data_raw_binned[n_ctx][0].extend(metadata)
-					data_raw_binned[n_ctx][1].append(patterns)
+					data_raw_binned[n_ctx][1].append(patterns.to("cpu"))
 
-					pbar.update(len(metadata))
+					pbar.update(n_sequences)
 
 		# create datasets from binned data
 		datasets: dict[int, AttentionPatternDataset] = {
