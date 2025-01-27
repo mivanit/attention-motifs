@@ -16,16 +16,38 @@ from zanj.torchutil import ConfiguredModel, set_config_class
 from trnbl import TrainingManager
 from trnbl.loggers.local import LocalLogger
 
-
 @serializable_dataclass
+class Conv2DConfig(SerializableDataclass):
+	channels: int
+	kernel_size: int = serializable_field(default=3)
+	stride: int = serializable_field(default=1)
+	padding: int = serializable_field(default=1)
+
+
+	def create(self, in_channels: int) -> nn.Conv2d:
+		return nn.Conv2d(
+			in_channels=in_channels,
+			out_channels=self.channels,
+			kernel_size=self.kernel_size,
+			stride=self.stride,
+			padding=self.padding,
+		)
+	
+	def create_decoder(self, out_channels: int) -> nn.Conv2d:
+		return nn.ConvTranspose2d(
+			in_channels=self.channels,
+			out_channels=out_channels,
+			kernel_size=self.kernel_size,
+			stride=self.stride,
+			padding=self.padding,
+		)
+
+
+@serializable_dataclass(kw_only=True)
 class AttnAEConfig(SerializableDataclass):
 	"""Configuration for square matrix contrastive autoencoder
 
 	# Parameters:
-	 - `min_size : int`
-	    Minimum matrix size to support
-	 - `max_size : int`
-	    Maximum matrix size to support
 	 - `latent_dim : int`
 	    Dimension of latent space
 	 - `encoder_channels : Sequence[int]`
@@ -42,22 +64,27 @@ class AttnAEConfig(SerializableDataclass):
 	    One of 'max' or 'avg'
 	"""
 
-	min_size: int
-	max_size: int
+	# architecture
 	latent_dim: int
-	encoder_channels: Sequence[int] = serializable_field(default=(32, 64, 64))
-	kernel_size: int = serializable_field(default=3)
-	margin: float = serializable_field(default=1.0)
+	in_channels: int = serializable_field(default=1)
+	conv_encoder: list[Conv2DConfig] = serializable_field(default_factory=lambda : [
+		Conv2DConfig(channels=16),
+		Conv2DConfig(channels=64),
+	])
+
+	mlp_prepool: list[int] = serializable_field(default_factory=lambda : [128])
+	mlp_postpool: list[int] = serializable_field(default_factory=lambda : [128, 64])
+
 	activation: type[nn.Module] = serializable_field(
 		default=nn.ReLU,
 		serialization_fn=lambda x: x.__name__,
 		deserialize_fn=lambda x: getattr(nn, x),
 	)
-	pooling: type[nn.Module] = serializable_field(
-		default=nn.MaxPool2d,
-		serialization_fn=lambda x: x.__name__,
-		deserialize_fn=lambda x: getattr(nn, x),
-	)
+
+	# loss
+	margin: float = serializable_field(default=1.0)
+
+	# optimizer
 	optimizer: type[torch.optim.Optimizer] = serializable_field(
 		default=torch.optim.Adam,
 		serialization_fn=lambda x: x.__name__,
@@ -69,9 +96,88 @@ class AttnAEConfig(SerializableDataclass):
 		return tuple(reversed(self.encoder_channels))
 
 	def __post_init__(self):
-		assert all(c > 0 for c in self.encoder_channels)
-		assert self.min_size > 0
-		assert self.max_size >= self.min_size
+		assert all(c.channels > 0 for c in self.encoder_channels)
+
+
+@set_config_class(AttnAEConfig)
+class Encoder(ConfiguredModel[AttnAEConfig]):
+	def __init__(self, config: AttnAEConfig):
+		super().__init__(config)
+		self.config: AttnAEConfig = config
+
+		# Convolutional encoder
+		in_ch: int = config.in_channels
+		conv_layers: list[nn.Module] = []
+
+		for conv_cfg in config.conv_encoder:
+			conv_layers.append(conv_cfg.create(in_ch))
+			conv_layers.append(config.activation())
+			in_ch = conv_cfg.channels
+
+		self.conv: nn.Module = nn.Sequential(*conv_layers)
+
+		# linear map on each pixel
+		linear_layers_prepool: list[nn.Module] = []
+		for out_dim in config.mlp_encoder:
+			linear_layers_prepool.append(nn.Linear(in_ch, out_dim))
+			linear_layers_prepool.append(config.activation())
+			in_ch = out_dim
+		
+		self.linear_prepool: nn.Module = nn.Sequential(*linear_layers_prepool)
+
+		# linear map on pooled features
+		linear_layers_postpool: list[nn.Module] = []
+		for out_dim in config.mlp_encoder:
+			linear_layers_postpool.append(nn.Linear(in_ch, out_dim))
+			linear_layers_postpool.append(config.activation())
+			in_ch = out_dim
+
+		self.linear_postpool: nn.Module = nn.Sequential(*linear_layers_postpool)
+
+	def forward(self, x: Float[Tensor, "batch 1 n n"]) -> Float[Tensor, "batch latent_dim"]:
+		# conv layers
+		h: Float[Tensor, "batch channels n n"] = self.conv(x)
+		# apply linear layers to each pixel
+		h = self.linear_prepool(h.flatten(2))
+		# mean pool over pixels
+		h = h.mean(dim=2)
+		# apply linear layers to pooled features
+		h = self.linear_postpool(h)
+		return h
+	
+
+@set_config_class(AttnAEConfig)
+class Decoder(ConfiguredModel[AttnAEConfig]):
+
+	def __init__(self, config: AttnAEConfig):
+		super().__init__(config)
+		self.config: AttnAEConfig = config
+
+		
+
+
+@set_config_class(AttnAEConfig)
+class AttnAE(ConfiguredModel[AttnAEConfig]):
+	def __init__(self, config: AttnAEConfig):
+		super().__init__(config)
+		self.config: AttnAEConfig = config
+
+		self.encoder: Encoder = Encoder(config)
+		self.decoder: Decoder = Decoder(config)
+
+	def forward(
+		self,
+		x: Float[Tensor, "*batch n n"],
+		output_with_channel_dim: bool = False,
+	) -> Float[Tensor, "*batch n n"]:
+		n_ctx: int = x.shape[-1]
+
+
+
+		z: Float[Tensor, "batch latent_dim"] = self.encoder(x)
+		x_recon: Float[Tensor, "batch 1 n n"] = self.decoder(z)
+		return x_recon
+
 
 
 @set_config_class(AttnAEConfig)

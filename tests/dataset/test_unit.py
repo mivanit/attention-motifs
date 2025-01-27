@@ -204,13 +204,25 @@ def test_dataloader_iteration():
 	assert len(all_yields) == 3
 
 	# first two yields => batch_size=2
+	counts_5: int = 0
+	counts_4: int = 0
 	for batch_patterns, batch_meta in all_yields[:2]:
-		assert batch_patterns.shape == (2, 4, 4)
+		# assert batch_patterns.shape == (2, 4, 4)
 		assert len(batch_meta) == 2
+		if batch_patterns.shape == (2, 4, 4):
+			counts_4 += 1
+			# assert batch_meta[0].n_ctx == 4
+		elif batch_patterns.shape == (2, 5, 5):
+			counts_5 += 1
+			# assert batch_meta[0].n_ctx == 5
+		else:
+			assert False
+	assert counts_4 == 1
+	assert counts_5 == 1
 
 	# last yield => leftover 1
 	last_patterns, last_meta = all_yields[-1]
-	assert last_patterns.shape == (1, 4, 4)
+	assert last_patterns.shape == (1, 5, 5)
 	assert len(last_meta) == 1
 
 
