@@ -128,7 +128,7 @@ typeguard==4.4.1
 typing-extensions==4.12.2
 tzdata==2025.1
 urllib3==2.3.0
-wandb==0.19.3
+wandb==0.19.4
 wcwidth==0.2.13
 widgetsnbextension==4.0.13
 xxhash==3.5.0

@@ -390,6 +390,11 @@ dep-check-torch:
 	@echo "see if torch is installed, and which CUDA version and devices it sees"
 	$(PYTHON) -c "$$CHECK_TORCH_SCRIPT"
 
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~
+# added --compile-bytecode
+# also the custom install of typing extensions is due to
+# https://github.com/pydantic/pydantic/issues/11348
 .PHONY: dep
 dep: get-cuda-info
 	@echo "Exporting dependencies as per $(PYPROJECT) section 'tool.uv-exports.exports'"
@@ -400,8 +405,9 @@ dep: get-cuda-info
 	@if [ "$(CUDA_PRESENT)" = "1" ]; then \
 		echo "CUDA is present, installing torch with CUDA $(CUDA_VERSION)"; \
 		uv pip install torch --compile-bytecode --upgrade --index https://download.pytorch.org/whl/cu$(CUDA_VERSION_SHORT); \
+		uv pip install typing-extensions==4.12.2
 	fi
-	
+# ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .PHONY: dep-check
 dep-check:
