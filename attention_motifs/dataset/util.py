@@ -183,8 +183,6 @@ def tokenize_and_bin_prompts(
 		(p.hash_int, model.to_tokens(p.text)[0]) for p in prompts
 	]
 
-	print(f"Tokenized {len(tokenized_prompts)} prompts")
-
 	# group by rounded length
 	bins_by_len: defaultdict[
 		int,
@@ -209,10 +207,6 @@ def tokenize_and_bin_prompts(
 			pass
 			# print(f"Skipping prompt with too few tokens: {len(tokens) = }, {token_len_min = }, {tokens = }")
 
-	print(f"Grouped into {len(bins_by_len)} bins")
-
-	print({k: (len(v1), len(v2)) for k, (v1, v2) in bins_by_len.items()})
-
 	output: dict[int, tuple[list[PromptHashInt], TokenSequenceBatch]] = {
 		n_ctx: (
 			prompt_hashes,
@@ -220,8 +214,6 @@ def tokenize_and_bin_prompts(
 		)
 		for n_ctx, (prompt_hashes, token_seqs_list) in bins_by_len.items()
 	}
-
-	print({k: (len(v1), v2.shape) for k, (v1, v2) in output.items()})
 
 	return output
 

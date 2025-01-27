@@ -315,24 +315,20 @@ class CollectedAttentionPatternDataloader:
 					tolerance=config.prompt_token_len_tolerance,
 				)
 			)
-			print(f"\t{len(bins_by_len)} bins created")
-			bins_tensors: dict[str, TokenSequenceBatch] = {
-				str(n_ctx): bin_contents[1]
-				for n_ctx, bin_contents in bins_by_len.items()
-			}
-			print(condense_tensor_dict(bins_tensors, fmt="yaml"))
 			total_tokens: int = sum(
-				len(bin_contents[1]) for bin_contents in bins_by_len.values()
+				len(bin_contents[1]) 
+				for bin_contents in bins_by_len.values()
 			)
+			print(f"{total_tokens = } tokens in {len(bins_by_len) = } bins")
 			with tqdm.tqdm(
 				total=total_tokens,
-				desc="Tokens to attention patterns",
-				unit="tok",
+				desc="",
+				unit="Seq",
 				unit_scale=True,
 			) as pbar:
 				for n_ctx, bin_contents in bins_by_len.items():
 					pbar.set_description(
-						f"Tokens to attention patterns (bin of sequences length {n_ctx})"
+						f"{n_ctx = }",
 					)
 					patterns: AttentionPatternBatch
 					metadata: list[AttentionPatternMetadata]
@@ -346,6 +342,8 @@ class CollectedAttentionPatternDataloader:
 						model_name=model_name,
 						max_batch_size=None,
 					)
+					n_samples: int = len(metadata)
+					assert len(patterns) == n_samples
 
 					# add to binned data
 					data_raw_binned[n_ctx][0].extend(metadata)
