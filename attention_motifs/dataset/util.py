@@ -3,7 +3,7 @@ from typing import Callable
 
 import numpy as np
 import torch
-from jaxtyping import Float, UInt64, UInt8, Int, UInt16, UInt32
+from jaxtyping import Float, UInt64, Int, UInt16
 from transformer_lens import HookedTransformer
 
 
@@ -45,9 +45,11 @@ class AttentionPatternMetadata(SerializableDataclass):
 			self.n_ctx,
 			self.prompt_hash,
 		)
-	
+
 	@classmethod
-	def from_tuple(cls, tup: AttentionPatternMetadataTuple) -> "AttentionPatternMetadata":
+	def from_tuple(
+		cls, tup: AttentionPatternMetadataTuple
+	) -> "AttentionPatternMetadata":
 		return cls(
 			model_name=tup[0],
 			idx_layer=tup[1],
@@ -75,7 +77,7 @@ class AttentionPatternMetadataArray(SerializableDataclass):
 
 	def __len__(self) -> int:
 		return self.n_samples
-	
+
 	def __getitem__(self, idx: int) -> AttentionPatternMetadata:
 		model_name_idx, layer, head, n_ctx = self.data[:, idx]
 		return AttentionPatternMetadata(
@@ -85,7 +87,7 @@ class AttentionPatternMetadataArray(SerializableDataclass):
 			n_ctx=n_ctx,
 			prompt_hash=self.prompt_hash[idx],
 		)
-	
+
 	@classmethod
 	def from_list(
 		cls,
@@ -93,14 +95,18 @@ class AttentionPatternMetadataArray(SerializableDataclass):
 	) -> "AttentionPatternMetadataArray":
 		model_names: set[str] = {m.model_name for m in metadata}
 		model_names_map: list[str] = sorted(list(model_names))
-		model_names_map_inv: dict[str, int] = {m: i for i, m in enumerate(model_names_map)}
+		model_names_map_inv: dict[str, int] = {
+			m: i for i, m in enumerate(model_names_map)
+		}
 
 		# allocate output
 		n_samples: int = len(metadata)
-		data: UInt16[np.ndarray, " model_name/idx_layer/idx_head/n_ctx=4 n_patterns"] = np.full(
-			(n_samples, 4), fill_value=0, dtype=np.uint16
+		data: UInt16[
+			np.ndarray, " model_name/idx_layer/idx_head/n_ctx=4 n_patterns"
+		] = np.full((n_samples, 4), fill_value=0, dtype=np.uint16)
+		prompt_hash: UInt64[np.ndarray, " n_patterns"] = np.zeros(
+			n_samples, dtype=np.uint64
 		)
-		prompt_hash: UInt64[np.ndarray, " n_patterns"] = np.zeros(n_samples, dtype=np.uint64)
 
 		# fill in data
 		for idx, m in enumerate(metadata):
@@ -210,7 +216,7 @@ def tokenize_and_bin_prompts(
 		for n_ctx, (prompt_hash, token_seqs_list) in bins_by_len.items()
 	}
 
-	print({k : (len(v1), v2.shape) for k, (v1, v2) in output.items()})
+	print({k: (len(v1), v2.shape) for k, (v1, v2) in output.items()})
 
 	return output
 

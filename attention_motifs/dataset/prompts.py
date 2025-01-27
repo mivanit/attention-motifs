@@ -82,8 +82,9 @@ class Prompt(SerializableDataclass):
 		return self.hash_int
 
 
-DEFAULT_CHAR_LEN_MIN: int|None = 64
-DEFAULT_CHAR_LEN_MAX: int|None = 1024
+DEFAULT_CHAR_LEN_MIN: int | None = 64
+DEFAULT_CHAR_LEN_MAX: int | None = 1024
+
 
 @serializable_dataclass
 class PromptDatasetConfig(SerializableDataclass):
@@ -95,15 +96,15 @@ class PromptDatasetConfig(SerializableDataclass):
 		deserialize_fn=lambda data: Path(data),
 	)
 	source_info: dict[str, JSONitem]
-	char_len_min: int|None = serializable_field(default=DEFAULT_CHAR_LEN_MIN)
-	char_len_max: int|None = serializable_field(default=DEFAULT_CHAR_LEN_MAX)
+	char_len_min: int | None = serializable_field(default=DEFAULT_CHAR_LEN_MIN)
+	char_len_max: int | None = serializable_field(default=DEFAULT_CHAR_LEN_MAX)
 
 	@classmethod
 	def from_source_path(
 		cls,
 		source_path: Path,
-		char_len_min: int|None = DEFAULT_CHAR_LEN_MIN,
-		char_len_max: int|None = DEFAULT_CHAR_LEN_MAX,
+		char_len_min: int | None = DEFAULT_CHAR_LEN_MIN,
+		char_len_max: int | None = DEFAULT_CHAR_LEN_MAX,
 	) -> "PromptDatasetConfig":
 		source_path = Path(source_path)
 		return cls(
@@ -165,18 +166,24 @@ class PromptDataset(SerializableDataclass):
 				if config.char_len_max is not None:
 					# grab the original text
 					d_text: str = d_raw["text"]
-					text_slices: list[str] = list(str_batches(
-						text=d_text,
-						batch_size=config.char_len_max,
-						allow_last_incomplete=True,
-					))
+					text_slices: list[str] = list(
+						str_batches(
+							text=d_text,
+							batch_size=config.char_len_max,
+							allow_last_incomplete=True,
+						)
+					)
 					# cut last if it's too short
 					if len(text_slices[-1]) < config.char_len_min:
 						text_slices.pop()
 
 					# add em all
 					for i, text_slice in enumerate(text_slices):
-						prompts.append(Prompt.from_dict({**d_raw, "text": text_slice, "text_idx": i}))
+						prompts.append(
+							Prompt.from_dict(
+								{**d_raw, "text": text_slice, "text_idx": i}
+							)
+						)
 				else:
 					# add the prompt if no length constraints
 					prompts.append(Prompt.from_dict(d_raw))
@@ -201,7 +208,7 @@ class PromptDataset(SerializableDataclass):
 			example={
 				"prompts[0]": self.prompts[0].serialize(),
 				f"hash_map[{example_hash_str}]": self.hash_map[example_hash_str],
-			}
+			},
 		)
 
 	def __len__(self) -> int:

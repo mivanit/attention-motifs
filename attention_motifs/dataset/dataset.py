@@ -1,7 +1,6 @@
 from collections import defaultdict
 from pathlib import Path
 import json
-import hashlib
 from typing import Any, Iterator, Optional
 
 import torch
@@ -79,7 +78,6 @@ class CollectedAttentionPatternDataloader:
 		self.prompts: PromptDataset = prompts
 		self.datasets: dict[int, AttentionPatternDataset] = datasets
 
-
 	def summary(self):
 		return dict(
 			model_names=self.model_names,
@@ -90,7 +88,7 @@ class CollectedAttentionPatternDataloader:
 			config=self.config.serialize(),
 			prompts=self.prompts.summary(),
 		)
-	
+
 	def __str__(self) -> str:
 		return json.dumps(self.summary(), indent=2)
 
@@ -158,11 +156,11 @@ class CollectedAttentionPatternDataloader:
 			yield patterns_batch, meta_list
 
 	def save(
-			self,
-			path: Path,
-			z: Optional[ZANJ] = None,
-			verbose: bool = False,
-		) -> None:
+		self,
+		path: Path,
+		z: Optional[ZANJ] = None,
+		verbose: bool = False,
+	) -> None:
 		"""Save the dataset to ZANJ-based files.
 
 		# Parameters:
@@ -297,17 +295,18 @@ class CollectedAttentionPatternDataloader:
 
 			# bin prompts by length
 			# with SpinnerContext(message="Tokenizing and binning prompts"):
-			bins_by_len: dict[
-				int, tuple[list[PromptHashStr], TokenSequenceBatch]
-			] = tokenize_and_bin_prompts(
-				model=model,
-				prompts=prompts,
-				token_len_min=config.token_len_min,
-				tolerance=config.prompt_token_len_tolerance,
+			bins_by_len: dict[int, tuple[list[PromptHashStr], TokenSequenceBatch]] = (
+				tokenize_and_bin_prompts(
+					model=model,
+					prompts=prompts,
+					token_len_min=config.token_len_min,
+					tolerance=config.prompt_token_len_tolerance,
+				)
 			)
 			print(f"\t{len(bins_by_len)} bins created")
 			bins_tensors: dict[str, TokenSequenceBatch] = {
-				str(n_ctx): bin_contents[1] for n_ctx, bin_contents in bins_by_len.items()
+				str(n_ctx): bin_contents[1]
+				for n_ctx, bin_contents in bins_by_len.items()
 			}
 			print(condense_tensor_dict(bins_tensors, fmt="yaml"))
 			total_tokens: int = sum(

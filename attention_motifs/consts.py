@@ -26,13 +26,13 @@ PromptHashStr = str
 PROMPT_HASH_BITS: int = 64
 "32 bits is enough for 4.3B unique prompts, but to avoid collision let's use 64 bits"
 
-PROMPT_HASH_MAX: int = 2 ** PROMPT_HASH_BITS
+PROMPT_HASH_MAX: int = 2**PROMPT_HASH_BITS
 
 PATTERN_DTYPE: torch.dtype = torch.float16
 
+
 def b64encode(data: bytes) -> str:
 	return base64.b64encode(data, altchars=b"_-").decode("utf-8")
-
 
 
 def compute_text_hashes(text: str, max_size: int = PROMPT_HASH_MAX) -> tuple[int, str]:
@@ -82,6 +82,7 @@ def str_batches(
 
 T_Tensor = TypeVar("T_Tensor", torch.Tensor, np.ndarray)
 
+
 def tensor_batches(
 	arr: Float[T_Tensor, " n_samples *data_dims"],
 	batch_size: int,
@@ -102,7 +103,7 @@ def tensor_batches(
 
 def tensor_batches_indexed(
 	arr: Float[T_Tensor, " n_samples *data_dims"],
-	batch_size: int|None = None,
+	batch_size: int | None = None,
 	allow_last_incomplete: bool = True,
 ) -> Iterator[tuple[int, int, Float[T_Tensor, " batch_size *data_dims"]]]:
 	"""Yield successive batches from a tensor."""
