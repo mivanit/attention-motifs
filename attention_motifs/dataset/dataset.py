@@ -18,6 +18,7 @@ from muutils.json_serialize import (
 from muutils.statcounter import StatCounter
 from muutils.spinner import SpinnerContext, NoOpContextManager
 from muutils.dictmagic import condense_tensor_dict
+from muutils.misc import shorten_numerical_to_str
 from zanj import ZANJ
 
 from attention_motifs.consts import (
@@ -282,6 +283,8 @@ class CollectedAttentionPatternDataloader:
 	def generate(
 		cls,
 		config: APGenerationConfig,
+		model_device: torch.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"),
+		storage_device: torch.device = torch.device("cpu"),
 		z: Optional[ZANJ] = None,
 	) -> "CollectedAttentionPatternDataloader":
 		"""Generate attention patterns for each prompt, for each model in config,
@@ -317,12 +320,14 @@ class CollectedAttentionPatternDataloader:
 		model_name: str
 		for model_name in config.model_names:
 			print(DIVIDER_S1)
-			print(f"Processing model: {model_name}")
+			print(f"# Processing model: {model_name}")
 			print(DIVIDER_S2)
 			# load model
 			with SpinnerContext(message=f"Loading model {model_name}"):
-				model: HookedTransformer = HookedTransformer.from_pretrained(model_name)
-			print(f"\tloaded {model_name} with {model.cfg.n_params} parameters")
+				model: HookedTransformer = HookedTransformer.from_pretrained(model_name, device=model_device)
+			print(f"#\tloaded {model_name} with {model.cfg.n_params} ({shorten_numerical_to_str(model.cfg.n_params)}) parameters")
+			model_devices: set[torch.device] = {p.device for p in model.parameters()}
+			print(f"#\tmodel devices: {model_devices}")
 
 
 			with SpinnerContext(message=f"tokenizing and binning prompts"):
@@ -345,9 +350,9 @@ class CollectedAttentionPatternDataloader:
 				str(tuple(x[1].shape))
 				for x in bins_by_len.values()
 			])
-			print(f"\tshapes of each bin contents (n_seqs, n_ctx): [ {bin_shapes} ]")
+			print(f"#\tshapes of each bin contents (n_seqs, n_ctx): [ {bin_shapes} ]")
 
-			print("getting attention patterns:")
+			print("# getting attention patterns:")
 			with tqdm.tqdm(
 				total=total_sequences,
 				desc="",
@@ -376,7 +381,7 @@ class CollectedAttentionPatternDataloader:
 
 					# add to binned data
 					data_raw_binned[n_ctx][0].extend(metadata)
-					data_raw_binned[n_ctx][1].append(patterns.to("cpu"))
+					data_raw_binned[n_ctx][1].append(patterns.to(storage_device))
 
 					pbar.update(n_sequences)
 
@@ -404,8 +409,9 @@ class CollectedAttentionPatternDataloader:
 			datasets=datasets,
 		)
 
-		print("done generating datasets! summary:")
+		print("# done generating datasets! summary:")
+		print(DIVIDER_S2)
 		print(json.dumps(output.summary_short(), indent=2))
-		
+		print(DIVIDER_S2)
 
 		return output
