@@ -22,6 +22,8 @@ TokenSequence = Int[torch.Tensor, "n_ctx"]
 TokenSequenceBatch = Int[torch.Tensor, "batch n_ctx"]
 
 PromptHashStr = str
+PromptHashInt = int
+PromptHashIntSequence = Int[torch.Tensor, "n_samples"]
 
 PROMPT_HASH_BITS: int = 64
 "32 bits is enough for 4.3B unique prompts, but to avoid collision let's use 64 bits"

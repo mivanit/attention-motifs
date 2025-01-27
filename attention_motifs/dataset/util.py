@@ -20,13 +20,15 @@ from attention_motifs.consts import (
 	TokenSequence,
 	TokenSequenceBatch,
 	PromptHashStr,
+	PromptHashIntSequence,
 	compute_text_hashes,
 	tensor_batches_indexed,
+	PromptHashInt,
 )
 
 from attention_motifs.dataset.prompts import PromptDataset
 
-AttentionPatternMetadataTuple = tuple[str, int, int, int, int]
+AttentionPatternMetadataTuple = tuple[str, int, int, int, PromptHashInt]
 
 
 @serializable_dataclass
@@ -35,7 +37,7 @@ class AttentionPatternMetadata(SerializableDataclass):
 	idx_layer: int
 	idx_head: int
 	n_ctx: int
-	prompt_hash: int
+	prompt_hash: PromptHashInt
 
 	def tuple(self) -> AttentionPatternMetadataTuple:
 		return (
@@ -158,7 +160,7 @@ def tokenize_and_bin_prompts(
 	prompts: PromptDataset,
 	token_len_min: int,
 	tolerance: int,
-) -> dict[int, tuple[list[PromptHashStr], TokenSequenceBatch]]:
+) -> dict[int, tuple[list[PromptHashInt], TokenSequenceBatch]]:
 	"""Tokenize prompts and bin them by sequence length.
 
 	# Parameters:
@@ -172,13 +174,13 @@ def tokenize_and_bin_prompts(
 		anything longer than but within `tolerance` of the bin size will be truncated to the bin size
 
 	# Returns:
-	- `dict[int, list[tuple[str, TokenSequence]]]`
-		Mapping from bin centers to list of (prompt, tokens) pairs
+	- `dict[int, list[tuple[PromptHashInt, TokenSequence]]]`
+		Mapping from bin size to list of (prompt, tokens) pairs
 	"""
 	# tokenize all prompts
 	# keep only hash_str, we can recover the text from the dataset
-	tokenized_prompts: list[tuple[str, TokenSequence]] = [
-		(p.hash_str, model.to_tokens(p.text)[0]) for p in prompts
+	tokenized_prompts: list[tuple[PromptHashInt, TokenSequence]] = [
+		(p.hash_int, model.to_tokens(p.text)[0]) for p in prompts
 	]
 
 	print(f"Tokenized {len(tokenized_prompts)} prompts")
@@ -211,9 +213,12 @@ def tokenize_and_bin_prompts(
 
 	print({k: (len(v1), len(v2)) for k, (v1, v2) in bins_by_len.items()})
 
-	output: dict[int, tuple[list[PromptHashStr], TokenSequenceBatch]] = {
-		n_ctx: (prompt_hash, torch.stack(token_seqs_list, dim=0))
-		for n_ctx, (prompt_hash, token_seqs_list) in bins_by_len.items()
+	output: dict[int, tuple[list[PromptHashInt], TokenSequenceBatch]] = {
+		n_ctx: (
+			prompt_hashes,
+			torch.stack(token_seqs_list, dim=0),
+		)
+		for n_ctx, (prompt_hashes, token_seqs_list) in bins_by_len.items()
 	}
 
 	print({k: (len(v1), v2.shape) for k, (v1, v2) in output.items()})
@@ -224,7 +229,7 @@ def tokenize_and_bin_prompts(
 def process_length_bin(
 	model: HookedTransformer,
 	n_ctx: int,
-	prompt_hashes: list[PromptHashStr],
+	prompt_hashes: PromptHashIntSequence,
 	tokens_tensor: TokenSequenceBatch,
 	raw_scores: bool = False,
 	model_name: str | None = None,
@@ -237,7 +242,7 @@ def process_length_bin(
 	   Model to extract patterns from
 	 - `n_ctx : int`
 	   expected context length
-	 - `prompt_hashes : list[PromptHashStr]`
+	 - `prompt_hashes : PromptHashIntSequence`
 	   List of prompt hashes (in order)
 	 - `tokens : TokenSequenceBatch`
 	   tensor of tokenized sequences
@@ -301,6 +306,9 @@ def process_length_bin(
 			for head in range(model.cfg.n_heads):
 				# get patterns for this head
 				head_patterns: AttentionPatternBatch = layer_patterns[:, head]
+				
+				# TODO: create AttentionPatternMetadataArray here instead, then concatenate them all at the end
+				# will require messing around with the model index, maybe make that a hash?
 
 				# create metadata for each pattern
 				meta_list: list[AttentionPatternMetadata] = [

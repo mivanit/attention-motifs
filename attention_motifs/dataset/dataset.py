@@ -14,6 +14,7 @@ from muutils.json_serialize import (
 	serializable_dataclass,
 	serializable_field,
 )
+from muutils.statcounter import StatCounter
 from muutils.spinner import SpinnerContext, NoOpContextManager
 from muutils.dictmagic import condense_tensor_dict
 from zanj import ZANJ
@@ -22,6 +23,7 @@ from attention_motifs.consts import (
 	PATTERN_DTYPE,
 	AttentionPatternBatch,
 	PromptHashStr,
+	PromptHashIntSequence,
 	TokenSequenceBatch,
 	DIVIDER_S1,
 	DIVIDER_S2,
@@ -85,6 +87,7 @@ class CollectedAttentionPatternDataloader:
 			n_datasets=self.n_datasets,
 			n_total_samples=self.n_total_samples,
 			n_ctx_counts=self.n_ctx_counts,
+			n_ctx_stats=self.n_ctx_stats.summary(),
 			config=self.config.serialize(),
 			prompts=self.prompts.summary(),
 		)
@@ -115,9 +118,13 @@ class CollectedAttentionPatternDataloader:
 		# (each dataset has a single n_ctx)
 		out: dict[int, int] = {}
 		ds: AttentionPatternDataset
-		for ds in self.datasets:
+		for ds in self.datasets.values():
 			out[ds.n_ctx] = out.get(ds.n_ctx, 0) + len(ds)
 		return out
+	
+	@property
+	def n_ctx_stats(self) -> StatCounter:
+		return StatCounter(self.n_ctx_counts)
 
 	def batches(
 		self, batch_size: int
@@ -294,7 +301,7 @@ class CollectedAttentionPatternDataloader:
 
 			# bin prompts by length
 			# with SpinnerContext(message="Tokenizing and binning prompts"):
-			bins_by_len: dict[int, tuple[list[PromptHashStr], TokenSequenceBatch]] = (
+			bins_by_len: dict[int, tuple[PromptHashIntSequence, TokenSequenceBatch]] = (
 				tokenize_and_bin_prompts(
 					model=model,
 					prompts=prompts,
