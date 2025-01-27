@@ -197,14 +197,14 @@ class CollectedAttentionPatternDataloader:
 		# save datasets
 		i: int
 		dataset: AttentionPatternDataset
-		for i, dataset in tqdm.tqdm(
-			enumerate(self.datasets),
+		for i, (n_ctx, dataset) in tqdm.tqdm(
+			enumerate(self.datasets.items()),
 			total=len(self.datasets),
 			desc="Saving datasets",
 			unit="dataset",
 			disable=not verbose,
 		):
-			z.save(dataset, path / f"dataset_{i}.zanj")
+			z.save(dataset, path / f"dataset_{n_ctx}.zanj")
 
 	@classmethod
 	def read(
