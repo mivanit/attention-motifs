@@ -9,6 +9,7 @@ notebooks/test.ipynb
 data/activations/**
 notebooks/*.zanj
 .hf-token
+notebooks/.hf-token
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Byte-compiled / optimized / DLL files
