@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 from attention_motifs.dataset.dataset import (
 	APGenerationConfig,
 	PromptDatasetConfig,
@@ -18,7 +20,6 @@ d = CollectedAttentionPatternDataloader.generate(
 
 d.save("data/activations/pile_1k", verbose=True)
 
-import matplotlib.pyplot as plt
 
 for x in d.batches(2):
 	print(x[0].shape)
