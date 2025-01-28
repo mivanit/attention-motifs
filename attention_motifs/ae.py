@@ -52,8 +52,6 @@ class AttnAEConfig(SerializableDataclass):
 	    Dimension of latent space
 	 - `encoder_channels : Sequence[int]`
 	    Number of channels in each encoder layer
-	 - `decoder_channels : Sequence[int] | None`
-	    Number of channels in each decoder layer. If None, mirrors encoder
 	 - `kernel_size : int`
 	    Kernel size for conv layers
 	 - `margin : float`
@@ -71,7 +69,9 @@ class AttnAEConfig(SerializableDataclass):
 		default_factory=lambda: [
 			Conv2DConfig(channels=16),
 			Conv2DConfig(channels=64),
-		]
+		],
+		serialization_fn=lambda x: [c.serialize() for c in x],
+		deserialize_fn=lambda x: [Conv2DConfig.load(c) for c in x],
 	)
 
 	mlp_prepool: list[int] = serializable_field(default_factory=lambda: [128])
@@ -93,12 +93,10 @@ class AttnAEConfig(SerializableDataclass):
 		deserialize_fn=lambda x: getattr(torch.optim, x),
 	)
 
-	@property
-	def decoder_channels(self) -> Sequence[int]:
-		return tuple(reversed(self.encoder_channels))
-
 	def __post_init__(self):
-		assert all(c.channels > 0 for c in self.encoder_channels)
+		assert all(c.channels > 0 for c in self.conv_encoder)
+		assert all(d > 0 for d in self.mlp_prepool)
+		assert all(d > 0 for d in self.mlp_postpool)
 
 
 @set_config_class(AttnAEConfig)
@@ -120,7 +118,7 @@ class Encoder(ConfiguredModel[AttnAEConfig]):
 
 		# linear map on each pixel
 		linear_layers_prepool: list[nn.Module] = []
-		for out_dim in config.mlp_encoder:
+		for out_dim in config.mlp_prepool:
 			linear_layers_prepool.append(nn.Linear(in_ch, out_dim))
 			linear_layers_prepool.append(config.activation())
 			in_ch = out_dim
@@ -129,7 +127,7 @@ class Encoder(ConfiguredModel[AttnAEConfig]):
 
 		# linear map on pooled features
 		linear_layers_postpool: list[nn.Module] = []
-		for out_dim in config.mlp_encoder:
+		for out_dim in config.mlp_postpool:
 			linear_layers_postpool.append(nn.Linear(in_ch, out_dim))
 			linear_layers_postpool.append(config.activation())
 			in_ch = out_dim
@@ -261,124 +259,12 @@ class AttnAE(ConfiguredModel[AttnAEConfig]):
 	def forward(
 		self,
 		x: Float[Tensor, "*batch n n"],
-		output_with_channel_dim: bool = False,
-	) -> Float[Tensor, "*batch n n"]:
+	) -> tuple[Float[Tensor, "*batch n n"], Float[Tensor, "batch latent_dim"]]:
 		n_ctx: int = x.shape[-1]
 
-		z: Float[Tensor, "batch latent_dim"] = self.encoder(x)
-		x_recon: Float[Tensor, "batch 1 n n"] = self.decoder(z, n_ctx=n_ctx)
-		return x_recon
-
-
-@set_config_class(AttnAEConfig)
-class AttnAE(ConfiguredModel[AttnAEConfig]):
-	def __init__(self, config: AttnAEConfig):
-		super().__init__(config)
-		self.config: AttnAEConfig = config
-
-		act_fn: nn.Module = config.activation()
-		pool_fn: nn.Module = config.pooling()
-
-		# Encoder stack with adaptive final pooling
-		encoder_layers: list[nn.Module] = []
-		in_ch: int = 1  # single channel input
-
-		# Progressive downsampling while increasing channels
-		for out_ch in config.encoder_channels:
-			encoder_layers.extend(
-				[
-					nn.Conv2d(in_ch, out_ch, config.kernel_size, padding=1),
-					act_fn(),
-					pool_fn(2),
-				]
-			)
-			in_ch = out_ch
-
-		# Add adaptive pooling to get to fixed size before latent space
-		encoder_layers.append(nn.AdaptiveAvgPool2d((4, 4)))
-		self.encoder_conv: nn.Module = nn.Sequential(*encoder_layers)
-
-		# Linear projection to latent space
-		self.final_conv_size: int = 4 * 4 * config.encoder_channels[-1]
-		self.encoder_linear: nn.Module = nn.Linear(
-			self.final_conv_size, config.latent_dim
-		)
-
-		# Decoder - starts from fixed size and uses interpolation
-		self.decoder_linear: nn.Module = nn.Linear(
-			config.latent_dim, self.final_conv_size
-		)
-
-		decoder_layers: list[nn.Module] = []
-		in_ch = config.decoder_channels[0]
-
-		# Start with reshaping layer
-		self.decoder_reshape: tuple[int, int, int] = (in_ch, 4, 4)
-
-		# Progressive upsampling while decreasing channels
-		for out_ch in config.decoder_channels[1:]:
-			decoder_layers.extend(
-				[
-					nn.ConvTranspose2d(in_ch, out_ch, config.kernel_size, padding=1),
-					act_fn(),
-					nn.Upsample(scale_factor=2),
-				]
-			)
-			in_ch = out_ch
-
-		# Final layer with adaptive interpolation
-		decoder_layers.extend(
-			[
-				nn.ConvTranspose2d(in_ch, 1, config.kernel_size, padding=1),
-				nn.Sigmoid(),
-				nn.Upsample(
-					mode="bilinear", align_corners=True
-				),  # size set in forward pass
-			]
-		)
-
-		self.decoder_conv: nn.ModuleList = nn.ModuleList(decoder_layers)
-
-	def encode(
-		self, x: Float[Tensor, "batch 1 n n"]
-	) -> Float[Tensor, "batch latent_dim"]:
-		h = self.encoder_conv(x)
-		return self.encoder_linear(h.flatten(1))
-
-	def decode(
-		self,
-		z: Float[Tensor, "batch latent_dim"],
-		output_size: tuple[int, int],
-	) -> Float[Tensor, "batch 1 n n"]:
-		"""Decode latent vectors to reconstructions
-
-		# Parameters:
-		 - `z : Tensor`
-		    Batch of latent vectors
-		 - `output_size : tuple[int, int]`
-		    Desired output size (height, width)
-		"""
-		h = self.decoder_linear(z)
-		h = h.view(-1, *self.decoder_reshape)
-
-		# All layers except last
-		for layer in self.decoder_conv[:-1]:
-			h = layer(h)
-
-		# Final upsampling layer - set size
-		if isinstance(self.decoder_conv[-1], nn.Upsample):
-			h = self.decoder_conv[-1](h, size=output_size)
-		else:
-			h = self.decoder_conv[-1](h)
-
-		return h
-
-	def forward(
-		self, x: Float[Tensor, "batch 1 n n"]
-	) -> tuple[Float[Tensor, "batch 1 n n"], Float[Tensor, "batch latent_dim"]]:
-		z: Float[Tensor, "batch latent_dim"] = self.encode(x)
-		x_recon = self.decode(z, output_size=(x.shape[2], x.shape[3]))
-		return x_recon, z
+		h: Float[Tensor, "batch latent_dim"] = self.encoder(x)
+		x_recon: Float[Tensor, "batch 1 n n"] = self.decoder(h, n_ctx=n_ctx)
+		return x_recon, h
 
 	def contrastive_loss(
 		self,
