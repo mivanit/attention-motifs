@@ -27,6 +27,7 @@ from attention_motifs.consts import (
 	TokenSequenceBatch,
 	DIVIDER_S1,
 	DIVIDER_S2,
+	tensor_batches_indexed,
 )
 from attention_motifs.dataset.util import (
 	AttentionPatternDataset,
@@ -170,31 +171,10 @@ class CollectedAttentionPatternDataloader:
 		- patterns: [batch_size, n_ctx, n_ctx]
 		- metadata: list[AttentionPatternMetadata] of length batch_size
 		"""
-		# flatten all items from all datasets
-		all_items: list[
-			tuple[Float[torch.Tensor, "n_ctx n_ctx"], AttentionPatternMetadata]
-		] = []
-		ds: AttentionPatternDataset
-		for ds in self.datasets.values():
-			i: int
-			for i in range(len(ds)):
-				all_items.append(ds[i])
-
-		# chunk them by batch_size
-		i: int
-		for i in range(0, len(all_items), batch_size):
-			chunk: list[
-				tuple[Float[torch.Tensor, "n_ctx n_ctx"], AttentionPatternMetadata]
-			] = all_items[i : i + batch_size]
-
-			pat_list: list[Float[torch.Tensor, "n_ctx n_ctx"]] = [x[0] for x in chunk]
-			meta_list: list[AttentionPatternMetadata] = [x[1] for x in chunk]
-
-			# stack patterns into a single tensor
-			patterns_batch: Float[torch.Tensor, "batch n_ctx n_ctx"] = torch.stack(
-				pat_list, dim=0
-			)
-			yield patterns_batch, meta_list
+		for n_ctx, ds in self.datasets.items():
+			for idx_start, idx_end, batch in tensor_batches_indexed(ds.patterns)
+				metadata = ds.metadata[idx_start:idx_end]
+				yield batch, metadata
 
 	def save(
 		self,
