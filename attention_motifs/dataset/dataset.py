@@ -85,8 +85,11 @@ class CollectedAttentionPatternDataloader:
 		 - `datasets : list[AttentionPatternDataset]`
 		    The list of attention-pattern datasets
 		"""
+		assert isinstance(config, APGenerationConfig)
 		self.config: APGenerationConfig = config
+		assert isinstance(prompts, PromptDataset)
 		self.prompts: PromptDataset = prompts
+		assert isinstance(datasets, dict)
 		self.datasets: dict[int, AttentionPatternDataset] = datasets
 
 	def summary(self):
@@ -155,6 +158,7 @@ class CollectedAttentionPatternDataloader:
 	) -> Iterator[
 		tuple[Float[torch.Tensor, "batch n_ctx n_ctx"], list[AttentionPatternMetadata]]
 	]:
+		assert batch_size >= 1, "batch_size must be positive"
 		"""
 		Yield mini-batches of (patterns, metadata).
 		- patterns: [batch_size, n_ctx, n_ctx]

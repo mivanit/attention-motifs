@@ -130,9 +130,13 @@ class PromptDatasetConfig(SerializableDataclass):
 		source_path: Path,
 		char_len_min: int | None = DEFAULT_CHAR_LEN_MIN,
 		char_len_max: int | None = DEFAULT_CHAR_LEN_MAX,
+		check_exists: bool = True,
 	) -> "PromptDatasetConfig":
+		assert char_len_min is None or char_len_min > 0
+		assert char_len_max is None or char_len_max > 0
+		assert char_len_min is None or char_len_max is None or char_len_min <= char_len_max
 		source_path = Path(source_path)
-		if not source_path.exists():
+		if check_exists and not source_path.exists():
 			raise FileNotFoundError(
 				f"Prompt dataset source path does not exist: {source_path = }"
 			)
@@ -189,6 +193,7 @@ class PromptDataset(SerializableDataclass):
 		prompts: list[Prompt] = []
 		with open(config.source_path, "r") as f:
 			for line_idx, line in enumerate(f):
+				print(line_idx, line)
 				# add fname metadata
 				d_raw: dict = json.loads(line)
 				d_raw["source_fname"] = config.source_path.as_posix()
@@ -197,6 +202,7 @@ class PromptDataset(SerializableDataclass):
 				# trim too-short samples
 				if config.char_len_min is not None:
 					if len(d_raw["text"]) < config.char_len_min:
+						print(f"skipping, too short: {config.char_len_min = }, {d_raw = }")
 						continue
 
 				# split up too-long samples
@@ -215,6 +221,7 @@ class PromptDataset(SerializableDataclass):
 						text_slices.pop()
 
 					# add em all
+					print(f"sliced up: {d_text = }, {text_slices = }")
 					for i, text_slice in enumerate(text_slices):
 						prompts.append(
 							Prompt.from_dict(
@@ -223,6 +230,7 @@ class PromptDataset(SerializableDataclass):
 						)
 				else:
 					# add the prompt if no length constraints
+					print(f"adding as is: {d_raw = }")
 					prompts.append(Prompt.from_dict(d_raw))
 
 		return cls.from_prompts(config=config, prompts=prompts)
