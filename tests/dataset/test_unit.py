@@ -48,10 +48,12 @@ def test_attention_pattern_dataset_basic():
 
 def test_dataloader_properties():
 	"""Unit test for dataloader properties."""
-	fake_prompts_path: Path = TEMP_DIR / "test_dataloader_properties" / "fake_prompts.jsonl"
+	fake_prompts_path: Path = (
+		TEMP_DIR / "test_dataloader_properties" / "fake_prompts.jsonl"
+	)
 	fake_prompts_path.parent.mkdir(exist_ok=True, parents=True)
 	fake_prompts_path.write_text(json.dumps({"text": "fake prompt"}) + "\n")
-	
+
 	ds_patterns = torch.randn((4, 3, 3))
 	ds_meta = [
 		AttentionPatternMetadata("modelA", 0, i, f"hash{i}", 3) for i in range(4)
@@ -136,7 +138,6 @@ def test_config_splitting_behavior():
 	lengths = [len(d.text) for d in data]
 	assert lengths == [20, 20, 10]
 
-
 	cfg_b: PromptDatasetConfig = PromptDatasetConfig.from_source_path(
 		source_path=splitted_file,
 		char_len_max=20,
@@ -179,7 +180,9 @@ def test_dataloader_negative_batch_size():
 
 	dl = CollectedAttentionPatternDataloader(
 		config=dummy_config,
-		prompts=PromptDataset(config=dummy_config.prompts_config, prompts=[], hash_map={}),
+		prompts=PromptDataset(
+			config=dummy_config.prompts_config, prompts=[], hash_map={}
+		),
 		datasets={3: ds},
 	)
 

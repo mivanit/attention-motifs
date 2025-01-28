@@ -132,7 +132,9 @@ class PromptDatasetConfig(SerializableDataclass):
 	) -> "PromptDatasetConfig":
 		assert char_len_min is None or char_len_min > 0
 		assert char_len_max is None or char_len_max > 0
-		assert char_len_min is None or char_len_max is None or char_len_min <= char_len_max
+		assert (
+			char_len_min is None or char_len_max is None or char_len_min <= char_len_max
+		)
 		source_path = Path(source_path)
 		if check_exists and not source_path.exists():
 			raise FileNotFoundError(

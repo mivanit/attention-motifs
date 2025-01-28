@@ -152,101 +152,102 @@ class Encoder(ConfiguredModel[AttnAEConfig]):
 
 @set_config_class(AttnAEConfig)
 class Decoder(ConfiguredModel[AttnAEConfig]):
-    """Decoder stage of the AttnAE architecture
+	"""Decoder stage of the AttnAE architecture
 
-    This mirrors the `Encoder` by:
-      1. Taking a latent vector of shape (batch, latent_dim)
-      2. Passing it through the inverse MLP layers
-      3. "Un-pooling" or broadcasting back to a spatial grid
-      4. Passing the resulting feature maps through transposed convolution layers
-      5. Producing a reconstructed image of shape (batch, in_channels, H, W)
+	This mirrors the `Encoder` by:
+	  1. Taking a latent vector of shape (batch, latent_dim)
+	  2. Passing it through the inverse MLP layers
+	  3. "Un-pooling" or broadcasting back to a spatial grid
+	  4. Passing the resulting feature maps through transposed convolution layers
+	  5. Producing a reconstructed image of shape (batch, in_channels, H, W)
 
-    # Parameters:
-     - `config : AttnAEConfig`
-        The model configuration
+	# Parameters:
+	 - `config : AttnAEConfig`
+	    The model configuration
 
-    # Usage:
-    ```python
-    >>> decoder = Decoder(config)
-    >>> z = torch.randn(16, config.latent_dim)
-    >>> x_recon = decoder(z)
-    >>> x_recon.shape
-    torch.Size([16, config.in_channels, H, W])
-    ```
-    """
+	# Usage:
+	```python
+	>>> decoder = Decoder(config)
+	>>> z = torch.randn(16, config.latent_dim)
+	>>> x_recon = decoder(z)
+	>>> x_recon.shape
+	torch.Size([16, config.in_channels, H, W])
+	```
+	"""
 
-    def __init__(self, config: AttnAEConfig):
-        super().__init__(config)
-        self.config: AttnAEConfig = config
+	def __init__(self, config: AttnAEConfig):
+		super().__init__(config)
+		self.config: AttnAEConfig = config
 
-        # Inverse of post-pool MLP
-        postunpool_layers: list[nn.Module] = []
-        in_dim: int = config.latent_dim
-        # We'll reverse the mlp_postpool layers used in the encoder
-        for out_dim in reversed(config.mlp_postpool):
-            postunpool_layers.append(nn.Linear(in_dim, out_dim))
-            postunpool_layers.append(config.activation())
-            in_dim = out_dim
+		# Inverse of post-pool MLP
+		postunpool_layers: list[nn.Module] = []
+		in_dim: int = config.latent_dim
+		# We'll reverse the mlp_postpool layers used in the encoder
+		for out_dim in reversed(config.mlp_postpool):
+			postunpool_layers.append(nn.Linear(in_dim, out_dim))
+			postunpool_layers.append(config.activation())
+			in_dim = out_dim
 
-        self.linear_postunpool: nn.Module = nn.Sequential(*postunpool_layers)
+		self.linear_postunpool: nn.Module = nn.Sequential(*postunpool_layers)
 
-        # Inverse of pre-pool MLP
-        preunpool_layers: list[nn.Module] = []
-        for out_dim in reversed(config.mlp_prepool):
-            preunpool_layers.append(nn.Linear(in_dim, out_dim))
-            preunpool_layers.append(config.activation())
-            in_dim = out_dim
+		# Inverse of pre-pool MLP
+		preunpool_layers: list[nn.Module] = []
+		for out_dim in reversed(config.mlp_prepool):
+			preunpool_layers.append(nn.Linear(in_dim, out_dim))
+			preunpool_layers.append(config.activation())
+			in_dim = out_dim
 
-        self.linear_preunpool: nn.Module = nn.Sequential(*preunpool_layers)
+		self.linear_preunpool: nn.Module = nn.Sequential(*preunpool_layers)
 
-        # Transposed convolution layers
-        rev_conv_cfgs = list(reversed(config.conv_encoder))
-        conv_layers: list[nn.Module] = []
-        for i, conv_cfg in enumerate(rev_conv_cfgs):
-            # Decide what the output channels of this transpose conv should be
-            # If not at the last reversed conv, next out is rev_conv_cfgs[i+1].channels
-            # Otherwise, decode to the original in_channels
-            if i < len(rev_conv_cfgs) - 1:
-                out_ch = rev_conv_cfgs[i + 1].channels
-            else:
-                out_ch = config.in_channels
+		# Transposed convolution layers
+		rev_conv_cfgs = list(reversed(config.conv_encoder))
+		conv_layers: list[nn.Module] = []
+		for i, conv_cfg in enumerate(rev_conv_cfgs):
+			# Decide what the output channels of this transpose conv should be
+			# If not at the last reversed conv, next out is rev_conv_cfgs[i+1].channels
+			# Otherwise, decode to the original in_channels
+			if i < len(rev_conv_cfgs) - 1:
+				out_ch = rev_conv_cfgs[i + 1].channels
+			else:
+				out_ch = config.in_channels
 
-            conv_layers.append(conv_cfg.create_decoder(out_ch))
-            # add activation except perhaps after the final layer
-            if i < len(rev_conv_cfgs) - 1:
-                conv_layers.append(config.activation())
+			conv_layers.append(conv_cfg.create_decoder(out_ch))
+			# add activation except perhaps after the final layer
+			if i < len(rev_conv_cfgs) - 1:
+				conv_layers.append(config.activation())
 
-        self.conv: nn.Module = nn.Sequential(*conv_layers)
+		self.conv: nn.Module = nn.Sequential(*conv_layers)
 
-    def forward(
-        self,
-        z: Float[Tensor, "batch latent_dim"],
+	def forward(
+		self,
+		z: Float[Tensor, "batch latent_dim"],
 		n_ctx: int,
-    ) -> Float[Tensor, "batch in_channels n_ctx n_ctx"]:
-        """Forward pass of the Decoder"""
-        # 1) Inverse of the post-pool MLP
-        h: Float[Tensor, "batch mid_dim"] = self.linear_postunpool(z)  # (B, ?)
+	) -> Float[Tensor, "batch in_channels n_ctx n_ctx"]:
+		"""Forward pass of the Decoder"""
+		# 1) Inverse of the post-pool MLP
+		h: Float[Tensor, "batch mid_dim"] = self.linear_postunpool(z)  # (B, ?)
 
-        # 2) Broadcast to spatial dimension
-        #    shape => (B, ?, image_size^2)
-        h = h.unsqueeze(-1)  # (B, ?, 1)
-        h = h.expand(-1, -1, self.image_size * self.image_size)  # (B, ?, H*W)
+		# 2) Broadcast to spatial dimension
+		#    shape => (B, ?, image_size^2)
+		h = h.unsqueeze(-1)  # (B, ?, 1)
+		h = h.expand(-1, -1, self.image_size * self.image_size)  # (B, ?, H*W)
 
-        # 3) Inverse of the pre-pool MLP => shape (B, channels, H*W)
-        h = self.linear_preunpool(h)  # (B, channels, H*W)
+		# 3) Inverse of the pre-pool MLP => shape (B, channels, H*W)
+		h = self.linear_preunpool(h)  # (B, channels, H*W)
 
-        # reshape => (B, channels, H, W)
-        h = h.view(
-            -1,
-            h.shape[1],
-            self.image_size,
-            self.image_size,
-        )
+		# reshape => (B, channels, H, W)
+		h = h.view(
+			-1,
+			h.shape[1],
+			self.image_size,
+			self.image_size,
+		)
 
-        # 4) Run transposed convolution => (B, in_channels, H, W)
-        x_recon: Float[Tensor, "batch in_channels H W"] = self.conv(h)
+		# 4) Run transposed convolution => (B, in_channels, H, W)
+		x_recon: Float[Tensor, "batch in_channels H W"] = self.conv(h)
 
-        return x_recon
+		return x_recon
+
 
 @set_config_class(AttnAEConfig)
 class AttnAE(ConfiguredModel[AttnAEConfig]):
