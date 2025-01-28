@@ -16,10 +16,10 @@ DOCS_DIR := docs
 COVERAGE_REPORTS_DIR := docs/coverage
 
 # where the tests are, for pytest
-TESTS_DIR := tests/
+TESTS_DIR := tests
 
 # tests temp directory to clean up. will remove this in `make clean`
-TESTS_TEMP_DIR := _temp/
+TESTS_TEMP_DIR := $(TESTS_DIR)/_temp/
 
 # probably don't change these:
 # --------------------------------------------------
@@ -453,7 +453,7 @@ format-check:
 typing: clean
 	@echo "running type checks"
 	$(PYTHON) -m mypy --config-file $(PYPROJECT) $(TYPECHECK_ARGS) $(PACKAGE_NAME)/
-	$(PYTHON) -m mypy --config-file $(PYPROJECT) $(TYPECHECK_ARGS) $(TESTS_DIR)/
+	$(PYTHON) -m mypy --config-file $(PYPROJECT) $(TYPECHECK_ARGS) $(TESTS_DIR)
 
 .PHONY: test
 test: clean
