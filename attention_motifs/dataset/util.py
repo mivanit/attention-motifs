@@ -75,14 +75,23 @@ class AttentionPatternMetadata(SerializableDataclass):
 @serializable_dataclass(on_typecheck_mismatch=ErrorMode.IGNORE)
 class AttentionPatternMetadataArray(SerializableDataclass):
 	model_names_map: list[str]
-	data: UInt16[np.ndarray, " model_name/idx_layer/idx_head/n_ctx=4 n_patterns"]
-	prompt_hash: UInt64[np.ndarray, " n_patterns"]
+	# TODO: wtf? why are these not being deserialized properly?
+	data: UInt16[np.ndarray, " model_name/idx_layer/idx_head/n_ctx=4 n_patterns"] = serializable_field(
+		deserialize_fn=lambda x: x["data"],
+	)
+	prompt_hash: UInt64[np.ndarray, " n_patterns"] = serializable_field(
+		deserialize_fn=lambda x: x["data"],
+	)
 	n_samples: int
 
 	def __len__(self) -> int:
 		return self.n_samples
 
 	def __getitem__(self, idx: int) -> AttentionPatternMetadata:
+		print(self.data)
+		print(self.model_names_map)
+		print(self.prompt_hash)
+		print(self.n_samples)
 		model_name_idx, layer, head, n_ctx = self.data[idx]
 		return AttentionPatternMetadata(
 			model_name=self.model_names_map[model_name_idx],
