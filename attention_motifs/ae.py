@@ -227,23 +227,16 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 		n_ctx: int,
 	) -> Float[Tensor, "batch in_channels n_ctx n_ctx"]:
 		"""Forward pass of the Decoder"""
-		print(f"{z.shape=}, {n_ctx=}")
 		# 1) Inverse of the post-pool MLP
 		h: Float[Tensor, "batch mid_dim"] = self.linear_postunpool(z)  # (B, ?)
-		print(f"{h.shape=}")
 		# 2) Broadcast to spatial dimension
 		h = h.unsqueeze(-1)
 		h = h.expand(-1, -1, n_ctx * n_ctx)
-		print(f"{h.shape=}")
 		h = h.permute(0, 2, 1)
-		print(f"{h.shape=}")
 		# 3) Inverse of the pre-pool MLP => shape (B, channels, H*W)
-		print(f"{self.linear_preunpool = }")
 		h = self.linear_preunpool(h)  # (B, channels, H*W)
-		print(f"{h.shape=}")
 		# reshape => (B, channels, H, W)
 		h = h.permute(0, 2, 1)
-		print(f"{h.shape=}")
 		h = h.view(
 			h.shape[0],
 			h.shape[1],
@@ -252,8 +245,6 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 		)
 
 		# 4) Run transposed convolution => (B, in_channels, H, W)
-		print(f"pre conv {h.shape=}")
-		print(f"{self.conv = }")
 		x_recon: Float[Tensor, "batch in_channels H W"] = self.conv(h)
 
 		return x_recon
