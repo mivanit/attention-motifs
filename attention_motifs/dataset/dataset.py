@@ -69,10 +69,12 @@ class DataloaderMock:
 	def __init__(
 			self,
 			iter_func,
+			batch_size: int,
 			n_batches: int,
 			n_samples: int,
 		) -> None:
 		self.iter_func = iter_func
+		self.batch_size: int = batch_size
 		self.n_samples: int = n_samples
 		self.n_batches: int = n_batches
 		self.dataset: DatasetMock = DatasetMock(n_samples)
@@ -209,6 +211,7 @@ class CollectedAttentionPatternDataloader:
 		"""Return a dataloader that yields batches of patterns and metadata."""
 		return DataloaderMock(
 			iter_func=lambda: self.batches(batch_size),
+			batch_size=batch_size,
 			n_batches=self.n_total_samples // batch_size,
 			n_samples=self.n_total_samples,
 		)
