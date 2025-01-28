@@ -93,12 +93,12 @@ class CollectedAttentionPatternDataloader:
 		self.datasets: dict[int, AttentionPatternDataset] = datasets
 
 	def summary(self):
-		n_ctx_stats: dict 
+		n_ctx_stats: dict
 		try:
 			n_ctx_stats = self.n_ctx_stats.summary()
 		except Exception as e:
 			n_ctx_stats = dict(stat_summary_failed=str(e))
-		
+
 		return dict(
 			model_names=self.model_names,
 			# dataset_metadata=self.dataset_metadata,

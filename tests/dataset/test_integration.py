@@ -31,6 +31,7 @@ def make_sample_prompts_file() -> Path:
 			f.write(json.dumps(p) + "\n")
 	return pfile
 
+
 SAMPLE_PROMPTS_FILE: Path = make_sample_prompts_file()
 
 
