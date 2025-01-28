@@ -1,9 +1,8 @@
-
 import torch
 import torch.nn as nn
 from torch import Tensor
 import torch.nn.functional as F
-from jaxtyping import Float, Int
+from jaxtyping import Float
 
 # custom utils
 from muutils.json_serialize import (
@@ -267,10 +266,8 @@ class AttnAE(ConfiguredModel[AttnAEConfig]):
 
 	def contrastive_loss(
 		self,
-		z1: Float[Tensor, "batch latent_dim"],
-		z2: Float[Tensor, "batch latent_dim"],
-		idx1: tuple[Int[Tensor, " batch"], ...],
-		idx2: tuple[Int[Tensor, " batch"], ...],
+		h: Float[Tensor, "batch latent_dim"],
+		classes: Float[Tensor, "batch"],
 	) -> Float[Tensor, ""]:
 		"""Compute contrastive loss between pairs of embeddings"""
 		distances = F.pairwise_distance(z1, z2)

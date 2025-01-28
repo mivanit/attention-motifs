@@ -61,6 +61,9 @@ class AttentionPatternMetadata(SerializableDataclass):
 			prompt_hash=tup[4],
 		)
 
+	def tuple_contrastive(self) -> tuple[str, int, int]:
+		return (self.model_name, self.idx_layer, self.idx_head)
+
 	def hash_int(self) -> int:
 		return compute_text_hashes(self.tuple())[0]
 
@@ -69,6 +72,30 @@ class AttentionPatternMetadata(SerializableDataclass):
 
 	def __hash__(self) -> int:
 		return self.hash_int()
+
+	@classmethod
+	def contrastive_classes(
+		cls,
+		metadata: "list[AttentionPatternMetadata]",
+	) -> Int["batch"]:
+		"class matches if everything but prompt hash and n_ctx matches"
+
+		contrastive_tuples: list[tuple] = [m.tuple_contrastive() for m in metadata]
+
+		classes: set[tuple] = set(contrastive_tuples)
+
+		# create mapping
+		class_map: dict[AttentionPatternMetadataTuple, int] = {
+			tup: idx for idx, tup in enumerate(classes)
+		}
+
+		# create output
+		output: Int["batch"] = torch.array(
+			[class_map[t] for t in contrastive_tuples],
+			dtype=torch.int,
+		)
+
+		return output
 
 
 # TODO: why is it warning us here? look into that error, ignoring for now.
