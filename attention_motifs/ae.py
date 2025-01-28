@@ -270,19 +270,7 @@ class AttnAE(ConfiguredModel[AttnAEConfig]):
 		classes: Float[Tensor, "batch"],
 	) -> Float[Tensor, ""]:
 		"""Compute contrastive loss between pairs of embeddings"""
-		distances = F.pairwise_distance(z1, z2)
-
-		# Compare tuples of indices
-		similar = torch.all(
-			torch.stack([i1 == i2 for i1, i2 in zip(idx1, idx2)]), dim=0
-		)
-
-		similar_loss = distances.pow(2) * similar
-		dissimilar_loss = torch.pow(
-			torch.clamp(self.zanj_model_config.margin - distances, min=0.0), 2
-		) * (~similar)
-
-		return (similar_loss + dissimilar_loss).mean()
+		
 
 
 def train(
