@@ -121,7 +121,11 @@ def test_prompt_getitem():
 	# We'll skip actually checking it if your code doesn't define it.
 	# If you had `property hash(self) -> int`, you'd check that.
 	# We'll do a minimal check that it doesn't error:
-	_ = p["hash"]
+	_ = p["hash_int"]
+	_ = p["hash_str"]
+	# Using an invalid key
+	with pytest.raises(KeyError):
+		_ = p["invalid_key"]
 
 
 # -------------------------

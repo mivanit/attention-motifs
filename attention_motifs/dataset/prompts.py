@@ -23,10 +23,18 @@ from attention_motifs.consts import (
 
 PROMPT_SPECIAL_KEYS: set[str] = {"text", "hash_int", "hash_str"}
 
+class HashMismatchError(ValueError):
+	"""raised when a hash does not match the text it is supposed to represent"""
+	pass
 
 @serializable_dataclass
 class Prompt(SerializableDataclass):
-	"""A prompt is a dictionary with a text key and an optional hash key."""
+	"""A prompt is a dictionary with a text key and an optional hash key.
+	
+	# Raises:
+	- `HashMismatchError`: if the hash does not match the text it is supposed to represent, or the integer/string hash is invalid.
+	
+	"""
 
 	text: str
 	hash_int: int
@@ -35,22 +43,33 @@ class Prompt(SerializableDataclass):
 
 	@classmethod
 	def from_dict(cls, data: dict[str, JSONitem]) -> "Prompt":
+		"""create a prompt from a dictionary, which must contain a `"text"` key.
+		
+		# Raises:
+		- `HashMismatchError`: if the hash does not match the text it is supposed to represent, or the integer/string hash is invalid.
+		"""
 		assert "text" in data
 
-		# compute hashes if not present
-		if ("hash_int" not in data) or ("hash_str" not in data):
-			# if either is missing, recompute the hashes
-			hash_int: int
-			hash_str: str
-			hash_int, hash_str = compute_text_hashes(data["text"])
+		# compute hashes
+		hash_int: int
+		hash_str: str
+		hash_int, hash_str = compute_text_hashes(data["text"])
 
-			# and assert they match, if present
+		if ("hash_int" not in data) or ("hash_str" not in data):
+			# assert they match, if present
+			print(data.get("hash_int", None), hash_int)
+			print(data.get("hash_str", None), hash_str)
 			assert data.get("hash_int", hash_int) == hash_int
 			assert data.get("hash_str", hash_str) == hash_str
 
 			# write to the data dict
 			data["hash_int"] = hash_int
 			data["hash_str"] = hash_str
+
+		elif ("hash_int" in data) and ("hash_str" in data):
+			# if both are present, assert they match
+			assert data["hash_int"] == hash_int
+			assert data["hash_str"] == hash_str
 
 		# return class
 		return cls(
@@ -73,8 +92,10 @@ class Prompt(SerializableDataclass):
 
 	def __getitem__(self, key: str) -> JSONitem:
 		match key:
-			case "hash":
-				return self.hash
+			case "hash_int":
+				return self.hash_int
+			case "hash_str":
+				return self.hash_str
 			case "text":
 				return self.text
 			case _:
@@ -109,6 +130,8 @@ class PromptDatasetConfig(SerializableDataclass):
 		char_len_max: int | None = DEFAULT_CHAR_LEN_MAX,
 	) -> "PromptDatasetConfig":
 		source_path = Path(source_path)
+		if not source_path.exists():
+			raise FileNotFoundError(f"Prompt dataset source path does not exist: {source_path = }")
 		return cls(
 			name=source_path.stem,
 			source_path=source_path,
