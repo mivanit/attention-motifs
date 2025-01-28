@@ -138,9 +138,17 @@ class Encoder(ConfiguredModel[AttnAEConfig]):
 		# conv layers
 		h: Float[Tensor, "batch channels n_ctx n_ctx"] = self.conv(x)
 		# apply linear layers to each pixel
-		h = self.linear_prepool(h.flatten(2))
+		# TODO: add pos embeds?
+		print(f"{h.shape = }")
+		print(f"{h.flatten(2).shape = }")
+
+		h_reshape = h.flatten(2).reshape(h.size(0), -1, h.size(1))
+		print(f"{h_reshape.shape = }")
+		print(f"{self.linear_prepool = }")
+		h = self.linear_prepool(h_reshape)
+		print(f"{h.shape = }")
 		# mean pool over pixels
-		h = h.mean(dim=2)
+		h = h.mean(dim=-2)
 		# apply linear layers to pooled features
 		h = self.linear_postpool(h)
 		return h
@@ -224,9 +232,9 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 		h: Float[Tensor, "batch mid_dim"] = self.linear_postunpool(z)  # (B, ?)
 
 		# 2) Broadcast to spatial dimension
-		#    shape => (B, ?, image_size^2)
+		#    shape => (B, ?, n_ctx^2)
 		h = h.unsqueeze(-1)  # (B, ?, 1)
-		h = h.expand(-1, -1, self.image_size * self.image_size)  # (B, ?, H*W)
+		h = h.expand(-1, -1, n_ctx * n_ctx)  # (B, ?, H*W)
 
 		# 3) Inverse of the pre-pool MLP => shape (B, channels, H*W)
 		h = self.linear_preunpool(h)  # (B, channels, H*W)
@@ -235,8 +243,8 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 		h = h.view(
 			-1,
 			h.shape[1],
-			self.image_size,
-			self.image_size,
+			n_ctx,
+			n_ctx,
 		)
 
 		# 4) Run transposed convolution => (B, in_channels, H, W)
