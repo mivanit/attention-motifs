@@ -172,7 +172,7 @@ class CollectedAttentionPatternDataloader:
 		- metadata: list[AttentionPatternMetadata] of length batch_size
 		"""
 		for n_ctx, ds in self.datasets.items():
-			for idx_start, idx_end, batch in tensor_batches_indexed(ds.patterns)
+			for idx_start, idx_end, batch in tensor_batches_indexed(ds.patterns):
 				metadata = ds.metadata[idx_start:idx_end]
 				yield batch, metadata
 

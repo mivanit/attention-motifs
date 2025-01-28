@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Callable
+from typing import Callable, overload
 
 import numpy as np
 import torch
@@ -87,19 +87,35 @@ class AttentionPatternMetadataArray(SerializableDataclass):
 	def __len__(self) -> int:
 		return self.n_samples
 
+	@overload
 	def __getitem__(self, idx: int) -> AttentionPatternMetadata:
-		print(self.data)
-		print(self.model_names_map)
-		print(self.prompt_hash)
-		print(self.n_samples)
-		model_name_idx, layer, head, n_ctx = self.data[idx]
-		return AttentionPatternMetadata(
-			model_name=self.model_names_map[model_name_idx],
-			idx_layer=layer,
-			idx_head=head,
-			n_ctx=n_ctx,
-			prompt_hash=self.prompt_hash[idx],
-		)
+		...
+	@overload
+	def __getitem__(self, idx: slice) -> list[AttentionPatternMetadata]:
+		...
+	def __getitem__(self, idx: int|slice) -> AttentionPatternMetadata|list[AttentionPatternMetadata]:
+		if isinstance(idx, slice):
+			return [
+				AttentionPatternMetadata(
+					model_name=self.model_names_map[model_name_idx],
+					idx_layer=layer,
+					idx_head=head,
+					n_ctx=n_ctx,
+					prompt_hash=self.prompt_hash[idx],
+				)
+				for model_name_idx, layer, head, n_ctx in self.data[idx]
+			]
+		elif isinstance(idx, int):
+			model_name_idx, layer, head, n_ctx = self.data[idx]
+			return AttentionPatternMetadata(
+				model_name=self.model_names_map[model_name_idx],
+				idx_layer=layer,
+				idx_head=head,
+				n_ctx=n_ctx,
+				prompt_hash=self.prompt_hash[idx],
+			)
+		else:
+			raise TypeError(f"Invalid index type: {type(idx) = }, {idx = }")
 
 	@classmethod
 	def from_list(
