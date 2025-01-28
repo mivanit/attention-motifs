@@ -90,7 +90,7 @@ class AttentionPatternMetadata(SerializableDataclass):
 		}
 
 		# create output
-		output: Int[torch.Tensor, " batch"] = torch.array(
+		output: Int[torch.Tensor, " batch"] = torch.tensor(
 			[class_map[t] for t in contrastive_tuples],
 			dtype=torch.int,
 		)
