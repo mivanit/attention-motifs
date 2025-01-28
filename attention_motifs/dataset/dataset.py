@@ -93,6 +93,12 @@ class CollectedAttentionPatternDataloader:
 		self.datasets: dict[int, AttentionPatternDataset] = datasets
 
 	def summary(self):
+		n_ctx_stats: dict 
+		try:
+			n_ctx_stats = self.n_ctx_stats.summary()
+		except Exception as e:
+			n_ctx_stats = dict(stat_summary_failed=str(e))
+		
 		return dict(
 			model_names=self.model_names,
 			# dataset_metadata=self.dataset_metadata,
@@ -100,7 +106,7 @@ class CollectedAttentionPatternDataloader:
 			n_datasets=self.n_datasets,
 			n_total_samples=self.n_total_samples,
 			# n_ctx_counts=self.n_ctx_counts,
-			n_ctx_stats=self.n_ctx_stats.summary(),
+			n_ctx_stats=n_ctx_stats,
 			config=self.config.serialize(),
 			prompts=self.prompts.summary(),
 		)
@@ -267,7 +273,7 @@ class CollectedAttentionPatternDataloader:
 
 		# read datasets of patterns
 		dataset_meta: list[dict[str, Any]] = obj_metadata["dataset_metadata"]
-		datasets: dict[int, AttentionPatternDataset] = []
+		datasets: dict[int, AttentionPatternDataset] = dict()
 		for d_m in dataset_meta:
 			n_ctx: int = d_m["n_ctx"]
 			ds_path: Path = path / f"dataset_n{n_ctx}.zanj"

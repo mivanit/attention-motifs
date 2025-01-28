@@ -14,11 +14,11 @@ from attention_motifs.dataset.prompts import PromptDatasetConfig
 TEMP_DIR: Path = Path("tests/_temp")
 
 
-@pytest.fixture
-def sample_prompts_file() -> Path:
+def make_sample_prompts_file() -> Path:
 	"""Create a small prompts file inside tests/_temp with multiple lines."""
 	# We'll not use a tempfile here so we can see the file in tests/_temp
 	pfile = TEMP_DIR / "sample_prompts.jsonl"
+	pfile.parent.mkdir(exist_ok=True, parents=True)
 	# create a few sample prompts
 	prompts = [
 		{"text": "Hello world!"},
@@ -31,16 +31,18 @@ def sample_prompts_file() -> Path:
 			f.write(json.dumps(p) + "\n")
 	return pfile
 
+SAMPLE_PROMPTS_FILE: Path = make_sample_prompts_file()
+
 
 @pytest.mark.parametrize(
 	"model_name", ["tiny-stories-1M"]
 )  # Expand or change as desired
-def test_integration_generate_save_read(model_name: str, sample_prompts_file: Path):
+def test_integration_generate_save_read(model_name: str):
 	# We'll use an actual model name "gpt2" by default for the test.
 
 	config = APGenerationConfig(
 		prompts_config=PromptDatasetConfig.from_source_path(
-			source_path=sample_prompts_file
+			source_path=SAMPLE_PROMPTS_FILE
 		),
 		model_names=[model_name],
 		prompt_token_len_tolerance=2,
@@ -90,11 +92,11 @@ def test_integration_generate_save_read(model_name: str, sample_prompts_file: Pa
 		["tiny-stories-1M", "pythia-14m"],
 	],
 )
-def test_integration_multiple_models(model_names: list[str], sample_prompts_file: Path):
+def test_integration_multiple_models(model_names: list[str]):
 	"""Check the behavior with zero or multiple model names."""
 	config = APGenerationConfig(
 		prompts_config=PromptDatasetConfig.from_source_path(
-			source_path=sample_prompts_file
+			source_path=SAMPLE_PROMPTS_FILE
 		),
 		model_names=model_names,
 		prompt_token_len_tolerance=2,
@@ -110,11 +112,11 @@ def test_integration_multiple_models(model_names: list[str], sample_prompts_file
 		assert dl.n_total_samples > 0
 
 
-def test_integration_missing_metadata(sample_prompts_file: Path):
+def test_integration_missing_metadata():
 	"""Check read() if metadata.zanj is missing => should raise FileNotFoundError."""
 	config = APGenerationConfig(
 		prompts_config=PromptDatasetConfig.from_source_path(
-			source_path=sample_prompts_file
+			source_path=SAMPLE_PROMPTS_FILE
 		),
 		model_names=["gpt2"],
 		prompt_token_len_tolerance=2,
@@ -122,7 +124,8 @@ def test_integration_missing_metadata(sample_prompts_file: Path):
 	dl = CollectedAttentionPatternDataloader.generate(config)
 
 	tmp_path: Path = TEMP_DIR / "test_integration_missing_metadata"
-	dl.save(tmp_path)
+	with pytest.warns(UserWarning):
+		dl.save(tmp_path)
 
 	# remove the metadata file
 	(tmp_path / "metadata.zanj").unlink()
@@ -131,11 +134,11 @@ def test_integration_missing_metadata(sample_prompts_file: Path):
 		_ = CollectedAttentionPatternDataloader.read(tmp_path)
 
 
-def test_integration_missing_dataset_files(sample_prompts_file: Path):
+def test_integration_missing_dataset_files():
 	"""Check read() if one dataset file is missing => should raise FileNotFoundError."""
 	config = APGenerationConfig(
 		prompts_config=PromptDatasetConfig.from_source_path(
-			source_path=sample_prompts_file
+			source_path=SAMPLE_PROMPTS_FILE
 		),
 		model_names=["gpt2"],
 		prompt_token_len_tolerance=2,
@@ -143,22 +146,23 @@ def test_integration_missing_dataset_files(sample_prompts_file: Path):
 	dl = CollectedAttentionPatternDataloader.generate(config)
 
 	tmp_path = TEMP_DIR / "test_integration_missing_dataset_files"
-	dl.save(tmp_path)
+	with pytest.warns(UserWarning):
+		dl.save(tmp_path)
 
 	# remove one dataset file
-	ds_to_remove = tmp_path / "dataset_0.zanj"
-	if ds_to_remove.is_file():
-		ds_to_remove.unlink()
+	dataset_files: list[Path] = list(tmp_path.glob("dataset_*.zanj"))
+	assert len(dataset_files) > 0
+	dataset_files[0].unlink()
 
 	with pytest.raises(FileNotFoundError):
 		_ = CollectedAttentionPatternDataloader.read(tmp_path)
 
 
-def test_integration_dummy_training_loop(sample_prompts_file: Path):
+def test_integration_dummy_training_loop():
 	"""A full pipeline, ending with a trivial training loop on the attention patterns."""
 	config = APGenerationConfig(
 		prompts_config=PromptDatasetConfig.from_source_path(
-			source_path=sample_prompts_file
+			source_path=SAMPLE_PROMPTS_FILE
 		),
 		model_names=["gpt2"],
 		prompt_token_len_tolerance=2,

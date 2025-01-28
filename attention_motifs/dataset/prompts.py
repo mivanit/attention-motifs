@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import warnings
 
 
 # custom utils
@@ -242,13 +243,22 @@ class PromptDataset(SerializableDataclass):
 		return cls(config=config, prompts=prompts, hash_map=hash_map)
 
 	def summary(self) -> JSONitem:
-		example_hash_str: PromptHashStr = self.prompts[0].hash_str
+		example_hash_str: PromptHashStr|None = None
+		example_prompt: dict|None = None
+		example_hash_map = None
+		try:
+			example_hash_str = self.prompts[0].hash_str
+			example_prompt = self.prompts[0].serialize()
+			example_hash_map = self.hash_map[example_hash_str]
+		except Exception as e:
+			warnings.warn(f"failed to get examples in PromptDatset().summary(), dataset is probably empty: {e = }")
+
 		return dict(
 			config=self.config.serialize(),
 			prompt_count=len(self),
 			example={
-				"prompts[0]": self.prompts[0].serialize(),
-				f"hash_map[{example_hash_str}]": self.hash_map[example_hash_str],
+				"prompts[0]": example_prompt,
+				f"hash_map[{example_hash_str}]": example_hash_map,
 			},
 		)
 
