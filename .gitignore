@@ -9,6 +9,7 @@ notebooks/test.ipynb
 data/activations/**
 notebooks/*.zanj
 notebooks/trnbl-logs/**
+notebooks/tb-logs-convAE/**
 .hf-token
 notebooks/.hf-token
 
