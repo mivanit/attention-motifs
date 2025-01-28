@@ -139,14 +139,8 @@ class Encoder(ConfiguredModel[AttnAEConfig]):
 		h: Float[Tensor, "batch channels n_ctx n_ctx"] = self.conv(x)
 		# apply linear layers to each pixel
 		# TODO: add pos embeds?
-		print(f"{h.shape = }")
-		print(f"{h.flatten(2).shape = }")
-
 		h_reshape = h.flatten(2).reshape(h.size(0), -1, h.size(1))
-		print(f"{h_reshape.shape = }")
-		print(f"{self.linear_prepool = }")
 		h = self.linear_prepool(h_reshape)
-		print(f"{h.shape = }")
 		# mean pool over pixels
 		h = h.mean(dim=-2)
 		# apply linear layers to pooled features
