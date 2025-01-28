@@ -52,10 +52,14 @@ except Exception as e:
 def b64encode(data: bytes) -> str:
 	return base64.b64encode(data, altchars=b"_-").decode("utf-8")
 
+
 def b64decode(data: str) -> bytes:
 	return base64.b64decode(data, altchars=b"_-")
 
-def compute_text_hashes(text: str, max_size: int = PROMPT_HASH_BYTES) -> tuple[int, str]:
+
+def compute_text_hashes(
+	text: str, max_size: int = PROMPT_HASH_BYTES
+) -> tuple[int, str]:
 	hash_digest: bytes = hashlib.sha256(text.encode("utf-8")).digest()
 	# truncate to the desired size
 	hash_digest = hash_digest[:max_size]

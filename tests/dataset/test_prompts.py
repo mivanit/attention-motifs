@@ -236,7 +236,9 @@ def test_prompt_dataset_from_config(ensure_temp_dir, example_prompts_data):
 			f.write(json.dumps(row) + "\n")
 
 	# Create config and load
-	config = PromptDatasetConfig.from_source_path(jsonl_path, char_len_min=1, char_len_max=99999)
+	config = PromptDatasetConfig.from_source_path(
+		jsonl_path, char_len_min=1, char_len_max=99999
+	)
 	ds = PromptDataset.from_config(config)
 
 	# Check length

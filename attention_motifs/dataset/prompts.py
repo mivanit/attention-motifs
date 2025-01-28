@@ -1,6 +1,5 @@
 # custom utils
 
-from base64 import b64decode
 import json
 from pathlib import Path
 
@@ -23,17 +22,20 @@ from attention_motifs.consts import (
 
 PROMPT_SPECIAL_KEYS: set[str] = {"text", "hash_int", "hash_str"}
 
+
 class HashMismatchError(ValueError):
 	"""raised when a hash does not match the text it is supposed to represent"""
+
 	pass
+
 
 @serializable_dataclass
 class Prompt(SerializableDataclass):
 	"""A prompt is a dictionary with a text key and an optional hash key.
-	
+
 	# Raises:
 	- `HashMismatchError`: if the hash does not match the text it is supposed to represent, or the integer/string hash is invalid.
-	
+
 	"""
 
 	text: str
@@ -44,7 +46,7 @@ class Prompt(SerializableDataclass):
 	@classmethod
 	def from_dict(cls, data: dict[str, JSONitem]) -> "Prompt":
 		"""create a prompt from a dictionary, which must contain a `"text"` key.
-		
+
 		# Raises:
 		- `HashMismatchError`: if the hash does not match the text it is supposed to represent, or the integer/string hash is invalid.
 		"""
@@ -131,7 +133,9 @@ class PromptDatasetConfig(SerializableDataclass):
 	) -> "PromptDatasetConfig":
 		source_path = Path(source_path)
 		if not source_path.exists():
-			raise FileNotFoundError(f"Prompt dataset source path does not exist: {source_path = }")
+			raise FileNotFoundError(
+				f"Prompt dataset source path does not exist: {source_path = }"
+			)
 		return cls(
 			name=source_path.stem,
 			source_path=source_path,
@@ -258,7 +262,9 @@ class PromptDataset(SerializableDataclass):
 	def hash_int_get(self, hash_int: int) -> Prompt:
 		"get a prompt by what the text hashes to (raw integer)"
 		# convert to string
-		hash_str: str = b64encode(hash_int.to_bytes(PROMPT_HASH_BITS // 8, byteorder="big"))
+		hash_str: str = b64encode(
+			hash_int.to_bytes(PROMPT_HASH_BITS // 8, byteorder="big")
+		)
 		return self.prompts[self.hash_map[hash_str]]
 
 	def hash_get(self, hash: int | PromptHashStr) -> Prompt:
