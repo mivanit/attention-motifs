@@ -270,7 +270,7 @@ class AttnAE(ConfiguredModel[AttnAEConfig]):
 		classes: Int[Tensor, " batch"],
 	) -> Float[Tensor, ""]:
 		"""Compute contrastive loss between pairs of embeddings
-		
+
 		This implements a margin-based contrastive loss using all pairs in the batch.
 		For each pair (i, j), if `classes[i] == classes[j]`, it penalizes the squared distance;
 		if they're different, it penalizes the squared distance from a margin.
@@ -302,17 +302,22 @@ class AttnAE(ConfiguredModel[AttnAEConfig]):
 		distances: Float[Tensor, "batch batch"] = torch.cdist(h, h, p=2)
 
 		# same_mask[i,j] = 1 if classes[i] == classes[j], else 0
-		same_mask: Float[Tensor, "batch batch"] = (classes.unsqueeze(1) == classes.unsqueeze(0)).float()
+		same_mask: Float[Tensor, "batch batch"] = (
+			classes.unsqueeze(1) == classes.unsqueeze(0)
+		).float()
 
 		# Loss for same-class pairs: dist^2
-		same_loss: Float[Tensor, "batch batch"] = (distances ** 2) * same_mask
+		same_loss: Float[Tensor, "batch batch"] = (distances**2) * same_mask
 
 		# Loss for different-class pairs: max(0, margin - dist)^2
-		diff_loss: Float[Tensor, "batch batch"] = (F.relu(margin - distances) ** 2) * (1 - same_mask)
+		diff_loss: Float[Tensor, "batch batch"] = (F.relu(margin - distances) ** 2) * (
+			1 - same_mask
+		)
 
-		total_loss: Float[Tensor, ""] = (same_loss + diff_loss).sum() / (batch_size * (batch_size - 1))
+		total_loss: Float[Tensor, ""] = (same_loss + diff_loss).sum() / (
+			batch_size * (batch_size - 1)
+		)
 		return total_loss
-		
 
 
 def train(

@@ -77,7 +77,7 @@ class AttentionPatternMetadata(SerializableDataclass):
 	def contrastive_classes(
 		cls,
 		metadata: "list[AttentionPatternMetadata]",
-	) -> Int[torch.Tensor, "batch"]:
+	) -> Int[torch.Tensor, " batch"]:
 		"class matches if everything but prompt hash and n_ctx matches"
 
 		contrastive_tuples: list[tuple] = [m.tuple_contrastive() for m in metadata]
@@ -90,7 +90,7 @@ class AttentionPatternMetadata(SerializableDataclass):
 		}
 
 		# create output
-		output: Int[torch.Tensor, "batch"] = torch.array(
+		output: Int[torch.Tensor, " batch"] = torch.array(
 			[class_map[t] for t in contrastive_tuples],
 			dtype=torch.int,
 		)
