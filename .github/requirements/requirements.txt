@@ -45,7 +45,7 @@ iniconfig==2.0.0
 ipykernel==6.29.5
 ipython==8.31.0
 ipywidgets==8.1.5
-jaxtyping==0.2.36
+jaxtyping==0.2.37
 jedi==0.19.2
 jinja2==3.1.5
 joblib==1.4.2
@@ -149,6 +149,7 @@ typer==0.15.1
 typing-extensions==4.12.2
 tzdata==2025.1
 urllib3==2.3.0
+wadler-lindig==0.1.3
 wandb==0.19.4
 wcmatch==10.0
 wcwidth==0.2.13
