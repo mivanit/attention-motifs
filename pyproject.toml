@@ -29,7 +29,7 @@ dependencies = [
     # custom utils
     "muutils>=0.6.21",
 	"zanj>=0.3.1",
-	"trnbl>=0.1.0",
+	"trnbl[tensorboard]>=0.1.0",
     # TL
     "transformer-lens>=2.10.0",
     # this TL dep not listed? is this in an extra?
