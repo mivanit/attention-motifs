@@ -40,7 +40,7 @@ class AttentionPatternMetadata(SerializableDataclass):
 	n_ctx: int
 	prompt_hash: PromptHashInt
 
-	def tuple(self) -> AttentionPatternMetadataTuple:
+	def as_tuple(self) -> AttentionPatternMetadataTuple:
 		return (
 			self.model_name,
 			self.idx_layer,
@@ -65,10 +65,10 @@ class AttentionPatternMetadata(SerializableDataclass):
 		return (self.model_name, self.idx_layer, self.idx_head)
 
 	def hash_int(self) -> int:
-		return compute_text_hashes(self.tuple())[0]
+		return compute_text_hashes(str(self.as_tuple()))[0]
 
 	def hash_str(self) -> str:
-		return compute_text_hashes(self.tuple())[1]
+		return compute_text_hashes(str(self.as_tuple()))[1]
 
 	def __hash__(self) -> int:
 		return self.hash_int()
@@ -77,7 +77,7 @@ class AttentionPatternMetadata(SerializableDataclass):
 	def contrastive_classes(
 		cls,
 		metadata: "list[AttentionPatternMetadata]",
-	) -> Int["batch"]:
+	) -> Int[torch.Tensor, "batch"]:
 		"class matches if everything but prompt hash and n_ctx matches"
 
 		contrastive_tuples: list[tuple] = [m.tuple_contrastive() for m in metadata]
@@ -90,7 +90,7 @@ class AttentionPatternMetadata(SerializableDataclass):
 		}
 
 		# create output
-		output: Int["batch"] = torch.array(
+		output: Int[torch.Tensor, "batch"] = torch.array(
 			[class_map[t] for t in contrastive_tuples],
 			dtype=torch.int,
 		)
