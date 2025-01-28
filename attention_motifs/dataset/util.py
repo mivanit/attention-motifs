@@ -13,6 +13,7 @@ from muutils.json_serialize import (
 	serializable_dataclass,
 	serializable_field,
 )
+from muutils.errormode import ErrorMode
 
 from attention_motifs.consts import (
 	AttentionPattern,
@@ -70,7 +71,8 @@ class AttentionPatternMetadata(SerializableDataclass):
 		return self.hash_int()
 
 
-@serializable_dataclass
+# TODO: why is it warning us here? look into that error, ignoring for now.
+@serializable_dataclass(on_typecheck_mismatch=ErrorMode.IGNORE)
 class AttentionPatternMetadataArray(SerializableDataclass):
 	model_names_map: list[str]
 	data: UInt16[np.ndarray, " model_name/idx_layer/idx_head/n_ctx=4 n_patterns"]

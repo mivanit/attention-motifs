@@ -240,6 +240,7 @@ class CollectedAttentionPatternDataloader:
 			unit="dataset",
 			disable=not verbose,
 		):
+			# TODO: switch to `_n{n_ctx}` for the dataset name
 			z.save(dataset, path / f"dataset_{n_ctx}.zanj")
 
 	@classmethod
@@ -262,6 +263,7 @@ class CollectedAttentionPatternDataloader:
 		# Returns:
 		 - `CollectedAttentionPatternDataloader`
 		"""
+		path = Path(path)
 		z = z or ZANJ()
 
 		# save the metadata
@@ -276,7 +278,8 @@ class CollectedAttentionPatternDataloader:
 		datasets: dict[int, AttentionPatternDataset] = dict()
 		for d_m in dataset_meta:
 			n_ctx: int = d_m["n_ctx"]
-			ds_path: Path = path / f"dataset_n{n_ctx}.zanj"
+			# TODO: switch to `_n{n_ctx}` for the dataset name
+			ds_path: Path = path / f"dataset_{n_ctx}.zanj"
 			ds: AttentionPatternDataset = z.read(ds_path)
 			datasets[n_ctx] = ds
 
