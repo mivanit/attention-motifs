@@ -58,6 +58,32 @@ class APGenerationConfig(SerializableDataclass):
 		)
 
 
+class DatasetMock:
+	def __init__(self, n_samples: int) -> None:
+		self.n_samples: int = n_samples
+
+	def __len__(self) -> int:
+		return self.n_samples
+
+class DataloaderMock:
+	def __init__(
+			self,
+			iter_func,
+			n_batches: int,
+			n_samples: int,
+		) -> None:
+		self.iter_func = iter_func
+		self.n_samples: int = n_samples
+		self.n_batches: int = n_batches
+		self.dataset: DatasetMock = DatasetMock(n_samples)
+	
+	def __len__(self) -> int:
+		return self.n_batches
+
+	def __iter__(self):
+		for x in self.iter_func():
+			yield x
+
 class CollectedAttentionPatternDataloader:
 	"""Collected dataset of `AttentionPatternDataset` objects, returning a batch of patterns and metadata.
 
@@ -175,6 +201,17 @@ class CollectedAttentionPatternDataloader:
 			for idx_start, idx_end, batch in tensor_batches_indexed(ds.patterns):
 				metadata = ds.metadata[idx_start:idx_end]
 				yield batch, metadata
+
+	def dataloader(
+		self,
+		batch_size: int,
+	) -> DataloaderMock:
+		"""Return a dataloader that yields batches of patterns and metadata."""
+		return DataloaderMock(
+			iter_func=lambda: self.batches(batch_size),
+			n_batches=self.n_total_samples // batch_size,
+			n_samples=self.n_total_samples,
+		)
 
 	def save(
 		self,
