@@ -65,26 +65,28 @@ class DatasetMock:
 	def __len__(self) -> int:
 		return self.n_samples
 
+
 class DataloaderMock:
 	def __init__(
-			self,
-			iter_func,
-			batch_size: int,
-			n_batches: int,
-			n_samples: int,
-		) -> None:
+		self,
+		iter_func,
+		batch_size: int,
+		n_batches: int,
+		n_samples: int,
+	) -> None:
 		self.iter_func = iter_func
 		self.batch_size: int = batch_size
 		self.n_samples: int = n_samples
 		self.n_batches: int = n_batches
 		self.dataset: DatasetMock = DatasetMock(n_samples)
-	
+
 	def __len__(self) -> int:
 		return self.n_batches
 
 	def __iter__(self):
 		for x in self.iter_func():
 			yield x
+
 
 class CollectedAttentionPatternDataloader:
 	"""Collected dataset of `AttentionPatternDataset` objects, returning a batch of patterns and metadata.

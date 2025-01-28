@@ -1,4 +1,3 @@
-from typing import Sequence
 
 import torch
 import torch.nn as nn

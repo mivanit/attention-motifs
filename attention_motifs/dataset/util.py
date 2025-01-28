@@ -76,8 +76,10 @@ class AttentionPatternMetadata(SerializableDataclass):
 class AttentionPatternMetadataArray(SerializableDataclass):
 	model_names_map: list[str]
 	# TODO: wtf? why are these not being deserialized properly?
-	data: UInt16[np.ndarray, " model_name/idx_layer/idx_head/n_ctx=4 n_patterns"] = serializable_field(
-		deserialize_fn=lambda x: x["data"],
+	data: UInt16[np.ndarray, " model_name/idx_layer/idx_head/n_ctx=4 n_patterns"] = (
+		serializable_field(
+			deserialize_fn=lambda x: x["data"],
+		)
 	)
 	prompt_hash: UInt64[np.ndarray, " n_patterns"] = serializable_field(
 		deserialize_fn=lambda x: x["data"],
@@ -88,12 +90,12 @@ class AttentionPatternMetadataArray(SerializableDataclass):
 		return self.n_samples
 
 	@overload
-	def __getitem__(self, idx: int) -> AttentionPatternMetadata:
-		...
+	def __getitem__(self, idx: int) -> AttentionPatternMetadata: ...
 	@overload
-	def __getitem__(self, idx: slice) -> list[AttentionPatternMetadata]:
-		...
-	def __getitem__(self, idx: int|slice) -> AttentionPatternMetadata|list[AttentionPatternMetadata]:
+	def __getitem__(self, idx: slice) -> list[AttentionPatternMetadata]: ...
+	def __getitem__(
+		self, idx: int | slice
+	) -> AttentionPatternMetadata | list[AttentionPatternMetadata]:
 		if isinstance(idx, slice):
 			return [
 				AttentionPatternMetadata(
