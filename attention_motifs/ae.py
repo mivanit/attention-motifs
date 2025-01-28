@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 import torch.nn.functional as F
-from jaxtyping import Float
+from jaxtyping import Float, Int
 
 # custom utils
 from muutils.json_serialize import (
@@ -267,9 +267,51 @@ class AttnAE(ConfiguredModel[AttnAEConfig]):
 	def contrastive_loss(
 		self,
 		h: Float[Tensor, "batch latent_dim"],
-		classes: Float[Tensor, "batch"],
+		classes: Int[Tensor, " batch"],
 	) -> Float[Tensor, ""]:
-		"""Compute contrastive loss between pairs of embeddings"""
+		"""Compute contrastive loss between pairs of embeddings
+		
+		This implements a margin-based contrastive loss using all pairs in the batch.
+		For each pair (i, j), if `classes[i] == classes[j]`, it penalizes the squared distance;
+		if they're different, it penalizes the squared distance from a margin.
+
+		# Parameters:
+		- `h : Float[Tensor, "batch latent_dim"]`
+			Embedding vectors of shape (batch, latent_dim)
+		- `classes : Int[Tensor, "batch"]`
+			Class labels for each embedding (batch,)
+
+		# Returns:
+		- `Float[Tensor, ""]`
+			Scalar contrastive loss
+
+		# Usage:
+
+		```python
+		>>> import torch
+		>>> h = torch.randn(4, 16)
+		>>> classes = torch.tensor([0, 0, 1, 1])
+		>>> loss = model.contrastive_loss(h, classes)
+		>>> loss.backward()
+		```
+		"""
+		margin: float = 1.0
+		batch_size: int = h.size(0)
+
+		# Pairwise distances, shape: (batch, batch)
+		distances: Float[Tensor, "batch batch"] = torch.cdist(h, h, p=2)
+
+		# same_mask[i,j] = 1 if classes[i] == classes[j], else 0
+		same_mask: Float[Tensor, "batch batch"] = (classes.unsqueeze(1) == classes.unsqueeze(0)).float()
+
+		# Loss for same-class pairs: dist^2
+		same_loss: Float[Tensor, "batch batch"] = (distances ** 2) * same_mask
+
+		# Loss for different-class pairs: max(0, margin - dist)^2
+		diff_loss: Float[Tensor, "batch batch"] = (F.relu(margin - distances) ** 2) * (1 - same_mask)
+
+		total_loss: Float[Tensor, ""] = (same_loss + diff_loss).sum() / (batch_size * (batch_size - 1))
+		return total_loss
 		
 
 
