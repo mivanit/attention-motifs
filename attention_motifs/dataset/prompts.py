@@ -59,8 +59,6 @@ class Prompt(SerializableDataclass):
 
 		if ("hash_int" not in data) or ("hash_str" not in data):
 			# assert they match, if present
-			print(data.get("hash_int", None), hash_int)
-			print(data.get("hash_str", None), hash_str)
 			assert data.get("hash_int", hash_int) == hash_int
 			assert data.get("hash_str", hash_str) == hash_str
 
@@ -193,7 +191,6 @@ class PromptDataset(SerializableDataclass):
 		prompts: list[Prompt] = []
 		with open(config.source_path, "r") as f:
 			for line_idx, line in enumerate(f):
-				print(line_idx, line)
 				# add fname metadata
 				d_raw: dict = json.loads(line)
 				d_raw["source_fname"] = config.source_path.as_posix()
@@ -202,7 +199,6 @@ class PromptDataset(SerializableDataclass):
 				# trim too-short samples
 				if config.char_len_min is not None:
 					if len(d_raw["text"]) < config.char_len_min:
-						print(f"skipping, too short: {config.char_len_min = }, {d_raw = }")
 						continue
 
 				# split up too-long samples
@@ -221,7 +217,6 @@ class PromptDataset(SerializableDataclass):
 						text_slices.pop()
 
 					# add em all
-					print(f"sliced up: {d_text = }, {text_slices = }")
 					for i, text_slice in enumerate(text_slices):
 						prompts.append(
 							Prompt.from_dict(
@@ -230,7 +225,6 @@ class PromptDataset(SerializableDataclass):
 						)
 				else:
 					# add the prompt if no length constraints
-					print(f"adding as is: {d_raw = }")
 					prompts.append(Prompt.from_dict(d_raw))
 
 		return cls.from_prompts(config=config, prompts=prompts)
