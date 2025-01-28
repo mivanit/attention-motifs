@@ -1,5 +1,6 @@
 # custom utils
 
+from base64 import b64decode
 import json
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from muutils.json_serialize import (
 )
 
 from attention_motifs.consts import (
+	PROMPT_HASH_BITS,
 	PromptHashStr,
 	b64encode,
 	compute_text_hashes,
@@ -233,7 +235,7 @@ class PromptDataset(SerializableDataclass):
 	def hash_int_get(self, hash_int: int) -> Prompt:
 		"get a prompt by what the text hashes to (raw integer)"
 		# convert to string
-		hash_str: str = b64encode(hash_int)
+		hash_str: str = b64encode(hash_int.to_bytes(PROMPT_HASH_BITS // 8, byteorder="big"))
 		return self.prompts[self.hash_map[hash_str]]
 
 	def hash_get(self, hash: int | PromptHashStr) -> Prompt:

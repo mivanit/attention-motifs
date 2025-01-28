@@ -204,6 +204,11 @@ def test_prompt_dataset_from_prompts(ensure_temp_dir):
 	all_prompts = list(iter(ds))
 	assert len(all_prompts) == 2
 	# test hash-based retrieval
+	print(ds.hash_map)
+	print(p1.hash_str)
+	print(p2.hash_str)
+	print(p1.hash_int)
+	print(p2.hash_int)
 	assert ds.hash_str_get(p1.hash_str) is p1
 	assert ds.hash_int_get(p2.hash_int) is p2
 
@@ -227,7 +232,7 @@ def test_prompt_dataset_from_config(ensure_temp_dir, example_prompts_data):
 			f.write(json.dumps(row) + "\n")
 
 	# Create config and load
-	config = PromptDatasetConfig.from_source_path(jsonl_path)
+	config = PromptDatasetConfig.from_source_path(jsonl_path, char_len_min=1, char_len_max=99999)
 	ds = PromptDataset.from_config(config)
 
 	# Check length
@@ -315,8 +320,10 @@ def test_prompt_dataset_hash_collisions(ensure_temp_dir):
 		for row in data_list:
 			f.write(json.dumps(row) + "\n")
 
-	config = PromptDatasetConfig.from_source_path(collision_path)
+	config = PromptDatasetConfig.from_source_path(collision_path, char_len_min=1)
 	ds = PromptDataset.from_config(config)
+
+	print(ds)
 
 	# We now have two distinct prompts in ds.prompts, but they share the same hash.
 	# The current code uses `hash_map: dict[PromptHashStr, int] = { p.hash_str: i ... }`
