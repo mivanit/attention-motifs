@@ -8,6 +8,7 @@ tests/_temp/**
 notebooks/test.ipynb
 data/activations/**
 notebooks/*.zanj
+notebooks/trnbl-logs/**
 .hf-token
 notebooks/.hf-token
 
