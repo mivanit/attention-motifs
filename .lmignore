@@ -1,10 +1,14 @@
 docs/**
 .github/requirements/**
 .git/**
-!data/pile_5.jsonl
 data/pile_100.jsonl
+data/pile_50.jsonl
+data/pile_5_val.jsonl
 data/pile_1k.jsonl
+.ruff_cache/**
+.github/**
 uv.lock
 # temp
-notebooks/**
+# notebooks/**
 makefile
+summary.md
