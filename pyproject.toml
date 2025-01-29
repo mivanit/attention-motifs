@@ -52,7 +52,7 @@ cli = [
 [dependency-groups]
 dev = [	
 	# lmcat
-    "lmcat>=0.0.1",
+    "lmcat>=0.1.0",
 	# test
 	"pytest>=8.2.2",
 	# coverage
