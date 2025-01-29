@@ -269,61 +269,6 @@ class AttnAE(ConfiguredModel[AttnAEConfig]):
 		x_recon: Float[Tensor, "batch 1 n n"] = self.decoder(h, n_ctx=n_ctx)
 		return x_recon, h
 
-	def contrastive_loss(
-		self,
-		h: Float[Tensor, "batch latent_dim"],
-		classes: Int[Tensor, " batch"],
-	) -> Float[Tensor, ""]:
-		"""Compute contrastive loss between pairs of embeddings
-
-		This implements a margin-based contrastive loss using all pairs in the batch.
-		For each pair (i, j), if `classes[i] == classes[j]`, it penalizes the squared distance;
-		if they're different, it penalizes the squared distance from a margin.
-
-		# Parameters:
-		- `h : Float[Tensor, "batch latent_dim"]`
-			Embedding vectors of shape (batch, latent_dim)
-		- `classes : Int[Tensor, "batch"]`
-			Class labels for each embedding (batch,)
-
-		# Returns:
-		- `Float[Tensor, ""]`
-			Scalar contrastive loss
-
-		# Usage:
-
-		```python
-		>>> import torch
-		>>> h = torch.randn(4, 16)
-		>>> classes = torch.tensor([0, 0, 1, 1])
-		>>> loss = model.contrastive_loss(h, classes)
-		>>> loss.backward()
-		```
-		"""
-		margin: float = 1.0
-		batch_size: int = h.size(0)
-
-		# Pairwise distances, shape: (batch, batch)
-		distances: Float[Tensor, "batch batch"] = torch.cdist(h, h, p=2)
-
-		# same_mask[i,j] = 1 if classes[i] == classes[j], else 0
-		same_mask: Float[Tensor, "batch batch"] = (
-			classes.unsqueeze(1) == classes.unsqueeze(0)
-		).float()
-
-		# Loss for same-class pairs: dist^2
-		same_loss: Float[Tensor, "batch batch"] = (distances**2) * same_mask
-
-		# Loss for different-class pairs: max(0, margin - dist)^2
-		diff_loss: Float[Tensor, "batch batch"] = (F.relu(margin - distances) ** 2) * (
-			1 - same_mask
-		)
-
-		total_loss: Float[Tensor, ""] = (same_loss + diff_loss).sum() / (
-			batch_size * (batch_size - 1)
-		)
-		return total_loss
-
 
 def train(
 	model: AttnAE,
@@ -472,3 +417,94 @@ def train(
 				)
 
 	return model, logger
+
+
+import torch
+from torch import Tensor
+from jaxtyping import Float
+
+
+def contrastive_loss(
+	h: Float[Tensor, "batch latent_dim"],
+	classes: Int[Tensor, " batch"],
+	temperature: float = 0.07,
+) -> Float[Tensor, ""]:
+	"""Compute a supervised contrastive loss.
+
+	Pushes samples of the same class together and pushes
+	samples from different classes apart.
+
+	# Parameters:
+	 - `h : Float[Tensor, "batch latent_dim"]`
+	    latent embeddings
+	 - `classes : Int[Tensor, " batch"]`
+	    class labels (integer) for each sample in the batch
+	 - `temperature : float`
+	    temperature for scaling similarities
+	    (defaults to 0.07)
+
+	# Returns:
+	 - `Float[Tensor, ""]`
+	    the scalar contrastive loss
+
+	# Usage:
+	```python
+	>>> batch_size = 8
+	>>> latent_dim = 16
+	>>> h = torch.randn(batch_size, latent_dim)
+	>>> classes = torch.randint(0, 3, (batch_size,))
+	>>> loss_val = contrastive_loss(h, classes, temperature=0.07)
+	>>> print(loss_val)
+	```
+
+	# Raises:
+	 - `ValueError` : if all samples belong to distinct classes (no positives)
+	"""
+
+	batch_size: int = h.shape[0]
+	# Normalize the embeddings
+	h_norm: Float[Tensor, "batch latent_dim"] = F.normalize(h, dim=1)
+
+	# Compute pairwise cosine similarities
+	# Shape: (batch, batch)
+	sim: Float[Tensor, "batch batch"] = h_norm @ h_norm.T
+
+	# Create a mask for all positives: same class and not self
+	# Shape: (batch, batch)
+	positive_mask: torch.BoolTensor = (classes.unsqueeze(1) == classes.unsqueeze(0)) & (
+		~torch.eye(batch_size, dtype=torch.bool, device=h.device)
+	)
+	# Ensure there's at least one positive for each sample
+	# (if there's a class with exactly 1 sample in the batch, that sample has no positives)
+	# We'll allow those samples to have zero contribution, though sometimes you'd skip them or handle separately.
+	# For full safety, you could raise an error or skip these samples:
+	if positive_mask.sum() == 0:
+		raise ValueError("No positives in the batch. Contrastive loss undefined.")
+
+	# Exponentiate scaled similarities
+	exp_sim: Float[Tensor, "batch batch"] = torch.exp(sim / temperature)
+
+	# For each anchor i, we exclude itself from the denominator
+	# so we zero out the diagonal
+	exp_sim_masked: Float[Tensor, "batch batch"] = exp_sim * (
+		~torch.eye(batch_size, device=h.device, dtype=torch.bool)
+	)
+
+	# Sum over all (masked) exponentiated similarities for the denominator
+	denom: Float[Tensor, "batch"] = exp_sim_masked.sum(dim=1)
+
+	# log_prob[i, j] = sim[i,j]/temp - log( sum_{k != i}(exp(sim[i,k]/temp)) )
+	log_prob: Float[Tensor, "batch batch"] = (sim / temperature) - torch.log(
+		denom
+	).unsqueeze(1)
+
+	# For each anchor i, we only want the log_probs for positives
+	# We'll sum over those positives and then divide by the number of positives
+	positive_log_prob: Float[Tensor, "batch"] = (log_prob * positive_mask).sum(
+		dim=1
+	) / (positive_mask.sum(dim=1) + 1e-8)
+
+	# Our loss is the negative mean of these average positive log probs
+	loss: Float[Tensor, ""] = -positive_log_prob.mean()
+
+	return loss
