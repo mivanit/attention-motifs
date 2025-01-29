@@ -71,11 +71,13 @@ class DataloaderMock:
 		self,
 		iter_func,
 		batch_size: int,
+		shuffle: bool,
 		n_batches: int,
 		n_samples: int,
 	) -> None:
 		self.iter_func = iter_func
 		self.batch_size: int = batch_size
+		self.shuffle: bool = shuffle
 		self.n_samples: int = n_samples
 		self.n_batches: int = n_batches
 		self.dataset: DatasetMock = DatasetMock(n_samples)
@@ -190,33 +192,99 @@ class CollectedAttentionPatternDataloader:
 	def n_ctx_stats(self) -> StatCounter:
 		return StatCounter(self.n_ctx_counts)
 
-	def batches(
-		self, batch_size: int
-	) -> Iterator[
-		tuple[Float[torch.Tensor, "batch n_ctx n_ctx"], list[AttentionPatternMetadata]]
-	]:
-		assert batch_size >= 1, "batch_size must be positive"
-		"""
-		Yield mini-batches of (patterns, metadata).
-		- patterns: [batch_size, n_ctx, n_ctx]
-		- metadata: list[AttentionPatternMetadata] of length batch_size
-		"""
-		for n_ctx, ds in self.datasets.items():
-			for idx_start, idx_end, batch in tensor_batches_indexed(
-				ds.patterns,
-				batch_size=batch_size,
-			):
-				metadata = ds.metadata[idx_start:idx_end]
-				yield batch, metadata
+import random
+from collections.abc import Iterator
+
+def batches(
+    self,
+    batch_size: int,
+    shuffle: bool,
+) -> Iterator[tuple[Float[torch.Tensor, "batch n_ctx n_ctx"], list[AttentionPatternMetadata]]]:
+    """Yield mini-batches of (patterns, metadata).
+
+    This function serves up batches from multiple datasets stored in `self.datasets`.
+    Each dataset has its own `patterns` and `metadata`. If `shuffle` is True, we:
+     1. Shuffle each dataset independently.
+     2. Randomly pick from any dataset that is not yet exhausted to yield the next batch.
+
+    # Parameters:
+     - `batch_size : int`
+        Size of each mini-batch (must be >= 1)
+     - `shuffle : bool`
+        If True, shuffle within and across datasets
+
+    # Returns:
+     - `Iterator[ tuple[Float[torch.Tensor, "batch n_ctx n_ctx"], list[AttentionPatternMetadata]] ]`
+       Yields `(batch, metadata)` pairs where:
+       - `batch` has shape `[batch_size, n_ctx, n_ctx]`
+       - `metadata` is a list of `AttentionPatternMetadata` objects of length `batch_size`
+
+    # Modifies:
+     - `ds : self.datasets[...]`
+       Shuffles each dataset in-place if `shuffle` is True
+
+    # Usage:
+    ```python
+    >>> for batch, meta in self.batches(batch_size=32, shuffle=True):
+    ...     pass
+    ```
+
+    # Raises:
+     - `AssertionError`
+       If `batch_size <= 0`
+    """
+    assert batch_size >= 1, "batch_size must be positive"
+
+    if shuffle:
+        # Shuffle each dataset
+        for ds in self.datasets.values():
+            ds.shuffle()
+
+        # Build an iterator for each dataset
+        iters: dict[int, Iterator[tuple[int, int, Float[torch.Tensor, "batch n_ctx n_ctx"]]]] = {}
+        for n_ctx, ds in self.datasets.items():
+            iters[n_ctx] = iter(
+                tensor_batches_indexed(ds.patterns, batch_size=batch_size)
+            )
+
+        # Randomly pick from any dataset that isn't exhausted
+        while iters:
+            n_ctx: int = random.choice(list(iters.keys()))
+            dataset_iter: Iterator[tuple[int, int, Float[torch.Tensor, "batch n_ctx n_ctx"]]] = iters[n_ctx]
+            try:
+                idx_start: int
+                idx_end: int
+                batch: Float[torch.Tensor, "batch n_ctx n_ctx"]
+                idx_start, idx_end, batch = next(dataset_iter)
+            except StopIteration:
+                del iters[n_ctx]
+                continue
+
+            ds = self.datasets[n_ctx]
+            metadata: list[AttentionPatternMetadata] = ds.metadata[idx_start:idx_end]
+            yield batch, metadata
+
+    else:
+        # Non-shuffled: yield batches from each dataset in sequence
+        for n_ctx, ds in self.datasets.items():
+            for idx_start, idx_end, batch in tensor_batches_indexed(
+                ds.patterns, batch_size=batch_size
+            ):
+                metadata: list[AttentionPatternMetadata] = ds.metadata[idx_start:idx_end]
+                yield batch, metadata
+
+
 
 	def dataloader(
 		self,
 		batch_size: int,
+		shuffle: bool,
 	) -> DataloaderMock:
 		"""Return a dataloader that yields batches of patterns and metadata."""
 		return DataloaderMock(
-			iter_func=lambda: self.batches(batch_size),
+			iter_func=lambda: self.batches(batch_size=batch_size, shuffle=shuffle),
 			batch_size=batch_size,
+			shuffle=shuffle,
 			n_batches=self.n_total_samples // batch_size,
 			n_samples=self.n_total_samples,
 		)
