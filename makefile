@@ -277,7 +277,7 @@ export CHECK_TORCH_SCRIPT
 RUN_GLOBAL ?= 0
 
 ifeq ($(RUN_GLOBAL),0)
-	PYTHON = uv run $(PYTHON_BASE) --no-sync
+	PYTHON = uv run --no-sync $(PYTHON_BASE)
 else
 	PYTHON = $(PYTHON_BASE)
 endif
