@@ -1,8 +1,9 @@
+import warnings
 import torch
 import torch.nn as nn
 from torch import Tensor
 import torch.nn.functional as F
-from jaxtyping import Float, Int
+from jaxtyping import Float, Int, Bool
 
 # custom utils
 from muutils.json_serialize import (
@@ -419,11 +420,6 @@ def train(
 	return model, logger
 
 
-import torch
-from torch import Tensor
-from jaxtyping import Float
-
-
 def contrastive_loss(
 	h: Float[Tensor, "batch latent_dim"],
 	classes: Int[Tensor, " batch"],
@@ -466,23 +462,24 @@ def contrastive_loss(
 	h_norm: Float[Tensor, "batch latent_dim"] = F.normalize(h, dim=1)
 
 	# Compute pairwise cosine similarities
-	# Shape: (batch, batch)
 	sim: Float[Tensor, "batch batch"] = h_norm @ h_norm.T
 
+	# Scale the similarities by the temperature
+	sim_scaled: Float[Tensor, "batch batch"] = sim / temperature
+
 	# Create a mask for all positives: same class and not self
-	# Shape: (batch, batch)
-	positive_mask: torch.BoolTensor = (classes.unsqueeze(1) == classes.unsqueeze(0)) & (
-		~torch.eye(batch_size, dtype=torch.bool, device=h.device)
-	)
+	positive_mask: Bool[Tensor, "batch batch"] = (
+		classes.unsqueeze(1) == classes.unsqueeze(0)
+	) & (~torch.eye(batch_size, dtype=torch.bool, device=h.device))
+
 	# Ensure there's at least one positive for each sample
 	# (if there's a class with exactly 1 sample in the batch, that sample has no positives)
 	# We'll allow those samples to have zero contribution, though sometimes you'd skip them or handle separately.
-	# For full safety, you could raise an error or skip these samples:
 	if positive_mask.sum() == 0:
-		raise ValueError("No positives in the batch. Contrastive loss undefined.")
+		warnings.warn("No positive pairs found in batch")
 
 	# Exponentiate scaled similarities
-	exp_sim: Float[Tensor, "batch batch"] = torch.exp(sim / temperature)
+	exp_sim: Float[Tensor, "batch batch"] = torch.exp(sim_scaled)
 
 	# For each anchor i, we exclude itself from the denominator
 	# so we zero out the diagonal
@@ -491,18 +488,19 @@ def contrastive_loss(
 	)
 
 	# Sum over all (masked) exponentiated similarities for the denominator
-	denom: Float[Tensor, "batch"] = exp_sim_masked.sum(dim=1)
+	denom: Float[Tensor, " batch"] = exp_sim_masked.sum(dim=1)
 
 	# log_prob[i, j] = sim[i,j]/temp - log( sum_{k != i}(exp(sim[i,k]/temp)) )
-	log_prob: Float[Tensor, "batch batch"] = (sim / temperature) - torch.log(
-		denom
-	).unsqueeze(1)
+	log_prob: Float[Tensor, "batch batch"] = (sim_scaled) - torch.log(denom).unsqueeze(
+		1
+	)
 
 	# For each anchor i, we only want the log_probs for positives
 	# We'll sum over those positives and then divide by the number of positives
-	positive_log_prob: Float[Tensor, "batch"] = (log_prob * positive_mask).sum(
-		dim=1
-	) / (positive_mask.sum(dim=1) + 1e-8)
+	positive_log_prob: Float[Tensor, " batch"] = (
+		(log_prob * positive_mask).sum(dim=1)
+		/ (positive_mask.sum(dim=1) + 1e-8)  # add epsilon to avoid div by zero
+	)
 
 	# Our loss is the negative mean of these average positive log probs
 	loss: Float[Tensor, ""] = -positive_log_prob.mean()
