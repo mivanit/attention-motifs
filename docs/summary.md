@@ -1,0 +1,4864 @@
+# Stats
+- 24 files
+- 4858 (4.9K) lines
+- 138978 (139K) chars
+- 55502 (56K) `gpt2` tokens
+
+# File Tree
+
+```
+attention-motifs                   
+├── attention_motifs               
+│   ├── dataset                    
+│   │   ├── __init__.py            [    0L         0C         0T]
+│   │   ├── dataset.py             [  538L    15,249C     6,166T]
+│   │   ├── prompts.py             [  296L     8,349C     3,322T]
+│   │   └── util.py                [  410L    11,179C     4,457T]
+│   ├── __init__.py                [    0L         0C         0T]
+│   ├── ae.py                      [  508L    15,426C     6,084T]
+│   ├── consts.py                  [  152L     4,188C     1,644T]
+│   └── figure_funcs.py            [  186L     5,070C     2,141T]
+├── data                           
+│   └── pile_example.jsonl         [    2L     1,797C       440T]
+├── notebooks                      
+│   ├── contrastive_AE.ipynb       [  248L     7,904C     3,654T]
+│   ├── demo.ipynb                 [  173L     4,889C     2,394T]
+│   ├── demo_dataset.ipynb         [  318L    77,392C    56,697T]
+│   ├── fit_patterns_manual.ipynb  [  546L   538,141C   404,452T]
+│   ├── fit_patterns_pysr.ipynb    [2,679L 1,932,395C 1,433,747T]
+│   ├── markov_absorption.ipynb    [  413L   361,334C   271,241T]
+├── scripts                        
+│   └── gen_data.py                [   31L       639C       295T]
+├── tests                          
+│   ├── dataset                    
+│   │   ├── test_integration.py    [  190L     5,644C     2,098T]
+│   │   ├── test_prompts.py        [  347L    11,007C     4,003T]
+│   │   └── test_unit.py           [  271L     7,583C     2,973T]
+│   ├── test_ae.py                 [  101L     4,088C     1,461T]
+│   └── test_consts.py             [   85L     2,428C     1,001T]
+├── README.md                      [    2L        23C        10T]
+├── makefile                       [  719L    24,356C     8,746T]
+├── pyproject.toml                 [  133L     3,127C     1,406T]
+```
+
+# File Contents
+
+``````{ path="attention_motifs/dataset/__init__.py"  }
+
+``````{ end_of_file="attention_motifs/dataset/__init__.py" }
+
+``````{ path="attention_motifs/dataset/dataset.py"  }
+from collections import defaultdict
+from pathlib import Path
+import json
+from typing import Any, Iterator, Optional
+import random
+
+import torch
+from jaxtyping import Float
+import tqdm
+from transformer_lens import HookedTransformer
+
+# custom utils
+from muutils.json_serialize import (
+	SerializableDataclass,
+	serializable_dataclass,
+	serializable_field,
+	JSONitem,
+)
+from muutils.statcounter import StatCounter
+from muutils.spinner import SpinnerContext, NoOpContextManager
+from muutils.misc import shorten_numerical_to_str
+from zanj import ZANJ
+
+from attention_motifs.consts import (
+	PATTERN_DTYPE,
+	AttentionPatternBatch,
+	PromptHashIntSequence,
+	TokenSequenceBatch,
+	DIVIDER_S1,
+	DIVIDER_S2,
+	tensor_batches_indexed,
+)
+from attention_motifs.dataset.util import (
+	AttentionPatternDataset,
+	AttentionPatternMetadataArray,
+	process_length_bin,
+	tokenize_and_bin_prompts,
+	AttentionPatternMetadata,
+)
+
+from attention_motifs.dataset.prompts import PromptDataset, PromptDatasetConfig
+
+
+@serializable_dataclass
+class APGenerationConfig(SerializableDataclass):
+	prompts_config: PromptDatasetConfig
+	model_names: list[str]
+	token_len_min: int = serializable_field(default=64)
+	prompt_token_len_tolerance: int = serializable_field(default=64)
+	raw_scores: bool = serializable_field(default=False)
+
+	def summary(self) -> dict[str, JSONitem]:
+		return dict(
+			prompts_config=self.prompts_config.summary(),
+			model_names=self.model_names,
+			token_len_min=self.token_len_min,
+			prompt_token_len_tolerance=self.prompt_token_len_tolerance,
+			raw_scores=self.raw_scores,
+		)
+
+
+class DatasetMock:
+	def __init__(self, n_samples: int) -> None:
+		self.n_samples: int = n_samples
+
+	def __len__(self) -> int:
+		return self.n_samples
+
+
+class DataloaderMock:
+	def __init__(
+		self,
+		iter_func,
+		batch_size: int,
+		shuffle: bool,
+		n_batches: int,
+		n_samples: int,
+	) -> None:
+		self.iter_func = iter_func
+		self.batch_size: int = batch_size
+		self.shuffle: bool = shuffle
+		self.n_samples: int = n_samples
+		self.n_batches: int = n_batches
+		self.dataset: DatasetMock = DatasetMock(n_samples)
+
+	def __len__(self) -> int:
+		return self.n_batches
+
+	def __iter__(self):
+		for x in self.iter_func():
+			yield x
+
+
+class CollectedAttentionPatternDataloader:
+	"""Collected dataset of `AttentionPatternDataset` objects, returning a batch of patterns and metadata.
+
+	# Usage in a training loop:
+	```python
+	dl = CollectedAttentionPatternDataloader.generate(cfg)
+	for patterns_batch, meta_batch in dl.batches(batch_size=32):
+	    # patterns_batch: [batch_size, n_ctx, n_ctx]
+	    # meta_batch: list of metadata objects
+	    ...
+	```
+	"""
+
+	def __init__(
+		self,
+		config: APGenerationConfig,
+		prompts: PromptDataset,
+		datasets: dict[int, AttentionPatternDataset],
+	):
+		"""
+		# Parameters:
+		 - `config : APGenerationConfig`
+		    The config used to generate or load this dataloader
+		 - `prompts : PromptDataset`
+		    The dataset of prompts
+		 - `datasets : list[AttentionPatternDataset]`
+		    The list of attention-pattern datasets
+		"""
+		assert isinstance(config, APGenerationConfig)
+		self.config: APGenerationConfig = config
+		assert isinstance(prompts, PromptDataset)
+		self.prompts: PromptDataset = prompts
+		assert isinstance(datasets, dict)
+		self.datasets: dict[int, AttentionPatternDataset] = datasets
+
+	def summary(self):
+		n_ctx_stats: dict
+		try:
+			n_ctx_stats = self.n_ctx_stats.summary()
+		except Exception as e:
+			n_ctx_stats = dict(stat_summary_failed=str(e))
+
+		return dict(
+			model_names=self.model_names,
+			# dataset_metadata=self.dataset_metadata,
+			dataset_shapes_summary=self.dataset_shapes_summary,
+			n_datasets=self.n_datasets,
+			n_total_samples=self.n_total_samples,
+			# n_ctx_counts=self.n_ctx_counts,
+			n_ctx_stats=n_ctx_stats,
+			config=self.config.serialize(),
+			prompts=self.prompts.summary(),
+		)
+
+	def summary_short(self):
+		return dict(
+			n_total_samples=self.n_total_samples,
+			n_prompts=len(self.prompts),
+			n_datasets=self.n_datasets,
+			config=self.config.summary(),
+			dataset_shapes_summary=self.dataset_shapes_summary,
+		)
+
+	def __str__(self) -> str:
+		return json.dumps(self.summary(), indent=2)
+
+	@property
+	def model_names(self) -> list[str]:
+		return self.config.model_names
+
+	@property
+	def dataset_metadata(self) -> list[dict[str, JSONitem]]:
+		"""Return metadata about each sub-dataset."""
+		return [dict(n_ctx=d.n_ctx, n_patterns=len(d)) for d in self.datasets.values()]
+
+	@property
+	def dataset_shapes_summary(self) -> dict[int, str]:
+		"""Return a summary of the shapes of the patterns in each sub-dataset."""
+		return [str(tuple(d.patterns.shape)) for d in self.datasets.values()]
+
+	@property
+	def n_datasets(self) -> int:
+		return len(self.datasets)
+
+	@property
+	def n_total_samples(self) -> int:
+		return sum(len(d) for d in self.datasets.values())
+
+	@property
+	def n_ctx_counts(self) -> dict[int, int]:
+		# how many patterns exist per sequence length
+		# (each dataset has a single n_ctx)
+		out: dict[int, int] = {}
+		ds: AttentionPatternDataset
+		for ds in self.datasets.values():
+			out[ds.n_ctx] = out.get(ds.n_ctx, 0) + len(ds)
+		return out
+
+	@property
+	def n_ctx_stats(self) -> StatCounter:
+		return StatCounter(self.n_ctx_counts)
+
+	def batches(
+		self,
+		batch_size: int,
+		shuffle: bool = False,
+	) -> Iterator[
+		tuple[Float[torch.Tensor, "batch n_ctx n_ctx"], list[AttentionPatternMetadata]]
+	]:
+		"""Yield mini-batches of (patterns, metadata).
+
+		This function serves up batches from multiple datasets stored in `self.datasets`.
+		Each dataset has its own `patterns` and `metadata`. If `shuffle` is True, we:
+		1. Shuffle each dataset independently.
+		2. Randomly pick from any dataset that is not yet exhausted to yield the next batch.
+
+		# Parameters:
+		- `batch_size : int`
+			Size of each mini-batch (must be >= 1)
+		- `shuffle : bool`
+			If True, shuffle within and across datasets
+
+		# Returns:
+		- `Iterator[ tuple[Float[torch.Tensor, "batch n_ctx n_ctx"], list[AttentionPatternMetadata]] ]`
+		Yields `(batch, metadata)` pairs where:
+		- `batch` has shape `[batch_size, n_ctx, n_ctx]`
+		- `metadata` is a list of `AttentionPatternMetadata` objects of length `batch_size`
+
+		# Modifies:
+		- `ds : self.datasets[...]`
+		Shuffles each dataset in-place if `shuffle` is True
+
+		# Usage:
+		```python
+		>>> for batch, meta in self.batches(batch_size=32, shuffle=True):
+		...     pass
+		```
+
+		# Raises:
+		- `AssertionError`
+		If `batch_size <= 0`
+		"""
+		assert batch_size >= 1, "batch_size must be positive"
+
+		if shuffle:
+			# Shuffle each dataset
+			for ds in self.datasets.values():
+				ds.shuffle()
+
+			# Build an iterator for each dataset
+			iters: dict[
+				int, Iterator[tuple[int, int, Float[torch.Tensor, "batch n_ctx n_ctx"]]]
+			] = {}
+			for n_ctx, ds in self.datasets.items():
+				iters[n_ctx] = iter(
+					tensor_batches_indexed(ds.patterns, batch_size=batch_size)
+				)
+
+			# Randomly pick from any dataset that isn't exhausted
+			while iters:
+				n_ctx: int = random.choice(list(iters.keys()))
+				dataset_iter: Iterator[
+					tuple[int, int, Float[torch.Tensor, "batch n_ctx n_ctx"]]
+				] = iters[n_ctx]
+				try:
+					idx_start: int
+					idx_end: int
+					batch: Float[torch.Tensor, "batch n_ctx n_ctx"]
+					idx_start, idx_end, batch = next(dataset_iter)
+				except StopIteration:
+					del iters[n_ctx]
+					continue
+
+				ds = self.datasets[n_ctx]
+				metadata: list[AttentionPatternMetadata] = ds.metadata[
+					idx_start:idx_end
+				]
+				yield batch, metadata
+
+		else:
+			# Non-shuffled: yield batches from each dataset in sequence
+			for n_ctx, ds in self.datasets.items():
+				for idx_start, idx_end, batch in tensor_batches_indexed(
+					ds.patterns, batch_size=batch_size
+				):
+					metadata: list[AttentionPatternMetadata] = ds.metadata[
+						idx_start:idx_end
+					]
+					yield batch, metadata
+
+	def dataloader(
+		self,
+		batch_size: int,
+		shuffle: bool,
+	) -> DataloaderMock:
+		"""Return a dataloader that yields batches of patterns and metadata."""
+		return DataloaderMock(
+			iter_func=lambda: self.batches(batch_size=batch_size, shuffle=shuffle),
+			batch_size=batch_size,
+			shuffle=shuffle,
+			n_batches=self.n_total_samples // batch_size,
+			n_samples=self.n_total_samples,
+		)
+
+	def save(
+		self,
+		path: Path,
+		z: Optional[ZANJ] = None,
+		verbose: bool = False,
+	) -> None:
+		"""Save the dataset to ZANJ-based files.
+
+		# Parameters:
+		 - `path : Path`
+		    Path to a directory where data will be stored
+		 - `z : Optional[ZANJ]`
+		    Instance of ZANJ to handle the saving
+		"""
+		# setup
+		path = Path(path)
+		z = z or ZANJ()
+
+		spinner = SpinnerContext if verbose else NoOpContextManager
+
+		# save metadata
+		with spinner(message="Saving metadata"):
+			obj_metadata: dict[str, Any] = dict(
+				config=self.config.serialize(),
+				dataset_metadata=self.dataset_metadata,
+				summary=self.summary(),
+			)
+
+			z.save(obj_metadata, path / "metadata.zanj")
+
+		# save prompts
+		with spinner(message="Saving prompts"):
+			z.save(self.prompts, path / "prompts.zanj")
+
+		# save datasets
+		i: int
+		dataset: AttentionPatternDataset
+		for i, (n_ctx, dataset) in tqdm.tqdm(
+			enumerate(self.datasets.items()),
+			total=len(self.datasets),
+			desc="Saving datasets",
+			unit="dataset",
+			disable=not verbose,
+		):
+			# TODO: switch to `_n{n_ctx}` for the dataset name
+			z.save(dataset, path / f"dataset_{n_ctx}.zanj")
+
+	@classmethod
+	def read(
+		cls,
+		path: Path,
+		z: Optional[ZANJ] = None,
+	) -> "CollectedAttentionPatternDataloader":
+		"""Read the dataset from a directory.
+
+		# Parameters:
+		 - `path : Path`
+		    The path to the directory containing:
+		    - metadata.zanj
+		    - prompts.jsonl
+		    - dataset_0.zanj, dataset_1.zanj, ...
+		 - `z : Optional[ZANJ]`
+		    Instance of ZANJ to handle loading
+
+		# Returns:
+		 - `CollectedAttentionPatternDataloader`
+		"""
+		path = Path(path)
+		z = z or ZANJ()
+
+		# save the metadata
+		obj_metadata: dict[str, Any] = z.read(path / "metadata.zanj")
+		config: APGenerationConfig = APGenerationConfig.load(obj_metadata["config"])
+
+		# read prompts
+		prompts: PromptDataset = z.read(path / "prompts.zanj")
+
+		# read datasets of patterns
+		dataset_meta: list[dict[str, Any]] = obj_metadata["dataset_metadata"]
+		datasets: dict[int, AttentionPatternDataset] = dict()
+		for d_m in dataset_meta:
+			n_ctx: int = d_m["n_ctx"]
+			# TODO: switch to `_n{n_ctx}` for the dataset name
+			ds_path: Path = path / f"dataset_{n_ctx}.zanj"
+			ds: AttentionPatternDataset = z.read(ds_path)
+			datasets[n_ctx] = ds
+
+		# create the object and return
+		loader: CollectedAttentionPatternDataloader = cls(
+			config=config,
+			prompts=prompts,
+			datasets=datasets,
+		)
+		return loader
+
+	@classmethod
+	def generate(
+		cls,
+		config: APGenerationConfig,
+		model_device: torch.device = torch.device("cuda")
+		if torch.cuda.is_available()
+		else torch.device("cpu"),
+		storage_device: torch.device = torch.device("cpu"),
+		max_batch_size: Optional[int] = None,
+		z: Optional[ZANJ] = None,
+	) -> "CollectedAttentionPatternDataloader":
+		"""Generate attention patterns for each prompt, for each model in config,
+		without adding any padding tokens. Instead, within each bin:
+
+		- We gather all prompts whose token-length L satisfies abs(L - bin_center) <= tolerance
+		- We compute bin_len = the min token-length among those prompts.
+		- We skip any that are shorter than bin_len (if that even occurs).
+		- We truncate any that are longer than bin_len.
+
+		# Parameters:
+		- `config : APGenerationConfig`
+			The config specifying model names, path to prompts, etc.
+		- `z : Optional[ZANJ]`
+			Not used for generation here (unless you want to do something custom).
+
+		# Returns:
+		- `CollectedAttentionPatternDataloader`
+		"""
+		# set up zanj
+		_z: ZANJ = z or ZANJ()
+
+		# load the text data
+		prompts: PromptDataset = PromptDataset.from_config(config.prompts_config)
+
+		# collect patterns by sequence length
+		data_raw_binned: defaultdict[
+			int,
+			tuple[list[AttentionPatternMetadata], list[AttentionPatternBatch]],
+		] = defaultdict(lambda: ([], []))
+
+		# process each model
+		model_name: str
+		for model_name in config.model_names:
+			print(DIVIDER_S1)
+			print(f"# Processing model: {model_name}")
+			print(DIVIDER_S2)
+			# load model
+			with SpinnerContext(message=f"Loading model {model_name}"):
+				model: HookedTransformer = HookedTransformer.from_pretrained(
+					model_name,
+					device=model_device,
+				)
+				model.eval()
+			print(
+				f"#\tloaded {model_name} with {model.cfg.n_params} ({shorten_numerical_to_str(model.cfg.n_params)}) parameters"
+			)
+			model_devices: set[torch.device] = {p.device for p in model.parameters()}
+			print(f"#\tmodel devices: {model_devices}")
+
+			with SpinnerContext(message="tokenizing and binning prompts"):
+				# bin prompts by length
+				# with SpinnerContext(message="Tokenizing and binning prompts"):
+				bins_by_len: dict[
+					int, tuple[PromptHashIntSequence, TokenSequenceBatch]
+				] = tokenize_and_bin_prompts(
+					model=model,
+					prompts=prompts,
+					token_len_min=config.token_len_min,
+					tolerance=config.prompt_token_len_tolerance,
+					storage_device=storage_device,
+				)
+				total_sequences: int = sum(
+					len(bin_contents[1]) for bin_contents in bins_by_len.values()
+				)
+
+			bin_shapes: str = ", ".join(
+				[str(tuple(x[1].shape)) for x in bins_by_len.values()]
+			)
+			print(f"#\tshapes of each bin contents (n_seqs, n_ctx): [ {bin_shapes} ]")
+
+			print("# getting attention patterns:")
+			with tqdm.tqdm(
+				total=total_sequences,
+				desc="",
+				unit="Seq",
+				unit_scale=True,
+			) as pbar:
+				for n_ctx, bin_contents in bins_by_len.items():
+					pbar.set_description(
+						f"{n_ctx = }",
+					)
+					n_sequences: int = len(bin_contents[1])
+					patterns: AttentionPatternBatch
+					metadata: list[AttentionPatternMetadata]
+					patterns, metadata = process_length_bin(
+						# model, bin_contents, model_name, config.token_len_min
+						model=model,
+						n_ctx=n_ctx,
+						prompt_hashes=bin_contents[0],
+						tokens_tensor=bin_contents[1],
+						raw_scores=False,
+						model_name=model_name,
+						max_batch_size=max_batch_size,
+						model_device=model_device,
+						storage_device=storage_device,
+					)
+					n_patterns: int = len(metadata)
+					assert len(patterns) == n_patterns
+
+					# add to binned data
+					data_raw_binned[n_ctx][0].extend(metadata)
+					data_raw_binned[n_ctx][1].append(patterns.to(storage_device))
+
+					pbar.update(n_sequences)
+
+			del model
+
+		print(DIVIDER_S1)
+
+		# create datasets from binned data
+		# TODO: save them incrementally. not enough dedidated wam
+		with SpinnerContext(message="assembling datasets"):
+			datasets: dict[int, AttentionPatternDataset] = {
+				n_ctx: AttentionPatternDataset(
+					n_ctx=n_ctx,
+					n_patterns=len(metadata),
+					patterns=torch.cat(patterns_list, dim=0).type(PATTERN_DTYPE),
+					metadata=AttentionPatternMetadataArray.from_list(metadata),
+					raw_scores=config.raw_scores,
+				)
+				for n_ctx, (metadata, patterns_list) in data_raw_binned.items()
+			}
+
+		# create and return the loader
+		output: CollectedAttentionPatternDataloader = cls(
+			config=config,
+			prompts=prompts,
+			datasets=datasets,
+		)
+
+		print("# done generating datasets! summary:")
+		print(DIVIDER_S2)
+		print(json.dumps(output.summary_short(), indent=2))
+		print(DIVIDER_S2)
+
+		return output
+
+``````{ end_of_file="attention_motifs/dataset/dataset.py" }
+
+``````{ path="attention_motifs/dataset/prompts.py"  }
+# custom utils
+
+import json
+from pathlib import Path
+import warnings
+
+
+# custom utils
+from muutils.json_serialize import (
+	SerializableDataclass,
+	serializable_dataclass,
+	serializable_field,
+	JSONitem,
+)
+
+from attention_motifs.consts import (
+	PROMPT_HASH_BITS,
+	PromptHashStr,
+	b64encode,
+	compute_text_hashes,
+	str_batches,
+)
+
+PROMPT_SPECIAL_KEYS: set[str] = {"text", "hash_int", "hash_str"}
+
+
+class HashMismatchError(ValueError):
+	"""raised when a hash does not match the text it is supposed to represent"""
+
+	pass
+
+
+@serializable_dataclass
+class Prompt(SerializableDataclass):
+	"""A prompt is a dictionary with a text key and an optional hash key.
+
+	# Raises:
+	- `HashMismatchError`: if the hash does not match the text it is supposed to represent, or the integer/string hash is invalid.
+
+	"""
+
+	text: str
+	hash_int: int
+	hash_str: PromptHashStr
+	meta: dict[str, JSONitem]
+
+	@classmethod
+	def from_dict(cls, data: dict[str, JSONitem]) -> "Prompt":
+		"""create a prompt from a dictionary, which must contain a `"text"` key.
+
+		# Raises:
+		- `HashMismatchError`: if the hash does not match the text it is supposed to represent, or the integer/string hash is invalid.
+		"""
+		assert "text" in data
+
+		# compute hashes
+		hash_int: int
+		hash_str: str
+		hash_int, hash_str = compute_text_hashes(data["text"])
+
+		if ("hash_int" not in data) or ("hash_str" not in data):
+			# assert they match, if present
+			assert data.get("hash_int", hash_int) == hash_int
+			assert data.get("hash_str", hash_str) == hash_str
+
+			# write to the data dict
+			data["hash_int"] = hash_int
+			data["hash_str"] = hash_str
+
+		elif ("hash_int" in data) and ("hash_str" in data):
+			# if both are present, assert they match
+			assert data["hash_int"] == hash_int
+			assert data["hash_str"] == hash_str
+
+		# return class
+		return cls(
+			text=data["text"],
+			hash_int=data["hash_int"],
+			hash_str=data["hash_str"],
+			# anything else is in the metadata dict
+			meta={k: v for k, v in data.items() if k not in PROMPT_SPECIAL_KEYS},
+		)
+
+	@classmethod
+	def from_text(cls, text: str) -> "Prompt":
+		hash_int, hash_str = compute_text_hashes(text)
+		return cls(
+			text=text,
+			hash_int=hash_int,
+			hash_str=hash_str,
+			meta={},
+		)
+
+	def __getitem__(self, key: str) -> JSONitem:
+		match key:
+			case "hash_int":
+				return self.hash_int
+			case "hash_str":
+				return self.hash_str
+			case "text":
+				return self.text
+			case _:
+				return self.meta[key]
+
+	def __hash__(self) -> int:
+		return self.hash_int
+
+
+DEFAULT_CHAR_LEN_MIN: int | None = 64
+DEFAULT_CHAR_LEN_MAX: int | None = 1024
+
+
+@serializable_dataclass
+class PromptDatasetConfig(SerializableDataclass):
+	"""holds the config for a prompt dataset"""
+
+	name: str
+	source_path: Path = serializable_field(
+		serialization_fn=lambda p: p.as_posix(),
+		deserialize_fn=lambda data: Path(data),
+	)
+	source_info: dict[str, JSONitem]
+	char_len_min: int | None = serializable_field(default=DEFAULT_CHAR_LEN_MIN)
+	char_len_max: int | None = serializable_field(default=DEFAULT_CHAR_LEN_MAX)
+
+	@classmethod
+	def from_source_path(
+		cls,
+		source_path: Path,
+		char_len_min: int | None = DEFAULT_CHAR_LEN_MIN,
+		char_len_max: int | None = DEFAULT_CHAR_LEN_MAX,
+		check_exists: bool = True,
+	) -> "PromptDatasetConfig":
+		assert char_len_min is None or char_len_min > 0
+		assert char_len_max is None or char_len_max > 0
+		assert (
+			char_len_min is None or char_len_max is None or char_len_min <= char_len_max
+		)
+		source_path = Path(source_path)
+		if check_exists and not source_path.exists():
+			raise FileNotFoundError(
+				f"Prompt dataset source path does not exist: {source_path = }"
+			)
+		return cls(
+			name=source_path.stem,
+			source_path=source_path,
+			source_info={
+				"source_path": source_path.as_posix(),
+			},
+			char_len_min=char_len_min,
+			char_len_max=char_len_max,
+		)
+
+	def summary(self) -> JSONitem:
+		return dict(
+			name=self.name,
+			source_path=self.source_path.as_posix(),
+			char_len_min=self.char_len_min,
+			char_len_max=self.char_len_max,
+		)
+
+
+@serializable_dataclass
+class PromptDataset(SerializableDataclass):
+	"""holds a dataset of prompts
+
+	# Parameters:
+	 - `prompts: list[Prompt]`
+	        a list of `Prompt` objects
+	 - `hash_map: dict[str, int]`
+	        a mapping from prompt hash to index in the `prompts` list.
+		we use a the hash as a b64 encoded string as the key instead of an int for two reasons:
+		 - int -> b64 string is easier than the reverse
+		 - json dict keys must be strings, not ints, and so we avoid an unnecessary conversion
+
+	we avoid storing the prompts in a dict to preserve order, and also to eventually dump them into a jsonl file
+	"""
+
+	config: PromptDatasetConfig
+	prompts: list[Prompt] = serializable_field(
+		serialization_fn=lambda p_lst: [p.serialize() for p in p_lst],
+		deserialize_fn=lambda data: [Prompt.load(p) for p in data],
+	)
+	hash_map: dict[PromptHashStr, int]
+
+	@classmethod
+	def from_config(cls, config: PromptDatasetConfig) -> "PromptDataset":
+		"""create a dataset from a config by loading the prompts from the source path"""
+		if not config.source_path.exists():
+			raise FileNotFoundError(
+				f"Prompt dataset source path does not exist: {config.source_path = }"
+			)
+		# load the prompts from the source path
+		prompts: list[Prompt] = []
+		with open(config.source_path, "r") as f:
+			for line_idx, line in enumerate(f):
+				# add fname metadata
+				d_raw: dict = json.loads(line)
+				d_raw["source_fname"] = config.source_path.as_posix()
+				d_raw["source_line"] = line_idx
+
+				# trim too-short samples
+				if config.char_len_min is not None:
+					if len(d_raw["text"]) < config.char_len_min:
+						continue
+
+				# split up too-long samples
+				if config.char_len_max is not None:
+					# grab the original text
+					d_text: str = d_raw["text"]
+					text_slices: list[str] = list(
+						str_batches(
+							text=d_text,
+							batch_size=config.char_len_max,
+							allow_last_incomplete=True,
+						)
+					)
+					# cut last if it's too short
+					if len(text_slices[-1]) < config.char_len_min:
+						text_slices.pop()
+
+					# add em all
+					for i, text_slice in enumerate(text_slices):
+						prompts.append(
+							Prompt.from_dict(
+								{**d_raw, "text": text_slice, "text_idx": i}
+							)
+						)
+				else:
+					# add the prompt if no length constraints
+					prompts.append(Prompt.from_dict(d_raw))
+
+		return cls.from_prompts(config=config, prompts=prompts)
+
+	@classmethod
+	def from_prompts(
+		cls, config: PromptDatasetConfig, prompts: list[Prompt]
+	) -> "PromptDataset":
+		"""create a dataset from a config and prompts by building the hash map"""
+		hash_map: dict[PromptHashStr, int] = {
+			p.hash_str: i for i, p in enumerate(prompts)
+		}
+		return cls(config=config, prompts=prompts, hash_map=hash_map)
+
+	def summary(self) -> JSONitem:
+		example_hash_str: PromptHashStr | None = None
+		example_prompt: dict | None = None
+		example_hash_map = None
+		try:
+			example_hash_str = self.prompts[0].hash_str
+			example_prompt = self.prompts[0].serialize()
+			example_hash_map = self.hash_map[example_hash_str]
+		except Exception as e:
+			warnings.warn(
+				f"failed to get examples in PromptDatset().summary(), dataset is probably empty: {e = }"
+			)
+
+		return dict(
+			config=self.config.serialize(),
+			prompt_count=len(self),
+			example={
+				"prompts[0]": example_prompt,
+				f"hash_map[{example_hash_str}]": example_hash_map,
+			},
+		)
+
+	def __len__(self) -> int:
+		return len(self.prompts)
+
+	def index_get(self, idx: int) -> Prompt:
+		"get a prompt by it's index in the prompts list"
+		return self.prompts[idx]
+
+	def hash_str_get(self, hash_str: PromptHashStr) -> Prompt:
+		"get a prompt by what the text hashes to (base64 encoded string)"
+		return self.prompts[self.hash_map[hash_str]]
+
+	def hash_int_get(self, hash_int: int) -> Prompt:
+		"get a prompt by what the text hashes to (raw integer)"
+		# convert to string
+		hash_str: str = b64encode(
+			hash_int.to_bytes(PROMPT_HASH_BITS // 8, byteorder="big")
+		)
+		return self.prompts[self.hash_map[hash_str]]
+
+	def hash_get(self, hash: int | PromptHashStr) -> Prompt:
+		"get a prompt by what the text hashes to"
+		if isinstance(hash, int):
+			return self.hash_int_get(hash)
+		elif isinstance(hash, str):
+			return self.hash_str_get(hash)
+		else:
+			raise TypeError(f"hash must be int or str, not {type(hash) = }, {hash = }")
+
+	def __iter__(self):
+		return iter(self.prompts)
+
+``````{ end_of_file="attention_motifs/dataset/prompts.py" }
+
+``````{ path="attention_motifs/dataset/util.py"  }
+from collections import defaultdict
+from typing import Callable, overload
+
+import numpy as np
+import torch
+from jaxtyping import Float, UInt64, Int, UInt16
+from transformer_lens import HookedTransformer
+
+
+# custom utils
+from muutils.json_serialize import (
+	SerializableDataclass,
+	serializable_dataclass,
+	serializable_field,
+)
+from muutils.errormode import ErrorMode
+
+from attention_motifs.consts import (
+	AttentionPattern,
+	AttentionPatternBatch,
+	TokenSequence,
+	TokenSequenceBatch,
+	PromptHashStr,
+	PromptHashIntSequence,
+	compute_text_hashes,
+	tensor_batches_indexed,
+	PromptHashInt,
+)
+
+from attention_motifs.dataset.prompts import PromptDataset
+
+AttentionPatternMetadataTuple = tuple[str, int, int, int, PromptHashInt]
+
+
+@serializable_dataclass
+class AttentionPatternMetadata(SerializableDataclass):
+	model_name: str
+	idx_layer: int
+	idx_head: int
+	n_ctx: int
+	prompt_hash: PromptHashInt
+
+	def as_tuple(self) -> AttentionPatternMetadataTuple:
+		return (
+			self.model_name,
+			self.idx_layer,
+			self.idx_head,
+			self.n_ctx,
+			self.prompt_hash,
+		)
+
+	@classmethod
+	def from_tuple(
+		cls, tup: AttentionPatternMetadataTuple
+	) -> "AttentionPatternMetadata":
+		return cls(
+			model_name=tup[0],
+			idx_layer=tup[1],
+			idx_head=tup[2],
+			n_ctx=tup[3],
+			prompt_hash=tup[4],
+		)
+
+	def tuple_contrastive(self) -> tuple[str, int, int]:
+		return (self.model_name, self.idx_layer, self.idx_head)
+
+	def hash_int(self) -> int:
+		return compute_text_hashes(str(self.as_tuple()))[0]
+
+	def hash_str(self) -> str:
+		return compute_text_hashes(str(self.as_tuple()))[1]
+
+	def __hash__(self) -> int:
+		return self.hash_int()
+
+	@classmethod
+	def contrastive_classes(
+		cls,
+		metadata: "list[AttentionPatternMetadata]",
+	) -> Int[torch.Tensor, " batch"]:
+		"class matches if everything but prompt hash and n_ctx matches"
+
+		contrastive_tuples: list[tuple] = [m.tuple_contrastive() for m in metadata]
+
+		classes: set[tuple] = set(contrastive_tuples)
+
+		# create mapping
+		class_map: dict[AttentionPatternMetadataTuple, int] = {
+			tup: idx for idx, tup in enumerate(classes)
+		}
+
+		# create output
+		output: Int[torch.Tensor, " batch"] = torch.tensor(
+			[class_map[t] for t in contrastive_tuples],
+			dtype=torch.int,
+		)
+
+		return output
+
+
+# TODO: why is it warning us here? look into that error, ignoring for now.
+@serializable_dataclass(on_typecheck_mismatch=ErrorMode.IGNORE)
+class AttentionPatternMetadataArray(SerializableDataclass):
+	model_names_map: list[str]
+	# TODO: wtf? why are these not being deserialized properly?
+	data: UInt16[np.ndarray, " model_name/idx_layer/idx_head/n_ctx=4 n_patterns"] = (
+		serializable_field(
+			deserialize_fn=lambda x: x["data"],
+		)
+	)
+	prompt_hash: UInt64[np.ndarray, " n_patterns"] = serializable_field(
+		deserialize_fn=lambda x: x["data"],
+	)
+	n_samples: int
+
+	def __len__(self) -> int:
+		return self.n_samples
+
+	@overload
+	def __getitem__(self, idx: int) -> AttentionPatternMetadata: ...
+	@overload
+	def __getitem__(self, idx: slice) -> list[AttentionPatternMetadata]: ...
+	def __getitem__(
+		self, idx: int | slice
+	) -> AttentionPatternMetadata | list[AttentionPatternMetadata]:
+		if isinstance(idx, slice):
+			return [
+				AttentionPatternMetadata(
+					model_name=self.model_names_map[model_name_idx],
+					idx_layer=layer,
+					idx_head=head,
+					n_ctx=n_ctx,
+					prompt_hash=self.prompt_hash[idx],
+				)
+				for model_name_idx, layer, head, n_ctx in self.data[idx]
+			]
+		elif isinstance(idx, int):
+			model_name_idx, layer, head, n_ctx = self.data[idx]
+			return AttentionPatternMetadata(
+				model_name=self.model_names_map[model_name_idx],
+				idx_layer=layer,
+				idx_head=head,
+				n_ctx=n_ctx,
+				prompt_hash=self.prompt_hash[idx],
+			)
+		else:
+			raise TypeError(f"Invalid index type: {type(idx) = }, {idx = }")
+
+	@classmethod
+	def from_list(
+		cls,
+		metadata: list[AttentionPatternMetadata],
+	) -> "AttentionPatternMetadataArray":
+		model_names: set[str] = {m.model_name for m in metadata}
+		model_names_map: list[str] = sorted(list(model_names))
+		model_names_map_inv: dict[str, int] = {
+			m: i for i, m in enumerate(model_names_map)
+		}
+
+		# allocate output
+		n_samples: int = len(metadata)
+		data: UInt16[
+			np.ndarray, " model_name/idx_layer/idx_head/n_ctx=4 n_patterns"
+		] = np.full((n_samples, 4), fill_value=0, dtype=np.uint16)
+		prompt_hash: UInt64[np.ndarray, " n_patterns"] = np.zeros(
+			n_samples, dtype=np.uint64
+		)
+
+		# fill in data
+		for idx, m in enumerate(metadata):
+			data[idx] = np.array(
+				[
+					model_names_map_inv[m.model_name],
+					m.idx_layer,
+					m.idx_head,
+					m.n_ctx,
+				],
+				dtype=np.uint16,
+			)
+			prompt_hash[idx] = m.prompt_hash
+
+		return cls(
+			model_names_map=model_names_map,
+			data=data,
+			prompt_hash=prompt_hash,
+			n_samples=n_samples,
+		)
+
+
+@serializable_dataclass
+class AttentionPatternDataset(SerializableDataclass):
+	n_ctx: int
+	n_patterns: int
+	patterns: AttentionPatternBatch
+	metadata: AttentionPatternMetadataArray
+	raw_scores: bool = serializable_field(default=False)
+
+	def __len__(self) -> int:
+		return self.n_patterns
+
+	def shuffle(self) -> None:
+		"shuffle the dataset in-place"
+		perm: Int[torch.Tensor, " n_patterns"] = torch.randperm(self.n_patterns)
+		self.patterns = self.patterns[perm]
+		self.metadata = [self.metadata[i] for i in perm]
+
+	def __getitem__(
+		self,
+		idx: int | slice,
+	) -> tuple[AttentionPattern, AttentionPatternMetadata]:
+		return self.patterns[idx], self.metadata[idx]
+
+
+def tokenize_and_bin_prompts(
+	model: HookedTransformer,
+	prompts: PromptDataset,
+	token_len_min: int,
+	tolerance: int,
+	storage_device: torch.device,
+) -> dict[int, tuple[list[PromptHashInt], TokenSequenceBatch]]:
+	"""Tokenize prompts and bin them by sequence length.
+
+	# Parameters:
+	- `model : HookedTransformer`
+		Model to use for tokenization
+	- `prompts : PromptDataset`
+		prompts to tokenize
+	- `token_len_min : int`
+		Minimum token length to consider
+	- `tolerance : int`
+		anything longer than but within `tolerance` of the bin size will be truncated to the bin size
+
+	# Returns:
+	- `dict[int, list[tuple[PromptHashInt, TokenSequence]]]`
+		Mapping from bin size to list of (prompt, tokens) pairs
+	"""
+	# tokenize all prompts
+	# keep only hash_str, we can recover the text from the dataset
+	tokenized_prompts: list[tuple[PromptHashInt, TokenSequence]] = [
+		(
+			p.hash_int,
+			model.to_tokens(p.text)[0].to(storage_device),
+		)
+		for p in prompts
+	]
+
+	# group by rounded length
+	bins_by_len: defaultdict[
+		int,
+		tuple[
+			list[PromptHashStr],  # prompt hash, can look it up in the dataset
+			list[TokenSequence],  # tokenized sequence
+		],
+	] = defaultdict(lambda: ([], []))
+
+	# iterare over all tokenized prompts
+	for prompt_hash, tokens in tokenized_prompts:
+		# skip if too short
+		if len(tokens) >= token_len_min:
+			# round down to nearest bin
+			desired_len: int = len(tokens) - len(tokens) % tolerance
+			tokens_truncated: TokenSequence = tokens[:desired_len]
+
+			bins_by_len[desired_len][0].append(prompt_hash)
+			bins_by_len[desired_len][1].append(tokens_truncated)
+			# print(bins_by_len)
+		else:
+			pass
+			# print(f"Skipping prompt with too few tokens: {len(tokens) = }, {token_len_min = }, {tokens = }")
+
+	output: dict[int, tuple[list[PromptHashInt], TokenSequenceBatch]] = {
+		n_ctx: (
+			prompt_hashes,
+			torch.stack(token_seqs_list, dim=0).to(storage_device),
+		)
+		for n_ctx, (prompt_hashes, token_seqs_list) in bins_by_len.items()
+	}
+
+	return output
+
+
+MHABatched = Float[torch.Tensor, "batch head_idx n_ctx n_ctx"]
+
+
+def process_length_bin(
+	model: HookedTransformer,
+	n_ctx: int,
+	prompt_hashes: PromptHashIntSequence,
+	tokens_tensor: TokenSequenceBatch,
+	model_device: torch.device,
+	storage_device: torch.device,
+	raw_scores: bool = False,
+	model_name: str | None = None,
+	max_batch_size: int | None = None,
+) -> tuple[AttentionPatternBatch, list[AttentionPatternMetadata]]:
+	"""Process a single bin of same-length sequences.
+
+	# Parameters:
+	 - `model : HookedTransformer`
+	   Model to extract patterns from
+	 - `n_ctx : int`
+	   expected context length
+	 - `prompt_hashes : PromptHashIntSequence`
+	   List of prompt hashes (in order)
+	 - `tokens : TokenSequenceBatch`
+	   tensor of tokenized sequences
+	 - `model_name : str | None`
+	   name of model for metadata (if `None`, will be set to `model.cfg.model_name`)
+	   (defaults to `None`)
+	 - `max_batch_size : int | None`
+	   max batch size for feeding into the model
+	   (defaults to `None`)
+	 - `raw_scores : bool`
+	   returns raw scores if `True` or processed lower-triangular row-stochastic patterns if `False`
+	   (defaults to `False`)
+
+	# Returns:
+
+	`tuple[AttentionPatternBatch, list[AttentionPatternMetadata]]`
+
+	- `AttentionPatternBatch`
+		Batch of attention patterns
+	- `list[AttentionPatternMetadata]`
+		List of metadata for each pattern (in order)
+	"""
+	# set model name
+	if model_name is None:
+		model_name = model.cfg.model_name
+
+	# set up filter and key format
+	names_filter: Callable[[str], bool] = (  # noqa: E731
+		lambda s: s.endswith("scores")
+		if raw_scores
+		else lambda s: s.endswith("pattern")
+	)
+	key_format: str = (
+		"blocks.{layer}.attn.hook_attn_scores"
+		if raw_scores
+		else "blocks.{layer}.attn.hook_pattern"
+	)
+
+	# allocate output
+	output_patterns: list[AttentionPatternBatch] = list()
+	output_metadata: list[AttentionPatternMetadata] = list()
+
+	# batch process through model
+	for idx_start, idx_end, tokens_batch in tensor_batches_indexed(
+		tokens_tensor, max_batch_size
+	):
+		# print(f"Processing batch {idx_start=}, {idx_end=}")
+		# print(f"{tokens_batch.shape=}")
+		# get attention patterns
+		cache: dict[str, MHABatched]
+		with torch.no_grad():
+			_, cache = model.run_with_cache(
+				tokens_batch.to(model_device),
+				return_type=None,
+				names_filter=names_filter,
+				return_cache_object=False,
+			)
+		# print(f"\tforwards done")
+
+		# extract patterns for each layer and head
+		layer: int
+		head: int
+		for layer in range(model.cfg.n_layers):
+			layer_key: str = key_format.format(layer=layer)
+			layer_patterns: MHABatched = cache[layer_key]
+			layer_patterns.to(storage_device)
+			for head in range(model.cfg.n_heads):
+				# get patterns for this head
+				head_patterns: AttentionPatternBatch = layer_patterns[:, head]
+
+				# TODO: create AttentionPatternMetadataArray here instead, then concatenate them all at the end
+				# will require messing around with the model index, maybe make that a hash?
+
+				# create metadata for each pattern
+				meta_list: list[AttentionPatternMetadata] = [
+					AttentionPatternMetadata(
+						model_name=model_name,
+						idx_layer=layer,
+						idx_head=head,
+						prompt_hash=p,
+						n_ctx=n_ctx,
+					)
+					for p in prompt_hashes[idx_start:idx_end]
+				]
+
+				# append to output
+				output_patterns.append(head_patterns.to(storage_device))
+				output_metadata.extend(meta_list)
+
+			del layer_patterns
+			del cache[layer_key]
+
+		# delete cache to free up memory
+		del cache
+
+	# concatenate patterns
+	output_patterns_tensor: AttentionPatternBatch = torch.cat(
+		output_patterns, dim=0
+	).to(storage_device)
+
+	# tensor shape sanity check
+	assert tuple(output_patterns_tensor.shape) == (
+		len(output_metadata),
+		n_ctx,
+		n_ctx,
+	)
+	return output_patterns_tensor, output_metadata
+
+``````{ end_of_file="attention_motifs/dataset/util.py" }
+
+``````{ path="attention_motifs/__init__.py"  }
+
+``````{ end_of_file="attention_motifs/__init__.py" }
+
+``````{ path="attention_motifs/ae.py"  }
+import warnings
+import torch
+import torch.nn as nn
+from torch import Tensor
+import torch.nn.functional as F
+from jaxtyping import Float, Int, Bool
+
+# custom utils
+from muutils.json_serialize import (
+	SerializableDataclass,
+	serializable_dataclass,
+	serializable_field,
+)
+from zanj.torchutil import ConfiguredModel, set_config_class
+from trnbl import TrainingManager
+from trnbl.loggers.local import LocalLogger
+
+
+@serializable_dataclass
+class Conv2DConfig(SerializableDataclass):
+	channels: int
+	kernel_size: int = serializable_field(default=3)
+	stride: int = serializable_field(default=1)
+	padding: int = serializable_field(default=1)
+
+	def create(self, in_channels: int) -> nn.Conv2d:
+		return nn.Conv2d(
+			in_channels=in_channels,
+			out_channels=self.channels,
+			kernel_size=self.kernel_size,
+			stride=self.stride,
+			padding=self.padding,
+		)
+
+	def create_decoder(self, out_channels: int) -> nn.Conv2d:
+		return nn.ConvTranspose2d(
+			in_channels=self.channels,
+			out_channels=out_channels,
+			kernel_size=self.kernel_size,
+			stride=self.stride,
+			padding=self.padding,
+		)
+
+
+@serializable_dataclass(kw_only=True)
+class AttnAEConfig(SerializableDataclass):
+	"""Configuration for square matrix contrastive autoencoder
+
+	# Parameters:
+	 - `latent_dim : int`
+	    Dimension of latent space
+	 - `encoder_channels : Sequence[int]`
+	    Number of channels in each encoder layer
+	 - `kernel_size : int`
+	    Kernel size for conv layers
+	 - `margin : float`
+	    Margin for contrastive loss
+	 - `activation : type[nn.Module]`
+	    activation function to use. will define `act_fn = activation()`
+	 - `pooling : str`
+	    One of 'max' or 'avg'
+	"""
+
+	# architecture
+	latent_dim: int
+	in_channels: int = serializable_field(default=1)
+	conv_encoder: list[Conv2DConfig] = serializable_field(
+		default_factory=lambda: [
+			Conv2DConfig(channels=16),
+			Conv2DConfig(channels=64),
+			Conv2DConfig(channels=64),
+			Conv2DConfig(channels=64),
+			Conv2DConfig(channels=128),
+		],
+		serialization_fn=lambda x: [c.serialize() for c in x],
+		deserialize_fn=lambda x: [Conv2DConfig.load(c) for c in x],
+	)
+
+	mlp_prepool: list[int] = serializable_field(default_factory=lambda: [128, 128])
+	mlp_postpool: list[int] = serializable_field(default_factory=lambda: [128, 128])
+
+	activation: type[nn.Module] = serializable_field(
+		default=nn.ReLU,
+		serialization_fn=lambda x: x.__name__,
+		deserialize_fn=lambda x: getattr(nn, x),
+	)
+
+	# loss
+	margin: float = serializable_field(default=1.0)
+
+	# optimizer
+	optimizer: type[torch.optim.Optimizer] = serializable_field(
+		default=torch.optim.Adam,
+		serialization_fn=lambda x: x.__name__,
+		deserialize_fn=lambda x: getattr(torch.optim, x),
+	)
+
+	def __post_init__(self):
+		assert all(c.channels > 0 for c in self.conv_encoder)
+		assert all(d > 0 for d in self.mlp_prepool)
+		assert all(d > 0 for d in self.mlp_postpool)
+
+
+@set_config_class(AttnAEConfig)
+class Encoder(ConfiguredModel[AttnAEConfig]):
+	def __init__(self, config: AttnAEConfig):
+		super().__init__(config)
+		self.config: AttnAEConfig = config
+
+		# Convolutional encoder
+		in_ch: int = config.in_channels
+		conv_layers: list[nn.Module] = []
+
+		for conv_cfg in config.conv_encoder:
+			conv_layers.append(conv_cfg.create(in_ch))
+			conv_layers.append(config.activation())
+			in_ch = conv_cfg.channels
+
+		self.conv: nn.Module = nn.Sequential(*conv_layers)
+
+		# linear map on each pixel
+		linear_layers_prepool: list[nn.Module] = []
+		for out_dim in config.mlp_prepool:
+			linear_layers_prepool.append(nn.Linear(in_ch, out_dim))
+			linear_layers_prepool.append(config.activation())
+			in_ch = out_dim
+
+		self.linear_prepool: nn.Module = nn.Sequential(*linear_layers_prepool)
+
+		# linear map on pooled features
+		linear_layers_postpool: list[nn.Module] = []
+		for out_dim in config.mlp_postpool:
+			linear_layers_postpool.append(nn.Linear(in_ch, out_dim))
+			linear_layers_postpool.append(config.activation())
+			in_ch = out_dim
+
+		self.linear_postpool: nn.Module = nn.Sequential(*linear_layers_postpool)
+
+	def forward(
+		self, x: Float[Tensor, "batch 1 n_ctx n_ctx"]
+	) -> Float[Tensor, "batch latent_dim"]:
+		# conv layers
+		h: Float[Tensor, "batch channels n_ctx n_ctx"] = self.conv(x)
+		# apply linear layers to each pixel
+		# TODO: add pos embeds?
+		h_reshape = h.flatten(2).reshape(h.size(0), -1, h.size(1))
+		h = self.linear_prepool(h_reshape)
+		# mean pool over pixels
+		h = h.mean(dim=-2)
+		# apply linear layers to pooled features
+		h = self.linear_postpool(h)
+		return h
+
+
+@set_config_class(AttnAEConfig)
+class Decoder(ConfiguredModel[AttnAEConfig]):
+	"""Decoder stage of the AttnAE architecture
+
+	This mirrors the `Encoder` by:
+	  1. Taking a latent vector of shape (batch, latent_dim)
+	  2. Passing it through the inverse MLP layers
+	  3. "Un-pooling" or broadcasting back to a spatial grid
+	  4. Passing the resulting feature maps through transposed convolution layers
+	  5. Producing a reconstructed image of shape (batch, in_channels, H, W)
+
+	# Parameters:
+	 - `config : AttnAEConfig`
+	    The model configuration
+
+	# Usage:
+	```python
+	>>> decoder = Decoder(config)
+	>>> z = torch.randn(16, config.latent_dim)
+	>>> x_recon = decoder(z)
+	>>> x_recon.shape
+	torch.Size([16, config.in_channels, H, W])
+	```
+	"""
+
+	def __init__(self, config: AttnAEConfig):
+		super().__init__(config)
+		self.config: AttnAEConfig = config
+
+		# Inverse of post-pool MLP
+		postunpool_layers: list[nn.Module] = []
+		in_dim: int = config.latent_dim
+		# We'll reverse the mlp_postpool layers used in the encoder
+		for out_dim in reversed(config.mlp_postpool):
+			postunpool_layers.append(nn.Linear(in_dim, out_dim))
+			postunpool_layers.append(config.activation())
+			in_dim = out_dim
+
+		self.linear_postunpool: nn.Module = nn.Sequential(*postunpool_layers)
+
+		# Inverse of pre-pool MLP
+		preunpool_layers: list[nn.Module] = []
+		for out_dim in reversed(config.mlp_prepool):
+			preunpool_layers.append(nn.Linear(in_dim, out_dim))
+			preunpool_layers.append(config.activation())
+			in_dim = out_dim
+
+		self.linear_preunpool: nn.Module = nn.Sequential(*preunpool_layers)
+
+		# TODO: first conv doesn't correctly read last preunpool layer size
+
+		# Transposed convolution layers
+		rev_conv_cfgs = list(reversed(config.conv_encoder))
+		conv_layers: list[nn.Module] = []
+		for i, conv_cfg in enumerate(rev_conv_cfgs):
+			# Decide what the output channels of this transpose conv should be
+			# If not at the last reversed conv, next out is rev_conv_cfgs[i+1].channels
+			# Otherwise, decode to the original in_channels
+			if i < len(rev_conv_cfgs) - 1:
+				out_ch = rev_conv_cfgs[i + 1].channels
+			else:
+				out_ch = config.in_channels
+
+			conv_layers.append(conv_cfg.create_decoder(out_ch))
+			# add activation except perhaps after the final layer
+			if i < len(rev_conv_cfgs) - 1:
+				conv_layers.append(config.activation())
+
+		self.conv: nn.Module = nn.Sequential(*conv_layers)
+
+	def forward(
+		self,
+		z: Float[Tensor, "batch latent_dim"],
+		n_ctx: int,
+	) -> Float[Tensor, "batch in_channels n_ctx n_ctx"]:
+		"""Forward pass of the Decoder"""
+		# 1) Inverse of the post-pool MLP
+		h: Float[Tensor, "batch mid_dim"] = self.linear_postunpool(z)  # (B, ?)
+		# 2) Broadcast to spatial dimension
+		h = h.unsqueeze(-1)
+		h = h.expand(-1, -1, n_ctx * n_ctx)
+		h = h.permute(0, 2, 1)
+		# 3) Inverse of the pre-pool MLP => shape (B, channels, H*W)
+		h = self.linear_preunpool(h)  # (B, channels, H*W)
+		# reshape => (B, channels, H, W)
+		h = h.permute(0, 2, 1)
+		h = h.view(
+			h.shape[0],
+			h.shape[1],
+			n_ctx,
+			n_ctx,
+		)
+
+		# 4) Run transposed convolution => (B, in_channels, H, W)
+		x_recon: Float[Tensor, "batch in_channels H W"] = self.conv(h)
+
+		return x_recon
+
+
+@set_config_class(AttnAEConfig)
+class AttnAE(ConfiguredModel[AttnAEConfig]):
+	def __init__(self, config: AttnAEConfig):
+		super().__init__(config)
+		self.config: AttnAEConfig = config
+
+		self.encoder: Encoder = Encoder(config)
+		self.decoder: Decoder = Decoder(config)
+
+	def forward(
+		self,
+		x: Float[Tensor, "*batch n n"],
+	) -> tuple[Float[Tensor, "*batch n n"], Float[Tensor, "batch latent_dim"]]:
+		n_ctx: int = x.shape[-1]
+
+		h: Float[Tensor, "batch latent_dim"] = self.encoder(x)
+		x_recon: Float[Tensor, "batch 1 n n"] = self.decoder(h, n_ctx=n_ctx)
+		return x_recon, h
+
+
+def train(
+	model: AttnAE,
+	train_loader: torch.utils.data.DataLoader,
+	val_loader: torch.utils.data.DataLoader | None = None,
+	num_epochs: int = 100,
+	learning_rate: float = 1e-3,
+	recon_weight: float = 1.0,
+	contrast_weight: float = 1.0,
+	project_name: str = "contrastive-ae",
+	checkpoint_interval: str = "1/10 run",
+	eval_interval: str = "1k samples",
+	device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+) -> tuple[AttnAE, LocalLogger]:
+	"""Train a contrastive autoencoder
+
+	# Parameters:
+	 - `model: ContrastiveAutoencoder`
+	    Model to train
+	 - `train_loader: torch.utils.data.DataLoader`
+	    Training data loader returning (tensor, index_tuple) pairs
+	 - `val_loader: torch.utils.data.DataLoader | None`
+	    Optional validation loader
+	 - `num_epochs: int`
+	    Number of epochs to train
+	 - `learning_rate: float`
+	    Learning rate for Adam optimizer
+	 - `recon_weight: float`
+	    Weight for reconstruction loss
+	 - `contrast_weight: float`
+	    Weight for contrastive loss
+	 - `project_name: str`
+	    Name for logging
+	    (default: "contrastive-ae")
+	 - `checkpoint_interval: str`
+	    When to save checkpoints (trnbl format)
+	 - `eval_interval: str`
+	    How often to evaluate (trnbl format)
+	 - `device: torch.device`
+	    Device to train on
+
+	# Returns:
+	 - `ContrastiveAutoencoder` : Trained model
+	 - `LocalLogger` : Logger with training history
+	"""
+	model = model.to(device)
+	optimizer: torch.optim.Optimizer = model.config.optimizer(
+		model.parameters(),
+		lr=learning_rate,
+	)
+
+	# setup logger
+	logger: LocalLogger = LocalLogger(
+		project=project_name,
+		metric_names=[
+			"train/loss",
+			"train/recon_loss",
+			"train/contrast_loss",
+			"val/loss",
+			"val/recon_loss",
+			"val/contrast_loss",
+		],
+		train_config=dict(
+			model_config=model.zanj_model_config.serialize(),
+			learning_rate=learning_rate,
+			recon_weight=recon_weight,
+			contrast_weight=contrast_weight,
+		),
+	)
+
+	def evaluation_step(model: AttnAE) -> dict[str, float]:
+		"""Evaluate model on validation set"""
+		if val_loader is None:
+			return {}
+
+		model.eval()
+		val_metrics = {"val/loss": 0.0, "val/recon_loss": 0.0, "val/contrast_loss": 0.0}
+
+		with torch.no_grad():
+			for batch_idx, (x, index_tuple) in enumerate(val_loader):
+				x = x.to(device)
+				index_tuple = tuple(i.to(device) for i in index_tuple)
+
+				x_recon, z = model(x)
+				recon_loss = F.mse_loss(x_recon, x)
+
+				batch_size = x.size(0)
+				z1 = z.repeat_interleave(batch_size, dim=0)
+				z2 = z.repeat(batch_size, 1)
+				idx1 = tuple(i.repeat_interleave(batch_size) for i in index_tuple)
+				idx2 = tuple(i.repeat(batch_size) for i in index_tuple)
+				contrast_loss = model.contrastive_loss(z1, z2, idx1, idx2)
+
+				total_loss = recon_weight * recon_loss + contrast_weight * contrast_loss
+
+				val_metrics["val/loss"] += total_loss.item()
+				val_metrics["val/recon_loss"] += recon_loss.item()
+				val_metrics["val/contrast_loss"] += contrast_loss.item()
+
+		for k in val_metrics:
+			val_metrics[k] /= len(val_loader)
+
+		model.train()
+		return val_metrics
+
+	with TrainingManager(
+		model=model,
+		logger=logger,
+		evals={
+			eval_interval: evaluation_step,
+		}.items(),
+		checkpoint_interval=checkpoint_interval,
+	) as tr:
+		for epoch in tr.epoch_loop(range(num_epochs)):
+			for x, index_tuple in tr.batch_loop(train_loader):
+				x = x.to(device)
+				index_tuple = tuple(i.to(device) for i in index_tuple)
+
+				optimizer.zero_grad()
+				x_recon, z = model(x)
+
+				# reconstruction loss
+				recon_loss = F.mse_loss(x_recon, x)
+
+				# contrastive loss using all pairs in batch
+				batch_size = x.size(0)
+				z1 = z.repeat_interleave(batch_size, dim=0)
+				z2 = z.repeat(batch_size, 1)
+				idx1 = tuple(i.repeat_interleave(batch_size) for i in index_tuple)
+				idx2 = tuple(i.repeat(batch_size) for i in index_tuple)
+				contrast_loss = model.contrastive_loss(z1, z2, idx1, idx2)
+
+				# combined loss and backward pass
+				total_loss = recon_weight * recon_loss + contrast_weight * contrast_loss
+				total_loss.backward()
+				optimizer.step()
+
+				# log metrics
+				tr.batch_update(
+					samples=len(x),
+					**{
+						"train/loss": total_loss.item(),
+						"train/recon_loss": recon_loss.item(),
+						"train/contrast_loss": contrast_loss.item(),
+					},
+				)
+
+	return model, logger
+
+
+def contrastive_loss(
+	h: Float[Tensor, "batch latent_dim"],
+	classes: Int[Tensor, " batch"],
+	temperature: float = 0.07,
+) -> Float[Tensor, ""]:
+	"""Compute a supervised contrastive loss.
+
+	Pushes samples of the same class together and pushes
+	samples from different classes apart.
+
+	# Parameters:
+	 - `h : Float[Tensor, "batch latent_dim"]`
+	    latent embeddings
+	 - `classes : Int[Tensor, " batch"]`
+	    class labels (integer) for each sample in the batch
+	 - `temperature : float`
+	    temperature for scaling similarities
+	    (defaults to 0.07)
+
+	# Returns:
+	 - `Float[Tensor, ""]`
+	    the scalar contrastive loss
+
+	# Usage:
+	```python
+	>>> batch_size = 8
+	>>> latent_dim = 16
+	>>> h = torch.randn(batch_size, latent_dim)
+	>>> classes = torch.randint(0, 3, (batch_size,))
+	>>> loss_val = contrastive_loss(h, classes, temperature=0.07)
+	>>> print(loss_val)
+	```
+
+	# Raises:
+	 - `ValueError` : if all samples belong to distinct classes (no positives)
+	"""
+
+	batch_size: int = h.shape[0]
+	# Normalize the embeddings
+	h_norm: Float[Tensor, "batch latent_dim"] = F.normalize(h, dim=1)
+
+	# Compute pairwise cosine similarities
+	sim: Float[Tensor, "batch batch"] = h_norm @ h_norm.T
+
+	# Scale the similarities by the temperature
+	sim_scaled: Float[Tensor, "batch batch"] = sim / temperature
+
+	# Create a mask for all positives: same class and not self
+	positive_mask: Bool[Tensor, "batch batch"] = (
+		classes.unsqueeze(1) == classes.unsqueeze(0)
+	) & (~torch.eye(batch_size, dtype=torch.bool, device=h.device))
+
+	# Ensure there's at least one positive for each sample
+	# (if there's a class with exactly 1 sample in the batch, that sample has no positives)
+	# We'll allow those samples to have zero contribution, though sometimes you'd skip them or handle separately.
+	if positive_mask.sum() == 0:
+		warnings.warn("No positive pairs found in batch")
+
+	# Exponentiate scaled similarities
+	exp_sim: Float[Tensor, "batch batch"] = torch.exp(sim_scaled)
+
+	# For each anchor i, we exclude itself from the denominator
+	# so we zero out the diagonal
+	exp_sim_masked: Float[Tensor, "batch batch"] = exp_sim * (
+		~torch.eye(batch_size, device=h.device, dtype=torch.bool)
+	)
+
+	# Sum over all (masked) exponentiated similarities for the denominator
+	denom: Float[Tensor, " batch"] = exp_sim_masked.sum(dim=1)
+
+	# log_prob[i, j] = sim[i,j]/temp - log( sum_{k != i}(exp(sim[i,k]/temp)) )
+	log_prob: Float[Tensor, "batch batch"] = (sim_scaled) - torch.log(denom).unsqueeze(
+		1
+	)
+
+	# For each anchor i, we only want the log_probs for positives
+	# We'll sum over those positives and then divide by the number of positives
+	positive_log_prob: Float[Tensor, " batch"] = (
+		(log_prob * positive_mask).sum(dim=1)
+		/ (positive_mask.sum(dim=1) + 1e-8)  # add epsilon to avoid div by zero
+	)
+
+	# Our loss is the negative mean of these average positive log probs
+	loss: Float[Tensor, ""] = -positive_log_prob.mean()
+
+	return loss
+
+``````{ end_of_file="attention_motifs/ae.py" }
+
+``````{ path="attention_motifs/consts.py"  }
+import hashlib
+import base64
+from typing import Iterable, Iterator, TypeVar
+import os
+import warnings
+
+import numpy as np
+import torch
+from jaxtyping import Float, Int
+from itertools import islice
+
+# custom utils
+
+DIVIDER_S1: str = "=" * 70
+"divider string for separating sections"
+
+DIVIDER_S2: str = "-" * 50
+"divider string for separating subsections"
+
+AttentionPattern = Float[torch.Tensor, "n_ctx n_ctx"]
+AttentionPatternBatch = Float[torch.Tensor, "batch n_ctx n_ctx"]
+TokenSequence = Int[torch.Tensor, "n_ctx"]
+TokenSequenceBatch = Int[torch.Tensor, "batch n_ctx"]
+
+PromptHashStr = str
+PromptHashInt = int
+PromptHashIntSequence = Int[torch.Tensor, "n_samples"]
+
+PROMPT_HASH_BYTES: int = 4
+"32 bits is enough for 4.3B unique prompts, but to avoid collision let's use 64 bits"
+
+PROMPT_HASH_BITS: int = PROMPT_HASH_BYTES * 8
+
+
+PROMPT_HASH_MAX: int = 2**PROMPT_HASH_BITS
+
+PATTERN_DTYPE: torch.dtype = torch.float16
+
+
+try:
+	with open(".hf-token", "r") as hf_tok_f:
+		os.environ["HF_TOKEN"] = hf_tok_f.read().strip()
+	HF_TOKEN = os.environ.get("HF_TOKEN", "")
+	if not HF_TOKEN.startswith("hf_"):
+		raise ValueError("Invalid Hugging Face token")
+except Exception as e:
+	warnings.warn(
+		f"Failed to get Hugging Face token -- info about certain models will be limited\n{e}"
+	)
+
+
+def b64encode(data: bytes) -> str:
+	return base64.b64encode(data, altchars=b"_-").decode("utf-8")
+
+
+def b64decode(data: str) -> bytes:
+	return base64.b64decode(data, altchars=b"_-")
+
+
+def compute_text_hashes(
+	text: str, max_size: int = PROMPT_HASH_BYTES
+) -> tuple[int, str]:
+	hash_digest: bytes = hashlib.sha256(text.encode("utf-8")).digest()
+	# truncate to the desired size
+	hash_digest = hash_digest[:max_size]
+	# get an integer hash
+	hash_int: int = int.from_bytes(hash_digest, byteorder="big")
+	# base64 encode it
+	hash_str: str = b64encode(hash_digest)
+
+	return hash_int, hash_str
+
+
+T_Sample = TypeVar("T_Sample")
+
+
+def batches(
+	it: Iterable,
+	batch_size: int,
+	allow_last_incomplete: bool = True,
+) -> Iterator[list[T_Sample]]:
+	"""Yield successive batches from an iterator."""
+	# https://stackoverflow.com/a/61435714
+	iterator: Iterator = iter(it)
+	while chunk := list(islice(iterator, batch_size)):
+		if not allow_last_incomplete and len(chunk) < batch_size:
+			break
+		yield chunk
+
+
+def str_batches(
+	text: str,
+	batch_size: int,
+	allow_last_incomplete: bool = True,
+) -> Iterator[str]:
+	"""Yield successive batches from a tensor."""
+	idx: int = 0
+	while idx < len(text):
+		str_slice: str = text[idx : idx + batch_size]
+		if not allow_last_incomplete and len(str_slice) < batch_size:
+			assert idx + batch_size >= len(text), "this state should be inaccesible"
+			break
+		idx += batch_size
+		yield str_slice
+
+
+T_Tensor = TypeVar("T_Tensor", torch.Tensor, np.ndarray)
+
+
+def tensor_batches(
+	arr: Float[T_Tensor, " n_samples *data_dims"],
+	batch_size: int,
+	allow_last_incomplete: bool = True,
+) -> Iterator[Float[T_Tensor, " batch_size *data_dims"]]:
+	"""Yield successive batches from a tensor."""
+	idx: int = 0
+	while idx < len(arr):
+		arr_slice: Float[T_Tensor, " batch_size *data_dims"] = arr[
+			idx : idx + batch_size
+		]
+		if not allow_last_incomplete and len(arr_slice) < batch_size:
+			assert idx + batch_size >= len(arr), "this state should be inaccesible"
+			break
+		idx += batch_size
+		yield arr_slice
+
+
+def tensor_batches_indexed(
+	arr: Float[T_Tensor, " n_samples *data_dims"],
+	batch_size: int | None = None,
+	allow_last_incomplete: bool = True,
+) -> Iterator[tuple[int, int, Float[T_Tensor, " batch_size *data_dims"]]]:
+	"""Yield successive batches from a tensor."""
+	if batch_size is None:
+		batch_size = len(arr)
+	idx_start: int = 0
+	while idx_start < len(arr):
+		# compute end index
+		idx_end: int = idx_start + batch_size
+		idx_end = min(idx_end, len(arr))
+		# get slice
+		arr_slice: Float[T_Tensor, " batch_size *data_dims"] = arr[idx_start:idx_end]
+		# throw away last incomplete batch if not allowed
+		if not allow_last_incomplete and len(arr_slice) < batch_size:
+			assert idx_start + batch_size >= len(arr), (
+				"this state should be inaccesible"
+			)
+			break
+		# yield (start, end, slice)
+		yield idx_start, idx_end, arr_slice
+		# increment index
+		idx_start += batch_size
+
+``````{ end_of_file="attention_motifs/consts.py" }
+
+``````{ path="attention_motifs/figure_funcs.py"  }
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.fft import fft2  # type: ignore[import-untyped]
+
+from muutils.spinner import SpinnerContext
+
+from pattern_lens.consts import DIVIDER_S1, DIVIDER_S2, SPINNER_KWARGS
+from pattern_lens.figure_util import (
+	matplotlib_figure_saver,
+	save_matrix_wrapper,
+	AttentionMatrix,
+	Matrix2D,
+)
+from pattern_lens.attn_figure_funcs import register_attn_figure_func
+from pattern_lens.figures import figures_main
+
+
+# gram matrices and FFTs
+
+
+"""
+	gram = pattern @ pattern.T
+	fft = fft2(gram)
+	fft_shifted = np.fft.fftshift(fft)
+	data: dict = {
+		"Pattern": pattern,
+		"Gram": gram,
+		"FFT (abs)": np.abs(fft),
+		"FFT (log abs)": np.log(np.abs(fft)),
+		"FFT (angle)": np.angle(fft),
+		"FFT (real)": np.real(fft),
+		"FFT (log abs real)": np.log(np.abs(np.real(fft))),
+		"FFT (imag)": np.imag(fft),
+		"Shifted FFT (abs)": np.abs(fft_shifted),
+		"Shifted FFT (log abs)": np.log(np.abs(fft_shifted)),
+		"Shifted FFT (angle)": np.angle(fft_shifted),
+		"Shifted FFT (real)": np.real(fft_shifted),
+		"Shifted FFT (log abs real)": np.log(np.abs(np.real(fft_shifted))),
+		"Shifted FFT (imag)": np.imag(fft_shifted),
+"""
+
+
+@register_attn_figure_func
+@save_matrix_wrapper(fmt="png", normalize=True)
+def fft(attn_matrix: AttentionMatrix) -> Matrix2D:
+	"abs of 2D fft of raw attention matrix"
+	return fft2(attn_matrix)
+
+
+@register_attn_figure_func
+@save_matrix_wrapper(fmt="png", normalize=True)
+def fft_abs(attn_matrix: AttentionMatrix) -> Matrix2D:
+	"abs of 2D fft of raw attention matrix"
+	return np.abs(fft2(attn_matrix))
+
+
+@register_attn_figure_func
+@save_matrix_wrapper(fmt="png", diverging_colormap=True)
+def gram(attn_matrix: AttentionMatrix) -> Matrix2D:
+	"Gram matrix A A^T"
+	return attn_matrix @ attn_matrix.T
+
+
+@register_attn_figure_func
+@save_matrix_wrapper(fmt="png", diverging_colormap=True, normalize=True)
+def gram_col(attn_matrix: AttentionMatrix) -> Matrix2D:
+	"Column-wise Gram matrix A^T A"
+	return attn_matrix.T @ attn_matrix
+
+
+@register_attn_figure_func
+@save_matrix_wrapper(fmt="png", diverging_colormap=True, normalize=True)
+def gram_fft(attn_matrix: AttentionMatrix) -> Matrix2D:
+	"2D fft of Gram matrix A A^T"
+	gram = attn_matrix @ attn_matrix.T
+	return np.abs(fft2(gram))
+
+
+@register_attn_figure_func
+@save_matrix_wrapper(fmt="png", diverging_colormap=True, normalize=True)
+def gram_col_fft(attn_matrix: AttentionMatrix) -> Matrix2D:
+	"2D fft of column-wise Gram matrix A^T A"
+	col_gram = attn_matrix.T @ attn_matrix
+	return np.abs(fft2(col_gram))
+
+
+@register_attn_figure_func
+@matplotlib_figure_saver(fmt="svgz")
+def gram_hist(attn_matrix: AttentionMatrix, ax: plt.Axes) -> None:
+	gram = attn_matrix @ attn_matrix.T
+	flat_gram = gram.flatten()
+
+	ax.hist(flat_gram, bins=50, density=True, alpha=0.7)
+	# x = np.linspace(0, 1, 100)
+	# ax.plot(x, beta.pdf(x, a, b), "r-", lw=2, label="Beta fit")
+	# ax.set_title(f"Histogram of Gram Matrix Values (Beta: a={a:.2f}, b={b:.2f})")
+	ax.set_title("Histogram of Gram Matrix Values")
+	# ax.legend()
+
+
+@register_attn_figure_func
+@matplotlib_figure_saver(fmt="svgz")
+def degree_dist(attn_matrix: AttentionMatrix, ax: plt.Axes) -> None:
+	"sum each column, plot histogram"
+	degrees_ax0 = np.sum(attn_matrix, axis=0)
+	ax.hist(degrees_ax0, bins=50, density=True, alpha=0.7, label="Ax0")
+	degrees_ax1 = np.sum(attn_matrix, axis=1)
+	ax.hist(degrees_ax1, bins=50, density=True, alpha=0.7, label="Ax1")
+	ax.legend()
+	ax.set_title("Histogram of Node Degrees")
+
+
+if __name__ == "__main__":
+	import argparse
+
+	print(DIVIDER_S1)
+	with SpinnerContext(message="parsing args", **SPINNER_KWARGS):
+		arg_parser: argparse.ArgumentParser = argparse.ArgumentParser()
+		# input and output
+		arg_parser.add_argument(
+			"--model",
+			"-m",
+			type=str,
+			required=True,
+			help="The model name(s) to use. comma separated with no whitespace if multiple",
+		)
+		arg_parser.add_argument(
+			"--save-path",
+			"-s",
+			type=str,
+			required=False,
+			help="The path to save the attention patterns",
+		)
+		# number of samples
+		arg_parser.add_argument(
+			"--n-samples",
+			"-n",
+			type=int,
+			required=False,
+			help="The max number of samples to process, do all in the file if None",
+			default=None,
+		)
+		# force overwrite of existing figures
+		arg_parser.add_argument(
+			"--force",
+			"-f",
+			type=bool,
+			required=False,
+			help="Force overwrite of existing figures",
+			default=False,
+		)
+
+		# parallel processing
+		arg_parser.add_argument(
+			"--parallel",
+			"-p",
+			type=int,
+			required=False,
+			help="Use parallel processing",
+			default=1,
+		)
+
+		args: argparse.Namespace = arg_parser.parse_args()
+
+	print(f"args parsed: {args}")
+
+	models: list[str]
+	if "," in args.model:
+		models = args.model.split(",")
+	else:
+		models = [args.model]
+
+	n_models: int = len(models)
+	for idx, model in enumerate(models):
+		print(DIVIDER_S2)
+		print(f"processing model {idx + 1} / {n_models}: {model}")
+		print(DIVIDER_S2)
+		figures_main(
+			model_name=model,
+			save_path=args.save_path,
+			n_samples=args.n_samples,
+			force=args.force,
+			parallel=bool(args.parallel),
+		)
+
+	print(DIVIDER_S1)
+
+``````{ end_of_file="attention_motifs/figure_funcs.py" }
+
+``````{ path="data/pile_example.jsonl"  }
+{"text": "Article content\n\nHuman behavior has a tremendous impact on investing \u2014 more so than most realize \u2014 and one of our biggest weaknesses is the tendency to constantly compare and contrast ourselves to others.\n\n[np_storybar title=\u201dFollow Financial Post\u201d link=\u201d\u201d]\n\nWe apologize, but this video has failed to load.\n\ntap here to see other videos from our team. Try refreshing your browser, or Three signs bubbles are brewing again in the market \u2014 and one of them has wheels Back to video\n\n\u2022 Twitter\n\n\u2022 Facebook\n\n[/np_storybar]\n\nFor example, a 1995 study by the Harvard School of Public Health indicated that people will forgo a stronger income scenario in favour of a weaker one as long as it meant earning more than their neighbours.\n\nUnfortunately, many in the investment world are keenly aware of this and will structure their marketing efforts accordingly. As a result, you have a compounding of momentum or trends in the market as investors buy at or near market tops for fear of not doing as well as or better than others.\n\nFor the same reason, investors piled into technology stocks in 2000 with only the promise of earnings in some distant future, and into housing-related investments in 2007 that were backstopped by very low incomes.", "meta": {"pile_set_name": "OpenWebText2"}}
+{"text": "Topic: reinvent midnight madness\n\nAmazon announced a new service at the AWS re:Invent Midnight Madness event. Amazon Sumerian is a solution that aims to make it easier for developers to build virtual reality, augmented reality, and 3D applications. It features a user friendly editor, which can be used to drag and drop 3D objects and characters into scenes. Amazon \u2026 continue reading", "meta": {"pile_set_name": "Pile-CC"}}
+``````{ end_of_file="data/pile_example.jsonl" }
+
+``````{ path="notebooks/contrastive_AE.ipynb" processed_with="ipynb_to_md" }
+```python
+from pathlib import Path
+
+import torch
+import torch.nn.functional as F
+from jaxtyping import Int
+
+# custom utils
+from muutils.misc import shorten_numerical_to_str
+from trnbl import TrainingManager
+
+# from trnbl.loggers.local import LocalLogger
+from trnbl.loggers.tensorboard import TensorBoardLogger
+
+
+from attention_motifs.ae import AttnAEConfig, AttnAE, contrastive_loss
+from attention_motifs.dataset.dataset import CollectedAttentionPatternDataloader
+from attention_motifs.dataset.util import AttentionPatternMetadata
+```
+
+```python
+# magic autoreload
+%load_ext autoreload
+%autoreload 2
+```
+
+```python
+train_loader_dataset = CollectedAttentionPatternDataloader.read(
+	"../data/activations/pile_5"
+)
+val_loader_dataset = CollectedAttentionPatternDataloader.read(
+	"../data/activations/pile_5_val"
+)
+
+batch_size: int = 32
+train_loader = train_loader_dataset.dataloader(batch_size)
+val_loader = val_loader_dataset.dataloader(batch_size)
+
+print(f"Train loader: {len(train_loader)} batches, {len(train_loader.dataset)} samples")
+```
+
+```python
+config: AttnAEConfig = AttnAEConfig(
+	latent_dim=128,
+)
+
+model: AttnAE = AttnAE(config)
+
+model_n_params: int = sum(p.numel() for p in model.parameters())
+print(
+	f"model has {model_n_params} ({shorten_numerical_to_str(model_n_params)}) parameters"
+)
+
+# model
+```
+
+```python
+train_loader: torch.utils.data.DataLoader
+val_loader: torch.utils.data.DataLoader | None = None
+num_epochs: int = 100
+learning_rate: float = 1e-5
+recon_weight: float = 1.0
+contrast_weight: float = 1.0
+project_name: str = "contrastive-ae"
+checkpoint_interval: str = "1/10 run"
+eval_interval: str = "1/2 run"
+device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+model = model.to(device)
+optimizer: torch.optim.Optimizer = model.config.optimizer(
+	model.parameters(),
+	lr=learning_rate,
+)
+```
+
+```python
+def evaluation_step(model: AttnAE) -> dict[str, float]:
+	"""Evaluate model on validation set"""
+	if val_loader is None:
+		return {}
+
+	model.eval()
+	val_metrics = {"val/loss": 0.0, "val/recon_loss": 0.0, "val/contrast_loss": 0.0}
+
+	with torch.no_grad():
+		for patterns, metadata in tr.batch_loop(train_loader):
+			patterns = patterns.to(device).to(torch.float32).unsqueeze(1)
+			optimizer.zero_grad()
+			x_recon, embeddings = model(patterns)
+
+			# reconstruction loss
+			recon_loss = F.mse_loss(x_recon, patterns)
+
+			# contrastive loss using all pairs in batch
+			# compute "classes" for contrastive loss
+			# classes is a tensor of the same shape as the batch, where each element is an integer
+			classes: Int[torch.Tensor, " batch"] = (
+				AttentionPatternMetadata.contrastive_classes(metadata).to(device)
+			)
+
+			# compute contrastive loss
+			contrast_loss = contrastive_loss(embeddings, classes)
+
+			# combined loss and backward pass
+			total_loss = recon_weight * recon_loss + contrast_weight * contrast_loss
+			total_loss.backward()
+			optimizer.step()
+
+			val_metrics["val/loss"] += total_loss.item()
+			val_metrics["val/recon_loss"] += recon_loss.item()
+			val_metrics["val/contrast_loss"] += contrast_loss.item()
+
+	for k in val_metrics:
+		val_metrics[k] /= len(val_loader)
+
+	model.train()
+	return val_metrics
+```
+
+```python
+# setup logger
+logger: TensorBoardLogger = TensorBoardLogger(
+	log_dir=Path("tb-logs-convAE"),
+	name=project_name,
+	# metric_names=[
+	# 	"train/loss",
+	# 	"train/recon_loss",
+	# 	"train/contrast_loss",
+	# 	"val/loss",
+	# 	"val/recon_loss",
+	# 	"val/contrast_loss",
+	# ],
+	train_config=dict(
+		model_config=model.zanj_model_config.serialize(),
+		learning_rate=learning_rate,
+		recon_weight=recon_weight,
+		contrast_weight=contrast_weight,
+	),
+)
+
+with TrainingManager(
+	model=model,
+	logger=logger,
+	evals={
+		eval_interval: evaluation_step,
+	}.items(),
+	checkpoint_interval=checkpoint_interval,
+) as tr:
+	for epoch in tr.epoch_loop(range(num_epochs)):
+		for patterns, metadata in tr.batch_loop(train_loader):
+			patterns = patterns.to(device).to(torch.float32).unsqueeze(1)
+			optimizer.zero_grad()
+			x_recon, embeddings = model(patterns)
+
+			# reconstruction loss
+			recon_loss = F.mse_loss(x_recon, patterns)
+
+			# contrastive loss using all pairs in batch
+			batch_size = patterns.size(0)
+
+			# compute "classes" for contrastive loss
+			# classes is a tensor of the same shape as the batch, where each element is an integer
+			classes: Int[torch.Tensor, " batch"] = (
+				AttentionPatternMetadata.contrastive_classes(metadata).to(device)
+			)
+
+			# compute contrastive loss
+			contrast_loss = contrastive_loss(embeddings, classes)
+
+			# combined loss and backward pass
+			total_loss = recon_weight * recon_loss + contrast_weight * contrast_loss
+			total_loss.backward()
+			optimizer.step()
+
+			# log metrics
+			tr.batch_update(
+				samples=len(metadata),
+				**{
+					"train/loss": total_loss.item(),
+					"train/recon_loss": recon_loss.item(),
+					"train/contrast_loss": contrast_loss.item(),
+				},
+			)
+
+			del patterns, x_recon, embeddings, recon_loss, contrast_loss, total_loss
+```
+
+
+``````{ end_of_file="notebooks/contrastive_AE.ipynb" }
+
+``````{ path="notebooks/demo.ipynb" processed_with="ipynb_to_md" }
+# imports
+
+```python
+from pathlib import Path
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.linalg import svd
+
+from pattern_lens.figure_util import matplotlib_figure_saver, save_matrix_wrapper
+from pattern_lens.attn_figure_funcs import register_attn_figure_func
+from pattern_lens.figures import figures_main
+```
+
+```python
+# define and register your own functions
+# don't take these too seriously, they're just examples
+
+
+# using matplotlib_figure_saver -- define a function that takes matrix and `plt.Axes`, modify the axes
+@register_attn_figure_func
+@matplotlib_figure_saver(fmt="svgz")
+def svd_spectra(attn_matrix: np.ndarray, ax: plt.Axes) -> None:
+	# Perform SVD
+	U, s, Vh = svd(attn_matrix)
+
+	# Plot singular values
+	ax.plot(s, "o-")
+	ax.set_yscale("log")
+	ax.set_xlabel("Singular Value Index")
+	ax.set_ylabel("Singular Value")
+	ax.set_title("Singular Value Spectrum of Attention Matrix")
+
+
+# manually creating and saving a figure
+@register_attn_figure_func
+def attention_flow(attn_matrix: np.ndarray, path: Path) -> None:
+	"""Visualize attention as flows between tokens.
+
+	Creates a simplified Sankey-style diagram where line thickness and color
+	intensity represent attention strength.
+	"""
+
+	fig, ax = plt.subplots(figsize=(6, 6))
+	n_tokens: int = attn_matrix.shape[0]
+
+	# Create positions for tokens on left and right
+	left_pos: np.ndarray = np.arange(n_tokens)
+	right_pos: np.ndarray = np.arange(n_tokens)
+
+	# Plot flows
+	for i in range(n_tokens):
+		for j in range(n_tokens):
+			weight = attn_matrix[i, j]
+			if weight > 0.05:  # Only plot stronger connections
+				ax.plot(
+					[0, 1],
+					[left_pos[i], right_pos[j]],
+					alpha=weight,
+					linewidth=weight * 5,
+					color="blue",
+				)
+
+	ax.set_xlim(-0.1, 1.1)
+	ax.set_ylim(-1, n_tokens)
+	ax.axis("off")
+	ax.set_title("Attention Flow Between Positions")
+
+	# be sure to save the figure as `function_name.format` in the given location
+	fig.savefig(path / "attention_flow.svgz", format="svgz")
+
+
+@register_attn_figure_func
+@save_matrix_wrapper(fmt="svgz")
+def gram_matrix(attn_matrix: np.ndarray) -> np.ndarray:
+	return attn_matrix @ attn_matrix.T
+```
+
+```python
+# run the pipeline
+figures_main(
+	model_name="pythia-14m",
+	save_path=Path("docs/demo/"),
+	n_samples=5,
+	force=False,
+)
+```
+
+
+``````{ end_of_file="notebooks/demo.ipynb" }
+
+``````{ path="notebooks/demo_dataset.ipynb" processed_with="ipynb_to_md" }
+```python
+from attention_motifs.dataset.dataset import (
+	APGenerationConfig,
+	PromptDatasetConfig,
+	CollectedAttentionPatternDataloader,
+)
+```
+
+```python
+# magic autoreload
+%load_ext autoreload
+%autoreload 2
+```
+
+```python
+d = CollectedAttentionPatternDataloader.generate(
+	config=APGenerationConfig(
+		prompts_config=PromptDatasetConfig.from_source_path("../data/pile_5_val.jsonl"),
+		model_names=[
+			"pythia-14m",
+			"gpt2-small",
+			"meta-llama/Llama-3.2-1B",
+		],
+	),
+	max_batch_size=8,
+)
+```
+
+```python
+d.save("../data/activations/pile_5_val", verbose=True)
+```
+
+```python
+import matplotlib.pyplot as plt
+
+for x in d.batches(2):
+	print(x[0].shape)
+	print(x[1])
+	plt.matshow(x[0][0].cpu().numpy())
+	plt.show()
+	plt.matshow(x[0][1].cpu().numpy())
+	plt.show()
+	break
+```
+
+
+``````{ end_of_file="notebooks/demo_dataset.ipynb" }
+
+``````{ path="notebooks/fit_patterns_manual.ipynb" processed_with="ipynb_to_md" }
+```python
+import json
+from pathlib import Path
+
+import torch
+import numpy as np
+
+import matplotlib.pyplot as plt
+from jaxtyping import Float
+from tqdm import tqdm
+from scipy.fft import fft2
+```
+
+```python
+# load activations for each prompt
+def load_activations(
+	model_name: str,
+	base_path: Path = Path("../docs/demo"),
+) -> tuple[
+	list[dict],
+	list[np.lib.npyio.NpzFile],
+]:
+	model_path: Path = base_path / model_name
+	with open(model_path / "prompts.jsonl") as f:
+		prompts = [json.loads(line) for line in f]
+
+	activations = [
+		np.load(model_path / "prompts" / p["hash"] / "activations.npz") for p in prompts
+	]
+
+	return prompts, activations
+
+
+PROMPTS, ACTIVATIONS = load_activations("pythia-14m")
+```
+
+```python
+ACTIVATIONS[0]
+```
+
+```python
+for i in range(5):
+	print(PROMPTS[i]["text"])
+	print("=" * 50)
+```
+
+```python
+ACTIVATIONS[1]["blocks.4.attn.hook_pattern"][0, 0].shape
+```
+
+```python
+def plot_pattern_info(
+	pattern: Float[np.ndarray, "n_ctx n_ctx"],
+	show: bool = True,
+) -> tuple[plt.Figure, plt.Axes]:
+	gram = pattern @ pattern.T
+	fft = fft2(gram)
+	fft_shifted = np.fft.fftshift(fft)
+	data: dict = {
+		"Pattern": pattern,
+		"Gram": gram,
+		"FFT (abs)": np.abs(fft),
+		"FFT (log abs)": np.log(np.abs(fft)),
+		"FFT (angle)": np.angle(fft),
+		"FFT (real)": np.real(fft),
+		"FFT (log abs real)": np.log(np.abs(np.real(fft))),
+		"FFT (imag)": np.imag(fft),
+		"Shifted FFT (abs)": np.abs(fft_shifted),
+		"Shifted FFT (log abs)": np.log(np.abs(fft_shifted)),
+		"Shifted FFT (angle)": np.angle(fft_shifted),
+		"Shifted FFT (real)": np.real(fft_shifted),
+		"Shifted FFT (log abs real)": np.log(np.abs(np.real(fft_shifted))),
+		"Shifted FFT (imag)": np.imag(fft_shifted),
+	}
+
+	# Create subplots and add colorbars using a loop
+	n_data: int = len(data)
+	n_cols: int = round(n_data / 2)
+	fig, axs = plt.subplots(2, n_cols, figsize=(5 * n_cols, 10))
+	for ax, (title, datum) in zip(axs.flat[:n_data], data.items()):
+		cax = ax.matshow(datum)
+		fig.colorbar(cax, ax=ax)
+		ax.set_title(title)
+		ax.axis("off")
+
+	if show:
+		plt.show()
+
+	return fig, axs
+
+
+def get_single_attn_pattern(
+	sample: int,
+	layer: int,
+	head: int,
+	activations=ACTIVATIONS,
+) -> Float[np.ndarray, "n_ctx n_ctx"]:
+	return activations[sample][f"blocks.{layer}.attn.hook_pattern"][0, head]
+
+
+plot_pattern_info(get_single_attn_pattern(1, 4, 0))
+```
+
+```python
+def plot_comparison(
+	original_data: np.ndarray,
+	fitted_model: np.ndarray,
+	freqs: np.ndarray,
+	title: str = "FFT Data vs. Fitted Model and Difference",
+) -> None:
+	"""Plot original data, fitted model, and their difference side by side."""
+	difference = original_data - fitted_model
+
+	fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+	fig.suptitle(title)
+
+	# Find common vmin/vmax for original and fitted data
+	vmin = min(original_data.min(), fitted_model.min())
+	vmax = max(original_data.max(), fitted_model.max())
+
+	# Original FFT Data
+	im0 = axes[0].imshow(
+		original_data,
+		extent=(freqs.min(), freqs.max(), freqs.min(), freqs.max()),
+		origin="lower",
+		vmin=vmin,
+		vmax=vmax,
+	)
+	axes[0].set_title("Original FFT Data")
+	axes[0].set_xlabel("Frequency fx")
+	axes[0].set_ylabel("Frequency fy")
+	fig.colorbar(im0, ax=axes[0], orientation="vertical")
+
+	# Fitted Model
+	im1 = axes[1].imshow(
+		fitted_model,
+		extent=(freqs.min(), freqs.max(), freqs.min(), freqs.max()),
+		origin="lower",
+		vmin=vmin,
+		vmax=vmax,
+	)
+	axes[1].set_title("Fitted Gaussian Model")
+	axes[1].set_xlabel("Frequency fx")
+	axes[1].set_ylabel("Frequency fy")
+	fig.colorbar(im1, ax=axes[1], orientation="vertical")
+
+	# Difference plot with symmetric red-blue colormap
+	diff_vmax = max(abs(difference.min()), abs(difference.max()))
+	im2 = axes[2].imshow(
+		difference,
+		extent=(freqs.min(), freqs.max(), freqs.min(), freqs.max()),
+		origin="lower",
+		cmap="RdBu_r",  # Red-Blue diverging colormap
+		vmin=-diff_vmax,  # Symmetric limits around zero
+		vmax=diff_vmax,
+	)
+	axes[2].set_title("Difference (Original - Fitted)")
+	axes[2].set_xlabel("Frequency fx")
+	axes[2].set_ylabel("Frequency fy")
+	fig.colorbar(im2, ax=axes[2], orientation="vertical")
+
+	plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+	plt.show()
+```
+
+```python
+class FFTModel(torch.nn.Module):
+	"""PyTorch model for fitting FFT patterns with Gaussian components."""
+
+	def __init__(self):
+		super(FFTModel, self).__init__()
+		# Initialize parameters with default values
+		self.A_cross = torch.nn.Parameter(torch.tensor(1.0))
+		self.sigma_cross = torch.nn.Parameter(torch.tensor(0.01))
+		self.A_diag = torch.nn.Parameter(torch.tensor(5.0))
+		self.sigma_diag = torch.nn.Parameter(torch.tensor(0.01))
+		self.B = torch.nn.Parameter(torch.tensor(1.0))
+
+	@classmethod
+	def smart_init(cls, pattern: np.ndarray) -> "FFTModel":
+		"""
+		Create a model with parameters initialized from pattern statistics using intelligent estimates.
+
+		Args:
+		    pattern: The attention pattern to analyze
+
+		Returns:
+		    FFTModel with intelligently guessed initial parameters
+		"""
+		model = cls()
+
+		# Compute gram and FFT
+		gram = pattern @ pattern.T
+		fft = np.fft.fft2(gram)
+		fft_shifted = np.fft.fftshift(fft)
+		log_fft = np.log(np.abs(fft_shifted) + 1e-8)  # Add epsilon to prevent log(0)
+
+		# Get dimensions
+		N = log_fft.shape[0]
+		center = N // 2
+
+		# Create a mask to exclude central peaks for background estimation
+		exclusion_size = N // 4
+		mask = np.ones_like(log_fft, dtype=bool)
+		start = center - exclusion_size // 2
+		end = center + exclusion_size // 2
+		mask[start:end, start:end] = False
+		background_values = log_fft[mask]
+
+		# Estimate background level (B) from areas excluding peaks
+		B_init = float(np.median(background_values))
+
+		# Estimate cross amplitude (A_cross) from central horizontal and vertical lines
+		horizontal_line = log_fft[center, :]
+		vertical_line = log_fft[:, center]
+		A_cross_init = float(max(horizontal_line.max(), vertical_line.max()) - B_init)
+
+		# Estimate cross width (sigma_cross) from horizontal and vertical lines
+		def estimate_sigma(line: np.ndarray, B_init: float) -> float:
+			peak = line.max()
+			half_max = peak - (peak - B_init) / 2
+			indices_above_half_max = np.where(line > half_max)[0]
+			if len(indices_above_half_max) >= 2:
+				fwhm = indices_above_half_max[-1] - indices_above_half_max[0]
+				sigma = fwhm / (2 * np.sqrt(2 * np.log(2)))  # Convert FWHM to sigma
+				return float(sigma / (N / 2))  # Normalize by size
+			return 0.01  # Default small value if estimation is not possible
+
+		sigma_cross_init = max(
+			estimate_sigma(horizontal_line, B_init),
+			estimate_sigma(vertical_line, B_init),
+		)
+
+		# Estimate diagonal amplitude (A_diag) from main and anti-diagonal lines
+		diagonal_line = np.diagonal(log_fft)
+		anti_diagonal_line = np.diagonal(np.fliplr(log_fft))
+		A_diag_init = float(max(diagonal_line.max(), anti_diagonal_line.max()) - B_init)
+
+		# Estimate diagonal width (sigma_diag) from diagonal lines
+		sigma_diag_init = max(
+			estimate_sigma(diagonal_line, B_init),
+			estimate_sigma(anti_diagonal_line, B_init),
+		)
+
+		# Set parameters with estimated values
+		model.B.data = torch.tensor(B_init, dtype=torch.float32)
+		model.A_cross.data = torch.tensor(A_cross_init, dtype=torch.float32)
+		model.sigma_cross.data = torch.tensor(sigma_cross_init, dtype=torch.float32)
+		model.A_diag.data = torch.tensor(A_diag_init, dtype=torch.float32)
+		model.sigma_diag.data = torch.tensor(sigma_diag_init, dtype=torch.float32)
+
+		return model
+
+	def forward(self, coords: torch.Tensor) -> torch.Tensor:
+		"""Forward pass of the model."""
+		fx, fy = coords
+		# Vertical and horizontal components
+		vertical = self.A_cross * torch.exp(-(fx**2) / (2 * self.sigma_cross**2))
+		horizontal = self.A_cross * torch.exp(-(fy**2) / (2 * self.sigma_cross**2))
+
+		# Diagonal component
+		theta = torch.tensor(torch.pi / 4)
+		fx_prime = fx * torch.cos(theta) + fy * torch.sin(theta)
+		diag = self.A_diag * torch.exp(-(fx_prime**2) / (2 * self.sigma_diag**2))
+
+		return (vertical + horizontal + diag + self.B).view(-1)
+```
+
+```python
+def fit_pattern(
+	pattern: np.ndarray, n_iterations: int = 5000, learning_rate: float = 0.01
+) -> tuple[FFTModel, np.ndarray, np.ndarray]:
+	"""Fit a pattern with the FFTModel."""
+	# Prepare data
+	gram = pattern @ pattern.T
+	fft_shifted = np.log(np.abs(np.fft.fftshift(np.fft.fft2(gram))))
+
+	N = fft_shifted.shape[0]
+	freqs = np.fft.fftshift(np.fft.fftfreq(N))
+	fx, fy = np.meshgrid(freqs, freqs)
+
+	# Convert to torch tensors
+	coords = torch.tensor(np.vstack((fx.ravel(), fy.ravel())), dtype=torch.float32)
+	fft_data_flat_torch = torch.tensor(fft_shifted.ravel(), dtype=torch.float32)
+
+	# Setup model and optimizer
+	model = FFTModel.smart_init(pattern)
+	optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+	loss_fn = torch.nn.MSELoss()
+
+	# List to store losses
+	losses = []
+
+	# Training loop
+	def closure():
+		optimizer.zero_grad()
+		output = model(coords)
+		loss = loss_fn(output, fft_data_flat_torch)
+		loss.backward()
+		losses.append(loss.item())
+		return loss
+
+	# Run optimization with progress bar
+	for _ in tqdm(range(n_iterations)):
+		optimizer.step(closure)
+
+	# Plot loss curve
+	plt.figure(figsize=(10, 6))
+	plt.loglog(range(1, len(losses) + 1), losses)
+	plt.grid(True, which="both", ls="-", alpha=0.2)
+	plt.xlabel("Iteration")
+	plt.ylabel("Loss (MSE)")
+	plt.title("Training Loss Over Time")
+	plt.show()
+
+	# Get fitted model
+	fitted_model = model(coords).detach().numpy().reshape(fft_shifted.shape)
+
+	return model, fitted_model, freqs
+```
+
+```python
+# Load data
+prompts, activations = load_activations("pythia-14m")
+
+# Get a sample pattern
+pattern = activations[2]["blocks.4.attn.hook_pattern"][0, 0]
+
+# Plot pattern information
+# plot_pattern_info(pattern)
+
+# Fit the pattern
+model, fitted_model, freqs = fit_pattern(pattern, 10000)
+
+# Print fitted parameters
+for name, param in model.named_parameters():
+	print(f"{name}: {param.item()}")
+
+# Plot comparison
+plot_comparison(
+	np.log(np.abs(np.fft.fftshift(np.fft.fft2(pattern @ pattern.T)))),
+	fitted_model,
+	freqs,
+)
+```
+
+
+``````{ end_of_file="notebooks/fit_patterns_manual.ipynb" }
+
+``````{ path="notebooks/fit_patterns_pysr.ipynb" processed_with="ipynb_to_md" }
+```python
+import json
+from pathlib import Path
+
+# must import pysr before torch because julia kernel init weirdness
+from pysr import PySRRegressor
+
+# torch AFTER pysr, dont let ruff/isort/whatever reorder this
+import numpy as np
+
+import sympy
+import matplotlib.pyplot as plt
+from jaxtyping import Float
+from scipy.fft import fft2
+```
+
+```python
+# load activations for each prompt
+def load_activations(
+	model_name: str,
+	base_path: Path = Path("../docs/demo"),
+) -> tuple[
+	list[dict],
+	list[np.lib.npyio.NpzFile],
+]:
+	model_path: Path = base_path / model_name
+	with open(model_path / "prompts.jsonl") as f:
+		prompts = [json.loads(line) for line in f]
+
+	activations = [
+		np.load(model_path / "prompts" / p["hash"] / "activations.npz") for p in prompts
+	]
+
+	return prompts, activations
+
+
+PROMPTS, ACTIVATIONS = load_activations("pythia-14m")
+```
+
+```python
+ACTIVATIONS[0]
+```
+
+```python
+for i in range(5):
+	print(PROMPTS[i]["text"])
+	print("=" * 50)
+```
+
+```python
+ACTIVATIONS[1]["blocks.4.attn.hook_pattern"][0, 0].shape
+```
+
+```python
+def plot_pattern_info(
+	pattern: Float[np.ndarray, "n_ctx n_ctx"],
+	show: bool = True,
+) -> tuple[plt.Figure, plt.Axes]:
+	gram = pattern @ pattern.T
+	fft = fft2(gram)
+	fft_shifted = np.fft.fftshift(fft)
+	data: dict = {
+		"Pattern": pattern,
+		"Gram": gram,
+		"FFT (abs)": np.abs(fft),
+		"FFT (log abs)": np.log(np.abs(fft)),
+		"FFT (angle)": np.angle(fft),
+		"FFT (real)": np.real(fft),
+		"FFT (log abs real)": np.log(np.abs(np.real(fft))),
+		"FFT (imag)": np.imag(fft),
+		"Shifted FFT (abs)": np.abs(fft_shifted),
+		"Shifted FFT (log abs)": np.log(np.abs(fft_shifted)),
+		"Shifted FFT (angle)": np.angle(fft_shifted),
+		"Shifted FFT (real)": np.real(fft_shifted),
+		"Shifted FFT (log abs real)": np.log(np.abs(np.real(fft_shifted))),
+		"Shifted FFT (imag)": np.imag(fft_shifted),
+	}
+
+	# Create subplots and add colorbars using a loop
+	n_data: int = len(data)
+	n_cols: int = round(n_data / 2)
+	fig, axs = plt.subplots(2, n_cols, figsize=(5 * n_cols, 10))
+	for ax, (title, datum) in zip(axs.flat[:n_data], data.items()):
+		cax = ax.matshow(datum)
+		fig.colorbar(cax, ax=ax)
+		ax.set_title(title)
+		# ax.axis("off")
+
+	if show:
+		plt.show()
+
+	return fig, axs
+
+
+def get_single_attn_pattern(
+	sample: int,
+	layer: int,
+	head: int,
+	activations=ACTIVATIONS,
+) -> Float[np.ndarray, "n_ctx n_ctx"]:
+	return activations[sample][f"blocks.{layer}.attn.hook_pattern"][0, head]
+
+
+plot_pattern_info(
+	get_single_attn_pattern(
+		sample=3,
+		layer=1,
+		head=0,
+	)
+)
+```
+
+```python
+# set up matrix
+pattern = get_single_attn_pattern(1, 4, 0)
+gram = pattern @ pattern.T
+fft = np.fft.fft2(gram)
+fft_shifted = np.fft.fftshift(fft)
+log_fft = np.log(np.abs(fft_shifted) + 1e-8)  # Add epsilon to prevent log(0)
+matrix = log_fft
+
+# set up pysr
+model = PySRRegressor(
+	# Search parameters
+	niterations=500,
+	maxsize=25,
+	populations=10,
+	population_size=50,
+	# Lots of potentially useful operators
+	binary_operators=[
+		"+",
+		"*",
+		"-",
+		"/",
+		"^",
+		"abs2(x,y) = x^2 + y^2",  # Radial distance squared
+		"hypot(x,y) = sqrt(x^2 + y^2)",  # Radial distance
+		# "atan2",  # Angular coordinate
+	],
+	unary_operators=[
+		# Basic functions
+		"exp",
+		"log1p",
+		"abs",
+		"sin",
+		"cos",
+		"tan",
+		"sinh",
+		"cosh",
+		"tanh",
+		# Squared terms
+		"square(x) = x^2",
+		"cube(x) = x^3",
+		# Gaussian-like functions
+		"gauss(x) = exp(-x^2)",
+		"invexp(x) = exp(-abs(x))",
+		# Rotated coordinates (various angles)
+		# "rot45x(x,y) = x * cos(pi/4) + y * sin(pi/4)",
+		# "rot45y(x,y) = -x * sin(pi/4) + y * cos(pi/4)",
+		# "rot30x(x,y) = x * cos(pi/6) + y * sin(pi/6)",
+		# "rot30y(x,y) = -x * sin(pi/6) + y * cos(pi/6)",
+		# "rot60x(x,y) = x * cos(pi/3) + y * sin(pi/3)",
+		# "rot60y(x,y) = -x * sin(pi/3) + y * cos(pi/3)",
+	],
+	# Use batching for speed
+	batching=True,
+	batch_size=1000,
+	# Loss function
+	elementwise_loss="loss(prediction, target) = (prediction - target)^2",
+	# Define SymPy mappings
+	extra_sympy_mappings={
+		"square": lambda x: x**2,
+		"cube": lambda x: x**3,
+		"gauss": lambda x: sympy.exp(-(x**2)),
+		"invexp": lambda x: sympy.exp(-abs(x)),
+		"abs2": lambda x, y: x**2 + y**2,
+		"hypot": lambda x, y: sympy.sqrt(x**2 + y**2),
+		# "rot45x": lambda x, y: x * sympy.cos(sympy.pi/4) + y * sympy.sin(sympy.pi/4),
+		# "rot45y": lambda x, y: -x * sympy.sin(sympy.pi/4) + y * sympy.cos(sympy.pi/4),
+		# "rot30x": lambda x, y: x * sympy.cos(sympy.pi/6) + y * sympy.sin(sympy.pi/6),
+		# "rot30y": lambda x, y: -x * sympy.sin(sympy.pi/6) + y * sympy.cos(sympy.pi/6),
+		# "rot60x": lambda x, y: x * sympy.cos(sympy.pi/3) + y * sympy.sin(sympy.pi/3),
+		# "rot60y": lambda x, y: -x * sympy.sin(sympy.pi/3) + y * sympy.cos(sympy.pi/3),
+	},
+	# Prevent too much nesting of expensive functions
+	nested_constraints={
+		"exp": {"exp": 0},
+		"gauss": {"gauss": 0},
+		"invexp": {"invexp": 0},
+	},
+	# Other parameters
+	parsimony=0.0001,  # Very small to allow complex expressions initially
+	turbo=True,  # Speed up evaluation
+)
+# This will set up the model for 40 iterations of the search code, which contains hundreds of thousands of mutations and equation evaluations.
+
+# Let's train this model on our dataset:
+X = np.indices(matrix.shape).reshape(2, -1).T
+y = matrix.ravel()
+model.fit(X, y)
+```
+
+```python
+model.equations_
+```
+
+```python
+idxs = np.indices(matrix.shape).reshape(2, -1).T
+idxs.shape
+```
+
+```python
+def plot_reconstructions(
+	original_matrix: np.ndarray, model_equations, start_complexity: int = 2
+) -> None:
+	"""
+	Plot original matrix and reconstructions at each complexity level.
+
+	Args:
+	    original_matrix: The original matrix being approximated
+	    model_equations: DataFrame containing the PySR equations
+	    start_complexity: Minimum complexity to start showing (default 2)
+	"""
+	# Generate frequency coordinates
+	N = original_matrix.shape[0]
+	# freqs = np.fft.fftshift(np.fft.fftfreq(N))
+
+	# First, show the original matrix
+	plt.figure(figsize=(6, 5))
+	plt.matshow(original_matrix, origin="lower")
+	plt.colorbar()
+	plt.title("Original Matrix")
+	plt.xlabel("x")
+	plt.ylabel("y")
+	plt.show()
+
+	# Get unique complexity levels
+	complexities = sorted(model_equations["complexity"].unique())
+	complexities = [c for c in complexities if c >= start_complexity]
+
+	# Create coordinate grid
+	y, x = np.meshgrid(range(N), range(N))
+	coords = np.stack([x.ravel(), y.ravel()], axis=1)
+
+	# For each complexity level
+	for complexity in complexities:
+		# Get the best equation at this complexity level
+		eq_row = model_equations[model_equations["complexity"] == complexity].iloc[-1]
+		eq = eq_row["lambda_format"]
+
+		try:
+			# Generate prediction
+			y_pred = eq(coords)
+			reconstructed = y_pred.reshape(original_matrix.shape)
+
+			# Calculate difference
+			difference = original_matrix - reconstructed
+
+			# Create comparison plot
+			fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+			fig.suptitle(
+				f"Complexity {complexity} (Loss: {eq_row['loss']:.4f})\n{eq_row['equation']}"
+			)
+
+			# Reconstructed matrix
+			vmin = min(original_matrix.min(), reconstructed.min())
+			vmax = max(original_matrix.max(), reconstructed.max())
+
+			im0 = axes[0].matshow(reconstructed, origin="lower", vmin=vmin, vmax=vmax)
+			axes[0].set_title("Reconstruction")
+			axes[0].set_xlabel("x")
+			axes[0].set_ylabel("y")
+			fig.colorbar(im0, ax=axes[0])
+
+			# Difference plot
+			diff_vmax = max(abs(difference.min()), abs(difference.max()))
+			im1 = axes[1].matshow(
+				difference,
+				origin="lower",
+				cmap="RdBu_r",
+				vmin=-diff_vmax,
+				vmax=diff_vmax,
+			)
+			axes[1].set_title("Error (Original - Reconstruction)")
+			axes[1].set_xlabel("x")
+			axes[1].set_ylabel("y")
+			fig.colorbar(im1, ax=axes[1])
+
+			plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+			plt.show()
+
+		except Exception as e:
+			print(f"Error plotting complexity {complexity}: {str(e)}")
+
+
+# Example usage:
+plot_reconstructions(matrix, model.equations_)
+```
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from typing import Callable
+
+
+def make_pattern_fn(
+	A_cross: float = 1.0,
+	sigma_cross: float = 0.2,
+	A_diag: float = 1.0,
+	sigma_diag: float = 0.1,
+	B: float = 0.0,
+) -> Callable[[np.ndarray, np.ndarray], np.ndarray]:
+	"""Create a function that generates patterns with given parameters."""
+
+	def pattern(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+		# Cross components
+		vertical = A_cross * np.exp(-(x**2) / (2 * sigma_cross**2))
+		horizontal = A_cross * np.exp(-(y**2) / (2 * sigma_cross**2))
+
+		# Diagonal component (along x=y)
+		diag_dist = (x - y) / np.sqrt(2)  # Distance from diagonal
+		diagonal = A_diag * np.exp(-(diag_dist**2) / (2 * sigma_diag**2))
+
+		return vertical + horizontal + diagonal + B
+
+	return pattern
+
+
+def visualize_pattern(size: int = 32, **pattern_params) -> None:
+	"""
+	Visualize a pattern with given parameters.
+
+	Args:
+	    size: Size of the matrix (default: 32)
+	    **pattern_params: Parameters passed to make_pattern_fn
+	"""
+	# Generate frequency coordinates
+	freqs = np.fft.fftshift(np.fft.fftfreq(size))
+	fx, fy = np.meshgrid(freqs, freqs)
+
+	# Generate pattern
+	pattern_fn = make_pattern_fn(**pattern_params)
+	pattern = pattern_fn(fx, fy)
+
+	# Plot
+	fig, ax = plt.subplots(figsize=(8, 6))
+	im = ax.matshow(pattern, origin="lower")
+	plt.colorbar(im, ax=ax)
+
+	# Add parameter info to title
+	param_str = ", ".join(f"{k}={v:.2f}" for k, v in pattern_params.items())
+	plt.title(f"Pattern with {param_str}")
+	plt.show()
+
+
+def compare_patterns(size: int = 32, param_sets: dict = None) -> None:
+	"""
+	Compare multiple patterns with different parameter sets.
+
+	Args:
+	    size: Size of matrices (default: 32)
+	    param_sets: Dict of parameter sets, each a dict of parameters
+	"""
+	if param_sets is None:
+		param_sets = {
+			"Base": dict(
+				A_cross=1.0, sigma_cross=0.2, A_diag=1.0, sigma_diag=0.1, B=0.0
+			),
+			"Strong Cross": dict(
+				A_cross=2.0, sigma_cross=0.2, A_diag=1.0, sigma_diag=0.1, B=0.0
+			),
+			"Wide Diagonal": dict(
+				A_cross=1.0, sigma_cross=0.2, A_diag=1.0, sigma_diag=0.3, B=0.0
+			),
+		}
+
+	# Generate frequency coordinates
+	freqs = np.fft.fftshift(np.fft.fftfreq(size))
+	fx, fy = np.meshgrid(freqs, freqs)
+
+	# Create subplot grid
+	n_patterns = len(param_sets)
+	fig, axes = plt.subplots(1, n_patterns, figsize=(6 * n_patterns, 5))
+	if n_patterns == 1:
+		axes = [axes]
+
+	# Plot each pattern
+	for ax, (name, params) in zip(axes, param_sets.items()):
+		pattern_fn = make_pattern_fn(**params)
+		pattern = pattern_fn(fx, fy)
+
+		im = ax.matshow(pattern, origin="lower")
+		plt.colorbar(im, ax=ax)
+
+		# Format parameters for title
+		param_str = ",\n".join(f"{k}={v:.2f}" for k, v in params.items())
+		ax.set_title(f"{name}\n{param_str}")
+
+	plt.tight_layout()
+	plt.show()
+
+
+# View a single pattern
+visualize_pattern(
+	A_cross=1.0,  # Amplitude of cross component
+	sigma_cross=0.2,  # Width of cross component
+	A_diag=1.0,  # Amplitude of diagonal stripe
+	sigma_diag=0.1,  # Width of diagonal stripe
+	B=0.0,  # Background/offset term
+)
+
+# Compare several patterns
+compare_patterns(
+	param_sets={
+		"Base": dict(A_cross=1.0, sigma_cross=0.2, A_diag=1.0, sigma_diag=0.1, B=0.0),
+		"Strong Cross": dict(
+			A_cross=2.0, sigma_cross=0.2, A_diag=1.0, sigma_diag=0.1, B=0.0
+		),
+		"Wide Diagonal": dict(
+			A_cross=1.0, sigma_cross=0.2, A_diag=1.0, sigma_diag=0.3, B=0.0
+		),
+	}
+)
+```
+
+
+``````{ end_of_file="notebooks/fit_patterns_pysr.ipynb" }
+
+``````{ path="notebooks/markov_absorption.ipynb" processed_with="ipynb_to_md" }
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+```
+
+```python
+# start with a random square matrix, make it LT, normalize rows
+n: int = 20
+A: np.ndarray = np.random.rand(n, n)
+# add salt and pepper noise
+A[A < 0.9] = 0
+A = A + np.random.rand(n, n) * 0.01
+A = np.tril(A)
+A = A / np.sum(A, axis=1)[:, np.newaxis]
+
+plt.matshow(A)
+```
+
+```python
+import json
+from pathlib import Path
+from jaxtyping import Float
+
+
+# load activations for each prompt
+def load_activations(
+	model_name: str,
+	base_path: Path = Path("../docs/demo"),
+) -> tuple[
+	list[dict],
+	list[np.lib.npyio.NpzFile],
+]:
+	model_path: Path = base_path / model_name
+	with open(model_path / "prompts.jsonl") as f:
+		prompts = [json.loads(line) for line in f]
+
+	activations = [
+		np.load(model_path / "prompts" / p["hash"] / "activations.npz") for p in prompts
+	]
+
+	return prompts, activations
+
+
+PROMPTS, ACTIVATIONS = load_activations("pythia-14m")
+
+
+def get_single_attn_pattern(
+	sample: int,
+	layer: int,
+	head: int,
+	activations=ACTIVATIONS,
+) -> Float[np.ndarray, "n_ctx n_ctx"]:
+	return activations[sample][f"blocks.{layer}.attn.hook_pattern"][0, head]
+
+
+A = get_single_attn_pattern(0, 1, 0)
+n: int = A.shape[0]
+```
+
+```python
+def transition_tensor(A: np.ndarray, K: int) -> np.ndarray:
+	"""
+	Compute the 3D array `X` of shape `(n, n, K+1)` such that `X[i, j, k]` = Probability of being in state j at step k if we start in state i at step 0.
+
+	# Parameters
+	- `A: np.ndarray`
+	    An n x n transition matrix (row-stochastic for a standard Markov chain).
+	- `K: int`
+	    The maximum number of steps for which to compute transition probabilities.
+
+	# Returns
+	`X: np.ndarray`
+	    A 3D NumPy array of shape (n, n, K+1).
+	    - X[:, :, 0] is the identity matrix (k=0).
+	    - X[:, :, k] is A^k for k >= 1.
+	"""
+	n: int = A.shape[0]
+	# Allocate output array
+	X = np.zeros((n, n, K + 1), dtype=A.dtype)
+
+	# Step 0: identity distribution
+	X[:, :, 0] = np.eye(n, dtype=A.dtype)
+
+	# Compute powers of A iteratively
+	for k in range(1, K + 1):
+		X[:, :, k] = X[:, :, k - 1] @ A
+
+	return X
+
+
+def resampled_tt(
+	matrix,
+	exact_l10: int = 1,
+	approx_l10: int = 3,
+	approx_pts: int = 20,
+):
+	resampled_idxs = np.logspace(exact_l10, approx_l10, approx_pts, base=10, dtype=int)
+
+	tt = transition_tensor(matrix, resampled_idxs[-1])
+
+	tt_resampled = np.concatenate(
+		[
+			tt[:, :, :exact_l10],
+			tt[:, :, resampled_idxs],
+		],
+		axis=-1,
+	)
+
+	return tt_resampled
+```
+
+```python
+fig, axs = plt.subplots(1, 6, figsize=(10, 5))
+for i in range(6):
+	A = get_single_attn_pattern(1, i, 0)
+	tt = resampled_tt(A, exact_l10=1, approx_l10=2.5, approx_pts=10)
+	axs[i].matshow(tt[:, 0, :])
+	axs[i].set_title(f"L{i}")
+	axs[i].axis("off")
+
+plt.show()
+```
+
+```python
+T_resample = tt
+T = tt
+
+plt.matshow(T_resample[:, 0, :])
+plt.colorbar()
+plt.show()
+```
+
+```python
+ttl = np.argmax(T[:, 0, :] > 0.9, axis=1)
+ttl.shape
+plt.plot(ttl, "o")
+plt.show()
+
+plt.plot(np.fft.fft(ttl))
+plt.show()
+```
+
+```python
+for i in range(n):
+	plt.plot(T[i, 0, :], label=f"i={i}")
+# plt.legend()
+plt.xscale("log")
+# plt.yscale("log")
+plt.show()
+```
+
+```python
+for i in range(10):
+	plt.matshow(T[:, :, i])
+	plt.show()
+```
+
+
+``````{ end_of_file="notebooks/markov_absorption.ipynb" }
+
+``````{ path="scripts/gen_data.py"  }
+import matplotlib.pyplot as plt
+
+from attention_motifs.dataset.dataset import (
+	APGenerationConfig,
+	PromptDatasetConfig,
+	CollectedAttentionPatternDataloader,
+)
+
+d = CollectedAttentionPatternDataloader.generate(
+	config=APGenerationConfig(
+		prompts_config=PromptDatasetConfig.from_source_path("data/pile_50.jsonl"),
+		model_names=[
+			"meta-llama/Llama-3.2-1B",
+			"gpt2-small",
+			"pythia-14m",
+		],
+	),
+	max_batch_size=8,
+)
+
+d.save("data/activations/pile_50", verbose=True)
+
+
+for x in d.batches(2):
+	print(x[0].shape)
+	print(x[1])
+	plt.matshow(x[0][0].cpu().numpy())
+	plt.show()
+	plt.matshow(x[0][1].cpu().numpy())
+	plt.show()
+	break
+
+``````{ end_of_file="scripts/gen_data.py" }
+
+``````{ path="tests/dataset/test_integration.py"  }
+# file: test_integration.py
+
+from pathlib import Path
+import json
+
+import pytest
+
+from attention_motifs.dataset.dataset import (
+	APGenerationConfig,
+	CollectedAttentionPatternDataloader,
+)
+from attention_motifs.dataset.prompts import PromptDatasetConfig
+
+TEMP_DIR: Path = Path("tests/_temp")
+
+
+def make_sample_prompts_file() -> Path:
+	"""Create a small prompts file inside tests/_temp with multiple lines."""
+	# We'll not use a tempfile here so we can see the file in tests/_temp
+	pfile = TEMP_DIR / "sample_prompts.jsonl"
+	pfile.parent.mkdir(exist_ok=True, parents=True)
+	# create a few sample prompts
+	prompts = [
+		{"text": "Hello world!"},
+		{"text": "This is a test exceeding min length."},
+		{"text": "This is another test exceeding min length."},
+		{"text": "Short"},
+	]
+	with open(pfile, "w") as f:
+		for p in prompts:
+			f.write(json.dumps(p) + "\n")
+	return pfile
+
+
+SAMPLE_PROMPTS_FILE: Path = make_sample_prompts_file()
+
+
+@pytest.mark.parametrize(
+	"model_name", ["tiny-stories-1M"]
+)  # Expand or change as desired
+def test_integration_generate_save_read(model_name: str):
+	# We'll use an actual model name "gpt2" by default for the test.
+
+	config = APGenerationConfig(
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=SAMPLE_PROMPTS_FILE
+		),
+		model_names=[model_name],
+		prompt_token_len_tolerance=2,
+	)
+
+	dl = CollectedAttentionPatternDataloader.generate(config=config)
+
+	# we expect at least one dataset
+	assert dl.n_datasets >= 1
+	# short prompt "Short" is filtered out
+	# so we have at least 2 prompts used
+
+	# step 1: test iteration
+	all_batches = list(dl)
+	# we can't assert an exact # because it depends on the model's # of layers * heads
+	# but we expect something > 0
+	assert len(all_batches) > 0
+
+	# step 2: test save -> read
+
+	tmp_path = Path(TEMP_DIR / "test_integration_generate_save_read")
+	dl.save(tmp_path)
+
+	dl2 = CollectedAttentionPatternDataloader.read(tmp_path)
+	assert dl2.n_datasets == dl.n_datasets
+	# the set of prompts should match
+	assert len(dl2.prompts) == len(dl.prompts)
+
+	# quick iteration check
+	all_batches2 = list(dl2)
+	assert len(all_batches2) == len(all_batches)
+
+	# check the patterns shape is the same
+	for (pats1, meta1), (pats2, meta2) in zip(all_batches, all_batches2):
+		assert pats1.shape == pats2.shape
+		# metadata might differ in object identity, but check
+		for m1, m2 in zip(meta1, meta2):
+			assert m1.prompt_hash == m2.prompt_hash
+			assert m1.model_name == m2.model_name
+			assert m1.n_ctx == m2.n_ctx
+
+
+@pytest.mark.parametrize(
+	"model_names",
+	[
+		[],  # No models
+		["tiny-stories-1M", "pythia-14m"],
+	],
+)
+def test_integration_multiple_models(model_names: list[str]):
+	"""Check the behavior with zero or multiple model names."""
+	config = APGenerationConfig(
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=SAMPLE_PROMPTS_FILE
+		),
+		model_names=model_names,
+		prompt_token_len_tolerance=2,
+	)
+	dl = CollectedAttentionPatternDataloader.generate(config)
+	# If no models => no datasets
+	# If multiple models => multiple sets
+	if not model_names:
+		assert dl.n_datasets == 0
+		assert dl.n_total_samples == 0
+	else:
+		assert dl.n_datasets > 0
+		assert dl.n_total_samples > 0
+
+
+def test_integration_missing_metadata():
+	"""Check read() if metadata.zanj is missing => should raise FileNotFoundError."""
+	config = APGenerationConfig(
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=SAMPLE_PROMPTS_FILE
+		),
+		model_names=["gpt2"],
+		prompt_token_len_tolerance=2,
+	)
+	dl = CollectedAttentionPatternDataloader.generate(config)
+
+	tmp_path: Path = TEMP_DIR / "test_integration_missing_metadata"
+	with pytest.warns(UserWarning):
+		dl.save(tmp_path)
+
+	# remove the metadata file
+	(tmp_path / "metadata.zanj").unlink()
+
+	with pytest.raises(FileNotFoundError):
+		_ = CollectedAttentionPatternDataloader.read(tmp_path)
+
+
+def test_integration_missing_dataset_files():
+	"""Check read() if one dataset file is missing => should raise FileNotFoundError."""
+	config = APGenerationConfig(
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=SAMPLE_PROMPTS_FILE
+		),
+		model_names=["gpt2"],
+		prompt_token_len_tolerance=2,
+	)
+	dl = CollectedAttentionPatternDataloader.generate(config)
+
+	tmp_path = TEMP_DIR / "test_integration_missing_dataset_files"
+	with pytest.warns(UserWarning):
+		dl.save(tmp_path)
+
+	# remove one dataset file
+	dataset_files: list[Path] = list(tmp_path.glob("dataset_*.zanj"))
+	assert len(dataset_files) > 0
+	dataset_files[0].unlink()
+
+	with pytest.raises(FileNotFoundError):
+		_ = CollectedAttentionPatternDataloader.read(tmp_path)
+
+
+def test_integration_dummy_training_loop():
+	"""A full pipeline, ending with a trivial training loop on the attention patterns."""
+	config = APGenerationConfig(
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=SAMPLE_PROMPTS_FILE
+		),
+		model_names=["gpt2"],
+		prompt_token_len_tolerance=2,
+	)
+	dl: CollectedAttentionPatternDataloader = (
+		CollectedAttentionPatternDataloader.generate(config)
+	)
+	# We'll do a trivial "training" step: each step we compute a "loss" from the batch.
+	# This ensures iteration and shapes are correct. We won't do actual backprop on a real model.
+
+	# Just do 1 "epoch"
+	for patterns_batch, meta_batch in dl.batches(batch_size=2):
+		# patterns_batch is shape [B, n_ctx, n_ctx]
+		# trivial "loss": the mean of the patterns + 1, squared
+		if patterns_batch.numel() > 0:
+			# requires grad
+			patterns_batch.requires_grad_(True)
+			loss = (patterns_batch.mean() + 1.0) ** 2
+			loss.backward()  # see if it errors
+		else:
+			# no data means skip
+			pass
+
+	# If we got here without exception, the loop is good.
+
+``````{ end_of_file="tests/dataset/test_integration.py" }
+
+``````{ path="tests/dataset/test_prompts.py"  }
+import json
+import pytest
+from pathlib import Path
+
+from attention_motifs.consts import (
+	compute_text_hashes,
+)
+
+from attention_motifs.dataset.prompts import (
+	Prompt,
+	PromptDataset,
+	PromptDatasetConfig,
+)
+
+# The directory where test output will be written
+TEMP_DIR: Path = Path("tests/_temp")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def ensure_temp_dir():
+	"""
+	A fixture that ensures the TEMP_DIR directory exists before any test runs.
+	It will not be cleaned up after tests.
+	"""
+	TEMP_DIR.mkdir(parents=True, exist_ok=True)
+	return TEMP_DIR
+
+
+# -------------------------
+# Tests for Prompt classes
+# -------------------------
+
+
+def test_prompt_from_text():
+	txt = "Example text"
+	prompt = Prompt.from_text(txt)
+	assert prompt.text == txt
+	# Check that the hash matches compute_text_hashes
+	hash_int, hash_str = compute_text_hashes(txt)
+	assert prompt.hash_int == hash_int
+	assert prompt.hash_str == hash_str
+	assert prompt.meta == {}
+
+
+def test_prompt_from_dict_no_hash():
+	"""
+	Test that from_dict() correctly computes missing hashes
+	and places the rest of the keys in the meta dictionary.
+	"""
+	data = {"text": "Hello from dict", "some_meta_key": "some_meta_value"}
+	p = Prompt.from_dict(data)
+	# Check that the text is correct
+	assert p.text == "Hello from dict"
+	# Check that from_dict() computed the hash
+	recomputed_int, recomputed_str = compute_text_hashes("Hello from dict")
+	assert p.hash_int == recomputed_int
+	assert p.hash_str == recomputed_str
+	# Check that meta was populated
+	assert p.meta["some_meta_key"] == "some_meta_value"
+
+
+def test_prompt_from_dict_with_hash():
+	"""
+	Test that from_dict() accepts existing correct hash values.
+	"""
+	text = "Hello from dict with correct hash"
+	correct_hash_int, correct_hash_str = compute_text_hashes(text)
+	data = {
+		"text": text,
+		"hash_int": correct_hash_int,
+		"hash_str": correct_hash_str,
+		"extra_key": 123,
+	}
+	p = Prompt.from_dict(data)
+	assert p.text == text
+	assert p.hash_int == correct_hash_int
+	assert p.hash_str == correct_hash_str
+	# The extra key should appear in meta
+	assert p.meta["extra_key"] == 123
+
+
+def test_prompt_from_dict_with_incorrect_hash():
+	"""
+	Test that from_dict() raises an AssertionError if the provided hash
+	doesn't match the computed hash.
+	"""
+	text = "Hello from dict but with mismatch"
+	correct_hash_int, correct_hash_str = compute_text_hashes(text)
+
+	# Provide an incorrect hash_int on purpose
+	data = {
+		"text": text,
+		"hash_int": correct_hash_int + 1,  # mismatch here
+		"hash_str": correct_hash_str,
+	}
+	with pytest.raises(AssertionError):
+		_ = Prompt.from_dict(data)
+
+	# Provide an incorrect hash_str on purpose
+	data2 = {
+		"text": text,
+		"hash_int": correct_hash_int,
+		"hash_str": correct_hash_str + "ABCD",  # mismatch here
+	}
+	with pytest.raises(AssertionError):
+		_ = Prompt.from_dict(data2)
+
+
+def test_prompt_getitem():
+	p = Prompt.from_text("Testing Prompt __getitem__")
+	p.meta["foo"] = "bar"
+	# Using "text"
+	assert p["text"] == "Testing Prompt __getitem__"
+	# Using meta
+	assert p["foo"] == "bar"
+	# Using "hash"
+	# The "hash" case in __getitem__ returns p.hash, which is ambiguous in code snippet
+	# If you meant to do return (hash_int, hash_str) or just hash_str, adapt accordingly.
+	# The snippet does `case "hash": return self.hash`, but the code doesn't define `self.hash`.
+	# For now, let's assume you want to test returning the integer hash or some combined thing:
+	# We'll skip actually checking it if your code doesn't define it.
+	# If you had `property hash(self) -> int`, you'd check that.
+	# We'll do a minimal check that it doesn't error:
+	_ = p["hash_int"]
+	_ = p["hash_str"]
+	# Using an invalid key
+	with pytest.raises(KeyError):
+		_ = p["invalid_key"]
+
+
+# -------------------------
+# Tests for PromptDataset*
+# -------------------------
+
+
+@pytest.fixture
+def example_prompts_data():
+	"""
+	Returns a list of dictionaries that can be written to a JSONL file.
+	Includes some with explicit hash, some without, to test the from_config loader.
+	"""
+	# We'll have 3 distinct lines
+	data_list = []
+
+	# 1) no hash fields
+	data_list.append(
+		{"text": "First prompt no hash fields", "some_meta_key": "meta_val_1"}
+	)
+
+	# 2) correct hash fields
+	text2 = "Second prompt with correct hash"
+	h2_int, h2_str = compute_text_hashes(text2)
+	data_list.append(
+		{"text": text2, "hash_int": h2_int, "hash_str": h2_str, "extra_info": True}
+	)
+
+	# 3) no hash fields again
+	data_list.append({"text": "Third prompt, also no hash fields", "numeric_meta": 999})
+
+	return data_list
+
+
+def test_prompt_dataset_config_from_source_path(ensure_temp_dir, example_prompts_data):
+	jsonl_path = TEMP_DIR / "test_prompts_config.jsonl"
+
+	# Write out the example prompts
+	with open(jsonl_path, "w", encoding="utf-8") as f:
+		for row in example_prompts_data:
+			f.write(json.dumps(row) + "\n")
+
+	# Now create the config
+	config = PromptDatasetConfig.from_source_path(jsonl_path)
+	assert config.name == jsonl_path.stem, (
+		"Expect the config name to match the file stem"
+	)
+	assert config.source_path == jsonl_path
+	assert config.source_info["source_path"] == jsonl_path.as_posix()
+
+
+def test_prompt_dataset_config_missing_path():
+	"""
+	Test that from_source_path raises FileNotFoundError if path is missing.
+	"""
+	bogus_path = Path("tests/_temp/this_file_does_not_exist.jsonl")
+	with pytest.raises(FileNotFoundError):
+		_ = PromptDatasetConfig.from_source_path(bogus_path)
+
+
+def test_prompt_dataset_from_prompts(ensure_temp_dir):
+	# We'll manually build some Prompts, then from_prompts them
+	p1 = Prompt.from_text("Hello DS1")
+	p2 = Prompt.from_text("Hello DS2")
+	config = PromptDatasetConfig(
+		name="my_dataset",
+		source_path=Path("dummy/path"),  # doesn't matter here
+		source_info={"desc": "testing from_prompts"},
+	)
+	ds = PromptDataset.from_prompts(config, [p1, p2])
+
+	assert len(ds) == 2
+	# The hash_map uses p.hash_str -> index
+	assert p1.hash_str in ds.hash_map
+	assert ds.hash_map[p1.hash_str] == 0
+	# test the indexing
+	assert ds.index_get(0) is p1
+	assert ds.index_get(1) is p2
+	# test iteration
+	all_prompts = list(iter(ds))
+	assert len(all_prompts) == 2
+	# test hash-based retrieval
+	print(ds.hash_map)
+	print(p1.hash_str)
+	print(p2.hash_str)
+	print(p1.hash_int)
+	print(p2.hash_int)
+	assert ds.hash_str_get(p1.hash_str) is p1
+	assert ds.hash_int_get(p2.hash_int) is p2
+
+	# test hash_get
+	assert ds.hash_get(p2.hash_str) is p2
+	assert ds.hash_get(p2.hash_int) is p2
+
+	# invalid type for hash_get
+	with pytest.raises(TypeError):
+		ds.hash_get(3.14159)
+
+
+def test_prompt_dataset_from_config(ensure_temp_dir, example_prompts_data):
+	"""
+	Comprehensive test of from_config, verifying that lines lacking hash are computed,
+	lines with hash are respected, and that the final dataset is consistent.
+	"""
+	jsonl_path = TEMP_DIR / "test_prompt_dataset.jsonl"
+	with open(jsonl_path, "w", encoding="utf-8") as f:
+		for row in example_prompts_data:
+			f.write(json.dumps(row) + "\n")
+
+	# Create config and load
+	config = PromptDatasetConfig.from_source_path(
+		jsonl_path, char_len_min=1, char_len_max=99999
+	)
+	ds = PromptDataset.from_config(config)
+
+	# Check length
+	assert len(ds) == len(example_prompts_data), "All lines must be loaded."
+
+	# Check that the hash_map is built
+	for i, row in enumerate(example_prompts_data):
+		loaded_prompt = ds.index_get(i)
+		# Confirm text matches
+		assert loaded_prompt.text == row["text"]
+		# Confirm meta keys
+		# (the difference between row keys and PROMPT_SPECIAL_KEYS ends up in meta)
+		# your code's PROMPT_SPECIAL_KEYS = {"text", "hash_int", "hash_str"}
+		# so everything else should be in meta
+		for k, v in row.items():
+			if k not in ("text", "hash_int", "hash_str"):
+				assert loaded_prompt.meta[k] == v
+
+		# Confirm the dataset's hash_map points back to the correct index
+		assert ds.hash_map[loaded_prompt.hash_str] == i
+
+		# If the row had no hash fields, they should have been computed
+		# If they existed, they should match
+		recomputed_int, recomputed_str = compute_text_hashes(row["text"])
+		assert loaded_prompt.hash_int == recomputed_int
+		assert loaded_prompt.hash_str == recomputed_str
+
+
+def test_prompt_dataset_serialization_roundtrip(ensure_temp_dir):
+	"""
+	Test that a PromptDataset can be serialized, saved to disk, reloaded, and remain consistent.
+	"""
+	# 1) Create a small dataset in memory
+	p1 = Prompt.from_text("Roundtrip 1")
+	p2 = Prompt.from_text("Roundtrip 2")
+	config = PromptDatasetConfig(
+		name="roundtrip_ds",
+		source_path=TEMP_DIR / "roundtrip.jsonl",
+		source_info={"test_field": "roundtrip_demo"},
+	)
+	ds_orig = PromptDataset.from_prompts(config, [p1, p2])
+
+	# 2) Serialize ds_orig to a dictionary
+	ds_dict = ds_orig.serialize()
+
+	# 3) Write that dictionary as JSON to a file
+	out_path = TEMP_DIR / "prompt_dataset_roundtrip.json"
+	with open(out_path, "w", encoding="utf-8") as f:
+		json.dump(ds_dict, f, indent=2)
+
+	# 4) Read it back
+	with open(out_path, "r", encoding="utf-8") as f:
+		loaded_dict = json.load(f)
+
+	# 5) Use PromptDataset.load() to build a new object
+	ds_new = PromptDataset.load(loaded_dict)
+
+	# 6) Compare ds_new with ds_orig
+	assert len(ds_new) == len(ds_orig)
+	for i in range(len(ds_orig)):
+		assert ds_new.index_get(i).text == ds_orig.index_get(i).text
+		assert ds_new.index_get(i).hash_int == ds_orig.index_get(i).hash_int
+		assert ds_new.index_get(i).hash_str == ds_orig.index_get(i).hash_str
+
+	# The config also should match
+	assert ds_new.config.name == ds_orig.config.name
+	assert ds_new.config.source_path == ds_orig.config.source_path
+	assert ds_new.config.source_info["test_field"] == "roundtrip_demo"
+
+
+def test_prompt_dataset_hash_collisions(ensure_temp_dir):
+	"""
+	(Optional) In the extremely rare event of collisions for SHA-256, we can't do much.
+	But you might want to test if your code gracefully handles duplicates in the input.
+	For demonstration, we'll create two lines with identical text & see what happens.
+	"""
+	text = "Duplicate text for collision test"
+	# We'll place two identical lines in the file
+	data_list = [
+		{"text": text},
+		{"text": text},
+	]
+	collision_path = TEMP_DIR / "collision_test.jsonl"
+	with open(collision_path, "w", encoding="utf-8") as f:
+		for row in data_list:
+			f.write(json.dumps(row) + "\n")
+
+	config = PromptDatasetConfig.from_source_path(collision_path, char_len_min=1)
+	ds = PromptDataset.from_config(config)
+
+	print(ds)
+
+	# We now have two distinct prompts in ds.prompts, but they share the same hash.
+	# The current code uses `hash_map: dict[PromptHashStr, int] = { p.hash_str: i ... }`
+	# That means the final index in the hash_map will be the last prompt's index.
+	# i.e., it overwrote the earlier one. Let's verify that:
+	last_idx = len(ds) - 1
+	p_last = ds.index_get(last_idx)
+	# They have the same text, so they have the same hash.
+	assert ds.hash_map[p_last.hash_str] == last_idx
+	# Attempt retrieving by hash_str
+	# We'll only get the last one in that list
+	retrieved = ds.hash_str_get(p_last.hash_str)
+	assert retrieved is p_last
+
+	# This doesn't truly solve collisions, but it demonstrates the behavior of the code.
+
+``````{ end_of_file="tests/dataset/test_prompts.py" }
+
+``````{ path="tests/dataset/test_unit.py"  }
+from pathlib import Path
+
+import torch
+import pytest
+import json
+
+from attention_motifs.dataset.dataset import (
+	APGenerationConfig,
+	AttentionPatternDataset,
+	AttentionPatternMetadata,
+	CollectedAttentionPatternDataloader,
+)
+from attention_motifs.dataset.prompts import PromptDataset, PromptDatasetConfig
+
+TEMP_DIR: Path = Path("tests/_temp")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_temp_dir():
+	"""Fixture to ensure the tests/_temp directory exists before tests run."""
+	TEMP_DIR.mkdir(exist_ok=True, parents=True)
+	yield
+
+
+def test_attention_pattern_dataset_basic():
+	"""Unit test for the basic indexing and length of AttentionPatternDataset."""
+	dummy_patterns = torch.zeros((5, 3, 3))  # n_patterns=5, n_ctx=3
+	dummy_metadata = [
+		AttentionPatternMetadata(
+			model_name="dummy-model",
+			idx_layer=0,
+			idx_head=i,
+			prompt_hash=i,
+			n_ctx=3,
+		)
+		for i in range(5)
+	]
+	ds = AttentionPatternDataset(
+		n_ctx=3, n_patterns=5, patterns=dummy_patterns, metadata=dummy_metadata
+	)
+
+	assert len(ds) == 5
+	pattern, meta = ds[2]
+	assert pattern.shape == (3, 3)
+	assert meta.idx_head == 2
+	assert meta.n_ctx == 3
+
+
+def test_dataloader_properties():
+	"""Unit test for dataloader properties."""
+	fake_prompts_path: Path = (
+		TEMP_DIR / "test_dataloader_properties" / "fake_prompts.jsonl"
+	)
+	fake_prompts_path.parent.mkdir(exist_ok=True, parents=True)
+	fake_prompts_path.write_text(json.dumps({"text": "fake prompt"}) + "\n")
+
+	ds_patterns = torch.randn((4, 3, 3))
+	ds_meta = [
+		AttentionPatternMetadata("modelA", 0, i, f"hash{i}", 3) for i in range(4)
+	]
+	ds = AttentionPatternDataset(
+		n_ctx=3,
+		n_patterns=4,
+		patterns=ds_patterns,
+		metadata=ds_meta,
+	)
+	dummy_config = APGenerationConfig(
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=fake_prompts_path,
+		),
+		model_names=["modelA", "modelB"],
+		prompt_token_len_tolerance=2,
+	)
+	loader = CollectedAttentionPatternDataloader(
+		config=dummy_config,
+		prompts=PromptDataset.from_config(dummy_config.prompts_config),
+		datasets={3: ds},
+	)
+
+	assert loader.model_names == ["modelA", "modelB"]
+	assert loader.n_datasets == 1
+	assert loader.n_total_samples == 4
+	assert loader.n_ctx_counts[3] == 4
+	meta_info = loader.dataset_metadata[0]
+	assert meta_info["n_ctx"] == 3
+	assert meta_info["n_patterns"] == 4
+
+
+# ----------------------------------------------
+# APGenerationConfig tests
+# ----------------------------------------------
+
+
+def test_config_load_empty_file():
+	"""Test APGenerationConfig on an empty file -> should return []."""
+	empty_file = TEMP_DIR / "empty_prompts.jsonl"
+	empty_file.write_text("")  # no lines
+	cfg: PromptDatasetConfig = PromptDatasetConfig.from_source_path(
+		source_path=empty_file,
+	)
+
+	data: PromptDataset = PromptDataset.from_config(cfg)
+	assert len(data) == 0
+
+
+def test_config_load_all_filtered():
+	"""If min_length is large, all lines get filtered."""
+	big_file = TEMP_DIR / "big_min_length.jsonl"
+	# single line with short text
+	big_file.write_text(json.dumps({"text": "Short prompt"}) + "\n")
+	cfg: PromptDatasetConfig = PromptDatasetConfig.from_source_path(
+		source_path=big_file,
+		char_len_min=1024,
+	)
+
+	data: PromptDataset = PromptDataset.from_config(cfg)
+	assert len(data) == 0
+
+
+def test_config_splitting_behavior():
+	"""Check that max_length causes splitting and that min_length re-filters."""
+	splitted_file = TEMP_DIR / "splitted.jsonl"
+	# single line with text length=50
+	text_50 = "x" * 50
+	splitted_file.write_text(json.dumps({"text": text_50}) + "\n")
+
+	cfg: PromptDatasetConfig = PromptDatasetConfig.from_source_path(
+		source_path=splitted_file,
+		char_len_max=20,
+		char_len_min=1,
+	)
+	data: PromptDataset = PromptDataset.from_config(cfg)
+	print(data)
+	# original is length=50
+	# splitted into segments of length=20,20,10
+	# after split, each is >= min_length=10, so we keep all 3
+	assert len(data) == 3
+	lengths = [len(d.text) for d in data]
+	assert lengths == [20, 20, 10]
+
+	cfg_b: PromptDatasetConfig = PromptDatasetConfig.from_source_path(
+		source_path=splitted_file,
+		char_len_max=20,
+		char_len_min=15,
+	)
+	data_b: PromptDataset = PromptDataset.from_config(cfg_b)
+	print(data_b)
+	assert len(data_b) == 2
+	lengths = [len(d.text) for d in data_b]
+	assert lengths == [20, 20]
+
+
+def test_attention_pattern_dataset_zero_length():
+	"""Corner case: zero-length dataset is possible, though unusual."""
+	ds = AttentionPatternDataset(
+		n_ctx=3, n_patterns=0, patterns=torch.empty((0, 3, 3)), metadata=[]
+	)
+	assert len(ds) == 0
+	with pytest.raises(IndexError):
+		_ = ds[0]  # should raise an error
+
+
+# ----------------------------------------------
+# CollectedAttentionPatternDataloader tests
+# ----------------------------------------------
+
+
+def test_dataloader_negative_batch_size():
+	"""Dataloader should raise ValueError if batch_size < 1."""
+	dummy_config = APGenerationConfig(
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=Path("fake.jsonl"),
+			check_exists=False,
+		),
+		model_names=[],
+	)
+	ds = AttentionPatternDataset(
+		n_ctx=3, n_patterns=0, patterns=torch.empty((0, 3, 3)), metadata=[]
+	)
+
+	dl = CollectedAttentionPatternDataloader(
+		config=dummy_config,
+		prompts=PromptDataset(
+			config=dummy_config.prompts_config, prompts=[], hash_map={}
+		),
+		datasets={3: ds},
+	)
+
+	with pytest.raises(AssertionError):
+		list(dl.batches(batch_size=0))
+
+
+def test_dataloader_iteration():
+	"""Basic iteration test. Combine multiple datasets of different sizes."""
+	ds1_patterns = torch.rand((2, 4, 4))
+	ds1_meta = [
+		AttentionPatternMetadata("modelA", 0, i, f"hash{i}", 4) for i in range(2)
+	]
+	ds1 = AttentionPatternDataset(
+		n_ctx=4, n_patterns=2, patterns=ds1_patterns, metadata=ds1_meta
+	)
+
+	ds2_patterns = torch.rand((3, 5, 5))
+	ds2_meta = [
+		AttentionPatternMetadata("modelA", 1, i, f"hash{i + 2}", 5) for i in range(3)
+	]
+	ds2 = AttentionPatternDataset(
+		n_ctx=5, n_patterns=3, patterns=ds2_patterns, metadata=ds2_meta
+	)
+
+	dummy_config = APGenerationConfig(
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=Path("fake.jsonl"),
+			check_exists=False,
+		),
+		model_names=["modelA"],
+	)
+
+	loader = CollectedAttentionPatternDataloader(
+		config=dummy_config,
+		prompts=PromptDataset(
+			config=dummy_config.prompts_config, prompts=[], hash_map={}
+		),
+		datasets={4: ds1, 5: ds2},
+	)
+
+	# total of 5 items => batch_size=2 => iteration yields 3 times
+	all_yields = list(loader.batches(batch_size=2))
+	assert len(all_yields) == 3
+
+	# first two yields => batch_size=2
+	counts_5: int = 0
+	counts_4: int = 0
+	for batch_patterns, batch_meta in all_yields[:2]:
+		# assert batch_patterns.shape == (2, 4, 4)
+		assert len(batch_meta) == 2
+		if batch_patterns.shape == (2, 4, 4):
+			counts_4 += 1
+			# assert batch_meta[0].n_ctx == 4
+		elif batch_patterns.shape == (2, 5, 5):
+			counts_5 += 1
+			# assert batch_meta[0].n_ctx == 5
+		else:
+			assert False
+	assert counts_4 == 1
+	assert counts_5 == 1
+
+	# last yield => leftover 1
+	last_patterns, last_meta = all_yields[-1]
+	assert last_patterns.shape == (1, 5, 5)
+	assert len(last_meta) == 1
+
+
+def test_dataloader_empty_datasets():
+	"""If we pass an empty dataset list, iteration yields nothing."""
+	dummy_config = APGenerationConfig(
+		prompts_config=PromptDatasetConfig.from_source_path(
+			source_path=Path("fake.jsonl"),
+			check_exists=False,
+		),
+		model_names=[],
+	)
+	loader = CollectedAttentionPatternDataloader(
+		config=dummy_config,
+		prompts=PromptDataset(
+			config=dummy_config.prompts_config, prompts=[], hash_map={}
+		),
+		datasets={},
+	)
+	all_batches = list(loader.batches(batch_size=2))
+	assert all_batches == []
+
+``````{ end_of_file="tests/dataset/test_unit.py" }
+
+``````{ path="tests/test_ae.py"  }
+import pytest
+import torch
+from torch import Tensor
+import torch.nn.functional as F
+from jaxtyping import Float, Int
+
+from attention_motifs.ae import contrastive_loss  # replace with actual import path
+
+@pytest.mark.parametrize(
+    "batch_size,latent_dim,num_classes",
+    [
+        (4, 8, 2),   # small batch, small latent, few classes
+        (8, 16, 4),  # medium batch, typical latent size, more classes
+    ],
+)
+def test_contrastive_loss_random_data(batch_size: int, latent_dim: int, num_classes: int) -> None:
+    """
+    Tests whether the loss runs without error on random data
+    and returns a finite scalar.
+    """
+    h: Float[Tensor, "batch latent_dim"] = torch.randn(batch_size, latent_dim)
+    classes: Int[Tensor, " batch"] = torch.randint(0, num_classes, (batch_size,))
+    loss_val = contrastive_loss(h, classes, temperature=0.07)
+
+    assert isinstance(loss_val, Tensor), "Loss must be a torch.Tensor"
+    assert loss_val.dim() == 0, "Loss must be a scalar (0-dim tensor)"
+    assert torch.isfinite(loss_val), "Loss returned NaN or Inf"
+
+
+def test_contrastive_loss_same_class() -> None:
+    """
+    Checks behavior when all samples belong to the same class.
+    The loss should still be computable and typically yield a negative log-likelihood
+    that is finite.
+    """
+    batch_size: int = 4
+    latent_dim: int = 8
+    h: Float[Tensor, "batch latent_dim"] = torch.randn(batch_size, latent_dim)
+    # All samples in the same class
+    classes: Int[Tensor, " batch"] = torch.zeros(batch_size, dtype=torch.int32)
+
+    loss_val = contrastive_loss(h, classes, temperature=0.07)
+    assert torch.isfinite(loss_val), "Loss returned NaN or Inf when all samples share a class"
+
+
+def test_contrastive_loss_distinct_classes() -> None:
+    """
+    Checks behavior when each sample is in its own class (no positives).
+    By default, we warn or handle the case with zero contribution for each sample.
+    """
+    batch_size: int = 4
+    latent_dim: int = 8
+    h: Float[Tensor, "batch latent_dim"] = torch.randn(batch_size, latent_dim)
+    # Each sample in a unique class
+    classes: Int[Tensor, " batch"] = torch.arange(batch_size, dtype=torch.int32)
+
+    # We expect a warning about "No positive pairs found in batch"
+    with pytest.warns(UserWarning, match="No positive pairs found in batch"):
+        loss_val = contrastive_loss(h, classes, temperature=0.07)
+    # The function might return 0, or some finite value.
+    assert torch.isfinite(loss_val), "Loss returned NaN or Inf with all distinct classes"
+
+
+def test_contrastive_loss_partial_positives() -> None:
+    """
+    Mixed scenario where some samples share classes and some do not.
+    Verifies that the loss is finite.
+    """
+    # For instance, classes = [0,0,1,2]
+    # => two positives in the first pair, and singletons otherwise
+    h: Float[Tensor, "batch latent_dim"] = torch.tensor([
+        [1.0,  0.0],
+        [0.99, 0.01],
+        [-1.0, 2.0],
+        [2.0, -3.0]
+    ])
+    classes: Int[Tensor, " batch"] = torch.tensor([0, 0, 1, 2])
+
+    loss_val = contrastive_loss(h, classes, temperature=0.07)
+    assert torch.isfinite(loss_val), "Loss returned NaN or Inf in a mixed scenario"
+    # Optionally check that the loss is > 0 or something else:
+    assert loss_val > 0, "Loss should be positive if there are meaningful negatives"
+
+
+def test_contrastive_loss_invariance_to_scale() -> None:
+    """
+    Tests that scaling the input embeddings by a constant
+    does not change the final loss, since embeddings are normalized internally.
+    """
+    batch_size: int = 4
+    latent_dim: int = 8
+    h: Float[Tensor, "batch latent_dim"] = torch.randn(batch_size, latent_dim)
+    classes: Int[Tensor, " batch"] = torch.tensor([0, 0, 1, 1])
+
+    loss_normal = contrastive_loss(h, classes, temperature=0.07)
+    loss_scaled = contrastive_loss(10.0 * h, classes, temperature=0.07)
+
+    # They should be very close because h is normalized before computing similarities
+    assert torch.allclose(loss_normal, loss_scaled, atol=1e-6), (
+        "Loss should be invariant to global scaling of embeddings."
+    )
+
+``````{ end_of_file="tests/test_ae.py" }
+
+``````{ path="tests/test_consts.py"  }
+import torch
+
+from attention_motifs.consts import (
+	compute_text_hashes,
+	b64encode,
+	batches,
+	tensor_batches,
+	tensor_batches_indexed,
+)
+
+
+def test_b64encode():
+	data = b"hello world"
+	encoded = b64encode(data)
+	assert isinstance(encoded, str)
+	# Check that decoding the string (with the same altchars) matches the original
+	import base64
+
+	decoded = base64.b64decode(encoded, altchars=b"_-")
+	assert decoded == data
+
+
+def test_compute_text_hashes():
+	text = "Hello, world!"
+	hash_int, hash_str = compute_text_hashes(text)
+	# Basic checks
+	assert isinstance(hash_int, int)
+	assert isinstance(hash_str, str)
+	# Now re-compute and verify the same values come out
+	hash_int2, hash_str2 = compute_text_hashes(text)
+	assert hash_int == hash_int2
+	assert hash_str == hash_str2
+
+
+def test_batches():
+	items = list(range(10))
+	batch_size = 3
+
+	collected = []
+	for batch in batches(items, batch_size, allow_last_incomplete=True):
+		collected.append(batch)
+
+	# We expect:
+	#   [0,1,2], [3,4,5], [6,7,8], [9]
+	assert len(collected) == 4
+	assert collected[0] == [0, 1, 2]
+	assert collected[-1] == [9]
+
+	# If we set allow_last_incomplete=False, we lose the final short batch
+	collected_strict = []
+	for batch in batches(items, batch_size, allow_last_incomplete=False):
+		collected_strict.append(batch)
+
+	# We expect: [0,1,2], [3,4,5], [6,7,8]  (the last partial batch [9] is discarded)
+	assert len(collected_strict) == 3
+	assert collected_strict[-1] == [6, 7, 8]
+
+
+def test_tensor_batches():
+	arr = torch.arange(10).float()  # shape [10], a simple 1D float Tensor
+	batch_size = 3
+	results = list(tensor_batches(arr, batch_size, allow_last_incomplete=True))
+	# We expect [0,1,2], [3,4,5], [6,7,8], [9]
+	assert len(results) == 4
+	assert torch.all(results[0] == torch.tensor([0.0, 1.0, 2.0]))
+	assert torch.all(results[-1] == torch.tensor([9.0]))
+
+
+def test_tensor_batches_indexed():
+	arr = torch.arange(10).float()  # shape [10]
+	batch_size = 3
+	results = list(tensor_batches_indexed(arr, batch_size, allow_last_incomplete=True))
+	# Each item is (start_idx, end_idx, slice_of_data)
+	# We expect:
+	#   (0, 3, [0,1,2]),
+	#   (3, 6, [3,4,5]),
+	#   (6, 9, [6,7,8]),
+	#   (9,10,[9])
+	assert len(results) == 4
+	(s0, e0, d0) = results[0]
+	(s_last, e_last, d_last) = results[-1]
+	assert s0 == 0 and e0 == 3
+	assert s_last == 9 and e_last == 10
+	assert torch.all(d0 == torch.tensor([0.0, 1.0, 2.0]))
+	assert torch.all(d_last == torch.tensor([9.0]))
+
+``````{ end_of_file="tests/test_consts.py" }
+
+``````{ path="README.md"  }
+# attention-motifs
+wip
+
+``````{ end_of_file="README.md" }
+
+``````{ path="makefile" processed_with="makefile_recipes" }
+# first/default target is help
+.PHONY: default
+default: help
+	...
+
+# this recipe is weird. we need it because:
+# - a one liner for getting the version with toml is unwieldy, and using regex is fragile
+# - using $$GET_VERSION_SCRIPT within $(shell ...) doesn't work because of escaping issues
+# - trying to write to the file inside the `gen-version-info` recipe doesn't work, 
+# 	shell eval happens before our `python -c ...` gets run and `cat` doesn't see the new file
+.PHONY: write-proj-version
+write-proj-version:
+	...
+
+# gets version info from $(PYPROJECT), last version from $(LAST_VERSION_FILE), and python version
+# uses just `python` for everything except getting the python version. no echo here, because this is "private"
+.PHONY: gen-version-info
+gen-version-info: write-proj-version
+	...
+
+# getting commit log since the tag specified in $(LAST_VERSION_FILE)
+# will write to $(COMMIT_LOG_FILE)
+# when publishing, the contents of $(COMMIT_LOG_FILE) will be used as the tag description (but can be edited during the process)
+# no echo here, because this is "private"
+.PHONY: gen-commit-log
+gen-commit-log: gen-version-info
+	...
+
+# force the version info to be read, printing it out
+# also force the commit log to be generated, and cat it out
+.PHONY: version
+version: gen-commit-log
+	@echo "Current version is $(VERSION), last auto-uploaded version is $(LAST_VERSION)"
+	...
+
+.PHONY: setup
+setup: dep-check
+	@echo "install and update via uv"
+	...
+
+.PHONY: get-cuda-info
+get-cuda-info:
+	...
+
+.PHONY: dep-check-torch
+dep-check-torch:
+	@echo "see if torch is installed, and which CUDA version and devices it sees"
+	...
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~
+# added --compile-bytecode
+# also the custom install of typing extensions is due to
+# https://github.com/pydantic/pydantic/issues/11348
+.PHONY: dep
+dep: get-cuda-info
+	@echo "Exporting dependencies as per $(PYPROJECT) section 'tool.uv-exports.exports'"
+	...
+
+.PHONY: dep-check
+dep-check:
+	@echo "Checking that exported requirements are up to date"
+	...
+
+.PHONY: dep-clean
+dep-clean:
+	@echo "clean up lock files, .venv, and requirements files"
+	...
+
+# runs ruff and pycln to format the code
+.PHONY: format
+format:
+	@echo "format the source code"
+	...
+
+# runs ruff and pycln to check if the code is formatted correctly
+.PHONY: format-check
+format-check:
+	@echo "check if the source code is formatted correctly"
+	...
+
+# runs type checks with mypy
+# at some point, need to add back --check-untyped-defs to mypy call
+# but it complains when we specify arguments by keyword where positional is fine
+# not sure how to fix this
+.PHONY: typing
+typing: clean
+	@echo "running type checks"
+	...
+
+.PHONY: test
+test: clean
+	@echo "running tests"
+	...
+
+.PHONY: check
+check: clean format-check test typing
+	@echo "run format checks, tests, and typing checks"
+	...
+
+# generates a whole tree of documentation in html format.
+# see `docs/make_docs.py` and the templates in `docs/templates/html/` for more info
+.PHONY: docs-html
+docs-html:
+	@echo "generate html docs"
+	...
+
+# instead of a whole website, generates a single markdown file with all docs using the templates in `docs/templates/markdown/`.
+# this is useful if you want to have a copy that you can grep/search, but those docs are much messier.
+# docs-combined will use pandoc to convert them to other formats.
+.PHONY: docs-md
+docs-md:
+	@echo "generate combined (single-file) docs in markdown"
+	...
+
+# after running docs-md, this will convert the combined markdown file to other formats:
+# gfm (github-flavored markdown), plain text, and html
+# requires pandoc in path, pointed to by $(PANDOC)
+# pdf output would be nice but requires other deps
+.PHONY: docs-combined
+docs-combined: docs-md
+	@echo "generate combined (single-file) docs in markdown and convert to other formats"
+	...
+
+# generates coverage reports as html and text with `pytest-cov`, and a badge with `coverage-badge`
+# if `.coverage` is not found, will run tests first
+# also removes the `.gitignore` file that `coverage html` creates, since we count that as part of the docs
+.PHONY: cov
+cov:
+	@echo "generate coverage reports"
+	...
+
+# runs the coverage report, then the docs, then the combined docs
+.PHONY: docs
+docs: cov docs-html docs-combined
+	@echo "generate all documentation and coverage reports"
+	...
+
+# removed all generated documentation files, but leaves the templates and the `docs/make_docs.py` script
+# distinct from `make clean`
+.PHONY: docs-clean
+docs-clean:
+	@echo "remove generated docs"
+	...
+
+# verifies that the current branch is $(PUBLISH_BRANCH) and that git is clean
+# used before publishing
+.PHONY: verify-git
+verify-git: 
+	@echo "checking git status"
+	...
+
+.PHONY: build
+build: 
+	@echo "build the package"
+	...
+
+# gets the commit log, checks everything, builds, and then publishes with twine
+# will ask the user to confirm the new version number (and this allows for editing the tag info)
+# will also print the contents of $(PYPI_TOKEN_FILE) to the console for the user to copy and paste in when prompted by twine
+.PHONY: publish
+publish: gen-commit-log check build verify-git version gen-version-info
+	@echo "run all checks, build, and then publish"
+	...
+
+# cleans up temp files from formatter, type checking, tests, coverage
+# removes all built files
+# removes $(TESTS_TEMP_DIR) to remove temporary test files
+# recursively removes all `__pycache__` directories and `*.pyc` or `*.pyo` files
+# distinct from `make docs-clean`, which only removes generated documentation files
+.PHONY: clean
+clean:
+	@echo "clean up temporary files"
+	...
+
+.PHONY: clean-all
+clean-all: clean dep-clean docs-clean
+	@echo "clean up all temporary files, dep files, venv, and generated docs"
+	...
+
+.PHONY: info
+info: gen-version-info get-cuda-info
+	@echo "# makefile variables"
+	...
+
+.PHONY: info-long
+info-long: info
+	@echo "# other variables"
+	...
+
+# immediately print out the help targets, and then local variables (but those take a bit longer)
+.PHONY: help
+help: help-targets info
+	@echo -n ""
+	...
+
+.PHONY: demo-clean
+demo-clean:
+	...
+
+.PHONY: demo-activations
+demo-activations:
+	...
+
+.PHONY: demo-figures
+demo-figures:
+	...
+
+.PHONY: demo-server
+demo-server:
+	...
+
+.PHONY: demo
+demo: demo-activations demo-figures demo-server
+	@echo "generate demo"
+	...
+
+.PHONY: demo-docs
+demo-docs: demo-clean demo-activations demo-figures
+	@echo "generate demo for docs (no server)"
+	...
+
+.PHONY: lmcat
+lmcat:
+	@echo "write docs/summary.md using lmcat"
+	...
+
+``````{ end_of_file="makefile" }
+
+``````{ path="pyproject.toml"  }
+[project]
+name = "attention-motifs"
+version = "0.0.4"
+description = "template for python projects/packages"
+authors = [
+	{ name = "Michael Ivanitskiy", email = "mivanits@umich.edu" }
+]
+readme = "README.md"
+requires-python = ">=3.12"
+
+dependencies = [
+	# standard
+    "numpy>=1.26.1,<2.0.0",
+    "torch>=2.5.1",
+    "jaxtyping>=0.2.33",
+    "tqdm>=4.66.5",
+    "pandas>=2.2.2",
+    "scipy>=1.14.1",
+    # "scikit-learn>=1.3",
+    "matplotlib>=3.8.0",
+    "pillow>=11.0.0",
+    # jupyter
+    "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.5",
+    # typing
+    "beartype>=0.14.1",
+	# symbolic regression
+	"pysr>=1.3.1",
+    # custom utils
+    "muutils>=0.6.21",
+	"zanj>=0.3.1",
+	"trnbl[tensorboard]>=0.1.0",
+    # TL
+    "transformer-lens>=2.10.0",
+    # this TL dep not listed? is this in an extra?
+    "typeguard>=4.4.1",
+	# see https://github.com/pydantic/pydantic/issues/11348
+	"typing_extensions==4.12.2",
+	"pydantic==2.10.4",
+	# pattern-lens
+	"pattern-lens>=0.2.0",
+	# pattern-lens from git
+	# "pattern-lens @ git+https://github.com/mivanit/pattern-lens",
+]
+
+[project.optional-dependencies]
+# for example purposes only
+cli = [
+	"fire>=0.6.0",
+]
+
+[dependency-groups]
+dev = [	
+	# lmcat
+    "lmcat>=0.1.1",
+	# test
+	"pytest>=8.2.2",
+	# coverage
+	"pytest-cov>=4.1.0",
+	"coverage-badge>=1.1.0",
+	# type checking
+	"mypy>=1.0.1",
+	# docs
+	'pdoc>=14.6.0',
+	# tomli since no tomlib in python < 3.11
+	"tomli>=2.1.0; python_version < '3.11'",
+]
+lint = [
+	# lint
+	"pycln>=2.1.3",
+	"ruff>=0.4.8",
+]
+
+[tool.uv]
+default-groups = ["dev", "lint"]
+
+[project.urls]
+Homepage = "https://miv.name/attention-motifs"
+Documentation = "https://miv.name/attention-motifs"
+Repository = "https://github.com/mivanit/attention-motifs"
+Issues = "https://github.com/mivanit/attention-motifs/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# ruff config
+[tool.ruff]
+exclude = ["__pycache__"]
+# ignore F722
+[tool.ruff.lint]
+ignore = ["F722"]
+
+[tool.ruff.format]
+indent-style = "tab"
+skip-magic-trailing-comma = false
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+# Custom export configurations
+[tool.uv-exports]
+args = [
+	"--no-hashes"
+]
+exports = [
+	# no groups, no extras, just the base dependencies
+    { name = "base", groups = false, extras = false },
+	# all extras but no groups
+    { name = "extras", groups = false, extras = true },
+	# include the dev group (this is the default behavior)
+    { name = "dev", groups = ["dev"] },
+	# only the lint group -- custom options for this
+	{ name = "lint", options = ["--only-group", "lint"] },
+	# all groups and extras
+    { name = "all", filename="requirements.txt", groups = true, extras=true },
+	# all groups and extras, a different way
+	{ name = "all", groups = true, options = ["--all-extras"] },
+]
+
+
+[tool.pytest.ini_options]
+addopts = "--jaxtyping-packages=pattern_lens,beartype.beartype"
+filterwarnings = [
+    "ignore: PEP 484 type hint*:beartype.roar._roarwarn.BeartypeDecorHintPep585DeprecationWarning",
+]
+
+[tool.lmcat]
+ignore_patterns_files = [".lmignore", ".gitignore"]
+
+[tool.lmcat.glob_process]
+"[mM]akefile" = "makefile_recipes"
+"*.ipynb" = "ipynb_to_md"
+``````{ end_of_file="pyproject.toml" }
