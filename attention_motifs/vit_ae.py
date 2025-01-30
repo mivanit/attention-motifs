@@ -82,9 +82,9 @@ class VitAEConfig(SerializableDataclass):
 	# ==================================================
 
 	# loss/epochs hyperparameters
-	contrast_temperature: float = serializable_field(default=0.07)
+	contrast_temperature: float = serializable_field(default=0.1)
 	recon_weight: float = serializable_field(default=1.0)
-	contrast_weight: float = serializable_field(default=1.0)
+	contrast_weight: float = serializable_field(default=0.1)
 	num_epochs: int = serializable_field(default=5)
 
 	# optimizer and scheduler
