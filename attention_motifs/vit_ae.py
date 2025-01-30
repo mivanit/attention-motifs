@@ -25,7 +25,7 @@ class VitAEConfig(SerializableDataclass):
 	    Dimension of the final latent space (for contrastive usage).
 	 - `patch_size : int`
 	    Size of each patch (image is split into patches).
-	 - `embed_dim : int`
+	 - `d_model : int`
 	    Dimension of the patch embeddings.
 	 - `num_heads : int`
 	    Number of attention heads.
@@ -53,13 +53,24 @@ class VitAEConfig(SerializableDataclass):
 	    Keyword arguments for the LR scheduler.
 	"""
 
+	# architecture
+	# ==================================================
+	
+	# basic and patch embedding hparams
 	latent_dim: int
+	d_model: int = serializable_field(default=64)
 	patch_size: int = serializable_field(default=4)
-	embed_dim: int = serializable_field(default=64)
+
+	# transformer block hparams
 	num_heads: int = serializable_field(default=8)
-	mlp_dim: int = serializable_field(default=128)
-	encoder_depth: int = serializable_field(default=4)
-	decoder_depth: int = serializable_field(default=4)
+	mlp_dim: int = serializable_field(default=256)
+	
+	# how many transformer blocks
+	encoder_depth: int = serializable_field(default=2)
+	decoder_depth: int = serializable_field(default=2)
+
+	# training
+	# ==================================================
 
 	# loss/epochs hyperparameters
 	contrast_temperature: float = serializable_field(default=0.07)
@@ -92,6 +103,8 @@ class VitAEConfig(SerializableDataclass):
 		)
 	)
 
+	# ==================================================
+
 	def get_optim_and_lrs(
 		self,
 		model: "VitAE",
@@ -112,7 +125,7 @@ class PatchEmbed(nn.Module):
 	"""2D Patch Embedding with linear projection (for single-channel square images).
 
 	# Parameters:
-	 - `embed_dim : int`
+	 - `d_model : int`
 	    Dimension of embedded patch
 	 - `patch_size : int`
 	    The patch size (square patches)
@@ -120,19 +133,19 @@ class PatchEmbed(nn.Module):
 
 	def __init__(
 		self,
-		embed_dim: int,
+		d_model: int,
 		patch_size: int,
 		in_channels: int = 1,
 		max_patches: int = 32,
 	) -> None:
 		super().__init__()
-		self.embed_dim: int = embed_dim
+		self.d_model: int = d_model
 		self.patch_size: int = patch_size
 		self.in_channels: int = in_channels
 
 		self.proj: nn.Conv2d = nn.Conv2d(
 			in_channels=self.in_channels,
-			out_channels=self.embed_dim,
+			out_channels=self.d_model,
 			kernel_size=self.patch_size,
 			stride=self.patch_size,
 		)
@@ -141,7 +154,7 @@ class PatchEmbed(nn.Module):
 		self.pos_embeds: nn.ModuleList = [
 			nn.Embedding(
 				num_embeddings=max_patches,
-				embedding_dim=embed_dim,
+				embedding_dim=d_model,
 			)
 			for _ in range(2)
 		]
@@ -149,37 +162,37 @@ class PatchEmbed(nn.Module):
 	def forward(
 		self,
 		x: Float[Tensor, "batch channels=1 n_ctx n_ctx"],
-	) -> Float[Tensor, "batch num_patches embed_dim"]:
+	) -> Float[Tensor, "batch num_patches d_model"]:
 		# 1) Convolutional projection
-		x_proj: Float[Tensor, "batch embed_dim ax_patches ax_patches"] = self.proj(x)
+		x_proj: Float[Tensor, "batch d_model ax_patches ax_patches"] = self.proj(x)
 		ax_patches: int = x_proj.shape[2]
-		assert tuple(x_proj.shape) == (x.shape[0], self.embed_dim, ax_patches, ax_patches)
+		assert tuple(x_proj.shape) == (x.shape[0], self.d_model, ax_patches, ax_patches)
 
-		# 2) Build separate positional embeddings for x and y, shape = (2, ax_patches, embed_dim)
+		# 2) Build separate positional embeddings for x and y, shape = (2, ax_patches, d_model)
 		positions: Int[Tensor, "ax_patches"] = torch.arange(ax_patches, device=x.device)
-		pos_embeds: Float[Tensor, "2 ax_patches embed_dim"] = torch.stack([
+		pos_embeds: Float[Tensor, "2 ax_patches d_model"] = torch.stack([
 			p(positions) for p in self.pos_embeds
 		])
-		# pos_embeds[0] = x-embeddings (ax_patches, embed_dim)
-		# pos_embeds[1] = y-embeddings (ax_patches, embed_dim)
+		# pos_embeds[0] = x-embeddings (ax_patches, d_model)
+		# pos_embeds[1] = y-embeddings (ax_patches, d_model)
 
 		# 3) "Outer add" to get a 2D embedding grid for each (row, col)
-		# pos2d will have shape (ax_patches, ax_patches, embed_dim)
-		pos2d: Float[Tensor, "ax_patches ax_patches embed_dim"] = (
+		# pos2d will have shape (ax_patches, ax_patches, d_model)
+		pos2d: Float[Tensor, "ax_patches ax_patches d_model"] = (
 			pos_embeds[0].unsqueeze(1) + pos_embeds[1].unsqueeze(0)
 		)
 
 		# 4) Reshape for broadcast-add to x_proj
-		# pos2d_perm: (embed_dim, ax_patches, ax_patches)
-		# then unsqueeze -> (1, embed_dim, ax_patches, ax_patches)
+		# pos2d_perm: (d_model, ax_patches, ax_patches)
+		# then unsqueeze -> (1, d_model, ax_patches, ax_patches)
 		pos2d_perm = pos2d.permute(2, 0, 1).unsqueeze(0)
 
 		# 5) Add to the convolution outputs
 		x_proj = x_proj + pos2d_perm  # broadcast over batch dim
 
-		# 6) Flatten to patches and transpose so embed_dim is last
-		# x_seq: Float[Tensor, "batch embed_dim num_patches"]
-		# x_out: Float[Tensor, "batch num_patches embed_dim"]
+		# 6) Flatten to patches and transpose so d_model is last
+		# x_seq: Float[Tensor, "batch d_model num_patches"]
+		# x_out: Float[Tensor, "batch num_patches d_model"]
 		return x_proj.flatten(2).transpose(1, 2)
 
 
@@ -188,7 +201,7 @@ class TransformerBlock(nn.Module):
 	"""A Transformer Encoder Block (pre-LayerNorm)
 
 	# Parameters:
-	 - `embed_dim : int`
+	 - `d_model : int`
 		dimension of token embeddings
 	 - `num_heads : int`
 		number of attention heads
@@ -198,7 +211,7 @@ class TransformerBlock(nn.Module):
 
 	def __init__(
 		self,
-		embed_dim: int,
+		d_model: int,
 		num_heads: int,
 		mlp_dim: int,
 		act_fn: type[nn.Module] = nn.GELU,
@@ -206,29 +219,29 @@ class TransformerBlock(nn.Module):
 		# attn_drop: float = 0.0,
 	) -> None:
 		super().__init__()
-		self.norm1: nn.LayerNorm = nn.LayerNorm(embed_dim)
+		self.norm1: nn.LayerNorm = nn.LayerNorm(d_model)
 		self.attn: nn.MultiheadAttention = nn.MultiheadAttention(
-			embed_dim=embed_dim,
+			d_model=d_model,
 			num_heads=num_heads,
 			batch_first=True,
 			# dropout=attn_drop,
 		)
 		# self.drop_attn: nn.Dropout = nn.Dropout(drop)
 
-		self.norm2: nn.LayerNorm = nn.LayerNorm(embed_dim)
+		self.norm2: nn.LayerNorm = nn.LayerNorm(d_model)
 		self.mlp: nn.Sequential = nn.Sequential(
-			nn.Linear(embed_dim, mlp_dim),
+			nn.Linear(d_model, mlp_dim),
 			act_fn(),
-			nn.Linear(mlp_dim, embed_dim),
+			nn.Linear(mlp_dim, d_model),
 		)
 		# self.drop_mlp: nn.Dropout = nn.Dropout(drop)
 
 	def forward(
 		self,
-		x: Float[Tensor, "batch seq_len embed_dim"],
-	) -> Float[Tensor, "batch seq_len embed_dim"]:
-		residual: Float[Tensor, "batch seq_len embed_dim"] = x
-		h: Float[Tensor, "batch seq_len embed_dim"] = self.norm1(x)
+		x: Float[Tensor, "batch seq_len d_model"],
+	) -> Float[Tensor, "batch seq_len d_model"]:
+		residual: Float[Tensor, "batch seq_len d_model"] = x
+		h: Float[Tensor, "batch seq_len d_model"] = self.norm1(x)
 		attn_out, _ = self.attn(h, h, h)
 		x = residual + attn_out
 
@@ -262,14 +275,14 @@ class VisionTransformerEncoder(ConfiguredModel[VitAEConfig]):
 
 		# Patch embedding
 		self.patch_embed: PatchEmbed = PatchEmbed(
-			embed_dim=config.embed_dim,
+			d_model=config.d_model,
 			patch_size=config.patch_size,
 		)
 
 		# For square images, row/col are identical in number of patches,
 		# but we still learn separate embeddings so each dimension is distinct.
 		self.max_patches: int = 256  # set upper bound for patch dimension
-		half_dim: int = config.embed_dim // 2
+		half_dim: int = config.d_model // 2
 		self.row_embed: nn.Parameter = nn.Parameter(
 			torch.zeros(self.max_patches, half_dim)
 		)
@@ -283,7 +296,7 @@ class VisionTransformerEncoder(ConfiguredModel[VitAEConfig]):
 		self.blocks: nn.ModuleList = nn.ModuleList(
 			[
 				TransformerEncoderBlock(
-					embed_dim=config.embed_dim,
+					d_model=config.d_model,
 					num_heads=config.num_heads,
 					mlp_dim=config.mlp_dim,
 					drop=0.0,
@@ -292,10 +305,10 @@ class VisionTransformerEncoder(ConfiguredModel[VitAEConfig]):
 				for _ in range(config.encoder_depth)
 			]
 		)
-		self.norm: nn.LayerNorm = nn.LayerNorm(config.embed_dim)
+		self.norm: nn.LayerNorm = nn.LayerNorm(config.d_model)
 
 		# Final projection to latent space
-		self.to_latent: nn.Linear = nn.Linear(config.embed_dim, config.latent_dim)
+		self.to_latent: nn.Linear = nn.Linear(config.d_model, config.latent_dim)
 
 	def forward(
 		self,
@@ -327,8 +340,8 @@ class VisionTransformerEncoder(ConfiguredModel[VitAEConfig]):
 		b_size: int = x.shape[0]
 		n_ctx: int = x.shape[1]
 
-		# (1) Embed patches => (B, num_patches, embed_dim)
-		x_patches: Float[Tensor, "batch num_patches embed_dim"] = self.patch_embed(x)
+		# (1) Embed patches => (B, num_patches, d_model)
+		x_patches: Float[Tensor, "batch num_patches d_model"] = self.patch_embed(x)
 
 		# (2) Number of patches in each dimension
 		grid_size: int = n_ctx // self.config.patch_size
@@ -340,14 +353,14 @@ class VisionTransformerEncoder(ConfiguredModel[VitAEConfig]):
 		row_coords = row_coords.unsqueeze(1).expand(grid_size, grid_size).reshape(-1)
 		col_coords = col_coords.unsqueeze(0).expand(grid_size, grid_size).reshape(-1)
 
-		# shape => (num_patches, embed_dim//2)
+		# shape => (num_patches, d_model//2)
 		pos_r: Float[Tensor, "num_patches half_dim"] = self.row_embed[row_coords]
 		pos_c: Float[Tensor, "num_patches half_dim"] = self.col_embed[col_coords]
-		# => (num_patches, embed_dim)
-		pos: Float[Tensor, "num_patches embed_dim"] = torch.cat([pos_r, pos_c], dim=-1)
+		# => (num_patches, d_model)
+		pos: Float[Tensor, "num_patches d_model"] = torch.cat([pos_r, pos_c], dim=-1)
 
-		# (3) Add positional embeddings => (B, num_patches, embed_dim)
-		pos_expanded: Float[Tensor, "batch num_patches embed_dim"] = pos.unsqueeze(
+		# (3) Add positional embeddings => (B, num_patches, d_model)
+		pos_expanded: Float[Tensor, "batch num_patches d_model"] = pos.unsqueeze(
 			0
 		).expand(b_size, -1, -1)
 		x_patches = x_patches + pos_expanded
@@ -358,7 +371,7 @@ class VisionTransformerEncoder(ConfiguredModel[VitAEConfig]):
 
 		# (5) Final layer norm and mean pool
 		x_patches = self.norm(x_patches)
-		x_mean: Float[Tensor, "batch embed_dim"] = x_patches.mean(dim=1)
+		x_mean: Float[Tensor, "batch d_model"] = x_patches.mean(dim=1)
 
 		# (6) Project to latent_dim
 		z: Float[Tensor, "batch latent_dim"] = self.to_latent(x_mean)
@@ -387,12 +400,12 @@ class VisionTransformerDecoder(ConfiguredModel[VitAEConfig]):
 		super().__init__(config)
 		self.config: VitAEConfig = config
 
-		# Map latent -> embed_dim
-		self.from_latent: nn.Linear = nn.Linear(config.latent_dim, config.embed_dim)
+		# Map latent -> d_model
+		self.from_latent: nn.Linear = nn.Linear(config.latent_dim, config.d_model)
 
 		# Separate row/col embeddings for decoding
 		self.max_patches: int = 256
-		half_dim: int = config.embed_dim // 2
+		half_dim: int = config.d_model // 2
 		self.row_embed_dec: nn.Parameter = nn.Parameter(
 			torch.zeros(self.max_patches, half_dim)
 		)
@@ -406,7 +419,7 @@ class VisionTransformerDecoder(ConfiguredModel[VitAEConfig]):
 		self.blocks: nn.ModuleList = nn.ModuleList(
 			[
 				TransformerDecoderBlock(
-					embed_dim=config.embed_dim,
+					d_model=config.d_model,
 					num_heads=config.num_heads,
 					mlp_dim=config.mlp_dim,
 					drop=0.0,
@@ -415,12 +428,12 @@ class VisionTransformerDecoder(ConfiguredModel[VitAEConfig]):
 				for _ in range(config.decoder_depth)
 			]
 		)
-		self.norm: nn.LayerNorm = nn.LayerNorm(config.embed_dim)
+		self.norm: nn.LayerNorm = nn.LayerNorm(config.d_model)
 
-		# Final projection from embed_dim -> patch pixels
+		# Final projection from d_model -> patch pixels
 		# For single-channel images, patch_dim = 1*(patch_size^2)
 		patch_dim: int = config.patch_size * config.patch_size
-		self.head: nn.Linear = nn.Linear(config.embed_dim, patch_dim)
+		self.head: nn.Linear = nn.Linear(config.d_model, patch_dim)
 
 	def forward(
 		self,
@@ -454,14 +467,14 @@ class VisionTransformerDecoder(ConfiguredModel[VitAEConfig]):
 		"""
 		batch_size: int = z.shape[0]
 
-		# (1) Map latent -> embed_dim
-		latent_embed: Float[Tensor, "batch embed_dim"] = self.from_latent(z)
+		# (1) Map latent -> d_model
+		latent_embed: Float[Tensor, "batch d_model"] = self.from_latent(z)
 
 		# (2) Compute how many patches along each dimension
 		grid_size: int = n_ctx // self.config.patch_size
 		num_patches: int = grid_size * grid_size
 
-		# (3) Expand (B, num_patches, embed_dim)
+		# (3) Expand (B, num_patches, d_model)
 		latent_embed = latent_embed.unsqueeze(1).expand(batch_size, num_patches, -1)
 
 		# (4) Build decoder positional embeddings
@@ -472,7 +485,7 @@ class VisionTransformerDecoder(ConfiguredModel[VitAEConfig]):
 
 		pos_r: Float[Tensor, "num_patches half_dim"] = self.row_embed_dec[row_coords]
 		pos_c: Float[Tensor, "num_patches half_dim"] = self.col_embed_dec[col_coords]
-		pos: Float[Tensor, "num_patches embed_dim"] = torch.cat([pos_r, pos_c], dim=-1)
+		pos: Float[Tensor, "num_patches d_model"] = torch.cat([pos_r, pos_c], dim=-1)
 		pos = pos.unsqueeze(0).expand(batch_size, -1, -1)
 
 		latent_embed = latent_embed + pos
