@@ -181,6 +181,9 @@ def eval_plots(
 					except Exception as e:
 						warnings.warn(f"failed to save or show pattern {i}: {e}")
 
+				finally:
+					plt.close(fig)
+
 	model.train()
 
 	return {
@@ -190,6 +193,12 @@ def eval_plots(
 	}
 
 
+_TRAINING_MANAGER_KWARGS_DEFAULT: dict = dict(
+	checkpoint_interval="1/2 run",
+	model_save_path="{run_path}/checkpoints/model.checkpoint-{latest_checkpoint}.zanj",
+	model_save_path_special="{run_path}/model.{alias}.zanj",
+)
+
 def train(
 	logger: TrainingLoggerBase,
 	device: torch.device,
@@ -198,13 +207,18 @@ def train(
 	lr_scheduler: torch.optim.lr_scheduler._LRScheduler,
 	train_loader: DataloaderMock,
 	val_loader: DataloaderMock | None = None,
-	training_manager_kwargs: dict = dict(
-		checkpoint_interval="1/2 run",
-		model_save_path="{run_path}/checkpoints/model.checkpoint-{latest_checkpoint}.zanj",
-		model_save_path_special="{run_path}/model.{alias}.zanj",
-	),
+	training_manager_kwargs: dict|None = None,
 ) -> ConfiguredModel[T_Config]:
+	
 	model_config: T_Config = model.config
+
+	if training_manager_kwargs is None:
+		training_manager_kwargs = dict()
+	
+	training_manager_kwargs = {
+		**_TRAINING_MANAGER_KWARGS_DEFAULT,
+		**training_manager_kwargs,
+	}
 
 	evals = list()
 	
