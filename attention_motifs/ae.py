@@ -182,15 +182,23 @@ class Encoder(ConfiguredModel[AttnAEConfig]):
 		self, x: Float[Tensor, "batch 1 n_ctx n_ctx"]
 	) -> Float[Tensor, "batch latent_dim"]:
 		# conv layers
+		print(f"x shape {x.shape}")
+		print(f"x input to encoder {x}")
 		h: Float[Tensor, "batch channels n_ctx n_ctx"] = self.conv(x)
+		print(f"x post conv {h}")
 		# apply linear layers to each pixel
 		# TODO: add pos embeds?
 		h_reshape = h.flatten(2).reshape(h.size(0), -1, h.size(1))
+		print(f"h_reshape {h_reshape}")
 		h = self.linear_prepool(h_reshape)
+
+		print(f"h post linear_prepool {h}")
 		# mean pool over pixels
 		h = h.mean(dim=-2)
+		print(f"h post mean pool {h}")
 		# apply linear layers to pooled features
 		h = self.linear_postpool(h)
+		print(f"h post linear_postpool {h}")
 		return h
 
 
@@ -270,13 +278,13 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 		x: Float[Tensor, "batch in_channels n_ctx n_ctx"],
 	) -> Float[Tensor, "batch in_channels n_ctx n_ctx"]:
 		# set the upper triangle to -inf
-		print(x.shape)
-		print(x)
+		print(f"{x.shape = }")
+		print(f"x before convert triu {x}")
 		x += torch.triu(torch.ones_like(x) * float("-inf"), diagonal=0)
 		# apply softmax
-		print(x)
+		print(f"x after convert triu {x}")
 		x = F.softmax(x, dim=-2)
-		print(x)
+		print(f"x after softmax {x}")
 		return x
 
 	def forward(
@@ -285,6 +293,8 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 		n_ctx: int,
 	) -> Float[Tensor, "batch in_channels n_ctx n_ctx"]:
 		"""Forward pass of the Decoder"""
+		print(f"z shape {z.shape}")
+		print(f"z input to decoder {z}")
 		# 1) Inverse of the post-pool MLP
 		h: Float[Tensor, "batch mid_dim"] = self.linear_postunpool(z)  # (B, ?)
 		# 2) Broadcast to spatial dimension
@@ -306,8 +316,9 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 		x_recon: Float[Tensor, "batch in_channels H W"] = self.conv(h)
 
 		# 5) Convert to row-stochastic
-		x_recon = self.convert_tril_rowstoch(x_recon)
-
+		# x_recon = self.convert_tril_rowstoch(x_recon)
+		print(f"x_recon shape {x_recon.shape}")
+		print(f"x_recon {x_recon}")
 		return x_recon
 
 
@@ -326,9 +337,14 @@ class AttnAE(ConfiguredModel[AttnAEConfig]):
 		self,
 		x: Float[Tensor, "*batch n n"],
 	) -> tuple[Float[Tensor, "*batch n n"], Float[Tensor, "batch latent_dim"]]:
-		n_ctx: int = x.shape[-1]
+		print(f"parameter sums\n", {k: v.sum().item() for k, v in self.named_parameters()})
 
+		print(f"x shape {x.shape}")
+		print(f"x input to encoder {x}")
+		n_ctx: int = x.shape[-1]
 		h: Float[Tensor, "batch latent_dim"] = self.encoder(x)
+		print(f"h shape {h.shape}")
+		print(f"h input to decoder {h}")
 		x_recon: Float[Tensor, "batch 1 n n"] = self.decoder(h, n_ctx=n_ctx)
 		return x_recon, h
 
