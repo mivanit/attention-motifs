@@ -43,7 +43,7 @@ class Conv2DConfig(SerializableDataclass):
 
 
 @serializable_dataclass(kw_only=True)
-class AttnAEConfig(SerializableDataclass):
+class VitAEConfig(SerializableDataclass):
 	"""Configuration for square matrix contrastive autoencoder
 
 	# Parameters:
@@ -127,7 +127,7 @@ class AttnAEConfig(SerializableDataclass):
 
 	def get_optim_and_lrs(
 		self,
-		model: "AttnAE",
+		model: "VitAE",
 	) -> tuple[
 		torch.optim.Optimizer,
 		torch.optim.lr_scheduler._LRScheduler,
@@ -143,11 +143,11 @@ class AttnAEConfig(SerializableDataclass):
 		return optimizer, lr_scheduler
 
 
-@set_config_class(AttnAEConfig)
-class Encoder(ConfiguredModel[AttnAEConfig]):
-	def __init__(self, config: AttnAEConfig):
+@set_config_class(VitAEConfig)
+class Encoder(ConfiguredModel[VitAEConfig]):
+	def __init__(self, config: VitAEConfig):
 		super().__init__(config)
-		self.config: AttnAEConfig = config
+		self.config: VitAEConfig = config
 
 		# Convolutional encoder
 		in_ch: int = config.in_channels
@@ -195,8 +195,8 @@ class Encoder(ConfiguredModel[AttnAEConfig]):
 		return h
 
 
-@set_config_class(AttnAEConfig)
-class Decoder(ConfiguredModel[AttnAEConfig]):
+@set_config_class(VitAEConfig)
+class Decoder(ConfiguredModel[VitAEConfig]):
 	"""Decoder stage of the AttnAE architecture
 
 	This mirrors the `Encoder` by:
@@ -220,9 +220,9 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 	```
 	"""
 
-	def __init__(self, config: AttnAEConfig):
+	def __init__(self, config: VitAEConfig):
 		super().__init__(config)
-		self.config: AttnAEConfig = config
+		self.config: VitAEConfig = config
 
 		# Inverse of post-pool MLP
 		postunpool_layers: list[nn.Module] = []
@@ -312,13 +312,13 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 		return x_recon
 
 
-@set_config_class(AttnAEConfig)
-class AttnAE(ConfiguredModel[AttnAEConfig]):
-	config: AttnAEConfig
+@set_config_class(VitAEConfig)
+class VitAE(ConfiguredModel[VitAEConfig]):
+	config: VitAEConfig
 
-	def __init__(self, config: AttnAEConfig):
+	def __init__(self, config: VitAEConfig):
 		super().__init__(config)
-		self.config: AttnAEConfig = config
+		self.config: VitAEConfig = config
 
 		self.encoder: Encoder = Encoder(config)
 		self.decoder: Decoder = Decoder(config)
@@ -334,7 +334,7 @@ class AttnAE(ConfiguredModel[AttnAEConfig]):
 
 
 def train(
-	model: AttnAE,
+	model: VitAE,
 	train_loader: torch.utils.data.DataLoader,
 	val_loader: torch.utils.data.DataLoader | None = None,
 	num_epochs: int = 100,
@@ -345,7 +345,7 @@ def train(
 	checkpoint_interval: str = "1/10 run",
 	eval_interval: str = "1k samples",
 	device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-) -> tuple[AttnAE, LocalLogger]:
+) -> tuple[VitAE, LocalLogger]:
 	"""Train a contrastive autoencoder
 
 	# Parameters:
@@ -402,7 +402,7 @@ def train(
 		),
 	)
 
-	def evaluation_step(model: AttnAE) -> dict[str, float]:
+	def evaluation_step(model: VitAE) -> dict[str, float]:
 		"""Evaluate model on validation set"""
 		if val_loader is None:
 			return {}
