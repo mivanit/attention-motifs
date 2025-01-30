@@ -71,7 +71,7 @@ class VitAEConfig(SerializableDataclass):
 	# transformer block hparams
 	num_heads: int = serializable_field(default=8)
 	mlp_dim: int = serializable_field(default=256)
-	
+
 	# how many transformer blocks
 	encoder_depth: int = serializable_field(default=2)
 	decoder_depth: int = serializable_field(default=2)
@@ -177,23 +177,25 @@ class PatchEmbed(nn.Module):
 
 		# 2) Build separate positional embeddings for x and y, shape = (2, ax_patches, d_model)
 		positions: Int[Tensor, "ax_patches"] = torch.arange(ax_patches, device=x.device)
-		pos_embeds: Float[Tensor, "2 ax_patches d_model"] = torch.stack([
-			p(positions) for p in self.pos_embeds
-		])
+		pos_embeds: Float[Tensor, "2 ax_patches d_model"] = torch.stack(
+			[p(positions) for p in self.pos_embeds]
+		)
 		# pos_embeds[0] = x-embeddings (ax_patches, d_model)
 		# pos_embeds[1] = y-embeddings (ax_patches, d_model)
 
 		# 3) "Outer add" to get a 2D embedding grid for each (row, col)
 		# pos2d will have shape (ax_patches, ax_patches, d_model)
-		pos2d: Float[Tensor, "ax_patches ax_patches d_model"] = (
-			pos_embeds[0].unsqueeze(1) + pos_embeds[1].unsqueeze(0)
-		)
+		pos2d: Float[Tensor, "ax_patches ax_patches d_model"] = pos_embeds[0].unsqueeze(
+			1
+		) + pos_embeds[1].unsqueeze(0)
 
 		# 4) Reshape for broadcast-add to x_proj
 		# pos2d_perm: (d_model, ax_patches, ax_patches)
 		# then unsqueeze -> (1, d_model, ax_patches, ax_patches)
 		# pos2d_perm = pos2d.permute(2, 0, 1).unsqueeze(0)
-		pos2d_perm: Float[Tensor, "1 d_model ax_patches ax_patches"] = pos2d.permute(2, 0, 1).unsqueeze(0)
+		pos2d_perm: Float[Tensor, "1 d_model ax_patches ax_patches"] = pos2d.permute(
+			2, 0, 1
+		).unsqueeze(0)
 
 		# 5) Add to the convolution outputs
 		x_proj = x_proj + pos2d_perm  # broadcast over batch dim
@@ -202,7 +204,6 @@ class PatchEmbed(nn.Module):
 		# x_seq: Float[Tensor, "batch d_model num_patches"]
 		# x_out: Float[Tensor, "batch num_patches d_model"]
 		return x_proj.flatten(2).transpose(1, 2)
-
 
 
 class TransformerBlock(nn.Module):
@@ -280,14 +281,16 @@ class VitEncoder(ConfiguredModel[VitAEConfig]):
 		)
 
 		# Transformer encoder blocks
-		self.blocks: nn.Module = nn.Sequential(*[
-			TransformerBlock(
-				d_model=config.d_model,
-				num_heads=config.num_heads,
-				mlp_dim=config.mlp_dim,
-			)
-			for _ in range(config.encoder_depth)
-		])
+		self.blocks: nn.Module = nn.Sequential(
+			*[
+				TransformerBlock(
+					d_model=config.d_model,
+					num_heads=config.num_heads,
+					mlp_dim=config.mlp_dim,
+				)
+				for _ in range(config.encoder_depth)
+			]
+		)
 
 		# Final projection to latent space
 		self.ln_final: nn.LayerNorm = nn.LayerNorm(config.d_model)
@@ -339,14 +342,16 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 		]
 
 		# Decoder transformer blocks
-		self.blocks: nn.Module = nn.Sequential(*[
-			TransformerBlock(
-				d_model=config.d_model,
-				num_heads=config.num_heads,
-				mlp_dim=config.mlp_dim,
-			)
-			for _ in range(config.decoder_depth)
-		])
+		self.blocks: nn.Module = nn.Sequential(
+			*[
+				TransformerBlock(
+					d_model=config.d_model,
+					num_heads=config.num_heads,
+					mlp_dim=config.mlp_dim,
+				)
+				for _ in range(config.decoder_depth)
+			]
+		)
 		self.norm: nn.LayerNorm = nn.LayerNorm(config.d_model)
 
 		# Final projection from d_model -> patch pixels
@@ -366,29 +371,32 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 		latent_embed: Float[Tensor, "batch d_model"] = self.from_latent(latent)
 
 		# Build separate positional embeddings for x and y, shape = (2, ax_patches, d_model)
-		positions: Int[Tensor, "ax_patches"] = torch.arange(ax_patches, device=latent.device)
-		pos_embeds: Float[Tensor, "2 ax_patches d_model"] = torch.stack([
-			p(positions) for p in self.pos_embeds
-		])
+		positions: Int[Tensor, "ax_patches"] = torch.arange(
+			ax_patches, device=latent.device
+		)
+		pos_embeds: Float[Tensor, "2 ax_patches d_model"] = torch.stack(
+			[p(positions) for p in self.pos_embeds]
+		)
 
 		# "Outer add" to get a 2D embedding grid for each (row, col)
 		# pos2d will have shape (ax_patches, ax_patches, d_model)
-		pos2d: Float[Tensor, "ax_patches ax_patches d_model"] = (
-			pos_embeds[0].unsqueeze(1) + pos_embeds[1].unsqueeze(0)
-		)
+		pos2d: Float[Tensor, "ax_patches ax_patches d_model"] = pos_embeds[0].unsqueeze(
+			1
+		) + pos_embeds[1].unsqueeze(0)
 
 		# Reshape for broadcast-add to x_proj
 		# pos2d_perm: (d_model, ax_patches, ax_patches)
 		# then unsqueeze -> (1, d_model, ax_patches, ax_patches)
 		# pos2d_perm = pos2d.permute(2, 0, 1).unsqueeze(0)
-		pos2d_perm: Float[Tensor, "1 d_model ax_patches ax_patches"] = pos2d.permute(2, 0, 1).unsqueeze(0)
+		pos2d_perm: Float[Tensor, "1 d_model ax_patches ax_patches"] = pos2d.permute(
+			2, 0, 1
+		).unsqueeze(0)
 
 		# patches_grid[i,j] = latent_embed + pos_embeds[0][i] + pos_embeds[1][j]
 		patches_grid: Float[Tensor, "batch d_model ax_patches ax_patches"] = (
 			latent_embed.unsqueeze(-1).unsqueeze(-1) + pos2d_perm
 		)
 		patches_seq: Float[Tensor, "batch n_patches d_model"] = patches_grid.flatten(1)
-
 
 		# Pass through decoder blocks
 		patches_seq = self.blocks(patches_seq)
@@ -414,8 +422,8 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 		# => (B, grid_size, grid_size, 1, patch_size, patch_size)
 		patches = patches.reshape(
 			batch_size,
-			grid_size,
-			grid_size,
+			n_ctx,
+			n_ctx,
 			1,
 			self.config.patch_size,
 			self.config.patch_size,
@@ -456,7 +464,6 @@ class VitAE(ConfiguredModel[VitAEConfig]):
 		self,
 		x: Float[Tensor, "batch n_ctx n_ctx"],
 	) -> Tuple[Float[Tensor, "batch n_ctx n_ctx"], Float[Tensor, "batch d_latent"]]:
-		
 		n_ctx: int = x.shape[1]
 
 		# Encode
