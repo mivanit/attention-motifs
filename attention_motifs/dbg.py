@@ -15,9 +15,7 @@ _CWD: Path = Path.cwd().absolute()
 
 
 _FNAME_CACHE: DefaulterDict[Path, str] = DefaulterDict(
-	lambda x: x.relative_to(
-	Path(os.path.commonpath([x, _CWD]))
-).as_posix()
+	lambda x: x.relative_to(Path(os.path.commonpath([x, _CWD]))).as_posix()
 )
 
 

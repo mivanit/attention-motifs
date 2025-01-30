@@ -15,7 +15,6 @@ from muutils.json_serialize import (
 from zanj.torchutil import ConfiguredModel, set_config_class
 
 from attention_motifs.train_util import convert_tril_rowstoch
-from attention_motifs.dbg import dbg
 
 
 @serializable_dataclass(kw_only=True)
@@ -404,7 +403,9 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 		patches_grid: Float[Tensor, "batch d_model ax_patches ax_patches"] = (
 			latent_embed.unsqueeze(-1).unsqueeze(-1) + pos2d_perm
 		)
-		patches_seq: Float[Tensor, "batch n_patches d_model"] = patches_grid.flatten(2).transpose(1, 2)
+		patches_seq: Float[Tensor, "batch n_patches d_model"] = patches_grid.flatten(
+			2
+		).transpose(1, 2)
 
 		# Pass through decoder blocks
 		patches_seq = self.blocks(patches_seq)
@@ -430,24 +431,29 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 		return unpatched
 
 
-
-
 def _mat_col_0_recon(
-	w: Float[Tensor, "batch"],
+	w: Float[Tensor, " batch"],
 	n_ctx: int,
 ) -> Float[Tensor, "batch channels=1 n_ctx n_ctx"]:
-	zero_tensor = torch.zeros(w.shape[0], 1, n_ctx, n_ctx-1, device=w.device)
+	zero_tensor = torch.zeros(w.shape[0], 1, n_ctx, n_ctx - 1, device=w.device)
 	col_filled = torch.nn.functional.pad(zero_tensor, (1, 0), value=1.0)
 	w_expanded = w[:, None, None, None]
 	out = col_filled * w_expanded
 	return out
 
 
-SPECIAL_FEATURES: list[tuple[
-	str,
-	Callable[[Float[Tensor, "batch channels=1 n_ctx n_ctx"]], Float[Tensor, "batch"]],
-	Callable[[Float[Tensor, "batch"], int], Float[Tensor, "batch channels=1 n_ctx n_ctx"]],
-]] = [
+SPECIAL_FEATURES: list[
+	tuple[
+		str,
+		Callable[
+			[Float[Tensor, "batch channels=1 n_ctx n_ctx"]], Float[Tensor, " batch"]
+		],
+		Callable[
+			[Float[Tensor, " batch"], int],
+			Float[Tensor, "batch channels=1 n_ctx n_ctx"],
+		],
+	]
+] = [
 	(
 		"mat_col_0",
 		lambda x: x[:, 0, 0, :].sum(dim=-1),
@@ -464,12 +470,10 @@ SPECIAL_FEATURES: list[tuple[
 		"identity",
 		lambda x: x.diagonal(dim1=-2, dim2=-1).squeeze(1).sum(-1),
 		lambda w, n: (
-			torch.eye(n, device=w.device)[None, None, :, :] 
-			* w[:, None, None, None]
+			torch.eye(n, device=w.device)[None, None, :, :] * w[:, None, None, None]
 		),
-	)
+	),
 ]
-
 
 
 @set_config_class(VitAEConfig)
@@ -503,14 +507,20 @@ class VitAE(ConfiguredModel[VitAEConfig]):
 
 		# special features
 		self.n_special_features: int = len(SPECIAL_FEATURES)
-		self.encoder_special: nn.Linear = nn.Linear(self.n_special_features, config.d_latent)
-		self.decoder_special: nn.Linear = nn.Linear(config.d_latent, self.n_special_features)
+		self.encoder_special: nn.Linear = nn.Linear(
+			self.n_special_features, config.d_latent
+		)
+		self.decoder_special: nn.Linear = nn.Linear(
+			config.d_latent, self.n_special_features
+		)
 
 	def forward(
 		self,
 		x: Float[Tensor, "batch channels=1 n_ctx n_ctx"],
-	) -> Tuple[Float[Tensor, "batch channels=1 n_ctx n_ctx"], Float[Tensor, "batch d_latent"]]:
-		batch_size: int = x.shape[0]
+	) -> Tuple[
+		Float[Tensor, "batch channels=1 n_ctx n_ctx"], Float[Tensor, "batch d_latent"]
+	]:
+		# batch_size: int = x.shape[0]
 		n_ctx: int = x.shape[2]
 
 		# Encode
@@ -535,16 +545,20 @@ class VitAE(ConfiguredModel[VitAEConfig]):
 
 		# add special features
 		decoder_feat_weights = self.decoder_special(pre_decoder)
-		special_feats_recon: Float[Tensor, "batch 1 n_ctx n_ctx"] = torch.stack(
-			[
-				fn(
-					decoder_feat_weights[:, idx],
-					n_ctx,
-				)
-				for idx, (_, _, fn) in enumerate(SPECIAL_FEATURES)
-			],
-			dim=1,
-		).to(x.device).sum(dim=1)
+		special_feats_recon: Float[Tensor, "batch 1 n_ctx n_ctx"] = (
+			torch.stack(
+				[
+					fn(
+						decoder_feat_weights[:, idx],
+						n_ctx,
+					)
+					for idx, (_, _, fn) in enumerate(SPECIAL_FEATURES)
+				],
+				dim=1,
+			)
+			.to(x.device)
+			.sum(dim=1)
+		)
 
 		x_recon += special_feats_recon
 
