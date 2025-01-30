@@ -21,7 +21,7 @@ class VitAEConfig(SerializableDataclass):
 	"""Configuration for a Vision Transformer Autoencoder (square images of size n_ctx x n_ctx)
 
 	# Parameters:
-	 - `latent_dim : int`
+	 - `d_latent : int`
 	    Dimension of the final latent space (for contrastive usage).
 	 - `patch_size : int`
 	    Size of each patch (image is split into patches).
@@ -55,9 +55,9 @@ class VitAEConfig(SerializableDataclass):
 
 	# architecture
 	# ==================================================
-	
+
 	# basic and patch embedding hparams
-	latent_dim: int
+	d_latent: int
 	d_model: int = serializable_field(default=64)
 	patch_size: int = serializable_field(default=4)
 
@@ -253,23 +253,15 @@ class TransformerBlock(nn.Module):
 
 
 @set_config_class(VitAEConfig)
-class VisionTransformerEncoder(ConfiguredModel[VitAEConfig]):
+class VitEncoder(ConfiguredModel[VitAEConfig]):
 	"""Vision Transformer Encoder (square inputs).
 
 	Splits the input into patches (fixed `patch_size`), uses a stack of
-	Transformer blocks, then outputs a `latent_dim` vector by average pooling
+	Transformer blocks, then outputs a `d_latent` vector by average pooling
 	the final patch embeddings.
 	"""
 
 	def __init__(self, config: VitAEConfig) -> None:
-		"""summary
-
-		extended summary
-
-		# Parameters:
-		 - `config : VitAEConfig`
-		    configuration object
-		"""
 		super().__init__(config)
 		self.config: VitAEConfig = config
 
@@ -279,23 +271,10 @@ class VisionTransformerEncoder(ConfiguredModel[VitAEConfig]):
 			patch_size=config.patch_size,
 		)
 
-		# For square images, row/col are identical in number of patches,
-		# but we still learn separate embeddings so each dimension is distinct.
-		self.max_patches: int = 256  # set upper bound for patch dimension
-		half_dim: int = config.d_model // 2
-		self.row_embed: nn.Parameter = nn.Parameter(
-			torch.zeros(self.max_patches, half_dim)
-		)
-		self.col_embed: nn.Parameter = nn.Parameter(
-			torch.zeros(self.max_patches, half_dim)
-		)
-		nn.init.normal_(self.row_embed, std=0.02)
-		nn.init.normal_(self.col_embed, std=0.02)
-
 		# Transformer encoder blocks
 		self.blocks: nn.ModuleList = nn.ModuleList(
 			[
-				TransformerEncoderBlock(
+				TransformerBlock(
 					d_model=config.d_model,
 					num_heads=config.num_heads,
 					mlp_dim=config.mlp_dim,
@@ -308,12 +287,12 @@ class VisionTransformerEncoder(ConfiguredModel[VitAEConfig]):
 		self.norm: nn.LayerNorm = nn.LayerNorm(config.d_model)
 
 		# Final projection to latent space
-		self.to_latent: nn.Linear = nn.Linear(config.d_model, config.latent_dim)
+		self.to_latent: nn.Linear = nn.Linear(config.d_model, config.d_latent)
 
 	def forward(
 		self,
 		x: Float[Tensor, "batch n_ctx n_ctx"],
-	) -> Float[Tensor, "batch latent_dim"]:
+	) -> Float[Tensor, "batch d_latent"]:
 		"""summary
 
 		extended summary
@@ -323,13 +302,13 @@ class VisionTransformerEncoder(ConfiguredModel[VitAEConfig]):
 		    single-channel square input images
 
 		# Returns:
-		 - `Float[Tensor, "batch latent_dim"]`
+		 - `Float[Tensor, "batch d_latent"]`
 		    latent representation after average pooling
 
 		# Usage:
 
 		```python
-		>>> config = VitAEConfig(latent_dim=128)
+		>>> config = VitAEConfig(d_latent=128)
 		>>> enc = VisionTransformerEncoder(config)
 		>>> x = torch.randn(4, 32, 32)  # batch=4, n_ctx=32
 		>>> z = enc(x)
@@ -373,8 +352,8 @@ class VisionTransformerEncoder(ConfiguredModel[VitAEConfig]):
 		x_patches = self.norm(x_patches)
 		x_mean: Float[Tensor, "batch d_model"] = x_patches.mean(dim=1)
 
-		# (6) Project to latent_dim
-		z: Float[Tensor, "batch latent_dim"] = self.to_latent(x_mean)
+		# (6) Project to d_latent
+		z: Float[Tensor, "batch d_latent"] = self.to_latent(x_mean)
 		return z
 
 
@@ -382,7 +361,7 @@ class VisionTransformerEncoder(ConfiguredModel[VitAEConfig]):
 class VisionTransformerDecoder(ConfiguredModel[VitAEConfig]):
 	"""Vision Transformer Decoder (square outputs).
 
-	Takes a (batch, latent_dim) vector, replicates it
+	Takes a (batch, d_latent) vector, replicates it
 	across the needed number of patches for a (n_ctx x n_ctx) image,
 	passes it through decoder Transformer blocks, then projects
 	back to patches and unpatchifies.
@@ -401,7 +380,7 @@ class VisionTransformerDecoder(ConfiguredModel[VitAEConfig]):
 		self.config: VitAEConfig = config
 
 		# Map latent -> d_model
-		self.from_latent: nn.Linear = nn.Linear(config.latent_dim, config.d_model)
+		self.from_latent: nn.Linear = nn.Linear(config.d_latent, config.d_model)
 
 		# Separate row/col embeddings for decoding
 		self.max_patches: int = 256
@@ -437,7 +416,7 @@ class VisionTransformerDecoder(ConfiguredModel[VitAEConfig]):
 
 	def forward(
 		self,
-		z: Float[Tensor, "batch latent_dim"],
+		z: Float[Tensor, "batch d_latent"],
 		n_ctx: int,
 	) -> Float[Tensor, "batch n_ctx n_ctx"]:
 		"""summary
@@ -445,7 +424,7 @@ class VisionTransformerDecoder(ConfiguredModel[VitAEConfig]):
 		extended summary
 
 		# Parameters:
-		 - `z : Float[Tensor, "batch latent_dim"]`
+		 - `z : Float[Tensor, "batch d_latent"]`
 		    latent representation from the encoder
 		 - `n_ctx : int`
 		    side length of the square output image
@@ -457,7 +436,7 @@ class VisionTransformerDecoder(ConfiguredModel[VitAEConfig]):
 		# Usage:
 
 		```python
-		>>> config = VitAEConfig(latent_dim=128)
+		>>> config = VitAEConfig(d_latent=128)
 		>>> dec = VisionTransformerDecoder(config)
 		>>> z = torch.randn(4, 128)
 		>>> out = dec(z, 32)
@@ -543,7 +522,7 @@ class VisionTransformerDecoder(ConfiguredModel[VitAEConfig]):
 class VitAE(ConfiguredModel[VitAEConfig]):
 	"""Vision Transformer Autoencoder with variable-sized square inputs.
 
-	Produces a latent vector of shape (batch, latent_dim) from the encoder,
+	Produces a latent vector of shape (batch, d_latent) from the encoder,
 	and reconstructs an output of shape (batch, n_ctx, n_ctx) from the decoder.
 	"""
 
@@ -558,13 +537,13 @@ class VitAE(ConfiguredModel[VitAEConfig]):
 		"""
 		super().__init__(config)
 		self.config: VitAEConfig = config
-		self.encoder: VisionTransformerEncoder = VisionTransformerEncoder(config)
+		self.encoder: VitEncoder = VitEncoder(config)
 		self.decoder: VisionTransformerDecoder = VisionTransformerDecoder(config)
 
 	def forward(
 		self,
 		x: Float[Tensor, "batch n_ctx n_ctx"],
-	) -> Tuple[Float[Tensor, "batch n_ctx n_ctx"], Float[Tensor, "batch latent_dim"]]:
+	) -> Tuple[Float[Tensor, "batch n_ctx n_ctx"], Float[Tensor, "batch d_latent"]]:
 		"""Forward pass of VitAE (square inputs).
 
 		# Parameters:
@@ -572,13 +551,13 @@ class VitAE(ConfiguredModel[VitAEConfig]):
 		    input image of shape (n_ctx, n_ctx)
 
 		# Returns:
-		 - `Tuple[Float[Tensor, "batch n_ctx n_ctx"], Float[Tensor, "batch latent_dim"]]`
+		 - `Tuple[Float[Tensor, "batch n_ctx n_ctx"], Float[Tensor, "batch d_latent"]]`
 		    A tuple of (reconstruction, latent_vector).
 		"""
 		n_ctx: int = x.shape[1]
 
 		# Encode
-		z: Float[Tensor, "batch latent_dim"] = self.encoder(x)
+		z: Float[Tensor, "batch d_latent"] = self.encoder(x)
 
 		# Decode back to original size
 		x_recon: Float[Tensor, "batch n_ctx n_ctx"] = self.decoder(z, n_ctx)
