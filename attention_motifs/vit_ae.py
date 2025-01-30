@@ -1,4 +1,4 @@
-from typing import Tuple, Dict, Any, Type
+from typing import Callable, Tuple, Dict, Any, Type
 
 import torch
 import torch.nn as nn
@@ -426,10 +426,37 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 			patch_w=self.config.patch_size,
 		)
 
-		# make lower-triangular and row-stochastic
-		x_recon = convert_tril_rowstoch(unpatched)
+		return unpatched
 
-		return x_recon
+
+
+
+SPECIAL_FEATURES: list[tuple[
+	str,
+	Callable[[Float[Tensor, "batch channels=1 n_ctx n_ctx"]], Float[Tensor, "batch"]],
+	Callable[[Float[Tensor, "batch"], int], Float[Tensor, "batch channels=1 n_ctx n_ctx"]],
+]] = [
+	(
+		"mat_col_0",
+		lambda x: x[:, 0, 0, :].sum(dim=-1),
+		lambda w, n: (
+			torch.nn.functional.pad(
+				torch.zeros(w.shape[0], 1, n, n-1, device=w.device),
+				(1, 0),
+				value=1.0,
+			) * w[:, None, None, None]
+		),
+	),
+	(
+		"identity",
+		lambda x: x.diagonal(dim1=-2, dim2=-1).squeeze(1).sum(-1),
+		lambda w, n: (
+			torch.eye(n, device=w.device)[None, None, :, :] 
+			* w[:, None, None, None],
+		),
+	)
+]
+
 
 
 @set_config_class(VitAEConfig)
@@ -443,8 +470,28 @@ class VitAE(ConfiguredModel[VitAEConfig]):
 	def __init__(self, config: VitAEConfig) -> None:
 		super().__init__(config)
 		self.config: VitAEConfig = config
+
+		# encoder and decoder
 		self.encoder: VitEncoder = VitEncoder(config)
 		self.decoder: VitDecoder = VitDecoder(config)
+
+		# extra mlps between encoder/latent and latent/decoder
+		# mostly for special features
+		self.encoder_mlp: nn.Sequential = nn.Sequential(
+			nn.Linear(config.d_latent, config.mlp_dim),
+			config.act_fn(),
+			nn.Linear(config.mlp_dim, config.d_latent),
+		)
+		self.decoder_mlp: nn.Sequential = nn.Sequential(
+			nn.Linear(config.d_latent, config.mlp_dim),
+			config.act_fn(),
+			nn.Linear(config.mlp_dim, config.d_latent),
+		)
+
+		# special features
+		self.n_special_features: int = len(SPECIAL_FEATURES)
+		self.encoder_special: nn.Linear = nn.Linear(self.n_special_features, config.d_latent)
+		self.decoder_special: nn.Linear = nn.Linear(config.d_latent, self.n_special_features)
 
 	def forward(
 		self,
@@ -456,6 +503,33 @@ class VitAE(ConfiguredModel[VitAEConfig]):
 		# Encode
 		latent: Float[Tensor, "batch d_latent"] = self.encoder(x)
 
+		# add special features
+		special_feats: Float[Tensor, "batch n_special_features"] = torch.stack(
+			[fn(x) for _, fn, _ in SPECIAL_FEATURES],
+			dim=1,
+			device=x.device,
+		)
+		latent += self.encoder_special(special_feats)
+
+		# compute mlp before latent
+		latent = self.encoder_mlp(latent)
+		# ============================================================
+
+		# mlp after latent
+		pre_decoder: Float[Tensor, "batch d_latent"] = self.decoder_mlp(latent)
+
 		# Decode back to original size
-		x_recon: Float[Tensor, "batch n_ctx n_ctx"] = self.decoder(latent, n_ctx)
+		x_recon: Float[Tensor, "batch n_ctx n_ctx"] = self.decoder(pre_decoder, n_ctx)
+
+		# add special features
+		special_feats_recon: Float[Tensor, "batch n_special_features"] = torch.stack(
+			[fn(pre_decoder, n_ctx) for _, _, fn in SPECIAL_FEATURES],
+			dim=1,
+			device=x.device,
+		)
+
+		pre_decoder += self.decoder_special(special_feats_recon)
+
+		# convert to upper triangular
+		x_recon = convert_tril_rowstoch(x_recon)
 		return x_recon, latent
