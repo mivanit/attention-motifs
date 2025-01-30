@@ -106,7 +106,7 @@ class VitAEConfig(SerializableDataclass):
 			threshold=1e-4,
 			threshold_mode="rel",
 			cooldown=0,
-			min_lr=1e-8,
+			min_lr=1e-6,
 			eps=1e-8,
 		)
 	)
