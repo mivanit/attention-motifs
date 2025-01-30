@@ -20,8 +20,8 @@ DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cp
 
 # training data
 ACTIVATIONS_PATH: Path = Path("data/activations/medium")
-BATCH_SIZE: int = 10
-N_TRAIN_BATCHES: int = 50
+BATCH_SIZE: int = 32
+N_TRAIN_BATCHES: int = 12750
 
 # validation data
 VAL_ACTIVATIONS_PATH: Path = Path("data/activations/small_val")
@@ -30,8 +30,13 @@ N_VAL_BATCHES: int = 8
 
 # model
 MODEL_CONFIG: VitAEConfig = VitAEConfig(
-	d_latent=128,
-	num_epochs=1,
+	d_latent=64,
+	num_epochs=10,
+	d_model=128,
+	mlp_dim=256,
+	num_heads=8,
+	encoder_depth=3,
+	decoder_depth=3,
 )
 
 
