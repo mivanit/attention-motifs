@@ -196,7 +196,7 @@ class CollectedAttentionPatternDataloader:
 	def batches(
 		self,
 		batch_size: int,
-		shuffle: bool,
+		shuffle: bool = False,
 	) -> Iterator[
 		tuple[Float[torch.Tensor, "batch n_ctx n_ctx"], list[AttentionPatternMetadata]]
 	]:
