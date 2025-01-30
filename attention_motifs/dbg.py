@@ -3,6 +3,7 @@
 from https://github.com/tylerwince/pydbg/blob/master/pydbg.py
 """
 
+import os
 import inspect
 import sys
 import typing
@@ -14,7 +15,7 @@ __version__ = "0.3.0"
 
 _ExpType = typing.TypeVar("_ExpType")
 
-cwd: Path = Path.cwd()
+cwd: Path = Path.cwd().absolute()
 
 
 def dbg(exp: _ExpType) -> _ExpType:
@@ -45,7 +46,10 @@ def dbg(exp: _ExpType) -> _ExpType:
 			if end == -1:
 				end = len(line)
 
-			fname: str = Path(frame.filename).relative_to(cwd).as_posix()
+			file: Path = Path(frame.filename).absolute()
+			common = Path(os.path.commonpath([file, cwd]))
+			fname: str = file.relative_to(common).as_posix()
+
 			print(
 				f"[{fname}:{frame.lineno}] {line[start:end]} = {exp!r}",
 				file=sys.stderr,
