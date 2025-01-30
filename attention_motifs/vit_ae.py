@@ -12,8 +12,6 @@ from muutils.json_serialize import (
 	serializable_field,
 )
 from zanj.torchutil import ConfiguredModel, set_config_class
-from trnbl import TrainingManager
-from trnbl.loggers.local import LocalLogger
 
 
 @serializable_dataclass

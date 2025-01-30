@@ -48,8 +48,6 @@ def evaluation_step(model: AttnAE) -> dict[str, float]:
 """
 
 
-
-
 def train(
 	model: VitAE,
 	train_loader: torch.utils.data.DataLoader,
