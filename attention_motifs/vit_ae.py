@@ -66,6 +66,7 @@ class VitAEConfig(SerializableDataclass):
 	d_latent: int
 	d_model: int = serializable_field(default=64)
 	patch_size: int = serializable_field(default=4)
+	max_patches: int = serializable_field(default=64)
 
 	# transformer block hparams
 	num_heads: int = serializable_field(default=8)
@@ -141,8 +142,8 @@ class PatchEmbed(nn.Module):
 		self,
 		d_model: int,
 		patch_size: int,
+		max_patches: int,
 		in_channels: int = 1,
-		max_patches: int = 32,
 	) -> None:
 		super().__init__()
 		self.d_model: int = d_model
@@ -191,7 +192,8 @@ class PatchEmbed(nn.Module):
 		# 4) Reshape for broadcast-add to x_proj
 		# pos2d_perm: (d_model, ax_patches, ax_patches)
 		# then unsqueeze -> (1, d_model, ax_patches, ax_patches)
-		pos2d_perm = pos2d.permute(2, 0, 1).unsqueeze(0)
+		# pos2d_perm = pos2d.permute(2, 0, 1).unsqueeze(0)
+		pos2d_perm: Float[Tensor, "1 d_model ax_patches ax_patches"] = pos2d.permute(2, 0, 1).unsqueeze(0)
 
 		# 5) Add to the convolution outputs
 		x_proj = x_proj + pos2d_perm  # broadcast over batch dim
@@ -327,17 +329,14 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 		# Map latent -> d_model
 		self.from_latent: nn.Linear = nn.Linear(config.d_latent, config.d_model)
 
-		# Separate row/col embeddings for decoding
-		self.max_patches: int = 256
-		half_dim: int = config.d_model // 2
-		self.row_embed_dec: nn.Parameter = nn.Parameter(
-			torch.zeros(self.max_patches, half_dim)
-		)
-		self.col_embed_dec: nn.Parameter = nn.Parameter(
-			torch.zeros(self.max_patches, half_dim)
-		)
-		nn.init.normal_(self.row_embed_dec, std=0.02)
-		nn.init.normal_(self.col_embed_dec, std=0.02)
+		# positional embeddings for x and y
+		self.pos_embeds: nn.ModuleList = [
+			nn.Embedding(
+				num_embeddings=config.max_patches,
+				embedding_dim=config.d_model,
+			)
+			for _ in range(2)
+		]
 
 		# Decoder transformer blocks
 		self.blocks: nn.Module = nn.Sequential(*[
@@ -357,42 +356,50 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 
 	def forward(
 		self,
-		z: Float[Tensor, "batch d_latent"],
+		latent: Float[Tensor, "batch d_latent"],
 		n_ctx: int,
 	) -> Float[Tensor, "batch n_ctx n_ctx"]:
-		batch_size: int = z.shape[0]
+		batch_size: int = latent.shape[0]
+		ax_patches: int = n_ctx // self.config.patch_size
 
-		# (1) Map latent -> d_model
-		latent_embed: Float[Tensor, "batch d_model"] = self.from_latent(z)
+		# Map latent -> d_model
+		latent_embed: Float[Tensor, "batch d_model"] = self.from_latent(latent)
 
-		# (2) Compute how many patches along each dimension
-		grid_size: int = n_ctx // self.config.patch_size
-		num_patches: int = grid_size * grid_size
+		# Build separate positional embeddings for x and y, shape = (2, ax_patches, d_model)
+		positions: Int[Tensor, "ax_patches"] = torch.arange(ax_patches, device=latent.device)
+		pos_embeds: Float[Tensor, "2 ax_patches d_model"] = torch.stack([
+			p(positions) for p in self.pos_embeds
+		])
 
-		# (3) Expand (B, num_patches, d_model)
-		latent_embed = latent_embed.unsqueeze(1).expand(batch_size, num_patches, -1)
+		# "Outer add" to get a 2D embedding grid for each (row, col)
+		# pos2d will have shape (ax_patches, ax_patches, d_model)
+		pos2d: Float[Tensor, "ax_patches ax_patches d_model"] = (
+			pos_embeds[0].unsqueeze(1) + pos_embeds[1].unsqueeze(0)
+		)
 
-		# (4) Build decoder positional embeddings
-		row_coords: torch.Tensor = torch.arange(grid_size, device=z.device)
-		col_coords: torch.Tensor = torch.arange(grid_size, device=z.device)
-		row_coords = row_coords.unsqueeze(1).expand(grid_size, grid_size).reshape(-1)
-		col_coords = col_coords.unsqueeze(0).expand(grid_size, grid_size).reshape(-1)
+		# Reshape for broadcast-add to x_proj
+		# pos2d_perm: (d_model, ax_patches, ax_patches)
+		# then unsqueeze -> (1, d_model, ax_patches, ax_patches)
+		# pos2d_perm = pos2d.permute(2, 0, 1).unsqueeze(0)
+		pos2d_perm: Float[Tensor, "1 d_model ax_patches ax_patches"] = pos2d.permute(2, 0, 1).unsqueeze(0)
 
-		pos_r: Float[Tensor, "num_patches half_dim"] = self.row_embed_dec[row_coords]
-		pos_c: Float[Tensor, "num_patches half_dim"] = self.col_embed_dec[col_coords]
-		pos: Float[Tensor, "num_patches d_model"] = torch.cat([pos_r, pos_c], dim=-1)
-		pos = pos.unsqueeze(0).expand(batch_size, -1, -1)
+		# patches_grid[i,j] = latent_embed + pos_embeds[0][i] + pos_embeds[1][j]
+		patches_grid: Float[Tensor, "batch d_model ax_patches ax_patches"] = (
+			latent_embed.unsqueeze(-1).unsqueeze(-1) + pos2d_perm
+		)
+		patches_seq: Float[Tensor, "batch n_patches d_model"] = patches_grid.flatten(1)
 
-		latent_embed = latent_embed + pos
 
-		# (5) Pass through decoder blocks
-		latent_embed = self.blocks(latent_embed)
+		# Pass through decoder blocks
+		patches_seq = self.blocks(patches_seq)
 
 		# (6) Final norm
-		latent_embed = self.norm(latent_embed)
+		patches_seq = self.norm(patches_seq)
 
 		# (7) Project to patch pixels => (B, num_patches, patch_dim)
 		patches: Float[Tensor, "batch num_patches patch_dim"] = self.head(latent_embed)
+		num_patches: int = patches.shape[1]
+		assert num_patches == ax_patches * ax_patches
 
 		# (8) Unpatchify:
 		# => (B, num_patches, 1, patch_size, patch_size)
@@ -425,12 +432,10 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 			n_ctx,
 		)
 
-		# Optionally apply your custom transform
+		# make lower-triangular and row-stochastic
 		x_recon_4d = convert_tril_rowstoch(x_recon_4d)
 
-		# => (B, n_ctx, n_ctx)
-		x_recon: Float[Tensor, "batch n_ctx n_ctx"] = x_recon_4d.squeeze(1)
-		return x_recon
+		return x_recon_4d
 
 
 @set_config_class(VitAEConfig)
