@@ -130,9 +130,11 @@ class AttentionPatternMetadataArray(SerializableDataclass):
 					idx_layer=layer,
 					idx_head=head,
 					n_ctx=n_ctx,
-					prompt_hash=self.prompt_hash[idx],
+					prompt_hash=prompt_hash,
 				)
-				for model_name_idx, layer, head, n_ctx in self.data[idx]
+				for (model_name_idx, layer, head, n_ctx), prompt_hash in zip(
+					self.data[idx], self.prompt_hash[idx]
+				)
 			]
 		elif isinstance(idx, int):
 			model_name_idx, layer, head, n_ctx = self.data[idx]
