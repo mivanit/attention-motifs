@@ -6,6 +6,7 @@ from attention_motifs.dataset.dataset import (
 	CollectedAttentionPatternDataloader,
 )
 
+
 if __name__ == "__main__":
 	import argparse
 
@@ -18,7 +19,7 @@ if __name__ == "__main__":
 	d = CollectedAttentionPatternDataloader.generate(
 		config=APGenerationConfig(
 			prompts_config=PromptDatasetConfig.from_source_path(
-				"data/pile_50.jsonl",
+				"data/pile_5_val.jsonl",
 				char_len_min=64,
 				char_len_max=256,
 			),
@@ -34,7 +35,7 @@ if __name__ == "__main__":
 		model_device=device,
 	)
 
-	d.save("data/activations/medium", verbose=True)
+	d.save("data/activations/small_val", verbose=True)
 
 	print("=" * 50)
 	print(d.summary())

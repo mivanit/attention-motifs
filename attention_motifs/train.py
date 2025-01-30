@@ -1,3 +1,4 @@
+import functools
 import json
 from pathlib import Path
 from typing import TypeVar
@@ -16,6 +17,7 @@ from muutils.json_serialize import (
 from muutils.misc import shorten_numerical_to_str
 from zanj.torchutil import ConfiguredModel
 from trnbl.loggers.base import TrainingLoggerBase
+
 try:
 	from trnbl.loggers.wandb import WandbLogger
 except ImportError as e:
@@ -37,6 +39,7 @@ def get_dataset(
 	activations_path: Path,
 	batch_size: int,
 	n_batches: int,
+	shuffle: bool = True,
 	show: bool = True,
 ) -> tuple[DataloaderMock, dict, torch.Tensor, list]:
 	"returns dataloader, dataset info, example patterns, example metadata"
@@ -52,7 +55,7 @@ def get_dataset(
 	# turn dataset into dataloader
 	train_loader: DataloaderMock = train_dataset.dataloader(
 		batch_size=batch_size,
-		shuffle=True,
+		shuffle=shuffle,
 		max_batches=n_batches,
 	)
 
@@ -63,7 +66,7 @@ def get_dataset(
 
 	# show example pattern
 	x_mat, x_meta = next(
-		iter(train_dataset.dataloader(10, shuffle=True, max_batches=1))
+		iter(train_dataset.dataloader(10, shuffle=shuffle, max_batches=1))
 	)
 	x_mat.shape
 	print(x_meta[0])
@@ -117,48 +120,47 @@ def set_up_model(
 
 def eval_plots(
 	model: ConfiguredModel[T_Config],
-	patterns: torch.Tensor,
-	metadata: list[AttentionPatternMetadata],
+	dataloader: DataloaderMock,
 	device: torch.device,
 	logger: TrainingLoggerBase,
 	show: bool = True,
 ) -> None:
 	model.eval()
+	with torch.no_grad():
+		for batch_idx, (patterns, metadata) in enumerate(dataloader):
+			
+			x_recon, x_latent = model(patterns.to(device).to(torch.float32).unsqueeze(1))
 
-	eval_batchsize: int = len(metadata)
+			x_recon_mean = x_recon.mean(dim=0)[0].detach().cpu().numpy()
+			
+			for i in range(len(metadata)):
+				x_recon_np = x_recon[i, 0].detach().cpu().numpy()
+				fig, axs = plt.subplots(1, 4, figsize=(12, 4))
+				axs[0].matshow(patterns[i])
+				axs[0].axis("off")
+				axs[1].matshow(x_recon_np)
+				axs[1].axis("off")
+				axs[2].matshow(x_recon_np - patterns[i].numpy(), cmap="RdBu", vmin=-1, vmax=1)
+				axs[2].axis("off")
+				axs[3].matshow(x_recon_np - x_recon_mean, cmap="RdBu", vmin=-1, vmax=1)
+				axs[3].axis("off")
+				fig.suptitle(metadata[i])
 
-	for i in range(eval_batchsize):
-		print(metadata[i])
-		x_recon, x_latent = model(patterns.to(device).to(torch.float32).unsqueeze(1))
-		print(f"{patterns.shape = }")
-		print(f"{x_latent.shape = }")
-		print(f"{x_recon.shape = }")
+				try:
+					if (WandbLogger is not None) and isinstance(logger, WandbLogger):
+						logger._run.log({f"eval_pattern/batch_{batch_idx}/pattern_{i}": fig})
+				except Exception as e:
+					warnings.warn(f"failed to log figure to wandb {i}: {e}")
 
-		x_recon_np = x_recon[i, 0].detach().cpu().numpy()
-
-		fig, axs = plt.subplots(1, 3, figsize=(12, 4))
-		axs[0].matshow(patterns[i])
-		axs[0].axis("off")
-		axs[1].matshow(x_recon_np)
-		axs[1].axis("off")
-		axs[2].matshow(x_recon_np - patterns[i].numpy(), cmap="RdBu", vmin=-1, vmax=1)
-		axs[2].axis("off")
-		fig.suptitle(f"Pattern {i}\n{metadata[i]}")
-
-
-		try:
-			if (WandbLogger is not None) and isinstance(logger, WandbLogger):
-				logger._run.log({f"eval_pattern/{i}": fig})
-		except Exception as e:
-			warnings.warn(f"failed to log figure to wandb {i}: {e}")
-
-			try:
-				if show:
-					plt.show()
-				else:
-					plt.savefig(f"eval_pattern_{i}.png")
-			except Exception as e:
-				warnings.warn(f"failed to save or show pattern {i}: {e}")
+					try:
+						if show:
+							plt.show()
+						else:
+							plt.savefig(f"eval_pattern_{i}.png")
+					except Exception as e:
+						warnings.warn(f"failed to save or show pattern {i}: {e}")
+	
+	model.train()
 
 
 def train(
@@ -168,7 +170,7 @@ def train(
 	optimizer: torch.optim.Optimizer,
 	lr_scheduler: torch.optim.lr_scheduler._LRScheduler,
 	train_loader: DataloaderMock,
-	val_loader: DataloaderMock|None = None,
+	val_loader: DataloaderMock | None = None,
 	training_manager_kwargs: dict = dict(
 		checkpoint_interval="1/2 run",
 		model_save_path="{run_path}/checkpoints/model.checkpoint-{latest_checkpoint}.zanj",
@@ -177,16 +179,27 @@ def train(
 ) -> ConfiguredModel[T_Config]:
 	model_config: T_Config = model.config
 
-	e
+	evals = list()
+	
+	if val_loader is not None: 
+		evals.append((
+		"1/10 run",
+		functools.partial(
+			eval_plots,
+			model=model,
+			dataloader=val_loader,
+			device=device,
+			logger=logger,
+			show=False,
+		),
+	))
 
 	with TrainingManager(
 		model=model,
 		logger=logger,
 		save_model=ZANJ().save,
-		evals=[
-			"1/10 run", functools.partial(eval_plots, show=False),
-		]
-		**training_manager_kwargs,
+		evals=evals,
+		** training_manager_kwargs,
 	) as tr:
 		for epoch in tr.epoch_loop(range(model_config.num_epochs), use_tqdm=False):
 			patterns: Float[torch.Tensor, "*batch n_ctx n_ctx"]
@@ -249,5 +262,3 @@ def train(
 				)
 
 	return model
-
-		
