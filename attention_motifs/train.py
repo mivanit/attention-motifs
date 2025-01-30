@@ -83,9 +83,9 @@ def get_dataset(
 		batch_size=batch_size,
 		n_patterns=dataset.n_total_samples,
 		n_batches=(
-			len(loader)
-			if return_loader
-			else min(float(n_batches), dataset.n_total_samples / batch_size)
+			min(float(n_batches), dataset.n_total_samples / batch_size)
+			if not return_loader
+			else len(loader)
 		),
 		activations_path=activations_path.as_posix(),
 		summary_short=dataset.summary_short(),
