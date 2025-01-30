@@ -3,7 +3,7 @@ from typing import Tuple, Dict, Any, Type
 import torch
 import torch.nn as nn
 from torch import Tensor
-from jaxtyping import Float
+from jaxtyping import Float, Int
 
 # custom utils
 from muutils.json_serialize import (
@@ -92,16 +92,6 @@ class VitAEConfig(SerializableDataclass):
 		)
 	)
 
-	def __post_init__(self) -> None:
-		"""Checks and validations after initialization."""
-		assert self.latent_dim > 0, "latent_dim must be positive"
-		assert self.patch_size > 0, "patch_size must be positive"
-		assert self.embed_dim > 0, "embed_dim must be positive"
-		assert self.num_heads > 0, "num_heads must be positive"
-		assert self.mlp_dim > 0, "mlp_dim must be positive"
-		assert self.encoder_depth > 0, "encoder_depth must be positive"
-		assert self.decoder_depth > 0, "decoder_depth must be positive"
-
 	def get_optim_and_lrs(
 		self,
 		model: "VitAE",
@@ -132,101 +122,96 @@ class PatchEmbed(nn.Module):
 		self,
 		embed_dim: int,
 		patch_size: int,
+		in_channels: int = 1,
+		max_patches: int = 32,
 	) -> None:
-		"""summary
-
-		extended summary
-
-		# Parameters:
-		 - `embed_dim : int`
-		    dimension of the projected patch embeddings
-		 - `patch_size : int`
-		    patch size for each square
-		"""
 		super().__init__()
 		self.embed_dim: int = embed_dim
 		self.patch_size: int = patch_size
+		self.in_channels: int = in_channels
 
-		# For single-channel images, in_channels=1
-		in_channels: int = 1
 		self.proj: nn.Conv2d = nn.Conv2d(
-			in_channels=in_channels,
+			in_channels=self.in_channels,
 			out_channels=self.embed_dim,
 			kernel_size=self.patch_size,
 			stride=self.patch_size,
 		)
 
+		# positional embeddings for x and y
+		self.pos_embeds: nn.ModuleList = [
+			nn.Embedding(
+				num_embeddings=max_patches,
+				embedding_dim=embed_dim,
+			)
+			for _ in range(2)
+		]
+
 	def forward(
 		self,
-		x: Float[Tensor, "batch n_ctx n_ctx"],
+		x: Float[Tensor, "batch channels=1 n_ctx n_ctx"],
 	) -> Float[Tensor, "batch num_patches embed_dim"]:
-		"""summary
+		
+		# convolutional projection
+		x_proj: Float[Tensor, "batch embed_dim ax_patches ax_patches"] = self.proj(x)
 
-		extended summary
+		ax_patches: int = x_proj.shape[2]
+		assert tuple(x_proj.shape) == (x.shape[0], self.embed_dim, ax_patches, ax_patches)
 
-		# Parameters:
-		 - `x : Float[Tensor, "batch n_ctx n_ctx"]`
-		    input single-channel images of size (n_ctx x n_ctx)
+		# create positional embeddings
+		positions: Int[Tensor, "ax_patches"] = torch.arange(ax_patches, device=x.device)
+		pos_embeds: Float[Tensor, "xy=2 ax_patches embed_dim"] = torch.stack([
+			p(positions) 
+			for p in self.pos_embeds
+		])
 
-		# Returns:
-		 - `Float[Tensor, "batch num_patches embed_dim"]`
-		    patch embeddings
-		"""
-		# b_size: int = x.shape[0]
-		# n_ctx: int = x.shape[1]
+		# add positional embeddings
+		
 
-		# Reshape to (B, 1, n_ctx, n_ctx)
-		x_4d: Float[Tensor, "batch 1 n_ctx n_ctx"] = x.unsqueeze(1)
 
-		# (B, embed_dim, n_ctx//patch_size, n_ctx//patch_size)
-		x_proj: Float[Tensor, "batch embed_dim patchH patchW"] = self.proj(x_4d)
+		# flatten to patches
+		x_seq: Float[Tensor, "batch embed_dim num_patches"] = x_proj.flatten(2)
 
-		# Flatten patch dims => (B, embed_dim, num_patches)
-		x_proj = x_proj.flatten(2)
+		# transpose so that embed_dim is last
+		x_out: Float[Tensor, "batch num_patches embed_dim"] = x_seq.transpose(1, 2)
 
-		# Transpose => (B, num_patches, embed_dim)
-		x_proj = x_proj.transpose(1, 2)
-		return x_proj
+		return x_out
 
 
 class TransformerEncoderBlock(nn.Module):
-	"""A Transformer Encoder Block (pre-LayerNorm)."""
+	"""A Transformer Encoder Block (pre-LayerNorm)
+	
+	# Parameters:
+	 - `embed_dim : int`
+		dimension of token embeddings
+	 - `num_heads : int`
+		number of attention heads
+	 - `mlp_dim : int`
+		dimension of hidden layer in the MLP
+	 - `drop : float`
+		dropout probability
+		(defaults to 0.0)
+	 - `attn_drop : float`
+		dropout probability for attention
+		(defaults to 0.0)
+	"""
 
 	def __init__(
 		self,
 		embed_dim: int,
 		num_heads: int,
 		mlp_dim: int,
-		drop: float = 0.0,
-		attn_drop: float = 0.0,
+		# drop: float = 0.0,
+		# attn_drop: float = 0.0,
 	) -> None:
-		"""summary
-
-		extended summary
-
-		# Parameters:
-		 - `embed_dim : int`
-		    dimension of token embeddings
-		 - `num_heads : int`
-		    number of attention heads
-		 - `mlp_dim : int`
-		    dimension of hidden layer in the MLP
-		 - `drop : float`
-		    dropout probability
-		    (defaults to 0.0)
-		 - `attn_drop : float`
-		    dropout probability for attention
-		    (defaults to 0.0)
-		"""
 		super().__init__()
 		self.norm1: nn.LayerNorm = nn.LayerNorm(embed_dim)
 		self.attn: nn.MultiheadAttention = nn.MultiheadAttention(
 			embed_dim=embed_dim,
 			num_heads=num_heads,
-			dropout=attn_drop,
 			batch_first=True,
+			# dropout=attn_drop,
 		)
-		self.drop_attn: nn.Dropout = nn.Dropout(drop)
+		# self.drop_attn: nn.Dropout = nn.Dropout(drop)
 
 		self.norm2: nn.LayerNorm = nn.LayerNorm(embed_dim)
 		self.mlp: nn.Sequential = nn.Sequential(
@@ -234,33 +219,21 @@ class TransformerEncoderBlock(nn.Module):
 			nn.GELU(),
 			nn.Linear(mlp_dim, embed_dim),
 		)
-		self.drop_mlp: nn.Dropout = nn.Dropout(drop)
+		# self.drop_mlp: nn.Dropout = nn.Dropout(drop)
 
 	def forward(
 		self,
 		x: Float[Tensor, "batch seq_len embed_dim"],
 	) -> Float[Tensor, "batch seq_len embed_dim"]:
-		"""summary
-
-		extended summary
-
-		# Parameters:
-		 - `x : Float[Tensor, "batch seq_len embed_dim"]`
-		    input token embeddings
-
-		# Returns:
-		 - `Float[Tensor, "batch seq_len embed_dim"]`
-		    output token embeddings
-		"""
 		residual: Float[Tensor, "batch seq_len embed_dim"] = x
 		h: Float[Tensor, "batch seq_len embed_dim"] = self.norm1(x)
 		attn_out, _ = self.attn(h, h, h)
-		x = residual + self.drop_attn(attn_out)
+		x = residual + attn_out
 
 		residual = x
 		h = self.norm2(x)
 		h = self.mlp(h)
-		x = residual + self.drop_mlp(h)
+		x = residual + h
 		return x
 
 
