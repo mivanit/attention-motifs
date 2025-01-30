@@ -1,5 +1,3 @@
-
-
 import json
 from pathlib import Path
 from typing import TypeVar
@@ -13,16 +11,17 @@ from jaxtyping import Int, Float
 # custom utils
 from muutils.json_serialize import (
 	SerializableDataclass,
-	serializable_dataclass,
-	serializable_field,
 )
 from muutils.misc import shorten_numerical_to_str
-from zanj.torchutil import ConfiguredModel, set_config_class
+from zanj.torchutil import ConfiguredModel
 from trnbl.loggers.base import TrainingLoggerBase
 from trnbl import TrainingManager
 from zanj import ZANJ
 
-from attention_motifs.dataset.dataset import DataloaderMock, CollectedAttentionPatternDataloader
+from attention_motifs.dataset.dataset import (
+	DataloaderMock,
+	CollectedAttentionPatternDataloader,
+)
 from attention_motifs.dataset.util import AttentionPatternMetadata
 from attention_motifs.train_util import contrastive_loss
 
@@ -37,7 +36,9 @@ def get_dataset(
 	activations_path = Path(activations_path)
 
 	# load dataset and print summary
-	train_dataset: CollectedAttentionPatternDataloader = CollectedAttentionPatternDataloader.read(activations_path)
+	train_dataset: CollectedAttentionPatternDataloader = (
+		CollectedAttentionPatternDataloader.read(activations_path)
+	)
 	summary_short_str: str = json.dumps(train_dataset.summary_short(), indent=2)
 	print(summary_short_str)
 
@@ -49,7 +50,9 @@ def get_dataset(
 	)
 
 	# print info
-	print(f"Train loader: {len(train_loader)} batches, {len(train_loader.dataset)} samples")
+	print(
+		f"Train loader: {len(train_loader)} batches, {len(train_loader.dataset)} samples"
+	)
 
 	# show example pattern
 	x_mat, x_meta = next(
@@ -63,7 +66,6 @@ def get_dataset(
 	else:
 		plt.savefig("example_pattern.png")
 
-	
 	dataset_info: dict = dict(
 		summary_short_str=summary_short_str,
 		n_patterns=len(train_loader.dataset),
@@ -79,6 +81,7 @@ def get_dataset(
 
 
 T_Config = TypeVar("T_Config", bound=SerializableDataclass)
+
 
 def set_up_model(
 	config: T_Config,
@@ -118,7 +121,6 @@ def train(
 		model_save_path_special="{run_path}/model.{alias}.zanj",
 	),
 ) -> ConfiguredModel[T_Config]:
-	
 	model_config: T_Config = model.config
 
 	with TrainingManager(
