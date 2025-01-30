@@ -63,6 +63,7 @@ VAL_LOADER, VAL_DATASET_INFO = get_dataset(
 	n_batches=N_VAL_BATCHES,
 	shuffle=False,
 	show=False,
+	return_loader=True,
 )
 
 

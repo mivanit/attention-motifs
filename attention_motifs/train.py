@@ -58,7 +58,7 @@ def get_dataset(
 	print(summary_short_str)
 
 	# turn dataset into dataloader
-	if not return_loader:
+	if return_loader:
 		loader: DataloaderMock = dataset.dataloader(
 			batch_size=batch_size,
 			shuffle=shuffle,
