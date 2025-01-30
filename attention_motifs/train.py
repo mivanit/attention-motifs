@@ -5,6 +5,7 @@ from typing import TypeVar
 import warnings
 
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn.functional as F
 from jaxtyping import Int, Float
@@ -126,29 +127,49 @@ def eval_plots(
 	show: bool = True,
 ) -> None:
 	model.eval()
+
+	reconstruction_diffs: list[float] = list()
+	mean_diffs: list[float] = list()
+	mean_std: list[float] = list()
+	latent_std: list[float] = list()
+
 	with torch.no_grad():
 		for batch_idx, (patterns, metadata) in enumerate(dataloader):
 			
 			x_recon, x_latent = model(patterns.to(device).to(torch.float32).unsqueeze(1))
+
+			latent_std.append(x_latent.std(dim=0).mean().item())
 
 			x_recon_mean = x_recon.mean(dim=0)[0].detach().cpu().numpy()
 			
 			for i in range(len(metadata)):
 				x_recon_np = x_recon[i, 0].detach().cpu().numpy()
 				fig, axs = plt.subplots(1, 4, figsize=(12, 4))
+
 				axs[0].matshow(patterns[i])
 				axs[0].axis("off")
+
 				axs[1].matshow(x_recon_np)
 				axs[1].axis("off")
-				axs[2].matshow(x_recon_np - patterns[i].numpy(), cmap="RdBu", vmin=-1, vmax=1)
+
+				recon_diff = x_recon_np - patterns[i].numpy()
+				axs[2].matshow(recon_diff, cmap="RdBu", vmin=-1, vmax=1)
+				reconstruction_diffs.append(np.abs(recon_diff).mean())
+
 				axs[2].axis("off")
-				axs[3].matshow(x_recon_np - x_recon_mean, cmap="RdBu", vmin=-1, vmax=1)
+				mean_diff: np.ndarray = x_recon_np - x_recon_mean
+				axs[3].matshow(mean_diff, cmap="RdBu", vmin=-1, vmax=1)
+				mean_diffs.append(np.abs(mean_diff).mean())
+				mean_std.append(mean_diff.std())
 				axs[3].axis("off")
+
+
+
 				fig.suptitle(metadata[i])
 
 				try:
 					if (WandbLogger is not None) and isinstance(logger, WandbLogger):
-						logger._run.log({f"eval_pattern/batch_{batch_idx}/pattern_{i}": fig})
+						logger._run.log({f"eval/batch_{batch_idx}/pattern_{i}": fig})
 				except Exception as e:
 					warnings.warn(f"failed to log figure to wandb {i}: {e}")
 
@@ -159,8 +180,14 @@ def eval_plots(
 							plt.savefig(f"eval_pattern_{i}.png")
 					except Exception as e:
 						warnings.warn(f"failed to save or show pattern {i}: {e}")
-	
+
 	model.train()
+
+	return {
+		"val/reconstruction": sum(reconstruction_diffs) / len(reconstruction_diffs),
+		"val/mean_diff": sum(mean_diffs) / len(mean_diffs),
+		"val/latent_std": sum(latent_std) / len(latent_std),
+	}
 
 
 def train(
@@ -186,7 +213,6 @@ def train(
 		"1/10 run",
 		functools.partial(
 			eval_plots,
-			model=model,
 			dataloader=val_loader,
 			device=device,
 			logger=logger,
