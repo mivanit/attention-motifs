@@ -1,8 +1,8 @@
 # Stats
 - 24 files
-- 4858 (4.9K) lines
-- 138978 (139K) chars
-- 55502 (56K) `gpt2` tokens
+- 4877 (4.9K) lines
+- 139130 (139K) chars
+- 55575 (56K) `gpt2` tokens
 
 # File Tree
 
@@ -12,8 +12,8 @@ attention-motifs
 │   ├── dataset                    
 │   │   ├── __init__.py            [    0L         0C         0T]
 │   │   ├── dataset.py             [  538L    15,249C     6,166T]
-│   │   ├── prompts.py             [  296L     8,349C     3,322T]
-│   │   └── util.py                [  410L    11,179C     4,457T]
+│   │   ├── prompts.py             [  296L     8,377C     3,336T]
+│   │   └── util.py                [  410L    11,207C     4,471T]
 │   ├── __init__.py                [    0L         0C         0T]
 │   ├── ae.py                      [  508L    15,426C     6,084T]
 │   ├── consts.py                  [  152L     4,188C     1,644T]
@@ -31,10 +31,10 @@ attention-motifs
 │   └── gen_data.py                [   31L       639C       295T]
 ├── tests                          
 │   ├── dataset                    
-│   │   ├── test_integration.py    [  190L     5,644C     2,098T]
+│   │   ├── test_integration.py    [  197L     5,831C     2,209T]
 │   │   ├── test_prompts.py        [  347L    11,007C     4,003T]
-│   │   └── test_unit.py           [  271L     7,583C     2,973T]
-│   ├── test_ae.py                 [  101L     4,088C     1,461T]
+│   │   └── test_unit.py           [  280L     7,754C     3,069T]
+│   ├── test_ae.py                 [  104L     3,826C     1,298T]
 │   └── test_consts.py             [   85L     2,428C     1,001T]
 ├── README.md                      [    2L        23C        10T]
 ├── makefile                       [  719L    24,356C     8,746T]
@@ -622,7 +622,7 @@ class HashMismatchError(ValueError):
 	pass
 
 
-@serializable_dataclass
+@serializable_dataclass(kw_only=True)
 class Prompt(SerializableDataclass):
 	"""A prompt is a dictionary with a text key and an optional hash key.
 
@@ -702,7 +702,7 @@ DEFAULT_CHAR_LEN_MIN: int | None = 64
 DEFAULT_CHAR_LEN_MAX: int | None = 1024
 
 
-@serializable_dataclass
+@serializable_dataclass(kw_only=True)
 class PromptDatasetConfig(SerializableDataclass):
 	"""holds the config for a prompt dataset"""
 
@@ -924,7 +924,7 @@ from attention_motifs.dataset.prompts import PromptDataset
 AttentionPatternMetadataTuple = tuple[str, int, int, int, PromptHashInt]
 
 
-@serializable_dataclass
+@serializable_dataclass(kw_only=True)
 class AttentionPatternMetadata(SerializableDataclass):
 	model_name: str
 	idx_layer: int
@@ -1079,7 +1079,7 @@ class AttentionPatternMetadataArray(SerializableDataclass):
 		)
 
 
-@serializable_dataclass
+@serializable_dataclass(kw_only=True)
 class AttentionPatternDataset(SerializableDataclass):
 	n_ctx: int
 	n_patterns: int
@@ -3524,8 +3524,10 @@ def test_integration_generate_save_read(model_name: str):
 
 	config = APGenerationConfig(
 		prompts_config=PromptDatasetConfig.from_source_path(
-			source_path=SAMPLE_PROMPTS_FILE
+			source_path=SAMPLE_PROMPTS_FILE,
+			char_len_min=1,
 		),
+		token_len_min=1,
 		model_names=[model_name],
 		prompt_token_len_tolerance=2,
 	)
@@ -3538,7 +3540,7 @@ def test_integration_generate_save_read(model_name: str):
 	# so we have at least 2 prompts used
 
 	# step 1: test iteration
-	all_batches = list(dl)
+	all_batches = list(dl.dataloader(batch_size=1, shuffle=False))
 	# we can't assert an exact # because it depends on the model's # of layers * heads
 	# but we expect something > 0
 	assert len(all_batches) > 0
@@ -3554,7 +3556,7 @@ def test_integration_generate_save_read(model_name: str):
 	assert len(dl2.prompts) == len(dl.prompts)
 
 	# quick iteration check
-	all_batches2 = list(dl2)
+	all_batches2 = list(dl2.dataloader(batch_size=1, shuffle=False))
 	assert len(all_batches2) == len(all_batches)
 
 	# check the patterns shape is the same
@@ -3578,8 +3580,10 @@ def test_integration_multiple_models(model_names: list[str]):
 	"""Check the behavior with zero or multiple model names."""
 	config = APGenerationConfig(
 		prompts_config=PromptDatasetConfig.from_source_path(
-			source_path=SAMPLE_PROMPTS_FILE
+			source_path=SAMPLE_PROMPTS_FILE,
+			char_len_min=1,
 		),
+		token_len_min=1,
 		model_names=model_names,
 		prompt_token_len_tolerance=2,
 	)
@@ -3598,16 +3602,17 @@ def test_integration_missing_metadata():
 	"""Check read() if metadata.zanj is missing => should raise FileNotFoundError."""
 	config = APGenerationConfig(
 		prompts_config=PromptDatasetConfig.from_source_path(
-			source_path=SAMPLE_PROMPTS_FILE
+			source_path=SAMPLE_PROMPTS_FILE,
+			char_len_min=1,
 		),
+		token_len_min=1,
 		model_names=["gpt2"],
 		prompt_token_len_tolerance=2,
 	)
 	dl = CollectedAttentionPatternDataloader.generate(config)
 
 	tmp_path: Path = TEMP_DIR / "test_integration_missing_metadata"
-	with pytest.warns(UserWarning):
-		dl.save(tmp_path)
+	dl.save(tmp_path)
 
 	# remove the metadata file
 	(tmp_path / "metadata.zanj").unlink()
@@ -3620,16 +3625,17 @@ def test_integration_missing_dataset_files():
 	"""Check read() if one dataset file is missing => should raise FileNotFoundError."""
 	config = APGenerationConfig(
 		prompts_config=PromptDatasetConfig.from_source_path(
-			source_path=SAMPLE_PROMPTS_FILE
+			source_path=SAMPLE_PROMPTS_FILE,
+			char_len_min=1,
 		),
+		token_len_min=1,
 		model_names=["gpt2"],
 		prompt_token_len_tolerance=2,
 	)
 	dl = CollectedAttentionPatternDataloader.generate(config)
 
 	tmp_path = TEMP_DIR / "test_integration_missing_dataset_files"
-	with pytest.warns(UserWarning):
-		dl.save(tmp_path)
+	dl.save(tmp_path)
 
 	# remove one dataset file
 	dataset_files: list[Path] = list(tmp_path.glob("dataset_*.zanj"))
@@ -3646,6 +3652,7 @@ def test_integration_dummy_training_loop():
 		prompts_config=PromptDatasetConfig.from_source_path(
 			source_path=SAMPLE_PROMPTS_FILE
 		),
+		token_len_min=1,
 		model_names=["gpt2"],
 		prompt_token_len_tolerance=2,
 	)
@@ -4082,7 +4089,10 @@ def test_dataloader_properties():
 
 	ds_patterns = torch.randn((4, 3, 3))
 	ds_meta = [
-		AttentionPatternMetadata("modelA", 0, i, f"hash{i}", 3) for i in range(4)
+		AttentionPatternMetadata(
+			model_name="modelA", idx_layer=0, idx_head=i, prompt_hash=f"hash{i}", n_ctx=3
+		)
+		for i in range(4)
 	]
 	ds = AttentionPatternDataset(
 		n_ctx=3,
@@ -4220,7 +4230,10 @@ def test_dataloader_iteration():
 	"""Basic iteration test. Combine multiple datasets of different sizes."""
 	ds1_patterns = torch.rand((2, 4, 4))
 	ds1_meta = [
-		AttentionPatternMetadata("modelA", 0, i, f"hash{i}", 4) for i in range(2)
+		AttentionPatternMetadata(
+			model_name="modelA", idx_layer=0, idx_head=i, prompt_hash=f"hash{i}", n_ctx=4
+		)
+		for i in range(2)
 	]
 	ds1 = AttentionPatternDataset(
 		n_ctx=4, n_patterns=2, patterns=ds1_patterns, metadata=ds1_meta
@@ -4228,7 +4241,10 @@ def test_dataloader_iteration():
 
 	ds2_patterns = torch.rand((3, 5, 5))
 	ds2_meta = [
-		AttentionPatternMetadata("modelA", 1, i, f"hash{i + 2}", 5) for i in range(3)
+		AttentionPatternMetadata(
+			model_name="modelA", idx_layer=1, idx_head=i, prompt_hash=f"hash{i + 2}", n_ctx=5
+		)
+		for i in range(3)
 	]
 	ds2 = AttentionPatternDataset(
 		n_ctx=5, n_patterns=3, patterns=ds2_patterns, metadata=ds2_meta
@@ -4302,104 +4318,107 @@ def test_dataloader_empty_datasets():
 import pytest
 import torch
 from torch import Tensor
-import torch.nn.functional as F
 from jaxtyping import Float, Int
 
 from attention_motifs.ae import contrastive_loss  # replace with actual import path
 
-@pytest.mark.parametrize(
-    "batch_size,latent_dim,num_classes",
-    [
-        (4, 8, 2),   # small batch, small latent, few classes
-        (8, 16, 4),  # medium batch, typical latent size, more classes
-    ],
-)
-def test_contrastive_loss_random_data(batch_size: int, latent_dim: int, num_classes: int) -> None:
-    """
-    Tests whether the loss runs without error on random data
-    and returns a finite scalar.
-    """
-    h: Float[Tensor, "batch latent_dim"] = torch.randn(batch_size, latent_dim)
-    classes: Int[Tensor, " batch"] = torch.randint(0, num_classes, (batch_size,))
-    loss_val = contrastive_loss(h, classes, temperature=0.07)
 
-    assert isinstance(loss_val, Tensor), "Loss must be a torch.Tensor"
-    assert loss_val.dim() == 0, "Loss must be a scalar (0-dim tensor)"
-    assert torch.isfinite(loss_val), "Loss returned NaN or Inf"
+@pytest.mark.parametrize(
+	"batch_size,latent_dim,num_classes",
+	[
+		(4, 8, 2),  # small batch, small latent, few classes
+		(8, 16, 4),  # medium batch, typical latent size, more classes
+	],
+)
+def test_contrastive_loss_random_data(
+	batch_size: int, latent_dim: int, num_classes: int
+) -> None:
+	"""
+	Tests whether the loss runs without error on random data
+	and returns a finite scalar.
+	"""
+	h: Float[Tensor, "batch latent_dim"] = torch.randn(batch_size, latent_dim)
+	classes: Int[Tensor, " batch"] = torch.randint(0, num_classes, (batch_size,))
+	loss_val = contrastive_loss(h, classes, temperature=0.07)
+
+	assert isinstance(loss_val, Tensor), "Loss must be a torch.Tensor"
+	assert loss_val.dim() == 0, "Loss must be a scalar (0-dim tensor)"
+	assert torch.isfinite(loss_val), "Loss returned NaN or Inf"
 
 
 def test_contrastive_loss_same_class() -> None:
-    """
-    Checks behavior when all samples belong to the same class.
-    The loss should still be computable and typically yield a negative log-likelihood
-    that is finite.
-    """
-    batch_size: int = 4
-    latent_dim: int = 8
-    h: Float[Tensor, "batch latent_dim"] = torch.randn(batch_size, latent_dim)
-    # All samples in the same class
-    classes: Int[Tensor, " batch"] = torch.zeros(batch_size, dtype=torch.int32)
+	"""
+	Checks behavior when all samples belong to the same class.
+	The loss should still be computable and typically yield a negative log-likelihood
+	that is finite.
+	"""
+	batch_size: int = 4
+	latent_dim: int = 8
+	h: Float[Tensor, "batch latent_dim"] = torch.randn(batch_size, latent_dim)
+	# All samples in the same class
+	classes: Int[Tensor, " batch"] = torch.zeros(batch_size, dtype=torch.int32)
 
-    loss_val = contrastive_loss(h, classes, temperature=0.07)
-    assert torch.isfinite(loss_val), "Loss returned NaN or Inf when all samples share a class"
+	loss_val = contrastive_loss(h, classes, temperature=0.07)
+	assert torch.isfinite(loss_val), (
+		"Loss returned NaN or Inf when all samples share a class"
+	)
 
 
 def test_contrastive_loss_distinct_classes() -> None:
-    """
-    Checks behavior when each sample is in its own class (no positives).
-    By default, we warn or handle the case with zero contribution for each sample.
-    """
-    batch_size: int = 4
-    latent_dim: int = 8
-    h: Float[Tensor, "batch latent_dim"] = torch.randn(batch_size, latent_dim)
-    # Each sample in a unique class
-    classes: Int[Tensor, " batch"] = torch.arange(batch_size, dtype=torch.int32)
+	"""
+	Checks behavior when each sample is in its own class (no positives).
+	By default, we warn or handle the case with zero contribution for each sample.
+	"""
+	batch_size: int = 4
+	latent_dim: int = 8
+	h: Float[Tensor, "batch latent_dim"] = torch.randn(batch_size, latent_dim)
+	# Each sample in a unique class
+	classes: Int[Tensor, " batch"] = torch.arange(batch_size, dtype=torch.int32)
 
-    # We expect a warning about "No positive pairs found in batch"
-    with pytest.warns(UserWarning, match="No positive pairs found in batch"):
-        loss_val = contrastive_loss(h, classes, temperature=0.07)
-    # The function might return 0, or some finite value.
-    assert torch.isfinite(loss_val), "Loss returned NaN or Inf with all distinct classes"
+	# We expect a warning about "No positive pairs found in batch"
+	with pytest.warns(UserWarning, match="No positive pairs found in batch"):
+		loss_val = contrastive_loss(h, classes, temperature=0.07)
+	# The function might return 0, or some finite value.
+	assert torch.isfinite(loss_val), (
+		"Loss returned NaN or Inf with all distinct classes"
+	)
 
 
 def test_contrastive_loss_partial_positives() -> None:
-    """
-    Mixed scenario where some samples share classes and some do not.
-    Verifies that the loss is finite.
-    """
-    # For instance, classes = [0,0,1,2]
-    # => two positives in the first pair, and singletons otherwise
-    h: Float[Tensor, "batch latent_dim"] = torch.tensor([
-        [1.0,  0.0],
-        [0.99, 0.01],
-        [-1.0, 2.0],
-        [2.0, -3.0]
-    ])
-    classes: Int[Tensor, " batch"] = torch.tensor([0, 0, 1, 2])
+	"""
+	Mixed scenario where some samples share classes and some do not.
+	Verifies that the loss is finite.
+	"""
+	# For instance, classes = [0,0,1,2]
+	# => two positives in the first pair, and singletons otherwise
+	h: Float[Tensor, "batch latent_dim"] = torch.tensor(
+		[[1.0, 0.0], [0.99, 0.01], [-1.0, 2.0], [2.0, -3.0]]
+	)
+	classes: Int[Tensor, " batch"] = torch.tensor([0, 0, 1, 2])
 
-    loss_val = contrastive_loss(h, classes, temperature=0.07)
-    assert torch.isfinite(loss_val), "Loss returned NaN or Inf in a mixed scenario"
-    # Optionally check that the loss is > 0 or something else:
-    assert loss_val > 0, "Loss should be positive if there are meaningful negatives"
+	loss_val = contrastive_loss(h, classes, temperature=0.07)
+	assert torch.isfinite(loss_val), "Loss returned NaN or Inf in a mixed scenario"
+	# Optionally check that the loss is > 0 or something else:
+	assert loss_val > 0, "Loss should be positive if there are meaningful negatives"
 
 
 def test_contrastive_loss_invariance_to_scale() -> None:
-    """
-    Tests that scaling the input embeddings by a constant
-    does not change the final loss, since embeddings are normalized internally.
-    """
-    batch_size: int = 4
-    latent_dim: int = 8
-    h: Float[Tensor, "batch latent_dim"] = torch.randn(batch_size, latent_dim)
-    classes: Int[Tensor, " batch"] = torch.tensor([0, 0, 1, 1])
+	"""
+	Tests that scaling the input embeddings by a constant
+	does not change the final loss, since embeddings are normalized internally.
+	"""
+	batch_size: int = 4
+	latent_dim: int = 8
+	h: Float[Tensor, "batch latent_dim"] = torch.randn(batch_size, latent_dim)
+	classes: Int[Tensor, " batch"] = torch.tensor([0, 0, 1, 1])
 
-    loss_normal = contrastive_loss(h, classes, temperature=0.07)
-    loss_scaled = contrastive_loss(10.0 * h, classes, temperature=0.07)
+	loss_normal = contrastive_loss(h, classes, temperature=0.07)
+	loss_scaled = contrastive_loss(10.0 * h, classes, temperature=0.07)
 
-    # They should be very close because h is normalized before computing similarities
-    assert torch.allclose(loss_normal, loss_scaled, atol=1e-6), (
-        "Loss should be invariant to global scaling of embeddings."
-    )
+	# They should be very close because h is normalized before computing similarities
+	assert torch.allclose(loss_normal, loss_scaled, atol=1e-6), (
+		"Loss should be invariant to global scaling of embeddings."
+	)
 
 ``````{ end_of_file="tests/test_ae.py" }
 

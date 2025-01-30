@@ -32,7 +32,7 @@ from attention_motifs.dataset.prompts import PromptDataset
 AttentionPatternMetadataTuple = tuple[str, int, int, int, PromptHashInt]
 
 
-@serializable_dataclass
+@serializable_dataclass(kw_only=True)
 class AttentionPatternMetadata(SerializableDataclass):
 	model_name: str
 	idx_layer: int
@@ -187,7 +187,7 @@ class AttentionPatternMetadataArray(SerializableDataclass):
 		)
 
 
-@serializable_dataclass
+@serializable_dataclass(kw_only=True)
 class AttentionPatternDataset(SerializableDataclass):
 	n_ctx: int
 	n_patterns: int

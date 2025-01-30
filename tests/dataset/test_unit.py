@@ -56,7 +56,10 @@ def test_dataloader_properties():
 
 	ds_patterns = torch.randn((4, 3, 3))
 	ds_meta = [
-		AttentionPatternMetadata("modelA", 0, i, f"hash{i}", 3) for i in range(4)
+		AttentionPatternMetadata(
+			model_name="modelA", idx_layer=0, idx_head=i, prompt_hash=f"hash{i}", n_ctx=3
+		)
+		for i in range(4)
 	]
 	ds = AttentionPatternDataset(
 		n_ctx=3,
@@ -194,7 +197,10 @@ def test_dataloader_iteration():
 	"""Basic iteration test. Combine multiple datasets of different sizes."""
 	ds1_patterns = torch.rand((2, 4, 4))
 	ds1_meta = [
-		AttentionPatternMetadata("modelA", 0, i, f"hash{i}", 4) for i in range(2)
+		AttentionPatternMetadata(
+			model_name="modelA", idx_layer=0, idx_head=i, prompt_hash=f"hash{i}", n_ctx=4
+		)
+		for i in range(2)
 	]
 	ds1 = AttentionPatternDataset(
 		n_ctx=4, n_patterns=2, patterns=ds1_patterns, metadata=ds1_meta
@@ -202,7 +208,10 @@ def test_dataloader_iteration():
 
 	ds2_patterns = torch.rand((3, 5, 5))
 	ds2_meta = [
-		AttentionPatternMetadata("modelA", 1, i, f"hash{i + 2}", 5) for i in range(3)
+		AttentionPatternMetadata(
+			model_name="modelA", idx_layer=1, idx_head=i, prompt_hash=f"hash{i + 2}", n_ctx=5
+		)
+		for i in range(3)
 	]
 	ds2 = AttentionPatternDataset(
 		n_ctx=5, n_patterns=3, patterns=ds2_patterns, metadata=ds2_meta

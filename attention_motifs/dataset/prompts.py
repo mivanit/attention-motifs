@@ -30,7 +30,7 @@ class HashMismatchError(ValueError):
 	pass
 
 
-@serializable_dataclass
+@serializable_dataclass(kw_only=True)
 class Prompt(SerializableDataclass):
 	"""A prompt is a dictionary with a text key and an optional hash key.
 
@@ -110,7 +110,7 @@ DEFAULT_CHAR_LEN_MIN: int | None = 64
 DEFAULT_CHAR_LEN_MAX: int | None = 1024
 
 
-@serializable_dataclass
+@serializable_dataclass(kw_only=True)
 class PromptDatasetConfig(SerializableDataclass):
 	"""holds the config for a prompt dataset"""
 
