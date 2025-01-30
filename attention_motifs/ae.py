@@ -309,7 +309,6 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 		# 5) Convert to row-stochastic
 		x_recon = self.convert_tril_rowstoch(x_recon)
 
-
 		return x_recon
 
 
