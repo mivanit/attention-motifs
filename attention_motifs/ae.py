@@ -266,12 +266,17 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 
 	@classmethod
 	def convert_tril_rowstoch(
+		cls,
 		x: Float[Tensor, "batch in_channels n_ctx n_ctx"],
 	) -> Float[Tensor, "batch in_channels n_ctx n_ctx"]:
 		# set the upper triangle to -inf
+		print(x.shape)
+		print(x)
 		x += torch.triu(torch.ones_like(x) * float("-inf"), diagonal=0)
 		# apply softmax
+		print(x)
 		x = F.softmax(x, dim=-2)
+		print(x)
 		return x
 
 	def forward(
