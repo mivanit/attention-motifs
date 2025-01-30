@@ -14,6 +14,7 @@ from muutils.json_serialize import (
 from zanj.torchutil import ConfiguredModel, set_config_class
 
 from attention_motifs.train import convert_tril_rowstoch
+from attention_motifs.dbg import dbg
 
 
 @serializable_dataclass(kw_only=True)
@@ -158,13 +159,13 @@ class PatchEmbed(nn.Module):
 		)
 
 		# positional embeddings for x and y
-		self.pos_embeds: nn.ModuleList = [
+		self.pos_embeds: nn.ModuleList = nn.ModuleList([
 			nn.Embedding(
 				num_embeddings=max_patches,
 				embedding_dim=d_model,
 			)
 			for _ in range(2)
-		]
+		])
 
 	def forward(
 		self,
@@ -176,7 +177,8 @@ class PatchEmbed(nn.Module):
 		assert tuple(x_proj.shape) == (x.shape[0], self.d_model, ax_patches, ax_patches)
 
 		# 2) Build separate positional embeddings for x and y, shape = (2, ax_patches, d_model)
-		positions: Int[Tensor, "ax_patches"] = torch.arange(ax_patches, device=x.device)
+		positions: Int[Tensor, "ax_patches"] = torch.arange(ax_patches).to(x.device)
+
 		pos_embeds: Float[Tensor, "2 ax_patches d_model"] = torch.stack(
 			[p(positions) for p in self.pos_embeds]
 		)
@@ -230,7 +232,7 @@ class TransformerBlock(nn.Module):
 		super().__init__()
 		self.norm1: nn.LayerNorm = nn.LayerNorm(d_model)
 		self.attn: nn.MultiheadAttention = nn.MultiheadAttention(
-			d_model=d_model,
+			embed_dim=d_model,
 			num_heads=num_heads,
 			batch_first=True,
 			# dropout=attn_drop,
@@ -278,6 +280,7 @@ class VitEncoder(ConfiguredModel[VitAEConfig]):
 		self.patch_embed: PatchEmbed = PatchEmbed(
 			d_model=config.d_model,
 			patch_size=config.patch_size,
+			max_patches=config.max_patches,
 		)
 
 		# Transformer encoder blocks
@@ -333,13 +336,13 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 		self.from_latent: nn.Linear = nn.Linear(config.d_latent, config.d_model)
 
 		# positional embeddings for x and y
-		self.pos_embeds: nn.ModuleList = [
+		self.pos_embeds: nn.ModuleList = nn.ModuleList([
 			nn.Embedding(
 				num_embeddings=config.max_patches,
 				embedding_dim=config.d_model,
 			)
 			for _ in range(2)
-		]
+		])
 
 		# Decoder transformer blocks
 		self.blocks: nn.Module = nn.Sequential(
@@ -393,13 +396,18 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 		).unsqueeze(0)
 
 		# patches_grid[i,j] = latent_embed + pos_embeds[0][i] + pos_embeds[1][j]
+		dbg(pos2d_perm.shape)
+		dbg(latent_embed.shape)
 		patches_grid: Float[Tensor, "batch d_model ax_patches ax_patches"] = (
 			latent_embed.unsqueeze(-1).unsqueeze(-1) + pos2d_perm
 		)
+		dbg(patches_grid.shape)
 		patches_seq: Float[Tensor, "batch n_patches d_model"] = patches_grid.flatten(1)
 
 		# Pass through decoder blocks
+		dbg(patches_seq.shape)
 		patches_seq = self.blocks(patches_seq)
+		dbg(patches_seq.shape)
 
 		# (6) Final norm
 		patches_seq = self.norm(patches_seq)
