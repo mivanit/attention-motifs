@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+import torch
 
 from attention_motifs.dataset.dataset import (
 	APGenerationConfig,
@@ -6,26 +6,38 @@ from attention_motifs.dataset.dataset import (
 	CollectedAttentionPatternDataloader,
 )
 
-d = CollectedAttentionPatternDataloader.generate(
-	config=APGenerationConfig(
-		prompts_config=PromptDatasetConfig.from_source_path("data/pile_50.jsonl"),
-		model_names=[
-			"meta-llama/Llama-3.2-1B",
-			"gpt2-small",
-			"pythia-14m",
-		],
-	),
-	max_batch_size=8,
-)
+if __name__ == "__main__":
+	import argparse
 
-d.save("data/activations/pile_50", verbose=True)
+	parser = argparse.ArgumentParser()
+	parser.add_argument("--device", type=str, default="cuda", help="device to use")
+	args = parser.parse_args()
 
+	device: torch.device = torch.device(args.device)
 
-for x in d.batches(2):
-	print(x[0].shape)
-	print(x[1])
-	plt.matshow(x[0][0].cpu().numpy())
-	plt.show()
-	plt.matshow(x[0][1].cpu().numpy())
-	plt.show()
-	break
+	d = CollectedAttentionPatternDataloader.generate(
+		config=APGenerationConfig(
+			prompts_config=PromptDatasetConfig.from_source_path(
+				"data/pile_50.jsonl",
+				char_len_min=64,
+				char_len_max=256,
+			),
+			model_names=[
+				"pythia-14m",
+				"gpt2-small",
+				"meta-llama/Llama-3.2-1B",
+			],
+			token_len_min=16,
+			prompt_token_len_tolerance=16,
+		),
+		max_batch_size=8,
+		model_device=device,
+	)
+
+	d.save("data/activations/medium", verbose=True)
+
+	print("=" * 50)
+	print(d.summary())
+	print("=" * 50)
+	print(d.summary_short())
+	print("=" * 50)

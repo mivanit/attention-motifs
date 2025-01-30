@@ -410,9 +410,9 @@ class CollectedAttentionPatternDataloader:
 	def generate(
 		cls,
 		config: APGenerationConfig,
-		model_device: torch.device = torch.device("cuda")
-		if torch.cuda.is_available()
-		else torch.device("cpu"),
+		model_device: torch.device = (
+			torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+		),
 		storage_device: torch.device = torch.device("cpu"),
 		max_batch_size: Optional[int] = None,
 		z: Optional[ZANJ] = None,
