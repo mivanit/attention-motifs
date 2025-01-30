@@ -436,16 +436,10 @@ def _mat_col_0_recon(
 	w: Float[Tensor, "batch"],
 	n_ctx: int,
 ) -> Float[Tensor, "batch channels=1 n_ctx n_ctx"]:
-	dbg(w.shape)
-	dbg(n_ctx)
 	zero_tensor = torch.zeros(w.shape[0], 1, n_ctx, n_ctx-1, device=w.device)
-	dbg(zero_tensor.shape)
 	col_filled = torch.nn.functional.pad(zero_tensor, (1, 0), value=1.0)
-	dbg(col_filled.shape)
 	w_expanded = w[:, None, None, None]
-	dbg(w_expanded.shape)
 	out = col_filled * w_expanded
-	dbg(out.shape)
 	return out
 
 
@@ -551,12 +545,6 @@ class VitAE(ConfiguredModel[VitAEConfig]):
 			],
 			dim=1,
 		).to(x.device).sum(dim=1)
-		import matplotlib.pyplot as plt
-		plt.imshow(special_feats_recon[0, 0].detach().cpu().numpy())
-		plt.show()
-
-		dbg(special_feats_recon.shape)
-		dbg(x_recon.shape)
 
 		x_recon += special_feats_recon
 
