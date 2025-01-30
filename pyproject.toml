@@ -52,7 +52,7 @@ cli = [
 [dependency-groups]
 dev = [	
 	# lmcat
-    "lmcat>=0.1.0",
+    "lmcat>=0.1.1",
 	# test
 	"pytest>=8.2.2",
 	# coverage
@@ -124,3 +124,10 @@ addopts = "--jaxtyping-packages=pattern_lens,beartype.beartype"
 filterwarnings = [
     "ignore: PEP 484 type hint*:beartype.roar._roarwarn.BeartypeDecorHintPep585DeprecationWarning",
 ]
+
+[tool.lmcat]
+ignore_patterns_files = [".lmignore", ".gitignore"]
+
+[tool.lmcat.glob_process]
+"[mM]akefile" = "makefile_recipes"
+"*.ipynb" = "ipynb_to_md"
