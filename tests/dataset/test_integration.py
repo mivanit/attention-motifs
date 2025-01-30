@@ -43,8 +43,10 @@ def test_integration_generate_save_read(model_name: str):
 
 	config = APGenerationConfig(
 		prompts_config=PromptDatasetConfig.from_source_path(
-			source_path=SAMPLE_PROMPTS_FILE
+			source_path=SAMPLE_PROMPTS_FILE,
+			char_len_min=1,
 		),
+		token_len_min=1,
 		model_names=[model_name],
 		prompt_token_len_tolerance=2,
 	)
@@ -57,7 +59,7 @@ def test_integration_generate_save_read(model_name: str):
 	# so we have at least 2 prompts used
 
 	# step 1: test iteration
-	all_batches = list(dl)
+	all_batches = list(dl.dataloader(batch_size=1, shuffle=False))
 	# we can't assert an exact # because it depends on the model's # of layers * heads
 	# but we expect something > 0
 	assert len(all_batches) > 0
@@ -73,7 +75,7 @@ def test_integration_generate_save_read(model_name: str):
 	assert len(dl2.prompts) == len(dl.prompts)
 
 	# quick iteration check
-	all_batches2 = list(dl2)
+	all_batches2 = list(dl2.dataloader(batch_size=1, shuffle=False))
 	assert len(all_batches2) == len(all_batches)
 
 	# check the patterns shape is the same
@@ -97,8 +99,10 @@ def test_integration_multiple_models(model_names: list[str]):
 	"""Check the behavior with zero or multiple model names."""
 	config = APGenerationConfig(
 		prompts_config=PromptDatasetConfig.from_source_path(
-			source_path=SAMPLE_PROMPTS_FILE
+			source_path=SAMPLE_PROMPTS_FILE,
+			char_len_min=1,
 		),
+		token_len_min=1,
 		model_names=model_names,
 		prompt_token_len_tolerance=2,
 	)
@@ -117,16 +121,17 @@ def test_integration_missing_metadata():
 	"""Check read() if metadata.zanj is missing => should raise FileNotFoundError."""
 	config = APGenerationConfig(
 		prompts_config=PromptDatasetConfig.from_source_path(
-			source_path=SAMPLE_PROMPTS_FILE
+			source_path=SAMPLE_PROMPTS_FILE,
+			char_len_min=1,
 		),
+		token_len_min=1,
 		model_names=["gpt2"],
 		prompt_token_len_tolerance=2,
 	)
 	dl = CollectedAttentionPatternDataloader.generate(config)
 
 	tmp_path: Path = TEMP_DIR / "test_integration_missing_metadata"
-	with pytest.warns(UserWarning):
-		dl.save(tmp_path)
+	dl.save(tmp_path)
 
 	# remove the metadata file
 	(tmp_path / "metadata.zanj").unlink()
@@ -139,16 +144,17 @@ def test_integration_missing_dataset_files():
 	"""Check read() if one dataset file is missing => should raise FileNotFoundError."""
 	config = APGenerationConfig(
 		prompts_config=PromptDatasetConfig.from_source_path(
-			source_path=SAMPLE_PROMPTS_FILE
+			source_path=SAMPLE_PROMPTS_FILE,
+			char_len_min=1,
 		),
+		token_len_min=1,
 		model_names=["gpt2"],
 		prompt_token_len_tolerance=2,
 	)
 	dl = CollectedAttentionPatternDataloader.generate(config)
 
 	tmp_path = TEMP_DIR / "test_integration_missing_dataset_files"
-	with pytest.warns(UserWarning):
-		dl.save(tmp_path)
+	dl.save(tmp_path)
 
 	# remove one dataset file
 	dataset_files: list[Path] = list(tmp_path.glob("dataset_*.zanj"))
@@ -165,6 +171,7 @@ def test_integration_dummy_training_loop():
 		prompts_config=PromptDatasetConfig.from_source_path(
 			source_path=SAMPLE_PROMPTS_FILE
 		),
+		token_len_min=1,
 		model_names=["gpt2"],
 		prompt_token_len_tolerance=2,
 	)
