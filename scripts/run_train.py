@@ -19,12 +19,12 @@ from attention_motifs.dataset.dataset import DataloaderMock
 DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # training data
-ACTIVATIONS_PATH: Path = Path("../data/activations/medium")
+ACTIVATIONS_PATH: Path = Path("data/activations/medium")
 BATCH_SIZE: int = 10
 N_TRAIN_BATCHES: int = 50
 
 # validation data
-VAL_ACTIVATIONS_PATH: Path = Path("../data/activations/small_val")
+VAL_ACTIVATIONS_PATH: Path = Path("data/activations/small_val")
 VAL_BATCH_SIZE: int = 8
 N_VAL_BATCHES: int = 8
 
@@ -44,6 +44,7 @@ TRAIN_LOADER, DATASET_INFO, _, _ = get_dataset(
 	activations_path=ACTIVATIONS_PATH,
 	batch_size=BATCH_SIZE,
 	n_batches=N_TRAIN_BATCHES,
+	show=False,
 )
 
 VAL_LOADER: DataloaderMock
@@ -52,6 +53,7 @@ VAL_LOADER, VAL_DATASET_INFO, _, _ = get_dataset(
 	batch_size=VAL_BATCH_SIZE,
 	n_batches=N_VAL_BATCHES,
 	shuffle=False,
+	show=False,
 )
 
 
@@ -86,4 +88,5 @@ MODEL = train(
 	lr_scheduler=LR_SCHEDULER,
 	train_loader=TRAIN_LOADER,
 	val_loader=VAL_LOADER,
+	eval_plots_interval="1/4 run",
 )

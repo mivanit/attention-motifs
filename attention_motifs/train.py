@@ -191,7 +191,7 @@ def eval_plots(
 
 
 _TRAINING_MANAGER_KWARGS_DEFAULT: dict = dict(
-	checkpoint_interval="1/2 run",
+	checkpoint_interval="1/10 run",
 	model_save_path="{run_path}/checkpoints/model.checkpoint-{latest_checkpoint}.zanj",
 	model_save_path_special="{run_path}/model.{alias}.zanj",
 )
@@ -206,6 +206,7 @@ def train(
 	train_loader: DataloaderMock,
 	val_loader: DataloaderMock | None = None,
 	training_manager_kwargs: dict | None = None,
+	eval_plots_interval: str = "1/10 run",
 ) -> ConfiguredModel[T_Config]:
 	model_config: T_Config = model.config
 
@@ -222,7 +223,7 @@ def train(
 	if val_loader is not None:
 		evals.append(
 			(
-				"1/10 run",
+				eval_plots_interval,
 				functools.partial(
 					eval_plots,
 					dataloader=val_loader,
