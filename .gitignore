@@ -12,6 +12,7 @@ notebooks/trnbl-logs/**
 notebooks/tb-logs-convAE/**
 .hf-token
 notebooks/.hf-token
+notebooks/profiles/**
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Byte-compiled / optimized / DLL files

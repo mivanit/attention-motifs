@@ -6,6 +6,7 @@ from typing import Iterator, Optional
 from time import time
 import cProfile
 import pstats
+import warnings
 import psutil
 import gc
 from contextlib import contextmanager, nullcontext
@@ -138,13 +139,13 @@ class TrainingProfiler:
 
 	# Profile the whole training loop
 	with profiler.profile("training"):
-	    for epoch in range(n_epochs):
-	        for batch in dataloader:
-	            # Take a memory snapshot at specific points
-	            profiler.snapshot()
+		for epoch in range(n_epochs):
+			for batch in dataloader:
+				# Take a memory snapshot at specific points
+				profiler.snapshot()
 
-	            # Your training code here
-	            ...
+				# Your training code here
+				...
 
 	# Print results
 	profiler.print_summary()
@@ -158,9 +159,9 @@ class TrainingProfiler:
 
 		# Parameters:
 		- `mode: ProfilerMode`
-		    What to profile (defaults to FULL)
+			What to profile (defaults to FULL)
 		- `output_dir: Optional[Path]`
-		    Where to save detailed profiling data (defaults to None)
+			Where to save detailed profiling data (defaults to None)
 		"""
 		self.mode = mode
 		self.output_dir = Path(output_dir) if output_dir else None
@@ -198,7 +199,7 @@ class TrainingProfiler:
 
 		# Parameters:
 		- `name: str`
-		    Name for this profiling session
+			Name for this profiling session
 		"""
 		# Setup
 		self._start_time = time()
@@ -238,7 +239,8 @@ class TrainingProfiler:
 		try:
 			with gpu_profiler_ctx as gpu_prof:
 				yield
-
+		except Exception as e:
+			warnings.warn(f"Error during profiling: {e}")
 		finally:
 			# Cleanup
 			if cpu_profiler:
@@ -251,7 +253,11 @@ class TrainingProfiler:
 			gpu_trace_path = None
 			if self.output_dir and gpu_prof:
 				gpu_trace_path = self.output_dir / f"{name}_trace.json"
-				gpu_prof.export_chrome_trace(gpu_trace_path.as_posix())
+
+				try:
+					gpu_prof.export_chrome_trace(gpu_trace_path.as_posix())
+				except Exception as e:
+					warnings.warn(f"Error saving GPU trace: {e}")
 
 			# Convert CPU profile to stats if available
 			cpu_stats = None
@@ -277,7 +283,7 @@ class TrainingProfiler:
 
 		# Parameters:
 		- `name: Optional[str]`
-		    Name of specific profile to summarize (default: all profiles)
+			Name of specific profile to summarize (default: all profiles)
 		"""
 		if name:
 			if name not in self.results:
