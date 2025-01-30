@@ -13,6 +13,7 @@ notebooks/tb-logs-convAE/**
 .hf-token
 notebooks/.hf-token
 notebooks/profiles/**
+*.pickle
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Byte-compiled / optimized / DLL files

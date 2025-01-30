@@ -264,6 +264,15 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 
 		self.conv: nn.Module = nn.Sequential(*conv_layers)
 
+	@classmethod
+	def convert_tril_rowstoch(x: Float[Tensor, "batch in_channels n_ctx n_ctx"]) -> Float[Tensor, "batch in_channels n_ctx n_ctx"]:
+
+		# set the upper triangle to -inf
+		x += torch.triu(torch.ones_like(x) * float("-inf"), diagonal=0)
+		# apply softmax
+		x = F.softmax(x, dim=-2)
+		return x
+
 	def forward(
 		self,
 		z: Float[Tensor, "batch latent_dim"],
@@ -289,7 +298,10 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 
 		# 4) Run transposed convolution => (B, in_channels, H, W)
 		x_recon: Float[Tensor, "batch in_channels H W"] = self.conv(h)
-
+		
+		# 5) Convert to row-stochastic
+		x_recon = self.convert_tril_rowstoch(x_recon)
+		
 		return x_recon
 
 
