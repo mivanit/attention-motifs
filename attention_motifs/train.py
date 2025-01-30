@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from typing import TypeVar
+import warnings
 
 import matplotlib.pyplot as plt
 import torch
@@ -15,9 +16,15 @@ from muutils.json_serialize import (
 from muutils.misc import shorten_numerical_to_str
 from zanj.torchutil import ConfiguredModel
 from trnbl.loggers.base import TrainingLoggerBase
+try:
+	from trnbl.loggers.wandb import WandbLogger
+except ImportError as e:
+	warnings.warn(f"failed to import wandb, can't log figures: {e}")
+	WandbLogger = None
 from trnbl import TrainingManager
 from zanj import ZANJ
 
+# this project
 from attention_motifs.dataset.dataset import (
 	DataloaderMock,
 	CollectedAttentionPatternDataloader,
@@ -29,7 +36,7 @@ from attention_motifs.train_util import contrastive_loss
 def get_dataset(
 	activations_path: Path,
 	batch_size: int,
-	n_train_batches: int,
+	n_batches: int,
 	show: bool = True,
 ) -> tuple[DataloaderMock, dict, torch.Tensor, list]:
 	"returns dataloader, dataset info, example patterns, example metadata"
@@ -46,7 +53,7 @@ def get_dataset(
 	train_loader: DataloaderMock = train_dataset.dataloader(
 		batch_size=batch_size,
 		shuffle=True,
-		max_batches=n_train_batches,
+		max_batches=n_batches,
 	)
 
 	# print info
@@ -106,6 +113,53 @@ def set_up_model(
 	optim, lrs = model.config.get_optim_and_lrs(model)
 
 	return model, optim, lrs
+
+
+def eval_plots(
+	model: ConfiguredModel[T_Config],
+	patterns: torch.Tensor,
+	metadata: list[AttentionPatternMetadata],
+	device: torch.device,
+	logger: TrainingLoggerBase,
+	show: bool = True,
+) -> None:
+	model.eval()
+
+	eval_batchsize: int = len(metadata)
+
+	for i in range(eval_batchsize):
+		print(metadata[i])
+		x_recon, x_latent = model(patterns.to(device).to(torch.float32).unsqueeze(1))
+		print(f"{patterns.shape = }")
+		print(f"{x_latent.shape = }")
+		print(f"{x_recon.shape = }")
+
+		x_recon_np = x_recon[i, 0].detach().cpu().numpy()
+
+		fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+		axs[0].matshow(patterns[i])
+		axs[0].axis("off")
+		axs[1].matshow(x_recon_np)
+		axs[1].axis("off")
+		axs[2].matshow(x_recon_np - patterns[i].numpy(), cmap="RdBu", vmin=-1, vmax=1)
+		axs[2].axis("off")
+		fig.suptitle(f"Pattern {i}\n{metadata[i]}")
+
+
+		try:
+			if (WandbLogger is not None) and isinstance(logger, WandbLogger):
+				logger._run.log({f"eval_pattern/{i}": fig})
+		except Exception as e:
+			warnings.warn(f"failed to log figure to wandb {i}: {e}")
+
+		try:
+			if show:
+				plt.show()
+			else:
+				plt.savefig(f"eval_pattern_{i}.png")
+		except Exception as e:
+			warnings.warn(f"failed to save or show pattern {i}: {e}")
+
 
 
 def train(
@@ -191,34 +245,4 @@ def train(
 
 	return model
 
-
-def eval_plots(
-	model: ConfiguredModel[T_Config],
-	patterns: torch.Tensor,
-	metadata: list[AttentionPatternMetadata],
-	device: torch.device,
-	show: bool = True,
-) -> None:
-	model.eval()
-
-	eval_batchsize: int = len(metadata)
-
-	for i in range(eval_batchsize):
-		print(metadata[i])
-		x_recon, x_latent = model(patterns.to(device).to(torch.float32).unsqueeze(1))
-		print(f"{patterns.shape = }")
-		print(f"{x_latent.shape = }")
-		print(f"{x_recon.shape = }")
-
-		x_recon_np = x_recon[i, 0].detach().cpu().numpy()
-
-		fig, axs = plt.subplots(1, 3, figsize=(12, 4))
-		axs[0].matshow(patterns[i])
-		axs[1].matshow(x_recon_np)
-		axs[2].matshow(x_recon_np - patterns[i].numpy(), cmap="RdBu", vmin=-1, vmax=1)
-		fig.suptitle(f"Pattern {i}\n{metadata[i]}")
-
-		if show:
-			plt.show()
-		else:
-			plt.savefig(f"eval_pattern_{i}.png")
+		

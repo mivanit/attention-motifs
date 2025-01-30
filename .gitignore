@@ -13,6 +13,8 @@ notebooks/tb-logs-convAE/**
 .hf-token
 notebooks/.hf-token
 notebooks/profiles/**
+notebooks/miv/**
+notebooks/wandb/**
 *.pickle
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
