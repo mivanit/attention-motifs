@@ -15,6 +15,7 @@ from muutils.json_serialize import (
 from zanj.torchutil import ConfiguredModel, set_config_class
 
 from attention_motifs.train import convert_tril_rowstoch
+from attention_motifs.dbg import dbg
 
 
 @serializable_dataclass(kw_only=True)
@@ -431,6 +432,23 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 
 
 
+def _mat_col_0_recon(
+	w: Float[Tensor, "batch"],
+	n_ctx: int,
+) -> Float[Tensor, "batch channels=1 n_ctx n_ctx"]:
+	dbg(w.shape)
+	dbg(n_ctx)
+	zero_tensor = torch.zeros(w.shape[0], 1, n_ctx, n_ctx-1, device=w.device)
+	dbg(zero_tensor.shape)
+	col_filled = torch.nn.functional.pad(zero_tensor, (1, 0), value=1.0)
+	dbg(col_filled.shape)
+	w_expanded = w[:, None, None, None]
+	dbg(w_expanded.shape)
+	out = col_filled * w_expanded
+	dbg(out.shape)
+	return out
+
+
 SPECIAL_FEATURES: list[tuple[
 	str,
 	Callable[[Float[Tensor, "batch channels=1 n_ctx n_ctx"]], Float[Tensor, "batch"]],
@@ -439,20 +457,21 @@ SPECIAL_FEATURES: list[tuple[
 	(
 		"mat_col_0",
 		lambda x: x[:, 0, 0, :].sum(dim=-1),
-		lambda w, n: (
-			torch.nn.functional.pad(
-				torch.zeros(w.shape[0], 1, n, n-1, device=w.device),
-				(1, 0),
-				value=1.0,
-			) * w[:, None, None, None]
-		),
+		_mat_col_0_recon,
+		# lambda w, n: (
+		# 	torch.nn.functional.pad(
+		# 		torch.zeros(w.shape[0], 1, n, n-1, device=w.device),
+		# 		(1, 0),
+		# 		value=1.0,
+		# 	) * w[:, None, None, None]
+		# ),
 	),
 	(
 		"identity",
 		lambda x: x.diagonal(dim1=-2, dim2=-1).squeeze(1).sum(-1),
 		lambda w, n: (
 			torch.eye(n, device=w.device)[None, None, :, :] 
-			* w[:, None, None, None],
+			* w[:, None, None, None]
 		),
 	)
 ]
@@ -507,8 +526,7 @@ class VitAE(ConfiguredModel[VitAEConfig]):
 		special_feats: Float[Tensor, "batch n_special_features"] = torch.stack(
 			[fn(x) for _, fn, _ in SPECIAL_FEATURES],
 			dim=1,
-			device=x.device,
-		)
+		).to(x.device)
 		latent += self.encoder_special(special_feats)
 
 		# compute mlp before latent
@@ -522,13 +540,25 @@ class VitAE(ConfiguredModel[VitAEConfig]):
 		x_recon: Float[Tensor, "batch n_ctx n_ctx"] = self.decoder(pre_decoder, n_ctx)
 
 		# add special features
-		special_feats_recon: Float[Tensor, "batch n_special_features"] = torch.stack(
-			[fn(pre_decoder, n_ctx) for _, _, fn in SPECIAL_FEATURES],
+		decoder_feat_weights = self.decoder_special(pre_decoder)
+		special_feats_recon: Float[Tensor, "batch 1 n_ctx n_ctx"] = torch.stack(
+			[
+				fn(
+					decoder_feat_weights[:, idx],
+					n_ctx,
+				)
+				for idx, (_, _, fn) in enumerate(SPECIAL_FEATURES)
+			],
 			dim=1,
-			device=x.device,
-		)
+		).to(x.device).sum(dim=1)
+		import matplotlib.pyplot as plt
+		plt.imshow(special_feats_recon[0, 0].detach().cpu().numpy())
+		plt.show()
 
-		pre_decoder += self.decoder_special(special_feats_recon)
+		dbg(special_feats_recon.shape)
+		dbg(x_recon.shape)
+
+		x_recon += special_feats_recon
 
 		# convert to upper triangular
 		x_recon = convert_tril_rowstoch(x_recon)
