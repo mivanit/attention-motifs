@@ -3,7 +3,7 @@ import torch
 from torch import Tensor
 from jaxtyping import Float, Int
 
-from attention_motifs.ae import contrastive_loss  # replace with actual import path
+from attention_motifs.train_util import contrastive_loss  # replace with actual import path
 
 
 @pytest.mark.parametrize(

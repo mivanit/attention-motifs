@@ -152,14 +152,13 @@ def eval_plots(
 		except Exception as e:
 			warnings.warn(f"failed to log figure to wandb {i}: {e}")
 
-		try:
-			if show:
-				plt.show()
-			else:
-				plt.savefig(f"eval_pattern_{i}.png")
-		except Exception as e:
-			warnings.warn(f"failed to save or show pattern {i}: {e}")
-
+			try:
+				if show:
+					plt.show()
+				else:
+					plt.savefig(f"eval_pattern_{i}.png")
+			except Exception as e:
+				warnings.warn(f"failed to save or show pattern {i}: {e}")
 
 
 def train(
@@ -169,6 +168,7 @@ def train(
 	optimizer: torch.optim.Optimizer,
 	lr_scheduler: torch.optim.lr_scheduler._LRScheduler,
 	train_loader: DataloaderMock,
+	val_loader: DataloaderMock|None = None,
 	training_manager_kwargs: dict = dict(
 		checkpoint_interval="1/2 run",
 		model_save_path="{run_path}/checkpoints/model.checkpoint-{latest_checkpoint}.zanj",
@@ -177,10 +177,15 @@ def train(
 ) -> ConfiguredModel[T_Config]:
 	model_config: T_Config = model.config
 
+	e
+
 	with TrainingManager(
 		model=model,
 		logger=logger,
 		save_model=ZANJ().save,
+		evals=[
+			"1/10 run", functools.partial(eval_plots, show=False),
+		]
 		**training_manager_kwargs,
 	) as tr:
 		for epoch in tr.epoch_loop(range(model_config.num_epochs), use_tqdm=False):
