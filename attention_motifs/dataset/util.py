@@ -202,7 +202,7 @@ class AttentionPatternDataset(SerializableDataclass):
 		"shuffle the dataset in-place"
 		perm: Int[torch.Tensor, " n_patterns"] = torch.randperm(self.n_patterns)
 		self.patterns = self.patterns[perm]
-		self.metadata = [self.metadata[i] for i in perm]
+		self.metadata = [self.metadata[i.item()] for i in perm]
 
 	def __getitem__(
 		self,

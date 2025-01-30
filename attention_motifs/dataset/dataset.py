@@ -197,6 +197,7 @@ class CollectedAttentionPatternDataloader:
 		self,
 		batch_size: int,
 		shuffle: bool = False,
+		max_batches: int|None = None,
 	) -> Iterator[
 		tuple[Float[torch.Tensor, "batch n_ctx n_ctx"], list[AttentionPatternMetadata]]
 	]:
@@ -235,6 +236,8 @@ class CollectedAttentionPatternDataloader:
 		"""
 		assert batch_size >= 1, "batch_size must be positive"
 
+
+		batches_count: int = 0
 		if shuffle:
 			# Shuffle each dataset
 			for ds in self.datasets.values():
@@ -250,7 +253,7 @@ class CollectedAttentionPatternDataloader:
 				)
 
 			# Randomly pick from any dataset that isn't exhausted
-			while iters:
+			while iters and (max_batches is None or batches_count < max_batches):
 				n_ctx: int = random.choice(list(iters.keys()))
 				dataset_iter: Iterator[
 					tuple[int, int, Float[torch.Tensor, "batch n_ctx n_ctx"]]
@@ -269,6 +272,7 @@ class CollectedAttentionPatternDataloader:
 					idx_start:idx_end
 				]
 				yield batch, metadata
+				batches_count += 1
 
 		else:
 			# Non-shuffled: yield batches from each dataset in sequence
@@ -280,19 +284,24 @@ class CollectedAttentionPatternDataloader:
 						idx_start:idx_end
 					]
 					yield batch, metadata
+					batches_count += 1
+					if max_batches is not None and batches_count >= max_batches:
+						raise StopIteration()
 
 	def dataloader(
 		self,
 		batch_size: int,
 		shuffle: bool,
+		max_batches: int|None = None,
 	) -> DataloaderMock:
 		"""Return a dataloader that yields batches of patterns and metadata."""
+		n_batches: int = max_batches or self.n_total_samples // batch_size
 		return DataloaderMock(
-			iter_func=lambda: self.batches(batch_size=batch_size, shuffle=shuffle),
+			iter_func=lambda: self.batches(batch_size=batch_size, shuffle=shuffle, max_batches=max_batches),
 			batch_size=batch_size,
 			shuffle=shuffle,
-			n_batches=self.n_total_samples // batch_size,
-			n_samples=self.n_total_samples,
+			n_batches=n_batches,
+			n_samples=n_batches * batch_size,
 		)
 
 	def save(

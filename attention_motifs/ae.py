@@ -86,7 +86,9 @@ class AttnAEConfig(SerializableDataclass):
 	)
 
 	# loss
-	margin: float = serializable_field(default=1.0)
+	contrast_temperature: float = serializable_field(default=0.07)
+	recon_weight: float = serializable_field(default=1.0)
+	contrast_weight: float = serializable_field(default=1.0)
 
 	# optimizer
 	optimizer: type[torch.optim.Optimizer] = serializable_field(
@@ -95,10 +97,51 @@ class AttnAEConfig(SerializableDataclass):
 		deserialize_fn=lambda x: getattr(torch.optim, x),
 	)
 
+	# lr scheduler
+	learning_rate: float = serializable_field(default=1e-4)
+	lr_scheduler: type[torch.optim.lr_scheduler._LRScheduler] = serializable_field(
+		default=torch.optim.lr_scheduler.ReduceLROnPlateau,
+		serialization_fn=lambda x: x.__name__,
+		deserialize_fn=lambda x: getattr(torch.optim.lr_scheduler, x),
+	)
+	lr_scheduler_kwargs: dict = serializable_field(
+		default_factory=lambda : dict(
+			mode="min",
+			factor=0.1,
+			patience=10,
+			threshold=1e-4,
+			threshold_mode="rel",
+			cooldown=0,
+			min_lr=1e-6,
+			eps=1e-8,
+		)
+	)
+
+	# epochs
+	num_epochs: int = serializable_field(default=5)
+
 	def __post_init__(self):
 		assert all(c.channels > 0 for c in self.conv_encoder)
 		assert all(d > 0 for d in self.mlp_prepool)
 		assert all(d > 0 for d in self.mlp_postpool)
+
+
+	def get_optim_and_lrs(
+		self,
+		model: "AttnAE",
+	) -> tuple[
+		torch.optim.Optimizer,
+		torch.optim.lr_scheduler._LRScheduler,
+	]:
+		optimizer: torch.optim.Optimizer = self.optimizer(
+			model.parameters(),
+			lr=self.learning_rate,
+		)
+		lr_scheduler: torch.optim.lr_scheduler._LRScheduler = self.lr_scheduler(
+			optimizer,
+			**self.lr_scheduler_kwargs,
+		)
+		return optimizer, lr_scheduler
 
 
 @set_config_class(AttnAEConfig)
@@ -253,6 +296,8 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 
 @set_config_class(AttnAEConfig)
 class AttnAE(ConfiguredModel[AttnAEConfig]):
+	config: AttnAEConfig
+
 	def __init__(self, config: AttnAEConfig):
 		super().__init__(config)
 		self.config: AttnAEConfig = config
