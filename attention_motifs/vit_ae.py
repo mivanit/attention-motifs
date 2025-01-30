@@ -391,10 +391,9 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 		# "Outer add" to get a 2D embedding grid for each (row, col)
 		# pos2d will have shape (ax_patches, ax_patches, d_model)
 		dbg(pos_embeds[0].unsqueeze(1).shape)
-		pos2d: Float[Tensor, "ax_patches ax_patches d_model"] = (
-			pos_embeds[0].unsqueeze(1) 
-			+ pos_embeds[1].unsqueeze(0)
-		)
+		pos2d: Float[Tensor, "ax_patches ax_patches d_model"] = pos_embeds[0].unsqueeze(
+			1
+		) + pos_embeds[1].unsqueeze(0)
 
 		# Reshape for broadcast-add to x_proj
 		# pos2d_perm: (d_model, ax_patches, ax_patches)

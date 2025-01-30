@@ -21,6 +21,7 @@ _COUNTER: int = 0
 
 _NoExpPassed = object()
 
+
 def dbg(exp: _ExpType = _NoExpPassed) -> _ExpType:
 	"""Call dbg with any variable or expression.
 
@@ -41,7 +42,6 @@ def dbg(exp: _ExpType = _NoExpPassed) -> _ExpType:
 
 	"""
 	global _COUNTER
-
 
 	for frame in inspect.stack():
 		line = frame.code_context[0]
