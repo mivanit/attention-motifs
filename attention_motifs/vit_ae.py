@@ -2,7 +2,6 @@ from typing import Tuple, Dict, Any, Type
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch import Tensor
 from jaxtyping import Float
 
@@ -13,6 +12,8 @@ from muutils.json_serialize import (
 	serializable_field,
 )
 from zanj.torchutil import ConfiguredModel, set_config_class
+
+from attention_motifs.train import convert_tril_rowstoch
 
 
 @serializable_dataclass(kw_only=True)
@@ -374,15 +375,6 @@ class VisionTransformerDecoder(ConfiguredModel[VitAEConfig]):
 		self.patch_dim: int = config.in_channels * config.patch_size * config.patch_size
 		self.head: nn.Linear = nn.Linear(config.embed_dim, self.patch_dim)
 
-	def convert_tril_rowstoch(
-		self,
-		x: Float[Tensor, "batch c H W"],
-	) -> Float[Tensor, "batch c H W"]:
-		"""Example row-stochastic transform (rare for typical image AEs)."""
-		x = x + torch.triu(torch.ones_like(x) * float("-inf"), diagonal=1)
-		x = F.softmax(x, dim=-1)
-		return x
-
 	def forward(
 		self, z: Float[Tensor, "batch latent_dim"]
 	) -> Float[Tensor, "batch in_channels H W"]:
@@ -442,8 +434,7 @@ class VisionTransformerDecoder(ConfiguredModel[VitAEConfig]):
 			self.config.image_size,
 		)
 
-		# (Optional) row-stochastic step:
-		# x_recon = self.convert_tril_rowstoch(x_recon)
+		x_recon = convert_tril_rowstoch(x_recon)
 		return x_recon
 
 

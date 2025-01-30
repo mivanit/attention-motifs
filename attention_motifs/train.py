@@ -4,7 +4,14 @@ from torch import Tensor
 import torch.nn.functional as F
 from jaxtyping import Float, Int, Bool
 
-# custom utils
+
+def convert_tril_rowstoch(
+	x: Float[Tensor, "batch c H W"],
+) -> Float[Tensor, "batch c H W"]:
+	"converts a square matrix to a row-stochastic lower triangular one"
+	x = x + torch.triu(torch.ones_like(x) * float("-inf"), diagonal=1)
+	x = F.softmax(x, dim=-1)
+	return x
 
 
 def contrastive_loss(

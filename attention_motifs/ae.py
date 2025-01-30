@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 from torch import Tensor
-import torch.nn.functional as F
 from jaxtyping import Float
 
 # custom utils
@@ -11,6 +10,8 @@ from muutils.json_serialize import (
 	serializable_field,
 )
 from zanj.torchutil import ConfiguredModel, set_config_class
+
+from attention_motifs.train import convert_tril_rowstoch
 
 
 @serializable_dataclass
@@ -262,21 +263,6 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 
 		self.conv: nn.Module = nn.Sequential(*conv_layers)
 
-	@classmethod
-	def convert_tril_rowstoch(
-		cls,
-		x: Float[Tensor, "batch in_channels n_ctx n_ctx"],
-	) -> Float[Tensor, "batch in_channels n_ctx n_ctx"]:
-		# set the upper triangle to -inf
-		# print(f"{x.shape = }")
-		# print(f"x before convert triu {x}")
-		x += torch.triu(torch.ones_like(x) * float("-inf"), diagonal=1)
-		# apply softmax
-		# print(f"x after convert triu {x}")
-		x = F.softmax(x, dim=-1)
-		# print(f"x after softmax {x}")
-		return x
-
 	def forward(
 		self,
 		z: Float[Tensor, "batch latent_dim"],
@@ -304,7 +290,7 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 		x_recon: Float[Tensor, "batch in_channels H W"] = self.conv(h)
 
 		# 5) Convert to row-stochastic
-		x_recon = self.convert_tril_rowstoch(x_recon)
+		x_recon = convert_tril_rowstoch(x_recon)
 
 		return x_recon
 
