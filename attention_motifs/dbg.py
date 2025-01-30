@@ -15,10 +15,13 @@ __version__ = "0.3.0"
 
 _ExpType = typing.TypeVar("_ExpType")
 
-cwd: Path = Path.cwd().absolute()
+_CWD: Path = Path.cwd().absolute()
 
+_COUNTER: int = 0
 
-def dbg(exp: _ExpType) -> _ExpType:
+_NoExpPassed = object()
+
+def dbg(exp: _ExpType = _NoExpPassed) -> _ExpType:
 	"""Call dbg with any variable or expression.
 
 	Calling dbg will print to stderr the current filename and lineno,
@@ -37,6 +40,8 @@ def dbg(exp: _ExpType) -> _ExpType:
 		dbg(square(a))
 
 	"""
+	global _COUNTER
+
 
 	for frame in inspect.stack():
 		line = frame.code_context[0]
@@ -47,11 +52,18 @@ def dbg(exp: _ExpType) -> _ExpType:
 				end = len(line)
 
 			file: Path = Path(frame.filename).absolute()
-			common = Path(os.path.commonpath([file, cwd]))
+			common = Path(os.path.commonpath([file, _CWD]))
 			fname: str = file.relative_to(common).as_posix()
 
+			msg: str = f"[{fname}:{frame.lineno}]"
+
+			if exp is _NoExpPassed:
+				msg += f" (dbg {_COUNTER})"
+			else:
+				msg += f" {line[start:end]} = {exp!r}"
+				_COUNTER += 1
 			print(
-				f"[{fname}:{frame.lineno}] {line[start:end]} = {exp!r}",
+				msg,
 				file=sys.stderr,
 			)
 			break

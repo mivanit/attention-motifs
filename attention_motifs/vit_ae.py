@@ -381,20 +381,26 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 		positions: Int[Tensor, "ax_patches"] = torch.arange(
 			ax_patches, device=latent.device
 		)
+		dbg()
+		dbg(positions.shape)
 		pos_embeds: Float[Tensor, "2 ax_patches d_model"] = torch.stack(
 			[p(positions) for p in self.pos_embeds]
 		)
+		dbg(pos_embeds.shape)
 
 		# "Outer add" to get a 2D embedding grid for each (row, col)
 		# pos2d will have shape (ax_patches, ax_patches, d_model)
-		pos2d: Float[Tensor, "ax_patches ax_patches d_model"] = pos_embeds[0].unsqueeze(
-			1
-		) + pos_embeds[1].unsqueeze(0)
+		dbg(pos_embeds[0].unsqueeze(1).shape)
+		pos2d: Float[Tensor, "ax_patches ax_patches d_model"] = (
+			pos_embeds[0].unsqueeze(1) 
+			+ pos_embeds[1].unsqueeze(0)
+		)
 
 		# Reshape for broadcast-add to x_proj
 		# pos2d_perm: (d_model, ax_patches, ax_patches)
 		# then unsqueeze -> (1, d_model, ax_patches, ax_patches)
 		# pos2d_perm = pos2d.permute(2, 0, 1).unsqueeze(0)
+		dbg(pos2d.shape)
 		pos2d_perm: Float[Tensor, "1 d_model ax_patches ax_patches"] = pos2d.permute(
 			2, 0, 1
 		).unsqueeze(0)
