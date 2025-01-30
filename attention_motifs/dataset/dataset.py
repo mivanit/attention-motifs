@@ -239,13 +239,13 @@ class CollectedAttentionPatternDataloader:
 		batches_count: int = 0
 		if shuffle:
 			# Shuffle each dataset
-			print(f"begin shuffle of datasets")
+			# print(f"begin shuffle of datasets")
 			for ds in self.datasets.values():
 				ds.shuffle()
-			print(f"\tend shuffle of datasets")
+			# print(f"\tend shuffle of datasets")
 
 			# Build an iterator for each dataset
-			print(f"begin building iterators")
+			# print(f"begin building iterators")
 			iters: dict[
 				int, Iterator[tuple[int, int, Float[torch.Tensor, "batch n_ctx n_ctx"]]]
 			] = {}
@@ -253,11 +253,11 @@ class CollectedAttentionPatternDataloader:
 				iters[n_ctx] = iter(
 					tensor_batches_indexed(ds.patterns, batch_size=batch_size)
 				)
-			print(f"\tend building iterators")
+			# print(f"\tend building iterators")
 
 			# Randomly pick from any dataset that isn't exhausted
 			while iters and (max_batches is None or batches_count < max_batches):
-				print("start trying to get a batch")
+				# print("start trying to get a batch")
 				n_ctx: int = random.choice(list(iters.keys()))
 				dataset_iter: Iterator[
 					tuple[int, int, Float[torch.Tensor, "batch n_ctx n_ctx"]]
@@ -275,7 +275,7 @@ class CollectedAttentionPatternDataloader:
 				metadata: list[AttentionPatternMetadata] = ds.metadata[
 					idx_start:idx_end
 				]
-				print(f"\tyielding batch of size {batch.shape = }, {len(metadata) = }")
+				# print(f"\tyielding batch of size {batch.shape = }, {len(metadata) = }")
 				yield batch, metadata
 				batches_count += 1
 
