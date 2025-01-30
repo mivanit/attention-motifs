@@ -61,9 +61,7 @@ def get_dataset(
 	)
 
 	# print info
-	print(
-		f"loader: {len(train_loader)} batches, {len(train_loader.dataset)} samples"
-	)
+	print(f"loader: {len(train_loader)} batches, {len(train_loader.dataset)} samples")
 
 	# show example pattern
 	x_mat, x_meta = next(
@@ -135,13 +133,14 @@ def eval_plots(
 
 	with torch.no_grad():
 		for batch_idx, (patterns, metadata) in enumerate(dataloader):
-			
-			x_recon, x_latent = model(patterns.to(device).to(torch.float32).unsqueeze(1))
+			x_recon, x_latent = model(
+				patterns.to(device).to(torch.float32).unsqueeze(1)
+			)
 
 			latent_std.append(x_latent.std(dim=0).mean().item())
 
 			x_recon_mean = x_recon.mean(dim=0)[0].detach().cpu().numpy()
-			
+
 			for i in range(len(metadata)):
 				x_recon_np = x_recon[i, 0].detach().cpu().numpy()
 				fig, axs = plt.subplots(1, 4, figsize=(12, 4))
@@ -162,8 +161,6 @@ def eval_plots(
 				mean_diffs.append(np.abs(mean_diff).mean())
 				mean_std.append(mean_diff.std())
 				axs[3].axis("off")
-
-
 
 				fig.suptitle(metadata[i])
 
@@ -199,6 +196,7 @@ _TRAINING_MANAGER_KWARGS_DEFAULT: dict = dict(
 	model_save_path_special="{run_path}/model.{alias}.zanj",
 )
 
+
 def train(
 	logger: TrainingLoggerBase,
 	device: torch.device,
@@ -207,39 +205,40 @@ def train(
 	lr_scheduler: torch.optim.lr_scheduler._LRScheduler,
 	train_loader: DataloaderMock,
 	val_loader: DataloaderMock | None = None,
-	training_manager_kwargs: dict|None = None,
+	training_manager_kwargs: dict | None = None,
 ) -> ConfiguredModel[T_Config]:
-	
 	model_config: T_Config = model.config
 
 	if training_manager_kwargs is None:
 		training_manager_kwargs = dict()
-	
+
 	training_manager_kwargs = {
 		**_TRAINING_MANAGER_KWARGS_DEFAULT,
 		**training_manager_kwargs,
 	}
 
 	evals = list()
-	
-	if val_loader is not None: 
-		evals.append((
-		"1/10 run",
-		functools.partial(
-			eval_plots,
-			dataloader=val_loader,
-			device=device,
-			logger=logger,
-			show=False,
-		),
-	))
+
+	if val_loader is not None:
+		evals.append(
+			(
+				"1/10 run",
+				functools.partial(
+					eval_plots,
+					dataloader=val_loader,
+					device=device,
+					logger=logger,
+					show=False,
+				),
+			)
+		)
 
 	with TrainingManager(
 		model=model,
 		logger=logger,
 		save_model=ZANJ().save,
 		evals=evals,
-		** training_manager_kwargs,
+		**training_manager_kwargs,
 	) as tr:
 		for epoch in tr.epoch_loop(range(model_config.num_epochs), use_tqdm=False):
 			patterns: Float[torch.Tensor, "*batch n_ctx n_ctx"]
