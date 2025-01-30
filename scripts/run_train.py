@@ -16,7 +16,7 @@ from attention_motifs.dataset.dataset import DataloaderMock
 # Configuration
 # ==================================================
 
-DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE: torch.device = torch.device("cuda:2")
 
 # training data
 ACTIVATIONS_PATH: Path = Path("data/activations/medium")
@@ -96,5 +96,5 @@ MODEL = train(
 	batch_size=BATCH_SIZE,
 	n_batches=N_TRAIN_BATCHES,
 	val_loader=VAL_LOADER,
-	eval_plots_interval="1/4 run",
+	eval_plots_interval="1/10 run",
 )

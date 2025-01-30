@@ -127,7 +127,7 @@ traitlets==5.14.3
 transformer-lens==2.11.0
 transformers==4.48.1
 triton==3.2.0 ; platform_machine == 'x86_64' and sys_platform == 'linux'
-trnbl==0.1.0
+trnbl==0.1.1
 typeguard==4.4.1
 typing-extensions==4.12.2
 tzdata==2025.1
