@@ -1,8 +1,8 @@
 # Stats
 - 24 files
-- 4877 (4.9K) lines
-- 139130 (139K) chars
-- 55575 (56K) `gpt2` tokens
+- 4943 (4.9K) lines
+- 140927 (141K) chars
+- 56485 (56K) `gpt2` tokens
 
 # File Tree
 
@@ -11,17 +11,17 @@ attention-motifs
 ├── attention_motifs               
 │   ├── dataset                    
 │   │   ├── __init__.py            [    0L         0C         0T]
-│   │   ├── dataset.py             [  538L    15,249C     6,166T]
+│   │   ├── dataset.py             [  547L    15,608C     6,311T]
 │   │   ├── prompts.py             [  296L     8,377C     3,336T]
-│   │   └── util.py                [  410L    11,207C     4,471T]
+│   │   └── util.py                [  410L    11,214C     4,474T]
 │   ├── __init__.py                [    0L         0C         0T]
-│   ├── ae.py                      [  508L    15,426C     6,084T]
+│   ├── ae.py                      [  553L    16,577C     6,597T]
 │   ├── consts.py                  [  152L     4,188C     1,644T]
 │   └── figure_funcs.py            [  186L     5,070C     2,141T]
 ├── data                           
 │   └── pile_example.jsonl         [    2L     1,797C       440T]
 ├── notebooks                      
-│   ├── contrastive_AE.ipynb       [  248L     7,904C     3,654T]
+│   ├── contrastive_AE.ipynb       [  317L     9,445C     4,563T]
 │   ├── demo.ipynb                 [  173L     4,889C     2,394T]
 │   ├── demo_dataset.ipynb         [  318L    77,392C    56,697T]
 │   ├── fit_patterns_manual.ipynb  [  546L   538,141C   404,452T]
@@ -247,6 +247,7 @@ class CollectedAttentionPatternDataloader:
 		self,
 		batch_size: int,
 		shuffle: bool = False,
+		max_batches: int|None = None,
 	) -> Iterator[
 		tuple[Float[torch.Tensor, "batch n_ctx n_ctx"], list[AttentionPatternMetadata]]
 	]:
@@ -285,6 +286,8 @@ class CollectedAttentionPatternDataloader:
 		"""
 		assert batch_size >= 1, "batch_size must be positive"
 
+
+		batches_count: int = 0
 		if shuffle:
 			# Shuffle each dataset
 			for ds in self.datasets.values():
@@ -300,7 +303,7 @@ class CollectedAttentionPatternDataloader:
 				)
 
 			# Randomly pick from any dataset that isn't exhausted
-			while iters:
+			while iters and (max_batches is None or batches_count < max_batches):
 				n_ctx: int = random.choice(list(iters.keys()))
 				dataset_iter: Iterator[
 					tuple[int, int, Float[torch.Tensor, "batch n_ctx n_ctx"]]
@@ -319,6 +322,7 @@ class CollectedAttentionPatternDataloader:
 					idx_start:idx_end
 				]
 				yield batch, metadata
+				batches_count += 1
 
 		else:
 			# Non-shuffled: yield batches from each dataset in sequence
@@ -330,19 +334,24 @@ class CollectedAttentionPatternDataloader:
 						idx_start:idx_end
 					]
 					yield batch, metadata
+					batches_count += 1
+					if max_batches is not None and batches_count >= max_batches:
+						raise StopIteration()
 
 	def dataloader(
 		self,
 		batch_size: int,
 		shuffle: bool,
+		max_batches: int|None = None,
 	) -> DataloaderMock:
 		"""Return a dataloader that yields batches of patterns and metadata."""
+		n_batches: int = max_batches or self.n_total_samples // batch_size
 		return DataloaderMock(
-			iter_func=lambda: self.batches(batch_size=batch_size, shuffle=shuffle),
+			iter_func=lambda: self.batches(batch_size=batch_size, shuffle=shuffle, max_batches=max_batches),
 			batch_size=batch_size,
 			shuffle=shuffle,
-			n_batches=self.n_total_samples // batch_size,
-			n_samples=self.n_total_samples,
+			n_batches=n_batches,
+			n_samples=n_batches * batch_size,
 		)
 
 	def save(
@@ -1094,7 +1103,7 @@ class AttentionPatternDataset(SerializableDataclass):
 		"shuffle the dataset in-place"
 		perm: Int[torch.Tensor, " n_patterns"] = torch.randperm(self.n_patterns)
 		self.patterns = self.patterns[perm]
-		self.metadata = [self.metadata[i] for i in perm]
+		self.metadata = [self.metadata[i.item()] for i in perm]
 
 	def __getitem__(
 		self,
@@ -1396,7 +1405,9 @@ class AttnAEConfig(SerializableDataclass):
 	)
 
 	# loss
-	margin: float = serializable_field(default=1.0)
+	contrast_temperature: float = serializable_field(default=0.07)
+	recon_weight: float = serializable_field(default=1.0)
+	contrast_weight: float = serializable_field(default=1.0)
 
 	# optimizer
 	optimizer: type[torch.optim.Optimizer] = serializable_field(
@@ -1405,10 +1416,51 @@ class AttnAEConfig(SerializableDataclass):
 		deserialize_fn=lambda x: getattr(torch.optim, x),
 	)
 
+	# lr scheduler
+	learning_rate: float = serializable_field(default=1e-4)
+	lr_scheduler: type[torch.optim.lr_scheduler._LRScheduler] = serializable_field(
+		default=torch.optim.lr_scheduler.ReduceLROnPlateau,
+		serialization_fn=lambda x: x.__name__,
+		deserialize_fn=lambda x: getattr(torch.optim.lr_scheduler, x),
+	)
+	lr_scheduler_kwargs: dict = serializable_field(
+		default_factory=lambda : dict(
+			mode="min",
+			factor=0.1,
+			patience=10,
+			threshold=1e-4,
+			threshold_mode="rel",
+			cooldown=0,
+			min_lr=1e-6,
+			eps=1e-8,
+		)
+	)
+
+	# epochs
+	num_epochs: int = serializable_field(default=5)
+
 	def __post_init__(self):
 		assert all(c.channels > 0 for c in self.conv_encoder)
 		assert all(d > 0 for d in self.mlp_prepool)
 		assert all(d > 0 for d in self.mlp_postpool)
+
+
+	def get_optim_and_lrs(
+		self,
+		model: "AttnAE",
+	) -> tuple[
+		torch.optim.Optimizer,
+		torch.optim.lr_scheduler._LRScheduler,
+	]:
+		optimizer: torch.optim.Optimizer = self.optimizer(
+			model.parameters(),
+			lr=self.learning_rate,
+		)
+		lr_scheduler: torch.optim.lr_scheduler._LRScheduler = self.lr_scheduler(
+			optimizer,
+			**self.lr_scheduler_kwargs,
+		)
+		return optimizer, lr_scheduler
 
 
 @set_config_class(AttnAEConfig)
@@ -1563,6 +1615,8 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 
 @set_config_class(AttnAEConfig)
 class AttnAE(ConfiguredModel[AttnAEConfig]):
+	config: AttnAEConfig
+
 	def __init__(self, config: AttnAEConfig):
 		super().__init__(config)
 		self.config: AttnAEConfig = config
@@ -2173,6 +2227,7 @@ if __name__ == "__main__":
 ``````{ path="notebooks/contrastive_AE.ipynb" processed_with="ipynb_to_md" }
 ```python
 from pathlib import Path
+import datetime
 
 import torch
 import torch.nn.functional as F
@@ -2198,28 +2253,35 @@ from attention_motifs.dataset.util import AttentionPatternMetadata
 ```
 
 ```python
-train_loader_dataset = CollectedAttentionPatternDataloader.read(
-	"../data/activations/pile_5"
-)
-val_loader_dataset = CollectedAttentionPatternDataloader.read(
-	"../data/activations/pile_5_val"
-)
-
-batch_size: int = 32
-train_loader = train_loader_dataset.dataloader(batch_size)
-val_loader = val_loader_dataset.dataloader(batch_size)
-
-print(f"Train loader: {len(train_loader)} batches, {len(train_loader.dataset)} samples")
+BATCH_SIZE: int = 4
+N_TRAIN_BATCHES: int = 10
+N_VAL_BATCHES: int = 10
 ```
 
 ```python
-config: AttnAEConfig = AttnAEConfig(
-	latent_dim=128,
+TRAIN_LOADER_DATASET = CollectedAttentionPatternDataloader.read(
+	"../data/activations/pile_5"
+)
+VAL_LOADER_DATASET = CollectedAttentionPatternDataloader.read(
+	"../data/activations/pile_5_val"
 )
 
-model: AttnAE = AttnAE(config)
+TRAIN_LOADER = TRAIN_LOADER_DATASET.dataloader(BATCH_SIZE, shuffle=True, max_batches=N_TRAIN_BATCHES)
+VAL_LOADER = VAL_LOADER_DATASET.dataloader(BATCH_SIZE, shuffle=True, max_batches=N_VAL_BATCHES)
 
-model_n_params: int = sum(p.numel() for p in model.parameters())
+print(f"Train loader: {len(TRAIN_LOADER)} batches, {len(TRAIN_LOADER.dataset)} samples")
+```
+
+```python
+MODEL: AttnAE = AttnAE(
+	AttnAEConfig(
+		latent_dim=128,
+	)
+)
+
+MODEL_CONFIG: AttnAEConfig = MODEL.config
+
+model_n_params: int = sum(p.numel() for p in MODEL.parameters())
 print(
 	f"model has {model_n_params} ({shorten_numerical_to_str(model_n_params)}) parameters"
 )
@@ -2228,38 +2290,35 @@ print(
 ```
 
 ```python
-train_loader: torch.utils.data.DataLoader
-val_loader: torch.utils.data.DataLoader | None = None
-num_epochs: int = 100
-learning_rate: float = 1e-5
-recon_weight: float = 1.0
-contrast_weight: float = 1.0
-project_name: str = "contrastive-ae"
-checkpoint_interval: str = "1/10 run"
-eval_interval: str = "1/2 run"
-device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+TRAIN_LOADER: torch.utils.data.DataLoader
+VAL_LOADER: torch.utils.data.DataLoader | None = None
 
+PROJECT_NAME: str = "contrastive-ae"
+CHECKPT_INTERVAL: str = "1/2 run"
+EVAL_INTERVAL: str = "1/2 run"
+DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+MODEL = MODEL.to(DEVICE)
+```
 
-model = model.to(device)
-optimizer: torch.optim.Optimizer = model.config.optimizer(
-	model.parameters(),
-	lr=learning_rate,
-)
+```python
+OPTIMIZER: torch.optim.Optimizer
+LR_SCHEDULER: torch.optim.lr_scheduler._LRScheduler
+OPTIMIZER, LR_SCHEDULER = MODEL_CONFIG.get_optim_and_lrs(MODEL)
 ```
 
 ```python
 def evaluation_step(model: AttnAE) -> dict[str, float]:
 	"""Evaluate model on validation set"""
-	if val_loader is None:
+	if VAL_LOADER is None:
 		return {}
 
 	model.eval()
-	val_metrics = {"val/loss": 0.0, "val/recon_loss": 0.0, "val/contrast_loss": 0.0}
+	val_metrics: dict[str, float] = {"val/loss": 0.0, "val/recon_loss": 0.0, "val/contrast_loss": 0.0}
 
 	with torch.no_grad():
-		for patterns, metadata in tr.batch_loop(train_loader):
-			patterns = patterns.to(device).to(torch.float32).unsqueeze(1)
-			optimizer.zero_grad()
+		for patterns, metadata in VAL_LOADER:
+			patterns = patterns.to(DEVICE).to(torch.float32).unsqueeze(1)
+			OPTIMIZER.zero_grad()
 			x_recon, embeddings = model(patterns)
 
 			# reconstruction loss
@@ -2269,23 +2328,23 @@ def evaluation_step(model: AttnAE) -> dict[str, float]:
 			# compute "classes" for contrastive loss
 			# classes is a tensor of the same shape as the batch, where each element is an integer
 			classes: Int[torch.Tensor, " batch"] = (
-				AttentionPatternMetadata.contrastive_classes(metadata).to(device)
+				AttentionPatternMetadata.contrastive_classes(metadata).to(DEVICE)
 			)
 
 			# compute contrastive loss
-			contrast_loss = contrastive_loss(embeddings, classes)
+			contrast_loss = contrastive_loss(embeddings, classes, temperature=config.contrast_temperature)
 
 			# combined loss and backward pass
-			total_loss = recon_weight * recon_loss + contrast_weight * contrast_loss
-			total_loss.backward()
-			optimizer.step()
-
+			total_loss = (
+				model.config.recon_weight * recon_loss 
+				+ model.config.contrast_weight * contrast_loss
+			)
 			val_metrics["val/loss"] += total_loss.item()
 			val_metrics["val/recon_loss"] += recon_loss.item()
 			val_metrics["val/contrast_loss"] += contrast_loss.item()
 
 	for k in val_metrics:
-		val_metrics[k] /= len(val_loader)
+		val_metrics[k] /= len(VAL_LOADER)
 
 	model.train()
 	return val_metrics
@@ -2293,9 +2352,9 @@ def evaluation_step(model: AttnAE) -> dict[str, float]:
 
 ```python
 # setup logger
-logger: TensorBoardLogger = TensorBoardLogger(
+LOGGER: TensorBoardLogger = TensorBoardLogger(
 	log_dir=Path("tb-logs-convAE"),
-	name=project_name,
+	name=PROJECT_NAME + datetime.datetime.now().strftime("-%Y-%m-%d-%H-%M-%S"),
 	# metric_names=[
 	# 	"train/loss",
 	# 	"train/recon_loss",
@@ -2305,46 +2364,52 @@ logger: TensorBoardLogger = TensorBoardLogger(
 	# 	"val/contrast_loss",
 	# ],
 	train_config=dict(
-		model_config=model.zanj_model_config.serialize(),
-		learning_rate=learning_rate,
-		recon_weight=recon_weight,
-		contrast_weight=contrast_weight,
+		model_config=MODEL.zanj_model_config.serialize(),
+		model_str=str(MODEL),
 	),
 )
 
 with TrainingManager(
-	model=model,
-	logger=logger,
+	model=MODEL,
+	logger=LOGGER,
 	evals={
-		eval_interval: evaluation_step,
+		EVAL_INTERVAL: evaluation_step,
 	}.items(),
-	checkpoint_interval=checkpoint_interval,
+	checkpoint_interval=CHECKPT_INTERVAL,
 ) as tr:
-	for epoch in tr.epoch_loop(range(num_epochs)):
-		for patterns, metadata in tr.batch_loop(train_loader):
-			patterns = patterns.to(device).to(torch.float32).unsqueeze(1)
-			optimizer.zero_grad()
-			x_recon, embeddings = model(patterns)
+	for epoch in tr.epoch_loop(range(MODEL_CONFIG.num_epochs)):
+		for patterns, metadata in tr.batch_loop(TRAIN_LOADER):
+			# move to device
+			patterns = patterns.to(DEVICE).to(torch.float32).unsqueeze(1)
+
+			# reset gradients
+			OPTIMIZER.zero_grad()
+
+			# forward pass
+			x_recon, embeddings = MODEL(patterns)
 
 			# reconstruction loss
 			recon_loss = F.mse_loss(x_recon, patterns)
 
-			# contrastive loss using all pairs in batch
-			batch_size = patterns.size(0)
-
 			# compute "classes" for contrastive loss
 			# classes is a tensor of the same shape as the batch, where each element is an integer
 			classes: Int[torch.Tensor, " batch"] = (
-				AttentionPatternMetadata.contrastive_classes(metadata).to(device)
+				AttentionPatternMetadata.contrastive_classes(metadata).to(DEVICE)
 			)
 
 			# compute contrastive loss
 			contrast_loss = contrastive_loss(embeddings, classes)
 
 			# combined loss and backward pass
-			total_loss = recon_weight * recon_loss + contrast_weight * contrast_loss
+			total_loss = (
+				MODEL_CONFIG.recon_weight * recon_loss 
+				+ MODEL_CONFIG.contrast_weight * contrast_loss
+			)
+
+			# backward pass
 			total_loss.backward()
-			optimizer.step()
+			OPTIMIZER.step()
+			LR_SCHEDULER.step(epoch)
 
 			# log metrics
 			tr.batch_update(
@@ -2353,6 +2418,7 @@ with TrainingManager(
 					"train/loss": total_loss.item(),
 					"train/recon_loss": recon_loss.item(),
 					"train/contrast_loss": contrast_loss.item(),
+					"lr": LR_SCHEDULER.get_last_lr()[0],
 				},
 			)
 
