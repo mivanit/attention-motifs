@@ -42,31 +42,34 @@ def get_dataset(
 	n_batches: int,
 	shuffle: bool = True,
 	show: bool = True,
-) -> tuple[DataloaderMock, dict, torch.Tensor, list]:
+	return_loader: bool = True,
+) -> tuple[
+	CollectedAttentionPatternDataloader | DataloaderMock,
+	dict,
+]:
 	"returns dataloader, dataset info, example patterns, example metadata"
 	activations_path = Path(activations_path)
 
 	# load dataset and print summary
-	train_dataset: CollectedAttentionPatternDataloader = (
+	dataset: CollectedAttentionPatternDataloader = (
 		CollectedAttentionPatternDataloader.read(activations_path)
 	)
-	summary_short_str: str = json.dumps(train_dataset.summary_short(), indent=2)
+	summary_short_str: str = json.dumps(dataset.summary_short(), indent=2)
 	print(summary_short_str)
 
 	# turn dataset into dataloader
-	train_loader: DataloaderMock = train_dataset.dataloader(
-		batch_size=batch_size,
-		shuffle=shuffle,
-		max_batches=n_batches,
-	)
+	if not return_loader:
+		loader: DataloaderMock = dataset.dataloader(
+			batch_size=batch_size,
+			shuffle=shuffle,
+			max_batches=n_batches,
+		)
 
-	# print info
-	print(f"loader: {len(train_loader)} batches, {len(train_loader.dataset)} samples")
+		# print info
+		print(f"loader: {len(loader)} batches, {len(loader.dataset)} samples")
 
 	# show example pattern
-	x_mat, x_meta = next(
-		iter(train_dataset.dataloader(10, shuffle=shuffle, max_batches=1))
-	)
+	x_mat, x_meta = next(iter(dataset.dataloader(10, shuffle=shuffle, max_batches=1)))
 	x_mat.shape
 	print(x_meta[0])
 	plt.matshow(x_mat[0])
@@ -77,16 +80,23 @@ def get_dataset(
 
 	dataset_info: dict = dict(
 		summary_short_str=summary_short_str,
-		n_patterns=len(train_loader.dataset),
 		batch_size=batch_size,
-		n_batches=len(train_loader),
+		n_patterns=len(dataset),
+		n_batches=(
+			len(loader)
+			if return_loader
+			else min(float(n_batches), len(dataset) / batch_size)
+		),
 		activations_path=activations_path.as_posix(),
-		summary_short=train_dataset.summary_short(),
-		summary=train_dataset.summary(),
-		dataset_str=str(train_dataset),
+		summary_short=dataset.summary_short(),
+		summary=dataset.summary(),
+		dataset_str=str(dataset),
 	)
 
-	return train_loader, dataset_info, x_mat, x_meta
+	if return_loader:
+		return loader, dataset_info
+	else:
+		return dataset, dataset_info
 
 
 T_Config = TypeVar("T_Config", bound=SerializableDataclass)
@@ -203,11 +213,14 @@ def train(
 	model: ConfiguredModel[T_Config],
 	optimizer: torch.optim.Optimizer,
 	lr_scheduler: torch.optim.lr_scheduler._LRScheduler,
-	train_loader: DataloaderMock,
+	train_dataset: CollectedAttentionPatternDataloader,
+	batch_size: int,
+	n_batches: int,
 	val_loader: DataloaderMock | None = None,
 	training_manager_kwargs: dict | None = None,
 	eval_plots_interval: str = "1/10 run",
 ) -> ConfiguredModel[T_Config]:
+	# setup
 	model_config: T_Config = model.config
 
 	if training_manager_kwargs is None:
@@ -234,6 +247,7 @@ def train(
 			)
 		)
 
+	# training loop
 	with TrainingManager(
 		model=model,
 		logger=logger,
@@ -244,7 +258,14 @@ def train(
 		for epoch in tr.epoch_loop(range(model_config.num_epochs), use_tqdm=False):
 			patterns: Float[torch.Tensor, "*batch n_ctx n_ctx"]
 			metadata: list[AttentionPatternMetadata]
-			for patterns, metadata in tr.batch_loop(train_loader, use_tqdm=True):
+			for patterns, metadata in tr.batch_loop(
+				train_dataset.dataloader(
+					batch_size=batch_size,
+					max_batches=n_batches,
+					shuffle=True,
+				),
+				use_tqdm=True,
+			):
 				this_batch_size: int = len(metadata)
 
 				# move to device, convert type, add channel dim
@@ -266,7 +287,9 @@ def train(
 				)
 
 				# compute contrastive loss
-				contrast_loss = contrastive_loss(embeddings, classes)
+				contrast_loss = contrastive_loss(
+					embeddings, classes, temperature=model_config.contrast_temperature
+				)
 
 				# combined loss and backward pass
 				total_loss = (
