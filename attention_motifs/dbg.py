@@ -9,13 +9,20 @@ import sys
 import typing
 from pathlib import Path
 
+from muutils.dictmagic import DefaulterDict
 
-__version__ = "0.3.0"
+_CWD: Path = Path.cwd().absolute()
+
+
+_FNAME_CACHE: DefaulterDict[Path, str] = DefaulterDict(
+	lambda x: x.relative_to(
+	Path(os.path.commonpath([x, _CWD]))
+).as_posix()
+)
 
 
 _ExpType = typing.TypeVar("_ExpType")
 
-_CWD: Path = Path.cwd().absolute()
 
 _COUNTER: int = 0
 
@@ -51,9 +58,10 @@ def dbg(exp: _ExpType = _NoExpPassed) -> _ExpType:
 			if end == -1:
 				end = len(line)
 
-			file: Path = Path(frame.filename).absolute()
-			common = Path(os.path.commonpath([file, _CWD]))
-			fname: str = file.relative_to(common).as_posix()
+			# file: Path = Path(frame.filename).absolute()
+			# common = Path(os.path.commonpath([file, _CWD]))
+			# fname: str = file.relative_to(common).as_posix()
+			fname: str = _FNAME_CACHE[Path(frame.filename)]
 
 			msg: str = f"[{fname}:{frame.lineno}]"
 

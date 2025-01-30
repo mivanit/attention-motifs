@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 from jaxtyping import Float, Int
+import einops
 
 # custom utils
 from muutils.json_serialize import (
@@ -373,6 +374,9 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 	) -> Float[Tensor, "batch n_ctx n_ctx"]:
 		batch_size: int = latent.shape[0]
 		ax_patches: int = n_ctx // self.config.patch_size
+		dbg(n_ctx)
+		dbg(self.config.patch_size)
+		dbg(ax_patches)
 
 		# Map latent -> d_model
 		latent_embed: Float[Tensor, "batch d_model"] = self.from_latent(latent)
@@ -411,7 +415,7 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 			latent_embed.unsqueeze(-1).unsqueeze(-1) + pos2d_perm
 		)
 		dbg(patches_grid.shape)
-		patches_seq: Float[Tensor, "batch n_patches d_model"] = patches_grid.flatten(1)
+		patches_seq: Float[Tensor, "batch n_patches d_model"] = patches_grid.flatten(2).transpose(1, 2)
 
 		# Pass through decoder blocks
 		dbg(patches_seq.shape)
@@ -422,45 +426,58 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 		patches_seq = self.norm(patches_seq)
 
 		# (7) Project to patch pixels => (B, num_patches, patch_dim)
-		patches: Float[Tensor, "batch num_patches patch_dim"] = self.head(latent_embed)
+		dbg(patches_seq.shape)
+		dbg(latent_embed.shape)
+		dbg(self.head)
+		patches: Float[Tensor, "batch num_patches patch_dim"] = self.head(patches_seq)
 		num_patches: int = patches.shape[1]
+		dbg(num_patches)
+		dbg(ax_patches)
+		dbg(patches.shape)
 		assert num_patches == ax_patches * ax_patches
 
-		# (8) Unpatchify:
-		# => (B, num_patches, 1, patch_size, patch_size)
-		patches = patches.view(
-			batch_size,
-			num_patches,
-			1,
-			self.config.patch_size,
-			self.config.patch_size,
+		# unpatch
+		unpatched: Float[Tensor, "batch channels=1 n_ctx n_ctx"] = einops.rearrange(
+			patches,
+			"batch (h w) (patch_h patch_w) -> batch 1 (h patch_h) (w patch_w)",
+			h=ax_patches,
+			w=ax_patches,
+			patch_h=self.config.patch_size,
+			patch_w=self.config.patch_size,
 		)
+		dbg(unpatched.shape)
 
-		# => (B, grid_size, grid_size, 1, patch_size, patch_size)
-		patches = patches.reshape(
-			batch_size,
-			n_ctx,
-			n_ctx,
-			1,
-			self.config.patch_size,
-			self.config.patch_size,
-		)
+		# # (8) Unpatchify:
+		# # => (B, num_patches, 1, patch_size, patch_size)
+		# patches = patches.view(
+		# 	batch_size,
+		# 	num_patches,
+		# 	1,
+		# 	self.config.patch_size,
+		# 	self.config.patch_size,
+		# )
+
+		# # => (B, grid_size, grid_size, 1, patch_size, patch_size)
+		# patches = patches.reshape(
+		# 	batch_size,
+		# 	n_ctx,
+		# 	n_ctx,
+		# 	1,
+		# 	self.config.patch_size,
+		# 	self.config.patch_size,
+		# )
+		# dbg(patches.shape)
 
 		# reorder to => (B, 1, grid_size*patch_size, grid_size*patch_size)
-		patches = patches.permute(0, 3, 1, 4, 2, 5).contiguous()
+		# patches = patches.permute(0, 3, 1, 4, 2, 5).contiguous()
+		# dbg(patches.shape)
 
-		# => (B, 1, n_ctx, n_ctx)
-		x_recon_4d: Float[Tensor, "batch 1 n_ctx n_ctx"] = patches.view(
-			batch_size,
-			1,
-			n_ctx,
-			n_ctx,
-		)
 
 		# make lower-triangular and row-stochastic
-		x_recon_4d = convert_tril_rowstoch(x_recon_4d)
+		x_recon = convert_tril_rowstoch(unpatched)
+		dbg(x_recon.shape)
 
-		return x_recon_4d
+		return x_recon
 
 
 @set_config_class(VitAEConfig)
@@ -479,9 +496,14 @@ class VitAE(ConfiguredModel[VitAEConfig]):
 
 	def forward(
 		self,
-		x: Float[Tensor, "batch n_ctx n_ctx"],
-	) -> Tuple[Float[Tensor, "batch n_ctx n_ctx"], Float[Tensor, "batch d_latent"]]:
-		n_ctx: int = x.shape[1]
+		x: Float[Tensor, "batch channels=1 n_ctx n_ctx"],
+	) -> Tuple[Float[Tensor, "batch channels=1 n_ctx n_ctx"], Float[Tensor, "batch d_latent"]]:
+		batch_size: int = x.shape[0]
+		n_ctx: int = x.shape[2]
+
+		dbg(x.shape)
+		dbg(n_ctx)
+		dbg(batch_size)
 
 		# Encode
 		latent: Float[Tensor, "batch d_latent"] = self.encoder(x)
