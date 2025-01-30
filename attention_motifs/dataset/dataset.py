@@ -197,7 +197,7 @@ class CollectedAttentionPatternDataloader:
 		self,
 		batch_size: int,
 		shuffle: bool = False,
-		max_batches: int|None = None,
+		max_batches: int | None = None,
 	) -> Iterator[
 		tuple[Float[torch.Tensor, "batch n_ctx n_ctx"], list[AttentionPatternMetadata]]
 	]:
@@ -235,7 +235,6 @@ class CollectedAttentionPatternDataloader:
 		If `batch_size <= 0`
 		"""
 		assert batch_size >= 1, "batch_size must be positive"
-
 
 		batches_count: int = 0
 		if shuffle:
@@ -292,12 +291,14 @@ class CollectedAttentionPatternDataloader:
 		self,
 		batch_size: int,
 		shuffle: bool,
-		max_batches: int|None = None,
+		max_batches: int | None = None,
 	) -> DataloaderMock:
 		"""Return a dataloader that yields batches of patterns and metadata."""
 		n_batches: int = max_batches or self.n_total_samples // batch_size
 		return DataloaderMock(
-			iter_func=lambda: self.batches(batch_size=batch_size, shuffle=shuffle, max_batches=max_batches),
+			iter_func=lambda: self.batches(
+				batch_size=batch_size, shuffle=shuffle, max_batches=max_batches
+			),
 			batch_size=batch_size,
 			shuffle=shuffle,
 			n_batches=n_batches,

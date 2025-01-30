@@ -105,7 +105,7 @@ class AttnAEConfig(SerializableDataclass):
 		deserialize_fn=lambda x: getattr(torch.optim.lr_scheduler, x),
 	)
 	lr_scheduler_kwargs: dict = serializable_field(
-		default_factory=lambda : dict(
+		default_factory=lambda: dict(
 			mode="min",
 			factor=0.1,
 			patience=10,
@@ -124,7 +124,6 @@ class AttnAEConfig(SerializableDataclass):
 		assert all(c.channels > 0 for c in self.conv_encoder)
 		assert all(d > 0 for d in self.mlp_prepool)
 		assert all(d > 0 for d in self.mlp_postpool)
-
 
 	def get_optim_and_lrs(
 		self,

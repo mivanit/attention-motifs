@@ -57,7 +57,11 @@ def test_dataloader_properties():
 	ds_patterns = torch.randn((4, 3, 3))
 	ds_meta = [
 		AttentionPatternMetadata(
-			model_name="modelA", idx_layer=0, idx_head=i, prompt_hash=f"hash{i}", n_ctx=3
+			model_name="modelA",
+			idx_layer=0,
+			idx_head=i,
+			prompt_hash=f"hash{i}",
+			n_ctx=3,
 		)
 		for i in range(4)
 	]
@@ -198,7 +202,11 @@ def test_dataloader_iteration():
 	ds1_patterns = torch.rand((2, 4, 4))
 	ds1_meta = [
 		AttentionPatternMetadata(
-			model_name="modelA", idx_layer=0, idx_head=i, prompt_hash=f"hash{i}", n_ctx=4
+			model_name="modelA",
+			idx_layer=0,
+			idx_head=i,
+			prompt_hash=f"hash{i}",
+			n_ctx=4,
 		)
 		for i in range(2)
 	]
@@ -209,7 +217,11 @@ def test_dataloader_iteration():
 	ds2_patterns = torch.rand((3, 5, 5))
 	ds2_meta = [
 		AttentionPatternMetadata(
-			model_name="modelA", idx_layer=1, idx_head=i, prompt_hash=f"hash{i + 2}", n_ctx=5
+			model_name="modelA",
+			idx_layer=1,
+			idx_head=i,
+			prompt_hash=f"hash{i + 2}",
+			n_ctx=5,
 		)
 		for i in range(3)
 	]
