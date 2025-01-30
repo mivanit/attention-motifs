@@ -87,8 +87,10 @@ class DataloaderMock:
 		return self.n_batches
 
 	def __iter__(self):
-		for x in self.iter_func():
-			yield x
+		try:
+			yield from self.iter_func()
+		except StopIteration:
+			pass
 
 
 class CollectedAttentionPatternDataloader:
@@ -291,7 +293,7 @@ class CollectedAttentionPatternDataloader:
 					yield batch, metadata
 					batches_count += 1
 					if max_batches is not None and batches_count >= max_batches:
-						raise StopIteration()
+						return
 
 	def dataloader(
 		self,

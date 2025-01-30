@@ -62,7 +62,7 @@ def get_dataset(
 
 	# print info
 	print(
-		f"Train loader: {len(train_loader)} batches, {len(train_loader.dataset)} samples"
+		f"loader: {len(train_loader)} batches, {len(train_loader.dataset)} samples"
 	)
 
 	# show example pattern

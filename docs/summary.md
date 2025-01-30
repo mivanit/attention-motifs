@@ -1,8 +1,8 @@
 # Stats
-- 24 files
-- 4943 (4.9K) lines
-- 140927 (141K) chars
-- 56485 (56K) `gpt2` tokens
+- 31 files
+- 6090 (6.1K) lines
+- 170648 (171K) chars
+- 68804 (69K) `gpt2` tokens
 
 # File Tree
 
@@ -11,34 +11,41 @@ attention-motifs
 ├── attention_motifs               
 │   ├── dataset                    
 │   │   ├── __init__.py            [    0L         0C         0T]
-│   │   ├── dataset.py             [  547L    15,608C     6,311T]
+│   │   ├── dataset.py             [  554L    15,908C     6,428T]
 │   │   ├── prompts.py             [  296L     8,377C     3,336T]
 │   │   └── util.py                [  410L    11,214C     4,474T]
 │   ├── __init__.py                [    0L         0C         0T]
-│   ├── ae.py                      [  553L    16,577C     6,597T]
+│   ├── ae.py                      [  316L     9,376C     3,818T]
 │   ├── consts.py                  [  152L     4,188C     1,644T]
-│   └── figure_funcs.py            [  186L     5,070C     2,141T]
+│   ├── dbg.py                     [   77L     1,515C       636T]
+│   ├── figure_funcs.py            [  186L     5,070C     2,141T]
+│   ├── profiling.py               [  296L     7,531C     2,804T]
+│   ├── train.py                   [  290L     7,618C     3,174T]
+│   ├── train_util.py              [  152L     4,689C     1,687T]
+│   └── vit_ae.py                  [  567L    16,384C     6,909T]
 ├── data                           
 │   └── pile_example.jsonl         [    2L     1,797C       440T]
 ├── notebooks                      
-│   ├── contrastive_AE.ipynb       [  317L     9,445C     4,563T]
+│   ├── contrastive_AE.ipynb       [  405L    54,070C    33,199T]
 │   ├── demo.ipynb                 [  173L     4,889C     2,394T]
-│   ├── demo_dataset.ipynb         [  318L    77,392C    56,697T]
+│   ├── demo_dataset.ipynb         [  348L    46,072C    31,645T]
 │   ├── fit_patterns_manual.ipynb  [  546L   538,141C   404,452T]
 │   ├── fit_patterns_pysr.ipynb    [2,679L 1,932,395C 1,433,747T]
 │   ├── markov_absorption.ipynb    [  413L   361,334C   271,241T]
+│   └── view_profiling.ipynb       [  150L     9,976C     4,894T]
 ├── scripts                        
-│   └── gen_data.py                [   31L       639C       295T]
+│   ├── gen_data.py                [   44L       949C       407T]
+│   └── run_train.py               [    0L         0C         0T]
 ├── tests                          
 │   ├── dataset                    
 │   │   ├── test_integration.py    [  197L     5,831C     2,209T]
 │   │   ├── test_prompts.py        [  347L    11,007C     4,003T]
-│   │   └── test_unit.py           [  280L     7,754C     3,069T]
-│   ├── test_ae.py                 [  104L     3,826C     1,298T]
+│   │   └── test_unit.py           [  292L     7,793C     3,123T]
+│   ├── test_ae.py                 [  106L     3,840C     1,307T]
 │   └── test_consts.py             [   85L     2,428C     1,001T]
 ├── README.md                      [    2L        23C        10T]
 ├── makefile                       [  719L    24,356C     8,746T]
-├── pyproject.toml                 [  133L     3,127C     1,406T]
+├── pyproject.toml                 [  134L     3,145C     1,420T]
 ```
 
 # File Contents
@@ -247,7 +254,7 @@ class CollectedAttentionPatternDataloader:
 		self,
 		batch_size: int,
 		shuffle: bool = False,
-		max_batches: int|None = None,
+		max_batches: int | None = None,
 	) -> Iterator[
 		tuple[Float[torch.Tensor, "batch n_ctx n_ctx"], list[AttentionPatternMetadata]]
 	]:
@@ -286,14 +293,16 @@ class CollectedAttentionPatternDataloader:
 		"""
 		assert batch_size >= 1, "batch_size must be positive"
 
-
 		batches_count: int = 0
 		if shuffle:
 			# Shuffle each dataset
+			# print(f"begin shuffle of datasets")
 			for ds in self.datasets.values():
 				ds.shuffle()
+			# print(f"\tend shuffle of datasets")
 
 			# Build an iterator for each dataset
+			# print(f"begin building iterators")
 			iters: dict[
 				int, Iterator[tuple[int, int, Float[torch.Tensor, "batch n_ctx n_ctx"]]]
 			] = {}
@@ -301,9 +310,11 @@ class CollectedAttentionPatternDataloader:
 				iters[n_ctx] = iter(
 					tensor_batches_indexed(ds.patterns, batch_size=batch_size)
 				)
+			# print(f"\tend building iterators")
 
 			# Randomly pick from any dataset that isn't exhausted
 			while iters and (max_batches is None or batches_count < max_batches):
+				# print("start trying to get a batch")
 				n_ctx: int = random.choice(list(iters.keys()))
 				dataset_iter: Iterator[
 					tuple[int, int, Float[torch.Tensor, "batch n_ctx n_ctx"]]
@@ -321,6 +332,7 @@ class CollectedAttentionPatternDataloader:
 				metadata: list[AttentionPatternMetadata] = ds.metadata[
 					idx_start:idx_end
 				]
+				# print(f"\tyielding batch of size {batch.shape = }, {len(metadata) = }")
 				yield batch, metadata
 				batches_count += 1
 
@@ -342,12 +354,14 @@ class CollectedAttentionPatternDataloader:
 		self,
 		batch_size: int,
 		shuffle: bool,
-		max_batches: int|None = None,
+		max_batches: int | None = None,
 	) -> DataloaderMock:
 		"""Return a dataloader that yields batches of patterns and metadata."""
 		n_batches: int = max_batches or self.n_total_samples // batch_size
 		return DataloaderMock(
-			iter_func=lambda: self.batches(batch_size=batch_size, shuffle=shuffle, max_batches=max_batches),
+			iter_func=lambda: self.batches(
+				batch_size=batch_size, shuffle=shuffle, max_batches=max_batches
+			),
 			batch_size=batch_size,
 			shuffle=shuffle,
 			n_batches=n_batches,
@@ -453,9 +467,9 @@ class CollectedAttentionPatternDataloader:
 	def generate(
 		cls,
 		config: APGenerationConfig,
-		model_device: torch.device = torch.device("cuda")
-		if torch.cuda.is_available()
-		else torch.device("cpu"),
+		model_device: torch.device = (
+			torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+		),
 		storage_device: torch.device = torch.device("cpu"),
 		max_batch_size: Optional[int] = None,
 		z: Optional[ZANJ] = None,
@@ -1317,12 +1331,10 @@ def process_length_bin(
 ``````{ end_of_file="attention_motifs/__init__.py" }
 
 ``````{ path="attention_motifs/ae.py"  }
-import warnings
 import torch
 import torch.nn as nn
 from torch import Tensor
-import torch.nn.functional as F
-from jaxtyping import Float, Int, Bool
+from jaxtyping import Float
 
 # custom utils
 from muutils.json_serialize import (
@@ -1331,8 +1343,8 @@ from muutils.json_serialize import (
 	serializable_field,
 )
 from zanj.torchutil import ConfiguredModel, set_config_class
-from trnbl import TrainingManager
-from trnbl.loggers.local import LocalLogger
+
+from attention_motifs.train_util import convert_tril_rowstoch
 
 
 @serializable_dataclass
@@ -1424,7 +1436,7 @@ class AttnAEConfig(SerializableDataclass):
 		deserialize_fn=lambda x: getattr(torch.optim.lr_scheduler, x),
 	)
 	lr_scheduler_kwargs: dict = serializable_field(
-		default_factory=lambda : dict(
+		default_factory=lambda: dict(
 			mode="min",
 			factor=0.1,
 			patience=10,
@@ -1443,7 +1455,6 @@ class AttnAEConfig(SerializableDataclass):
 		assert all(c.channels > 0 for c in self.conv_encoder)
 		assert all(d > 0 for d in self.mlp_prepool)
 		assert all(d > 0 for d in self.mlp_postpool)
-
 
 	def get_optim_and_lrs(
 		self,
@@ -1507,6 +1518,7 @@ class Encoder(ConfiguredModel[AttnAEConfig]):
 		# TODO: add pos embeds?
 		h_reshape = h.flatten(2).reshape(h.size(0), -1, h.size(1))
 		h = self.linear_prepool(h_reshape)
+
 		# mean pool over pixels
 		h = h.mean(dim=-2)
 		# apply linear layers to pooled features
@@ -1610,6 +1622,9 @@ class Decoder(ConfiguredModel[AttnAEConfig]):
 		# 4) Run transposed convolution => (B, in_channels, H, W)
 		x_recon: Float[Tensor, "batch in_channels H W"] = self.conv(h)
 
+		# 5) Convert to row-stochastic
+		x_recon = convert_tril_rowstoch(x_recon)
+
 		return x_recon
 
 
@@ -1629,247 +1644,9 @@ class AttnAE(ConfiguredModel[AttnAEConfig]):
 		x: Float[Tensor, "*batch n n"],
 	) -> tuple[Float[Tensor, "*batch n n"], Float[Tensor, "batch latent_dim"]]:
 		n_ctx: int = x.shape[-1]
-
 		h: Float[Tensor, "batch latent_dim"] = self.encoder(x)
 		x_recon: Float[Tensor, "batch 1 n n"] = self.decoder(h, n_ctx=n_ctx)
 		return x_recon, h
-
-
-def train(
-	model: AttnAE,
-	train_loader: torch.utils.data.DataLoader,
-	val_loader: torch.utils.data.DataLoader | None = None,
-	num_epochs: int = 100,
-	learning_rate: float = 1e-3,
-	recon_weight: float = 1.0,
-	contrast_weight: float = 1.0,
-	project_name: str = "contrastive-ae",
-	checkpoint_interval: str = "1/10 run",
-	eval_interval: str = "1k samples",
-	device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-) -> tuple[AttnAE, LocalLogger]:
-	"""Train a contrastive autoencoder
-
-	# Parameters:
-	 - `model: ContrastiveAutoencoder`
-	    Model to train
-	 - `train_loader: torch.utils.data.DataLoader`
-	    Training data loader returning (tensor, index_tuple) pairs
-	 - `val_loader: torch.utils.data.DataLoader | None`
-	    Optional validation loader
-	 - `num_epochs: int`
-	    Number of epochs to train
-	 - `learning_rate: float`
-	    Learning rate for Adam optimizer
-	 - `recon_weight: float`
-	    Weight for reconstruction loss
-	 - `contrast_weight: float`
-	    Weight for contrastive loss
-	 - `project_name: str`
-	    Name for logging
-	    (default: "contrastive-ae")
-	 - `checkpoint_interval: str`
-	    When to save checkpoints (trnbl format)
-	 - `eval_interval: str`
-	    How often to evaluate (trnbl format)
-	 - `device: torch.device`
-	    Device to train on
-
-	# Returns:
-	 - `ContrastiveAutoencoder` : Trained model
-	 - `LocalLogger` : Logger with training history
-	"""
-	model = model.to(device)
-	optimizer: torch.optim.Optimizer = model.config.optimizer(
-		model.parameters(),
-		lr=learning_rate,
-	)
-
-	# setup logger
-	logger: LocalLogger = LocalLogger(
-		project=project_name,
-		metric_names=[
-			"train/loss",
-			"train/recon_loss",
-			"train/contrast_loss",
-			"val/loss",
-			"val/recon_loss",
-			"val/contrast_loss",
-		],
-		train_config=dict(
-			model_config=model.zanj_model_config.serialize(),
-			learning_rate=learning_rate,
-			recon_weight=recon_weight,
-			contrast_weight=contrast_weight,
-		),
-	)
-
-	def evaluation_step(model: AttnAE) -> dict[str, float]:
-		"""Evaluate model on validation set"""
-		if val_loader is None:
-			return {}
-
-		model.eval()
-		val_metrics = {"val/loss": 0.0, "val/recon_loss": 0.0, "val/contrast_loss": 0.0}
-
-		with torch.no_grad():
-			for batch_idx, (x, index_tuple) in enumerate(val_loader):
-				x = x.to(device)
-				index_tuple = tuple(i.to(device) for i in index_tuple)
-
-				x_recon, z = model(x)
-				recon_loss = F.mse_loss(x_recon, x)
-
-				batch_size = x.size(0)
-				z1 = z.repeat_interleave(batch_size, dim=0)
-				z2 = z.repeat(batch_size, 1)
-				idx1 = tuple(i.repeat_interleave(batch_size) for i in index_tuple)
-				idx2 = tuple(i.repeat(batch_size) for i in index_tuple)
-				contrast_loss = model.contrastive_loss(z1, z2, idx1, idx2)
-
-				total_loss = recon_weight * recon_loss + contrast_weight * contrast_loss
-
-				val_metrics["val/loss"] += total_loss.item()
-				val_metrics["val/recon_loss"] += recon_loss.item()
-				val_metrics["val/contrast_loss"] += contrast_loss.item()
-
-		for k in val_metrics:
-			val_metrics[k] /= len(val_loader)
-
-		model.train()
-		return val_metrics
-
-	with TrainingManager(
-		model=model,
-		logger=logger,
-		evals={
-			eval_interval: evaluation_step,
-		}.items(),
-		checkpoint_interval=checkpoint_interval,
-	) as tr:
-		for epoch in tr.epoch_loop(range(num_epochs)):
-			for x, index_tuple in tr.batch_loop(train_loader):
-				x = x.to(device)
-				index_tuple = tuple(i.to(device) for i in index_tuple)
-
-				optimizer.zero_grad()
-				x_recon, z = model(x)
-
-				# reconstruction loss
-				recon_loss = F.mse_loss(x_recon, x)
-
-				# contrastive loss using all pairs in batch
-				batch_size = x.size(0)
-				z1 = z.repeat_interleave(batch_size, dim=0)
-				z2 = z.repeat(batch_size, 1)
-				idx1 = tuple(i.repeat_interleave(batch_size) for i in index_tuple)
-				idx2 = tuple(i.repeat(batch_size) for i in index_tuple)
-				contrast_loss = model.contrastive_loss(z1, z2, idx1, idx2)
-
-				# combined loss and backward pass
-				total_loss = recon_weight * recon_loss + contrast_weight * contrast_loss
-				total_loss.backward()
-				optimizer.step()
-
-				# log metrics
-				tr.batch_update(
-					samples=len(x),
-					**{
-						"train/loss": total_loss.item(),
-						"train/recon_loss": recon_loss.item(),
-						"train/contrast_loss": contrast_loss.item(),
-					},
-				)
-
-	return model, logger
-
-
-def contrastive_loss(
-	h: Float[Tensor, "batch latent_dim"],
-	classes: Int[Tensor, " batch"],
-	temperature: float = 0.07,
-) -> Float[Tensor, ""]:
-	"""Compute a supervised contrastive loss.
-
-	Pushes samples of the same class together and pushes
-	samples from different classes apart.
-
-	# Parameters:
-	 - `h : Float[Tensor, "batch latent_dim"]`
-	    latent embeddings
-	 - `classes : Int[Tensor, " batch"]`
-	    class labels (integer) for each sample in the batch
-	 - `temperature : float`
-	    temperature for scaling similarities
-	    (defaults to 0.07)
-
-	# Returns:
-	 - `Float[Tensor, ""]`
-	    the scalar contrastive loss
-
-	# Usage:
-	```python
-	>>> batch_size = 8
-	>>> latent_dim = 16
-	>>> h = torch.randn(batch_size, latent_dim)
-	>>> classes = torch.randint(0, 3, (batch_size,))
-	>>> loss_val = contrastive_loss(h, classes, temperature=0.07)
-	>>> print(loss_val)
-	```
-
-	# Raises:
-	 - `ValueError` : if all samples belong to distinct classes (no positives)
-	"""
-
-	batch_size: int = h.shape[0]
-	# Normalize the embeddings
-	h_norm: Float[Tensor, "batch latent_dim"] = F.normalize(h, dim=1)
-
-	# Compute pairwise cosine similarities
-	sim: Float[Tensor, "batch batch"] = h_norm @ h_norm.T
-
-	# Scale the similarities by the temperature
-	sim_scaled: Float[Tensor, "batch batch"] = sim / temperature
-
-	# Create a mask for all positives: same class and not self
-	positive_mask: Bool[Tensor, "batch batch"] = (
-		classes.unsqueeze(1) == classes.unsqueeze(0)
-	) & (~torch.eye(batch_size, dtype=torch.bool, device=h.device))
-
-	# Ensure there's at least one positive for each sample
-	# (if there's a class with exactly 1 sample in the batch, that sample has no positives)
-	# We'll allow those samples to have zero contribution, though sometimes you'd skip them or handle separately.
-	if positive_mask.sum() == 0:
-		warnings.warn("No positive pairs found in batch")
-
-	# Exponentiate scaled similarities
-	exp_sim: Float[Tensor, "batch batch"] = torch.exp(sim_scaled)
-
-	# For each anchor i, we exclude itself from the denominator
-	# so we zero out the diagonal
-	exp_sim_masked: Float[Tensor, "batch batch"] = exp_sim * (
-		~torch.eye(batch_size, device=h.device, dtype=torch.bool)
-	)
-
-	# Sum over all (masked) exponentiated similarities for the denominator
-	denom: Float[Tensor, " batch"] = exp_sim_masked.sum(dim=1)
-
-	# log_prob[i, j] = sim[i,j]/temp - log( sum_{k != i}(exp(sim[i,k]/temp)) )
-	log_prob: Float[Tensor, "batch batch"] = (sim_scaled) - torch.log(denom).unsqueeze(
-		1
-	)
-
-	# For each anchor i, we only want the log_probs for positives
-	# We'll sum over those positives and then divide by the number of positives
-	positive_log_prob: Float[Tensor, " batch"] = (
-		(log_prob * positive_mask).sum(dim=1)
-		/ (positive_mask.sum(dim=1) + 1e-8)  # add epsilon to avoid div by zero
-	)
-
-	# Our loss is the negative mean of these average positive log probs
-	loss: Float[Tensor, ""] = -positive_log_prob.mean()
-
-	return loss
 
 ``````{ end_of_file="attention_motifs/ae.py" }
 
@@ -2028,6 +1805,87 @@ def tensor_batches_indexed(
 		idx_start += batch_size
 
 ``````{ end_of_file="attention_motifs/consts.py" }
+
+``````{ path="attention_motifs/dbg.py"  }
+"""pydbg is an implementation of the Rust builtin `dbg!` for Python.
+
+from https://github.com/tylerwince/pydbg/blob/master/pydbg.py
+"""
+
+import os
+import inspect
+import sys
+import typing
+from pathlib import Path
+
+from muutils.dictmagic import DefaulterDict
+
+_CWD: Path = Path.cwd().absolute()
+
+
+_FNAME_CACHE: DefaulterDict[Path, str] = DefaulterDict(
+	lambda x: x.relative_to(Path(os.path.commonpath([x, _CWD]))).as_posix()
+)
+
+
+_ExpType = typing.TypeVar("_ExpType")
+
+
+_COUNTER: int = 0
+
+_NoExpPassed = object()
+
+
+def dbg(exp: _ExpType = _NoExpPassed) -> _ExpType:
+	"""Call dbg with any variable or expression.
+
+	Calling dbg will print to stderr the current filename and lineno,
+	as well as the passed expression and what the expression evaluates to:
+
+		from pydbg import dbg
+
+		a = 2
+		b = 5
+
+		dbg(a+b)
+
+		def square(x: int) -> int:
+			return x * x
+
+		dbg(square(a))
+
+	"""
+	global _COUNTER
+
+	for frame in inspect.stack():
+		line = frame.code_context[0]
+		if "dbg" in line:
+			start = line.find("(") + 1
+			end = line.rfind(")")
+			if end == -1:
+				end = len(line)
+
+			# file: Path = Path(frame.filename).absolute()
+			# common = Path(os.path.commonpath([file, _CWD]))
+			# fname: str = file.relative_to(common).as_posix()
+			fname: str = _FNAME_CACHE[Path(frame.filename)]
+
+			msg: str = f"[{fname}:{frame.lineno}]"
+
+			if exp is _NoExpPassed:
+				msg += f" (dbg {_COUNTER})"
+			else:
+				msg += f" {line[start:end]} = {exp!r}"
+				_COUNTER += 1
+			print(
+				msg,
+				file=sys.stderr,
+			)
+			break
+
+	return exp
+
+``````{ end_of_file="attention_motifs/dbg.py" }
 
 ``````{ path="attention_motifs/figure_funcs.py"  }
 import numpy as np
@@ -2219,110 +2077,725 @@ if __name__ == "__main__":
 
 ``````{ end_of_file="attention_motifs/figure_funcs.py" }
 
-``````{ path="data/pile_example.jsonl"  }
-{"text": "Article content\n\nHuman behavior has a tremendous impact on investing \u2014 more so than most realize \u2014 and one of our biggest weaknesses is the tendency to constantly compare and contrast ourselves to others.\n\n[np_storybar title=\u201dFollow Financial Post\u201d link=\u201d\u201d]\n\nWe apologize, but this video has failed to load.\n\ntap here to see other videos from our team. Try refreshing your browser, or Three signs bubbles are brewing again in the market \u2014 and one of them has wheels Back to video\n\n\u2022 Twitter\n\n\u2022 Facebook\n\n[/np_storybar]\n\nFor example, a 1995 study by the Harvard School of Public Health indicated that people will forgo a stronger income scenario in favour of a weaker one as long as it meant earning more than their neighbours.\n\nUnfortunately, many in the investment world are keenly aware of this and will structure their marketing efforts accordingly. As a result, you have a compounding of momentum or trends in the market as investors buy at or near market tops for fear of not doing as well as or better than others.\n\nFor the same reason, investors piled into technology stocks in 2000 with only the promise of earnings in some distant future, and into housing-related investments in 2007 that were backstopped by very low incomes.", "meta": {"pile_set_name": "OpenWebText2"}}
-{"text": "Topic: reinvent midnight madness\n\nAmazon announced a new service at the AWS re:Invent Midnight Madness event. Amazon Sumerian is a solution that aims to make it easier for developers to build virtual reality, augmented reality, and 3D applications. It features a user friendly editor, which can be used to drag and drop 3D objects and characters into scenes. Amazon \u2026 continue reading", "meta": {"pile_set_name": "Pile-CC"}}
-``````{ end_of_file="data/pile_example.jsonl" }
+``````{ path="attention_motifs/profiling.py"  }
+"""Profile PyTorch training loops for both time and memory usage."""
 
-``````{ path="notebooks/contrastive_AE.ipynb" processed_with="ipynb_to_md" }
-```python
+from dataclasses import dataclass, field
 from pathlib import Path
-import datetime
+from typing import Iterator, Optional
+from time import time
+import cProfile
+import pstats
+import warnings
+import psutil
+import gc
+from contextlib import contextmanager, nullcontext
+from enum import Enum, auto
 
 import torch
+from torch.profiler import profile, ProfilerActivity
+import numpy as np
+from typing import Sequence
+
+
+class ProfilerMode(Enum):
+	"""Different profiling modes available."""
+
+	TIME = auto()  # Just time profiling
+	MEMORY = auto()  # Just memory profiling
+	FULL = auto()  # Both time and memory
+
+
+@dataclass
+class MemorySnapshot:
+	"""Single snapshot of memory usage."""
+
+	timestamp: float
+	cpu_used: int
+	cpu_percent: float
+	gpu_allocated: Optional[int] = None
+	gpu_reserved: Optional[int] = None
+
+	@property
+	def cpu_used_mb(self) -> float:
+		"""CPU memory used in MB."""
+		return self.cpu_used / (1024 * 1024)
+
+	@property
+	def gpu_allocated_mb(self) -> Optional[float]:
+		"""GPU memory allocated in MB."""
+		if self.gpu_allocated is None:
+			return None
+		return self.gpu_allocated / (1024 * 1024)
+
+	@property
+	def gpu_reserved_mb(self) -> Optional[float]:
+		"""GPU memory reserved in MB."""
+		if self.gpu_reserved is None:
+			return None
+		return self.gpu_reserved / (1024 * 1024)
+
+
+@dataclass
+class MemoryStats:
+	"""Statistics about memory usage over time."""
+
+	snapshots: list[MemorySnapshot] = field(default_factory=list)
+
+	@property
+	def cpu_peak_mb(self) -> float:
+		"""Peak CPU memory usage in MB."""
+		return max(s.cpu_used_mb for s in self.snapshots)
+
+	@property
+	def gpu_peak_mb(self) -> Optional[float]:
+		"""Peak GPU memory usage in MB."""
+		gpu_mems = [
+			s.gpu_allocated_mb for s in self.snapshots if s.gpu_allocated_mb is not None
+		]
+		return max(gpu_mems) if gpu_mems else None
+
+	def summarize(self) -> str:
+		"""Get a string summary of memory usage."""
+		lines = ["Memory Usage Summary:"]
+		lines.append(f"Peak CPU: {self.cpu_peak_mb:.1f} MB")
+
+		if self.gpu_peak_mb is not None:
+			lines.append(f"Peak GPU: {self.gpu_peak_mb:.1f} MB")
+
+		# Add percentile stats for both CPU and GPU
+		cpu_mbs = [s.cpu_used_mb for s in self.snapshots]
+		lines.append("\nCPU Memory (MB):")
+		lines.extend(self._percentile_stats(cpu_mbs))
+
+		gpu_mbs = [
+			s.gpu_allocated_mb for s in self.snapshots if s.gpu_allocated_mb is not None
+		]
+		if gpu_mbs:
+			lines.append("\nGPU Memory (MB):")
+			lines.extend(self._percentile_stats(gpu_mbs))
+
+		return "\n".join(lines)
+
+	@staticmethod
+	def _percentile_stats(
+		values: Sequence[float], percentiles: Sequence[int] = (0, 25, 50, 75, 100)
+	) -> list[str]:
+		"""Get percentile statistics for a sequence of values."""
+		if not values:
+			return ["  No data available"]
+
+		stats = np.percentile(values, percentiles)
+		return [f"  {p}th percentile: {v:.1f}" for p, v in zip(percentiles, stats)]
+
+
+@dataclass
+class ProfilingResult:
+	"""Results from a profiling run."""
+
+	elapsed_time: float
+	memory_stats: MemoryStats
+	cpu_profile: Optional[pstats.Stats] = None
+	gpu_trace_path: Optional[Path] = None
+
+	def summarize(self) -> str:
+		"""Get a string summary of the profiling results."""
+		lines = [
+			"=" * 50,
+			"PROFILING RESULTS",
+			"=" * 50,
+			f"\nTotal time: {self.elapsed_time:.2f} seconds",
+			"\n" + self.memory_stats.summarize(),
+		]
+		return "\n".join(lines)
+
+
+class TrainingProfiler:
+	"""Profile PyTorch training loops.
+
+	# Usage:
+	```python
+	profiler = TrainingProfiler()
+
+	# Profile the whole training loop
+	with profiler.profile("training"):
+		for epoch in range(n_epochs):
+			for batch in dataloader:
+				# Take a memory snapshot at specific points
+				profiler.snapshot()
+
+				# Your training code here
+				...
+
+	# Print results
+	profiler.print_summary()
+	```
+	"""
+
+	def __init__(
+		self, mode: ProfilerMode = ProfilerMode.FULL, output_dir: Optional[Path] = None
+	):
+		"""Initialize the profiler.
+
+		# Parameters:
+		- `mode: ProfilerMode`
+			What to profile (defaults to FULL)
+		- `output_dir: Optional[Path]`
+			Where to save detailed profiling data (defaults to None)
+		"""
+		self.mode = mode
+		self.output_dir = Path(output_dir) if output_dir else None
+		if self.output_dir:
+			self.output_dir.mkdir(parents=True, exist_ok=True)
+
+		# Results storage
+		self.results: dict[str, ProfilingResult] = {}
+		self._current_memory_stats: Optional[MemoryStats] = None
+		self._start_time: Optional[float] = None
+
+	def snapshot(self) -> None:
+		"""Take a snapshot of current memory usage."""
+		if self._current_memory_stats is None:
+			return
+
+		# Get CPU memory
+		process = psutil.Process()
+		snapshot = MemorySnapshot(
+			timestamp=time() - (self._start_time or 0),
+			cpu_used=process.memory_info().rss,
+			cpu_percent=process.cpu_percent(),
+		)
+
+		# Get GPU memory if available
+		if torch.cuda.is_available():
+			snapshot.gpu_allocated = torch.cuda.memory_allocated()
+			snapshot.gpu_reserved = torch.cuda.memory_reserved()
+
+		self._current_memory_stats.snapshots.append(snapshot)
+
+	@contextmanager
+	def profile(self, name: str) -> Iterator[None]:
+		"""Context manager for profiling a code block.
+
+		# Parameters:
+		- `name: str`
+			Name for this profiling session
+		"""
+		# Setup
+		self._start_time = time()
+		self._current_memory_stats = MemoryStats()
+
+		# Clear memory before starting
+		gc.collect()
+		if torch.cuda.is_available():
+			torch.cuda.empty_cache()
+			torch.cuda.reset_peak_memory_stats()
+
+		# Take initial snapshot
+		self.snapshot()
+
+		# Setup profilers based on mode
+		cpu_profiler = (
+			cProfile.Profile()
+			if self.mode in (ProfilerMode.TIME, ProfilerMode.FULL)
+			else None
+		)
+		if cpu_profiler:
+			cpu_profiler.enable()
+
+		gpu_profiler_ctx = (
+			profile(
+				activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+				record_shapes=True,
+				profile_memory=True,
+				with_stack=True,
+				with_flops=True,
+			)
+			if torch.cuda.is_available()
+			and self.mode in (ProfilerMode.TIME, ProfilerMode.FULL)
+			else nullcontext()
+		)
+
+		try:
+			with gpu_profiler_ctx as gpu_prof:
+				yield
+		except Exception as e:
+			warnings.warn(f"Error during profiling: {e}")
+		finally:
+			# Cleanup
+			if cpu_profiler:
+				cpu_profiler.disable()
+
+			# Save results
+			elapsed = time() - self._start_time
+
+			# Save GPU trace if available
+			gpu_trace_path = None
+			if self.output_dir and gpu_prof:
+				gpu_trace_path = self.output_dir / f"{name}_trace.json"
+
+				try:
+					gpu_prof.export_chrome_trace(gpu_trace_path.as_posix())
+				except Exception as e:
+					warnings.warn(f"Error saving GPU trace: {e}")
+
+			# Convert CPU profile to stats if available
+			cpu_stats = None
+			if cpu_profiler:
+				cpu_stats = pstats.Stats(cpu_profiler)
+				if self.output_dir:
+					cpu_stats.dump_stats(self.output_dir / f"{name}_profile.stats")
+
+			# Store results
+			self.results[name] = ProfilingResult(
+				elapsed_time=elapsed,
+				memory_stats=self._current_memory_stats or MemoryStats(),
+				cpu_profile=cpu_stats,
+				gpu_trace_path=gpu_trace_path,
+			)
+
+			# Clear current stats
+			self._current_memory_stats = None
+			self._start_time = None
+
+	def print_summary(self, name: Optional[str] = None) -> None:
+		"""Print a summary of profiling results.
+
+		# Parameters:
+		- `name: Optional[str]`
+			Name of specific profile to summarize (default: all profiles)
+		"""
+		if name:
+			if name not in self.results:
+				print(f"No results found for '{name}'")
+				return
+			print(self.results[name].summarize())
+		else:
+			for name, result in self.results.items():
+				print(f"\nProfile: {name}")
+				print(result.summarize())
+
+``````{ end_of_file="attention_motifs/profiling.py" }
+
+``````{ path="attention_motifs/train.py"  }
+import functools
+import json
+from pathlib import Path
+from typing import TypeVar
+import warnings
+
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
 import torch.nn.functional as F
-from jaxtyping import Int
+from jaxtyping import Int, Float
+
 
 # custom utils
+from muutils.json_serialize import (
+	SerializableDataclass,
+)
 from muutils.misc import shorten_numerical_to_str
+from zanj.torchutil import ConfiguredModel
+from trnbl.loggers.base import TrainingLoggerBase
+
+try:
+	from trnbl.loggers.wandb import WandbLogger
+except ImportError as e:
+	warnings.warn(f"failed to import wandb, can't log figures: {e}")
+	WandbLogger = None
 from trnbl import TrainingManager
+from zanj import ZANJ
 
-# from trnbl.loggers.local import LocalLogger
-from trnbl.loggers.tensorboard import TensorBoardLogger
-
-
-from attention_motifs.ae import AttnAEConfig, AttnAE, contrastive_loss
-from attention_motifs.dataset.dataset import CollectedAttentionPatternDataloader
+# this project
+from attention_motifs.dataset.dataset import (
+	DataloaderMock,
+	CollectedAttentionPatternDataloader,
+)
 from attention_motifs.dataset.util import AttentionPatternMetadata
-```
+from attention_motifs.train_util import contrastive_loss
 
-```python
-# magic autoreload
-%load_ext autoreload
-%autoreload 2
-```
 
-```python
-BATCH_SIZE: int = 4
-N_TRAIN_BATCHES: int = 10
-N_VAL_BATCHES: int = 10
-```
+def get_dataset(
+	activations_path: Path,
+	batch_size: int,
+	n_batches: int,
+	shuffle: bool = True,
+	show: bool = True,
+) -> tuple[DataloaderMock, dict, torch.Tensor, list]:
+	"returns dataloader, dataset info, example patterns, example metadata"
+	activations_path = Path(activations_path)
 
-```python
-TRAIN_LOADER_DATASET = CollectedAttentionPatternDataloader.read(
-	"../data/activations/pile_5"
-)
-VAL_LOADER_DATASET = CollectedAttentionPatternDataloader.read(
-	"../data/activations/pile_5_val"
-)
-
-TRAIN_LOADER = TRAIN_LOADER_DATASET.dataloader(BATCH_SIZE, shuffle=True, max_batches=N_TRAIN_BATCHES)
-VAL_LOADER = VAL_LOADER_DATASET.dataloader(BATCH_SIZE, shuffle=True, max_batches=N_VAL_BATCHES)
-
-print(f"Train loader: {len(TRAIN_LOADER)} batches, {len(TRAIN_LOADER.dataset)} samples")
-```
-
-```python
-MODEL: AttnAE = AttnAE(
-	AttnAEConfig(
-		latent_dim=128,
+	# load dataset and print summary
+	train_dataset: CollectedAttentionPatternDataloader = (
+		CollectedAttentionPatternDataloader.read(activations_path)
 	)
-)
+	summary_short_str: str = json.dumps(train_dataset.summary_short(), indent=2)
+	print(summary_short_str)
 
-MODEL_CONFIG: AttnAEConfig = MODEL.config
+	# turn dataset into dataloader
+	train_loader: DataloaderMock = train_dataset.dataloader(
+		batch_size=batch_size,
+		shuffle=shuffle,
+		max_batches=n_batches,
+	)
 
-model_n_params: int = sum(p.numel() for p in MODEL.parameters())
-print(
-	f"model has {model_n_params} ({shorten_numerical_to_str(model_n_params)}) parameters"
-)
+	# print info
+	print(
+		f"Train loader: {len(train_loader)} batches, {len(train_loader.dataset)} samples"
+	)
 
-# model
-```
+	# show example pattern
+	x_mat, x_meta = next(
+		iter(train_dataset.dataloader(10, shuffle=shuffle, max_batches=1))
+	)
+	x_mat.shape
+	print(x_meta[0])
+	plt.matshow(x_mat[0])
+	if show:
+		plt.show()
+	else:
+		plt.savefig("example_pattern.png")
 
-```python
-TRAIN_LOADER: torch.utils.data.DataLoader
-VAL_LOADER: torch.utils.data.DataLoader | None = None
+	dataset_info: dict = dict(
+		summary_short_str=summary_short_str,
+		n_patterns=len(train_loader.dataset),
+		batch_size=batch_size,
+		n_batches=len(train_loader),
+		activations_path=activations_path.as_posix(),
+		summary_short=train_dataset.summary_short(),
+		summary=train_dataset.summary(),
+		dataset_str=str(train_dataset),
+	)
 
-PROJECT_NAME: str = "contrastive-ae"
-CHECKPT_INTERVAL: str = "1/2 run"
-EVAL_INTERVAL: str = "1/2 run"
-DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-MODEL = MODEL.to(DEVICE)
-```
+	return train_loader, dataset_info, x_mat, x_meta
 
-```python
-OPTIMIZER: torch.optim.Optimizer
-LR_SCHEDULER: torch.optim.lr_scheduler._LRScheduler
-OPTIMIZER, LR_SCHEDULER = MODEL_CONFIG.get_optim_and_lrs(MODEL)
-```
 
-```python
+T_Config = TypeVar("T_Config", bound=SerializableDataclass)
+
+
+def set_up_model(
+	config: T_Config,
+	model_cls: type[ConfiguredModel[T_Config]],
+	device: torch.device,
+) -> tuple[
+	ConfiguredModel[T_Config],
+	torch.optim.Optimizer,
+	torch.optim.lr_scheduler._LRScheduler,
+]:
+	# set up model
+	model: ConfiguredModel[T_Config] = model_cls(config)
+
+	model_n_params: int = sum(p.numel() for p in model.parameters())
+	print(
+		f"model has {model_n_params} ({shorten_numerical_to_str(model_n_params)}) parameters"
+	)
+	model = model.to(device)
+	model.train()
+
+	# set up optimizer and lr scheduler
+	optim, lrs = model.config.get_optim_and_lrs(model)
+
+	return model, optim, lrs
+
+
+def eval_plots(
+	model: ConfiguredModel[T_Config],
+	dataloader: DataloaderMock,
+	device: torch.device,
+	logger: TrainingLoggerBase,
+	show: bool = True,
+) -> None:
+	model.eval()
+
+	reconstruction_diffs: list[float] = list()
+	mean_diffs: list[float] = list()
+	mean_std: list[float] = list()
+	latent_std: list[float] = list()
+
+	with torch.no_grad():
+		for batch_idx, (patterns, metadata) in enumerate(dataloader):
+			
+			x_recon, x_latent = model(patterns.to(device).to(torch.float32).unsqueeze(1))
+
+			latent_std.append(x_latent.std(dim=0).mean().item())
+
+			x_recon_mean = x_recon.mean(dim=0)[0].detach().cpu().numpy()
+			
+			for i in range(len(metadata)):
+				x_recon_np = x_recon[i, 0].detach().cpu().numpy()
+				fig, axs = plt.subplots(1, 4, figsize=(12, 4))
+
+				axs[0].matshow(patterns[i])
+				axs[0].axis("off")
+
+				axs[1].matshow(x_recon_np)
+				axs[1].axis("off")
+
+				recon_diff = x_recon_np - patterns[i].numpy()
+				axs[2].matshow(recon_diff, cmap="RdBu", vmin=-1, vmax=1)
+				reconstruction_diffs.append(np.abs(recon_diff).mean())
+
+				axs[2].axis("off")
+				mean_diff: np.ndarray = x_recon_np - x_recon_mean
+				axs[3].matshow(mean_diff, cmap="RdBu", vmin=-1, vmax=1)
+				mean_diffs.append(np.abs(mean_diff).mean())
+				mean_std.append(mean_diff.std())
+				axs[3].axis("off")
+
+
+
+				fig.suptitle(metadata[i])
+
+				try:
+					if (WandbLogger is not None) and isinstance(logger, WandbLogger):
+						logger._run.log({f"eval/batch_{batch_idx}/pattern_{i}": fig})
+				except Exception as e:
+					warnings.warn(f"failed to log figure to wandb {i}: {e}")
+
+					try:
+						if show:
+							plt.show()
+						else:
+							plt.savefig(f"eval_pattern_{i}.png")
+					except Exception as e:
+						warnings.warn(f"failed to save or show pattern {i}: {e}")
+
+	model.train()
+
+	return {
+		"val/reconstruction": sum(reconstruction_diffs) / len(reconstruction_diffs),
+		"val/mean_diff": sum(mean_diffs) / len(mean_diffs),
+		"val/latent_std": sum(latent_std) / len(latent_std),
+	}
+
+
+def train(
+	logger: TrainingLoggerBase,
+	device: torch.device,
+	model: ConfiguredModel[T_Config],
+	optimizer: torch.optim.Optimizer,
+	lr_scheduler: torch.optim.lr_scheduler._LRScheduler,
+	train_loader: DataloaderMock,
+	val_loader: DataloaderMock | None = None,
+	training_manager_kwargs: dict = dict(
+		checkpoint_interval="1/2 run",
+		model_save_path="{run_path}/checkpoints/model.checkpoint-{latest_checkpoint}.zanj",
+		model_save_path_special="{run_path}/model.{alias}.zanj",
+	),
+) -> ConfiguredModel[T_Config]:
+	model_config: T_Config = model.config
+
+	evals = list()
+	
+	if val_loader is not None: 
+		evals.append((
+		"1/10 run",
+		functools.partial(
+			eval_plots,
+			dataloader=val_loader,
+			device=device,
+			logger=logger,
+			show=False,
+		),
+	))
+
+	with TrainingManager(
+		model=model,
+		logger=logger,
+		save_model=ZANJ().save,
+		evals=evals,
+		** training_manager_kwargs,
+	) as tr:
+		for epoch in tr.epoch_loop(range(model_config.num_epochs), use_tqdm=False):
+			patterns: Float[torch.Tensor, "*batch n_ctx n_ctx"]
+			metadata: list[AttentionPatternMetadata]
+			for patterns, metadata in tr.batch_loop(train_loader, use_tqdm=True):
+				this_batch_size: int = len(metadata)
+
+				# move to device, convert type, add channel dim
+				patterns = patterns.to(device).to(torch.float32).unsqueeze(1)
+
+				# reset gradients
+				optimizer.zero_grad()
+
+				# forward pass
+				patterns_recon, embeddings = model(patterns)
+
+				# reconstruction loss
+				recon_loss = F.mse_loss(patterns_recon, patterns)
+
+				# compute "classes" for contrastive loss
+				# classes is a tensor of the same shape as the batch, where each element is an integer
+				classes: Int[torch.Tensor, " batch"] = (
+					AttentionPatternMetadata.contrastive_classes(metadata).to(device)
+				)
+
+				# compute contrastive loss
+				contrast_loss = contrastive_loss(embeddings, classes)
+
+				# combined loss and backward pass
+				total_loss = (
+					model_config.recon_weight * recon_loss
+					+ model_config.contrast_weight * contrast_loss
+				)
+
+				# backward pass
+				total_loss.backward()
+				optimizer.step()
+				lr_scheduler.step(epoch)
+
+				# log metrics
+				metrics: dict[str, float] = {
+					"train/loss": total_loss.item() / this_batch_size,
+					"train/recon_loss": recon_loss.item() / this_batch_size,
+					"train/contrast_loss": contrast_loss.item() / this_batch_size,
+					"lr": lr_scheduler.get_last_lr()[0],
+				}
+				tr.batch_update(
+					samples=len(metadata),
+					**metrics,
+				)
+
+				# cleanup
+				del (
+					patterns,
+					patterns_recon,
+					embeddings,
+					recon_loss,
+					contrast_loss,
+					total_loss,
+				)
+
+	return model
+
+``````{ end_of_file="attention_motifs/train.py" }
+
+``````{ path="attention_motifs/train_util.py"  }
+import warnings
+import torch
+from torch import Tensor
+import torch.nn.functional as F
+from jaxtyping import Float, Int, Bool
+
+
+def convert_tril_rowstoch(
+	x: Float[Tensor, "batch c H W"],
+) -> Float[Tensor, "batch c H W"]:
+	"converts a square matrix to a row-stochastic lower triangular one"
+	x = x + torch.triu(torch.ones_like(x) * float("-inf"), diagonal=1)
+	x = F.softmax(x, dim=-1)
+	return x
+
+
+def contrastive_loss(
+	h: Float[Tensor, "batch latent_dim"],
+	classes: Int[Tensor, " batch"],
+	temperature: float = 0.07,
+) -> Float[Tensor, ""]:
+	"""Compute a supervised contrastive loss.
+
+	Pushes samples of the same class together and pushes
+	samples from different classes apart.
+
+	# Parameters:
+	 - `h : Float[Tensor, "batch latent_dim"]`
+	    latent embeddings
+	 - `classes : Int[Tensor, " batch"]`
+	    class labels (integer) for each sample in the batch
+	 - `temperature : float`
+	    temperature for scaling similarities
+	    (defaults to 0.07)
+
+	# Returns:
+	 - `Float[Tensor, ""]`
+	    the scalar contrastive loss
+
+	# Usage:
+	```python
+	>>> batch_size = 8
+	>>> latent_dim = 16
+	>>> h = torch.randn(batch_size, latent_dim)
+	>>> classes = torch.randint(0, 3, (batch_size,))
+	>>> loss_val = contrastive_loss(h, classes, temperature=0.07)
+	>>> print(loss_val)
+	```
+
+	# Raises:
+	 - `ValueError` : if all samples belong to distinct classes (no positives)
+	"""
+
+	batch_size: int = h.shape[0]
+	# Normalize the embeddings
+	h_norm: Float[Tensor, "batch latent_dim"] = F.normalize(h, dim=1)
+
+	# Compute pairwise cosine similarities
+	sim: Float[Tensor, "batch batch"] = h_norm @ h_norm.T
+
+	# Scale the similarities by the temperature
+	sim_scaled: Float[Tensor, "batch batch"] = sim / temperature
+
+	# Create a mask for all positives: same class and not self
+	positive_mask: Bool[Tensor, "batch batch"] = (
+		classes.unsqueeze(1) == classes.unsqueeze(0)
+	) & (~torch.eye(batch_size, dtype=torch.bool, device=h.device))
+
+	# Ensure there's at least one positive for each sample
+	# (if there's a class with exactly 1 sample in the batch, that sample has no positives)
+	# We'll allow those samples to have zero contribution, though sometimes you'd skip them or handle separately.
+	if positive_mask.sum() == 0:
+		warnings.warn("No positive pairs found in batch")
+
+	# Exponentiate scaled similarities
+	exp_sim: Float[Tensor, "batch batch"] = torch.exp(sim_scaled)
+
+	# For each anchor i, we exclude itself from the denominator
+	# so we zero out the diagonal
+	exp_sim_masked: Float[Tensor, "batch batch"] = exp_sim * (
+		~torch.eye(batch_size, device=h.device, dtype=torch.bool)
+	)
+
+	# Sum over all (masked) exponentiated similarities for the denominator
+	denom: Float[Tensor, " batch"] = exp_sim_masked.sum(dim=1)
+
+	# log_prob[i, j] = sim[i,j]/temp - log( sum_{k != i}(exp(sim[i,k]/temp)) )
+	log_prob: Float[Tensor, "batch batch"] = (sim_scaled) - torch.log(denom).unsqueeze(
+		1
+	)
+
+	# For each anchor i, we only want the log_probs for positives
+	# We'll sum over those positives and then divide by the number of positives
+	positive_log_prob: Float[Tensor, " batch"] = (
+		(log_prob * positive_mask).sum(dim=1)
+		/ (positive_mask.sum(dim=1) + 1e-8)  # add epsilon to avoid div by zero
+	)
+
+	# Our loss is the negative mean of these average positive log probs
+	loss: Float[Tensor, ""] = -positive_log_prob.mean()
+
+	return loss
+
+
+"""
 def evaluation_step(model: AttnAE) -> dict[str, float]:
-	"""Evaluate model on validation set"""
+	"Evaluate model on validation set"
 	if VAL_LOADER is None:
 		return {}
 
 	model.eval()
-	val_metrics: dict[str, float] = {"val/loss": 0.0, "val/recon_loss": 0.0, "val/contrast_loss": 0.0}
+	val_metrics: dict[str, float] = {
+		"val/loss": 0.0,
+		"val/recon_loss": 0.0,
+		"val/contrast_loss": 0.0,
+	}
 
 	with torch.no_grad():
 		for patterns, metadata in VAL_LOADER:
 			patterns = patterns.to(DEVICE).to(torch.float32).unsqueeze(1)
-			OPTIMIZER.zero_grad()
-			x_recon, embeddings = model(patterns)
+			patterns_recon, embeddings = model(patterns)
 
 			# reconstruction loss
-			recon_loss = F.mse_loss(x_recon, patterns)
+			recon_loss = F.mse_loss(patterns_recon, patterns)
 
 			# contrastive loss using all pairs in batch
 			# compute "classes" for contrastive loss
@@ -2332,11 +2805,13 @@ def evaluation_step(model: AttnAE) -> dict[str, float]:
 			)
 
 			# compute contrastive loss
-			contrast_loss = contrastive_loss(embeddings, classes, temperature=config.contrast_temperature)
+			contrast_loss = contrastive_loss(
+				embeddings, classes, temperature=model.config.contrast_temperature
+			)
 
 			# combined loss and backward pass
 			total_loss = (
-				model.config.recon_weight * recon_loss 
+				model.config.recon_weight * recon_loss
 				+ model.config.contrast_weight * contrast_loss
 			)
 			val_metrics["val/loss"] += total_loss.item()
@@ -2348,81 +2823,685 @@ def evaluation_step(model: AttnAE) -> dict[str, float]:
 
 	model.train()
 	return val_metrics
+"""
+
+``````{ end_of_file="attention_motifs/train_util.py" }
+
+``````{ path="attention_motifs/vit_ae.py"  }
+from typing import Callable, Tuple, Dict, Any, Type
+
+import torch
+import torch.nn as nn
+from torch import Tensor
+from jaxtyping import Float, Int
+import einops
+
+# custom utils
+from muutils.json_serialize import (
+	SerializableDataclass,
+	serializable_dataclass,
+	serializable_field,
+)
+from zanj.torchutil import ConfiguredModel, set_config_class
+
+from attention_motifs.train_util import convert_tril_rowstoch
+
+
+@serializable_dataclass(kw_only=True)
+class VitAEConfig(SerializableDataclass):
+	"""Configuration for a Vision Transformer Autoencoder (square images of size n_ctx x n_ctx)
+
+	# Parameters:
+	 - `d_latent : int`
+	    Dimension of the final latent space (for contrastive usage).
+	 - `patch_size : int`
+	    Size of each patch (image is split into patches).
+	 - `d_model : int`
+	    Dimension of the patch embeddings.
+	 - `num_heads : int`
+	    Number of attention heads.
+	 - `mlp_dim : int`
+	    MLP dimension inside the Transformer blocks.
+	 - `encoder_depth : int`
+	    Number of Transformer blocks for the encoder.
+	 - `decoder_depth : int`
+	    Number of Transformer blocks for the decoder.
+	 - `contrast_temperature : float`
+	    Temperature for contrastive loss.
+	 - `recon_weight : float`
+	    Weight on reconstruction loss.
+	 - `contrast_weight : float`
+	    Weight on contrastive loss.
+	 - `num_epochs : int`
+	    Number of training epochs.
+	 - `optimizer : Type[torch.optim.Optimizer]`
+	    Optimizer class.
+	 - `learning_rate : float`
+	    Initial learning rate.
+	 - `lr_scheduler : Type[torch.optim.lr_scheduler._LRScheduler]`
+	    LR scheduler class.
+	 - `lr_scheduler_kwargs : Dict[str, Any]`
+	    Keyword arguments for the LR scheduler.
+	"""
+
+	# architecture
+	# ==================================================
+
+	act_fn: type[nn.Module] = serializable_field(
+		default=nn.GELU,
+		serialization_fn=lambda x: x.__name__,
+		deserialize_fn=lambda x: getattr(nn, x),
+	)
+
+	# basic and patch embedding hparams
+	d_latent: int
+	d_model: int = serializable_field(default=64)
+	patch_size: int = serializable_field(default=4)
+	max_patches: int = serializable_field(default=64)
+
+	# transformer block hparams
+	num_heads: int = serializable_field(default=8)
+	mlp_dim: int = serializable_field(default=256)
+
+	# how many transformer blocks
+	encoder_depth: int = serializable_field(default=2)
+	decoder_depth: int = serializable_field(default=2)
+
+	# training
+	# ==================================================
+
+	# loss/epochs hyperparameters
+	contrast_temperature: float = serializable_field(default=0.1)
+	recon_weight: float = serializable_field(default=1.0)
+	contrast_weight: float = serializable_field(default=0.1)
+	num_epochs: int = serializable_field(default=5)
+
+	# optimizer and scheduler
+	optimizer: Type[torch.optim.Optimizer] = serializable_field(
+		default=torch.optim.Adam,
+		serialization_fn=lambda x: x.__name__,
+		deserialize_fn=lambda x: getattr(torch.optim, x),
+	)
+	learning_rate: float = serializable_field(default=1e-4)
+	lr_scheduler: Type[torch.optim.lr_scheduler._LRScheduler] = serializable_field(
+		default=torch.optim.lr_scheduler.ReduceLROnPlateau,
+		serialization_fn=lambda x: x.__name__,
+		deserialize_fn=lambda x: getattr(torch.optim.lr_scheduler, x),
+	)
+	lr_scheduler_kwargs: Dict[str, Any] = serializable_field(
+		default_factory=lambda: dict(
+			mode="min",
+			factor=0.1,
+			patience=10,
+			threshold=1e-4,
+			threshold_mode="rel",
+			cooldown=0,
+			min_lr=1e-6,
+			eps=1e-8,
+		)
+	)
+
+	# ==================================================
+
+	def get_optim_and_lrs(
+		self,
+		model: "VitAE",
+	) -> Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler._LRScheduler]:
+		"""Utility to create optimizer and learning rate scheduler from config."""
+		optimizer: torch.optim.Optimizer = self.optimizer(
+			model.parameters(),
+			lr=self.learning_rate,
+		)
+		lr_scheduler: torch.optim.lr_scheduler._LRScheduler = self.lr_scheduler(
+			optimizer,
+			**self.lr_scheduler_kwargs,
+		)
+		return optimizer, lr_scheduler
+
+
+class PatchEmbed(nn.Module):
+	"""2D Patch Embedding with linear projection (for single-channel square images).
+
+	# Parameters:
+	 - `d_model : int`
+	    Dimension of embedded patch
+	 - `patch_size : int`
+	    The patch size (square patches)
+	"""
+
+	def __init__(
+		self,
+		d_model: int,
+		patch_size: int,
+		max_patches: int,
+		in_channels: int = 1,
+	) -> None:
+		super().__init__()
+		self.d_model: int = d_model
+		self.patch_size: int = patch_size
+		self.in_channels: int = in_channels
+
+		self.proj: nn.Conv2d = nn.Conv2d(
+			in_channels=self.in_channels,
+			out_channels=self.d_model,
+			kernel_size=self.patch_size,
+			stride=self.patch_size,
+		)
+
+		# positional embeddings for x and y
+		self.pos_embeds: nn.ModuleList = nn.ModuleList(
+			[
+				nn.Embedding(
+					num_embeddings=max_patches,
+					embedding_dim=d_model,
+				)
+				for _ in range(2)
+			]
+		)
+
+	def forward(
+		self,
+		x: Float[Tensor, "batch channels=1 n_ctx n_ctx"],
+	) -> Float[Tensor, "batch num_patches d_model"]:
+		# 1) Convolutional projection
+		x_proj: Float[Tensor, "batch d_model ax_patches ax_patches"] = self.proj(x)
+		ax_patches: int = x_proj.shape[2]
+		assert tuple(x_proj.shape) == (x.shape[0], self.d_model, ax_patches, ax_patches)
+
+		# 2) Build separate positional embeddings for x and y, shape = (2, ax_patches, d_model)
+		positions: Int[Tensor, "ax_patches"] = torch.arange(ax_patches).to(x.device)
+
+		pos_embeds: Float[Tensor, "2 ax_patches d_model"] = torch.stack(
+			[p(positions) for p in self.pos_embeds]
+		)
+		# pos_embeds[0] = x-embeddings (ax_patches, d_model)
+		# pos_embeds[1] = y-embeddings (ax_patches, d_model)
+
+		# 3) "Outer add" to get a 2D embedding grid for each (row, col)
+		# pos2d will have shape (ax_patches, ax_patches, d_model)
+		pos2d: Float[Tensor, "ax_patches ax_patches d_model"] = pos_embeds[0].unsqueeze(
+			1
+		) + pos_embeds[1].unsqueeze(0)
+
+		# 4) Reshape for broadcast-add to x_proj
+		# pos2d_perm: (d_model, ax_patches, ax_patches)
+		# then unsqueeze -> (1, d_model, ax_patches, ax_patches)
+		# pos2d_perm = pos2d.permute(2, 0, 1).unsqueeze(0)
+		pos2d_perm: Float[Tensor, "1 d_model ax_patches ax_patches"] = pos2d.permute(
+			2, 0, 1
+		).unsqueeze(0)
+
+		# 5) Add to the convolution outputs
+		x_proj = x_proj + pos2d_perm  # broadcast over batch dim
+
+		# 6) Flatten to patches and transpose so d_model is last
+		# x_seq: Float[Tensor, "batch d_model num_patches"]
+		# x_out: Float[Tensor, "batch num_patches d_model"]
+		return x_proj.flatten(2).transpose(1, 2)
+
+
+class TransformerBlock(nn.Module):
+	"""A Transformer Encoder Block (pre-LayerNorm)
+
+	# Parameters:
+	 - `d_model : int`
+		dimension of token embeddings
+	 - `num_heads : int`
+		number of attention heads
+	 - `mlp_dim : int`
+		dimension of hidden layer in the MLP
+	"""
+
+	def __init__(
+		self,
+		d_model: int,
+		num_heads: int,
+		mlp_dim: int,
+		act_fn: type[nn.Module] = nn.GELU,
+		# drop: float = 0.0,
+		# attn_drop: float = 0.0,
+	) -> None:
+		super().__init__()
+		self.norm1: nn.LayerNorm = nn.LayerNorm(d_model)
+		self.attn: nn.MultiheadAttention = nn.MultiheadAttention(
+			embed_dim=d_model,
+			num_heads=num_heads,
+			batch_first=True,
+			# dropout=attn_drop,
+		)
+		# self.drop_attn: nn.Dropout = nn.Dropout(drop)
+
+		self.norm2: nn.LayerNorm = nn.LayerNorm(d_model)
+		self.mlp: nn.Sequential = nn.Sequential(
+			nn.Linear(d_model, mlp_dim),
+			act_fn(),
+			nn.Linear(mlp_dim, d_model),
+		)
+		# self.drop_mlp: nn.Dropout = nn.Dropout(drop)
+
+	def forward(
+		self,
+		x: Float[Tensor, "batch seq_len d_model"],
+	) -> Float[Tensor, "batch seq_len d_model"]:
+		residual: Float[Tensor, "batch seq_len d_model"] = x
+		h: Float[Tensor, "batch seq_len d_model"] = self.norm1(x)
+		attn_out, _ = self.attn(h, h, h)
+		x = residual + attn_out
+
+		residual = x
+		h = self.norm2(x)
+		h = self.mlp(h)
+		x = residual + h
+		return x
+
+
+@set_config_class(VitAEConfig)
+class VitEncoder(ConfiguredModel[VitAEConfig]):
+	"""Vision Transformer Encoder (square inputs).
+
+	Splits the input into patches (fixed `patch_size`), uses a stack of
+	Transformer blocks, then outputs a `d_latent` vector by average pooling
+	the final patch embeddings.
+	"""
+
+	def __init__(self, config: VitAEConfig) -> None:
+		super().__init__(config)
+		self.config: VitAEConfig = config
+
+		# Patch embedding
+		self.patch_embed: PatchEmbed = PatchEmbed(
+			d_model=config.d_model,
+			patch_size=config.patch_size,
+			max_patches=config.max_patches,
+		)
+
+		# Transformer encoder blocks
+		self.blocks: nn.Module = nn.Sequential(
+			*[
+				TransformerBlock(
+					d_model=config.d_model,
+					num_heads=config.num_heads,
+					mlp_dim=config.mlp_dim,
+				)
+				for _ in range(config.encoder_depth)
+			]
+		)
+
+		# Final projection to latent space
+		self.ln_final: nn.LayerNorm = nn.LayerNorm(config.d_model)
+		self.to_latent: nn.Linear = nn.Linear(config.d_model, config.d_latent)
+
+	def forward(
+		self,
+		x: Float[Tensor, "batch n_ctx n_ctx"],
+	) -> Float[Tensor, "batch d_latent"]:
+		# (1) Embed patches => (B, num_patches, d_model)
+		x_patches: Float[Tensor, "batch num_patches d_model"] = self.patch_embed(x)
+
+		# (2) Pass through encoder blocks
+		x_patches = self.blocks(x_patches)
+
+		# (3) Final layer norm and mean pool
+		x_patches = self.ln_final(x_patches)
+		x_mean: Float[Tensor, "batch d_model"] = x_patches.mean(dim=1)
+
+		# (4) Project to d_latent
+		z: Float[Tensor, "batch d_latent"] = self.to_latent(x_mean)
+		return z
+
+
+@set_config_class(VitAEConfig)
+class VitDecoder(ConfiguredModel[VitAEConfig]):
+	"""Vision Transformer Decoder (square outputs).
+
+	Takes a (batch, d_latent) vector, replicates it
+	across the needed number of patches for a (n_ctx x n_ctx) image,
+	passes it through decoder Transformer blocks, then projects
+	back to patches and unpatchifies.
+	"""
+
+	def __init__(self, config: VitAEConfig) -> None:
+		super().__init__(config)
+		self.config: VitAEConfig = config
+
+		# Map latent -> d_model
+		self.from_latent: nn.Linear = nn.Linear(config.d_latent, config.d_model)
+
+		# positional embeddings for x and y
+		self.pos_embeds: nn.ModuleList = nn.ModuleList(
+			[
+				nn.Embedding(
+					num_embeddings=config.max_patches,
+					embedding_dim=config.d_model,
+				)
+				for _ in range(2)
+			]
+		)
+
+		# Decoder transformer blocks
+		self.blocks: nn.Module = nn.Sequential(
+			*[
+				TransformerBlock(
+					d_model=config.d_model,
+					num_heads=config.num_heads,
+					mlp_dim=config.mlp_dim,
+				)
+				for _ in range(config.decoder_depth)
+			]
+		)
+		self.norm: nn.LayerNorm = nn.LayerNorm(config.d_model)
+
+		# Final projection from d_model -> patch pixels
+		# For single-channel images, patch_dim = 1*(patch_size^2)
+		patch_dim: int = config.patch_size * config.patch_size
+		self.head: nn.Linear = nn.Linear(config.d_model, patch_dim)
+
+	def forward(
+		self,
+		latent: Float[Tensor, "batch d_latent"],
+		n_ctx: int,
+	) -> Float[Tensor, "batch n_ctx n_ctx"]:
+		# batch_size: int = latent.shape[0]
+		ax_patches: int = n_ctx // self.config.patch_size
+
+		# Map latent -> d_model
+		latent_embed: Float[Tensor, "batch d_model"] = self.from_latent(latent)
+
+		# Build separate positional embeddings for x and y, shape = (2, ax_patches, d_model)
+		positions: Int[Tensor, "ax_patches"] = torch.arange(
+			ax_patches, device=latent.device
+		)
+		pos_embeds: Float[Tensor, "2 ax_patches d_model"] = torch.stack(
+			[p(positions) for p in self.pos_embeds]
+		)
+
+		# "Outer add" to get a 2D embedding grid for each (row, col)
+		# pos2d will have shape (ax_patches, ax_patches, d_model)
+		pos2d: Float[Tensor, "ax_patches ax_patches d_model"] = pos_embeds[0].unsqueeze(
+			1
+		) + pos_embeds[1].unsqueeze(0)
+
+		# Reshape for broadcast-add to x_proj
+		# pos2d_perm: (d_model, ax_patches, ax_patches)
+		# then unsqueeze -> (1, d_model, ax_patches, ax_patches)
+		# pos2d_perm = pos2d.permute(2, 0, 1).unsqueeze(0)
+		pos2d_perm: Float[Tensor, "1 d_model ax_patches ax_patches"] = pos2d.permute(
+			2, 0, 1
+		).unsqueeze(0)
+
+		# patches_grid[i,j] = latent_embed + pos_embeds[0][i] + pos_embeds[1][j]
+		patches_grid: Float[Tensor, "batch d_model ax_patches ax_patches"] = (
+			latent_embed.unsqueeze(-1).unsqueeze(-1) + pos2d_perm
+		)
+		patches_seq: Float[Tensor, "batch n_patches d_model"] = patches_grid.flatten(
+			2
+		).transpose(1, 2)
+
+		# Pass through decoder blocks
+		patches_seq = self.blocks(patches_seq)
+
+		# (6) Final norm
+		patches_seq = self.norm(patches_seq)
+
+		# (7) Project to patch pixels => (B, num_patches, patch_dim)
+		patches: Float[Tensor, "batch num_patches patch_dim"] = self.head(patches_seq)
+		num_patches: int = patches.shape[1]
+		assert num_patches == ax_patches * ax_patches
+
+		# unpatch
+		unpatched: Float[Tensor, "batch channels=1 n_ctx n_ctx"] = einops.rearrange(
+			patches,
+			"batch (h w) (patch_h patch_w) -> batch 1 (h patch_h) (w patch_w)",
+			h=ax_patches,
+			w=ax_patches,
+			patch_h=self.config.patch_size,
+			patch_w=self.config.patch_size,
+		)
+
+		return unpatched
+
+
+def _mat_col_0_recon(
+	w: Float[Tensor, " batch"],
+	n_ctx: int,
+) -> Float[Tensor, "batch channels=1 n_ctx n_ctx"]:
+	zero_tensor = torch.zeros(w.shape[0], 1, n_ctx, n_ctx - 1, device=w.device)
+	col_filled = torch.nn.functional.pad(zero_tensor, (1, 0), value=1.0)
+	w_expanded = w[:, None, None, None]
+	out = col_filled * w_expanded
+	return out
+
+
+SPECIAL_FEATURES: list[
+	tuple[
+		str,
+		Callable[
+			[Float[Tensor, "batch channels=1 n_ctx n_ctx"]], Float[Tensor, " batch"]
+		],
+		Callable[
+			[Float[Tensor, " batch"], int],
+			Float[Tensor, "batch channels=1 n_ctx n_ctx"],
+		],
+	]
+] = [
+	(
+		"mat_col_0",
+		lambda x: x[:, 0, 0, :].sum(dim=-1),
+		_mat_col_0_recon,
+		# lambda w, n: (
+		# 	torch.nn.functional.pad(
+		# 		torch.zeros(w.shape[0], 1, n, n-1, device=w.device),
+		# 		(1, 0),
+		# 		value=1.0,
+		# 	) * w[:, None, None, None]
+		# ),
+	),
+	(
+		"identity",
+		lambda x: x.diagonal(dim1=-2, dim2=-1).squeeze(1).sum(-1),
+		lambda w, n: (
+			torch.eye(n, device=w.device)[None, None, :, :] * w[:, None, None, None]
+		),
+	),
+]
+
+
+@set_config_class(VitAEConfig)
+class VitAE(ConfiguredModel[VitAEConfig]):
+	"""Vision Transformer Autoencoder with variable-sized square inputs.
+
+	Produces a latent vector of shape (batch, d_latent) from the encoder,
+	and reconstructs an output of shape (batch, n_ctx, n_ctx) from the decoder.
+	"""
+
+	def __init__(self, config: VitAEConfig) -> None:
+		super().__init__(config)
+		self.config: VitAEConfig = config
+
+		# encoder and decoder
+		self.encoder: VitEncoder = VitEncoder(config)
+		self.decoder: VitDecoder = VitDecoder(config)
+
+		# extra mlps between encoder/latent and latent/decoder
+		# mostly for special features
+		self.encoder_mlp: nn.Sequential = nn.Sequential(
+			nn.Linear(config.d_latent, config.mlp_dim),
+			config.act_fn(),
+			nn.Linear(config.mlp_dim, config.d_latent),
+		)
+		self.decoder_mlp: nn.Sequential = nn.Sequential(
+			nn.Linear(config.d_latent, config.mlp_dim),
+			config.act_fn(),
+			nn.Linear(config.mlp_dim, config.d_latent),
+		)
+
+		# special features
+		self.n_special_features: int = len(SPECIAL_FEATURES)
+		self.encoder_special: nn.Linear = nn.Linear(
+			self.n_special_features, config.d_latent
+		)
+		self.decoder_special: nn.Linear = nn.Linear(
+			config.d_latent, self.n_special_features
+		)
+
+	def forward(
+		self,
+		x: Float[Tensor, "batch channels=1 n_ctx n_ctx"],
+	) -> Tuple[
+		Float[Tensor, "batch channels=1 n_ctx n_ctx"], Float[Tensor, "batch d_latent"]
+	]:
+		# batch_size: int = x.shape[0]
+		n_ctx: int = x.shape[2]
+
+		# Encode
+		latent: Float[Tensor, "batch d_latent"] = self.encoder(x)
+
+		# add special features
+		special_feats: Float[Tensor, "batch n_special_features"] = torch.stack(
+			[fn(x) for _, fn, _ in SPECIAL_FEATURES],
+			dim=1,
+		).to(x.device)
+		latent += self.encoder_special(special_feats)
+
+		# compute mlp before latent
+		latent = self.encoder_mlp(latent)
+		# ============================================================
+
+		# mlp after latent
+		pre_decoder: Float[Tensor, "batch d_latent"] = self.decoder_mlp(latent)
+
+		# Decode back to original size
+		x_recon: Float[Tensor, "batch n_ctx n_ctx"] = self.decoder(pre_decoder, n_ctx)
+
+		# add special features
+		decoder_feat_weights = self.decoder_special(pre_decoder)
+		special_feats_recon: Float[Tensor, "batch 1 n_ctx n_ctx"] = (
+			torch.stack(
+				[
+					fn(
+						decoder_feat_weights[:, idx],
+						n_ctx,
+					)
+					for idx, (_, _, fn) in enumerate(SPECIAL_FEATURES)
+				],
+				dim=1,
+			)
+			.to(x.device)
+			.sum(dim=1)
+		)
+
+		x_recon += special_feats_recon
+
+		# convert to upper triangular
+		x_recon = convert_tril_rowstoch(x_recon)
+		return x_recon, latent
+
+``````{ end_of_file="attention_motifs/vit_ae.py" }
+
+``````{ path="data/pile_example.jsonl"  }
+{"text": "Article content\n\nHuman behavior has a tremendous impact on investing \u2014 more so than most realize \u2014 and one of our biggest weaknesses is the tendency to constantly compare and contrast ourselves to others.\n\n[np_storybar title=\u201dFollow Financial Post\u201d link=\u201d\u201d]\n\nWe apologize, but this video has failed to load.\n\ntap here to see other videos from our team. Try refreshing your browser, or Three signs bubbles are brewing again in the market \u2014 and one of them has wheels Back to video\n\n\u2022 Twitter\n\n\u2022 Facebook\n\n[/np_storybar]\n\nFor example, a 1995 study by the Harvard School of Public Health indicated that people will forgo a stronger income scenario in favour of a weaker one as long as it meant earning more than their neighbours.\n\nUnfortunately, many in the investment world are keenly aware of this and will structure their marketing efforts accordingly. As a result, you have a compounding of momentum or trends in the market as investors buy at or near market tops for fear of not doing as well as or better than others.\n\nFor the same reason, investors piled into technology stocks in 2000 with only the promise of earnings in some distant future, and into housing-related investments in 2007 that were backstopped by very low incomes.", "meta": {"pile_set_name": "OpenWebText2"}}
+{"text": "Topic: reinvent midnight madness\n\nAmazon announced a new service at the AWS re:Invent Midnight Madness event. Amazon Sumerian is a solution that aims to make it easier for developers to build virtual reality, augmented reality, and 3D applications. It features a user friendly editor, which can be used to drag and drop 3D objects and characters into scenes. Amazon \u2026 continue reading", "meta": {"pile_set_name": "Pile-CC"}}
+``````{ end_of_file="data/pile_example.jsonl" }
+
+``````{ path="notebooks/contrastive_AE.ipynb" processed_with="ipynb_to_md" }
+# imports and setup
+
+```python
+from pathlib import Path
+
+import torch
+
+# custom utils
+from trnbl.loggers.wandb import WandbLogger
+
+
+from attention_motifs.vit_ae import VitAEConfig, VitAE
+from attention_motifs.train import get_dataset, set_up_model, train, eval_plots
+from attention_motifs.dataset.dataset import DataloaderMock
 ```
 
 ```python
-# setup logger
-LOGGER: TensorBoardLogger = TensorBoardLogger(
-	log_dir=Path("tb-logs-convAE"),
-	name=PROJECT_NAME + datetime.datetime.now().strftime("-%Y-%m-%d-%H-%M-%S"),
-	# metric_names=[
-	# 	"train/loss",
-	# 	"train/recon_loss",
-	# 	"train/contrast_loss",
-	# 	"val/loss",
-	# 	"val/recon_loss",
-	# 	"val/contrast_loss",
-	# ],
-	train_config=dict(
-		model_config=MODEL.zanj_model_config.serialize(),
-		model_str=str(MODEL),
-	),
+# magic autoreload
+%load_ext autoreload
+%autoreload 2
+```
+
+# Configuration
+
+```python
+DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# training data
+ACTIVATIONS_PATH: Path = Path("../data/activations/medium")
+BATCH_SIZE: int = 10
+N_TRAIN_BATCHES: int = 500
+
+# validation data
+VAL_ACTIVATIONS_PATH: Path = Path("../data/activations/small_val")
+VAL_BATCH_SIZE: int = 8
+N_VAL_BATCHES: int = 8
+
+# model
+MODEL_CONFIG: VitAEConfig = VitAEConfig(
+	d_latent=128,
+	num_epochs=1,
+)
+```
+
+# get data
+
+```python
+TRAIN_LOADER: DataloaderMock
+TRAIN_LOADER, DATASET_INFO, _, _ = get_dataset(
+	activations_path=ACTIVATIONS_PATH,
+	batch_size=BATCH_SIZE,
+	n_batches=N_TRAIN_BATCHES,
 )
 
-with TrainingManager(
-	model=MODEL,
+VAL_LOADER: DataloaderMock
+VAL_LOADER, VAL_DATASET_INFO, _, _ = get_dataset(
+	activations_path=VAL_ACTIVATIONS_PATH,
+	batch_size=VAL_BATCH_SIZE,
+	n_batches=N_VAL_BATCHES,
+	shuffle=False,
+)
+
+
+```
+
+# set up model and train
+
+```python
+MODEL, OPTIMIZER, LR_SCHEDULER = set_up_model(
+	config=MODEL_CONFIG,
+	model_cls=VitAE,
+	device=DEVICE,
+)
+```
+
+```python
+# init logger
+LOGGER: WandbLogger = WandbLogger.create(
+	config=dict(
+		model_config=MODEL.zanj_model_config.serialize(),
+		dataset_info=DATASET_INFO,
+		val_dataset_info=VAL_DATASET_INFO,
+		model_str=str(MODEL),
+		device=str(DEVICE),
+	),
+	project="vit-ae",
+	# name="vit-ae" + datetime.datetime.now().strftime("-%Y-%m-%d-%H-%M-%S"),
+)
+
+MODEL = train(
 	logger=LOGGER,
-	evals={
-		EVAL_INTERVAL: evaluation_step,
-	}.items(),
-	checkpoint_interval=CHECKPT_INTERVAL,
-) as tr:
-	for epoch in tr.epoch_loop(range(MODEL_CONFIG.num_epochs)):
-		for patterns, metadata in tr.batch_loop(TRAIN_LOADER):
-			# move to device
-			patterns = patterns.to(DEVICE).to(torch.float32).unsqueeze(1)
-
-			# reset gradients
-			OPTIMIZER.zero_grad()
-
-			# forward pass
-			x_recon, embeddings = MODEL(patterns)
-
-			# reconstruction loss
-			recon_loss = F.mse_loss(x_recon, patterns)
-
-			# compute "classes" for contrastive loss
-			# classes is a tensor of the same shape as the batch, where each element is an integer
-			classes: Int[torch.Tensor, " batch"] = (
-				AttentionPatternMetadata.contrastive_classes(metadata).to(DEVICE)
-			)
-
-			# compute contrastive loss
-			contrast_loss = contrastive_loss(embeddings, classes)
-
-			# combined loss and backward pass
-			total_loss = (
-				MODEL_CONFIG.recon_weight * recon_loss 
-				+ MODEL_CONFIG.contrast_weight * contrast_loss
-			)
-
-			# backward pass
-			total_loss.backward()
-			OPTIMIZER.step()
-			LR_SCHEDULER.step(epoch)
-
-			# log metrics
-			tr.batch_update(
-				samples=len(metadata),
-				**{
-					"train/loss": total_loss.item(),
-					"train/recon_loss": recon_loss.item(),
-					"train/contrast_loss": contrast_loss.item(),
-					"lr": LR_SCHEDULER.get_last_lr()[0],
-				},
-			)
-
-			del patterns, x_recon, embeddings, recon_loss, contrast_loss, total_loss
+	device=DEVICE,
+	model=MODEL,
+	optimizer=OPTIMIZER,
+	lr_scheduler=LR_SCHEDULER,
+	train_loader=TRAIN_LOADER,
+	val_loader=VAL_LOADER,
+)
 ```
 
 
@@ -2538,19 +3617,31 @@ from attention_motifs.dataset.dataset import (
 ```python
 d = CollectedAttentionPatternDataloader.generate(
 	config=APGenerationConfig(
-		prompts_config=PromptDatasetConfig.from_source_path("../data/pile_5_val.jsonl"),
+		prompts_config=PromptDatasetConfig.from_source_path(
+			"../data/pile_50.jsonl",
+			char_len_min=64,
+			char_len_max=256,
+		),
 		model_names=[
 			"pythia-14m",
 			"gpt2-small",
 			"meta-llama/Llama-3.2-1B",
 		],
+		token_len_min=16,
+		prompt_token_len_tolerance=16,
 	),
 	max_batch_size=8,
 )
 ```
 
 ```python
-d.save("../data/activations/pile_5_val", verbose=True)
+import json
+
+print(json.dumps(d.summary()))
+```
+
+```python
+d.save("../data/activations/medium", verbose=True)
 ```
 
 ```python
@@ -3509,8 +4600,32 @@ for i in range(10):
 
 ``````{ end_of_file="notebooks/markov_absorption.ipynb" }
 
+``````{ path="notebooks/view_profiling.ipynb" processed_with="ipynb_to_md" }
+```python
+import pstats
+
+# Load the stats file
+stats = pstats.Stats("profiles/training_profile.stats")
+
+# Sort by cumulative time and print top 20 functions
+stats.sort_stats("cumulative").print_stats(20)
+
+# Sort by total time (excluding sub-function calls)
+stats.sort_stats("time").print_stats(20)
+
+# You can also filter by function name
+stats.sort_stats("cumulative").print_stats("forward|backward")  # regex pattern
+
+# Get more detailed info including caller/callee relationships
+# stats.print_callers()
+# stats.print_callees()
+```
+
+
+``````{ end_of_file="notebooks/view_profiling.ipynb" }
+
 ``````{ path="scripts/gen_data.py"  }
-import matplotlib.pyplot as plt
+import torch
 
 from attention_motifs.dataset.dataset import (
 	APGenerationConfig,
@@ -3518,31 +4633,48 @@ from attention_motifs.dataset.dataset import (
 	CollectedAttentionPatternDataloader,
 )
 
-d = CollectedAttentionPatternDataloader.generate(
-	config=APGenerationConfig(
-		prompts_config=PromptDatasetConfig.from_source_path("data/pile_50.jsonl"),
-		model_names=[
-			"meta-llama/Llama-3.2-1B",
-			"gpt2-small",
-			"pythia-14m",
-		],
-	),
-	max_batch_size=8,
-)
 
-d.save("data/activations/pile_50", verbose=True)
+if __name__ == "__main__":
+	import argparse
 
+	parser = argparse.ArgumentParser()
+	parser.add_argument("--device", type=str, default="cuda", help="device to use")
+	args = parser.parse_args()
 
-for x in d.batches(2):
-	print(x[0].shape)
-	print(x[1])
-	plt.matshow(x[0][0].cpu().numpy())
-	plt.show()
-	plt.matshow(x[0][1].cpu().numpy())
-	plt.show()
-	break
+	device: torch.device = torch.device(args.device)
+
+	d = CollectedAttentionPatternDataloader.generate(
+		config=APGenerationConfig(
+			prompts_config=PromptDatasetConfig.from_source_path(
+				"data/pile_5_val.jsonl",
+				char_len_min=64,
+				char_len_max=256,
+			),
+			model_names=[
+				"pythia-14m",
+				"gpt2-small",
+				"meta-llama/Llama-3.2-1B",
+			],
+			token_len_min=16,
+			prompt_token_len_tolerance=16,
+		),
+		max_batch_size=8,
+		model_device=device,
+	)
+
+	d.save("data/activations/small_val", verbose=True)
+
+	print("=" * 50)
+	print(d.summary())
+	print("=" * 50)
+	print(d.summary_short())
+	print("=" * 50)
 
 ``````{ end_of_file="scripts/gen_data.py" }
+
+``````{ path="scripts/run_train.py"  }
+
+``````{ end_of_file="scripts/run_train.py" }
 
 ``````{ path="tests/dataset/test_integration.py"  }
 # file: test_integration.py
@@ -4156,7 +5288,11 @@ def test_dataloader_properties():
 	ds_patterns = torch.randn((4, 3, 3))
 	ds_meta = [
 		AttentionPatternMetadata(
-			model_name="modelA", idx_layer=0, idx_head=i, prompt_hash=f"hash{i}", n_ctx=3
+			model_name="modelA",
+			idx_layer=0,
+			idx_head=i,
+			prompt_hash=f"hash{i}",
+			n_ctx=3,
 		)
 		for i in range(4)
 	]
@@ -4297,7 +5433,11 @@ def test_dataloader_iteration():
 	ds1_patterns = torch.rand((2, 4, 4))
 	ds1_meta = [
 		AttentionPatternMetadata(
-			model_name="modelA", idx_layer=0, idx_head=i, prompt_hash=f"hash{i}", n_ctx=4
+			model_name="modelA",
+			idx_layer=0,
+			idx_head=i,
+			prompt_hash=f"hash{i}",
+			n_ctx=4,
 		)
 		for i in range(2)
 	]
@@ -4308,7 +5448,11 @@ def test_dataloader_iteration():
 	ds2_patterns = torch.rand((3, 5, 5))
 	ds2_meta = [
 		AttentionPatternMetadata(
-			model_name="modelA", idx_layer=1, idx_head=i, prompt_hash=f"hash{i + 2}", n_ctx=5
+			model_name="modelA",
+			idx_layer=1,
+			idx_head=i,
+			prompt_hash=f"hash{i + 2}",
+			n_ctx=5,
 		)
 		for i in range(3)
 	]
@@ -4386,7 +5530,9 @@ import torch
 from torch import Tensor
 from jaxtyping import Float, Int
 
-from attention_motifs.ae import contrastive_loss  # replace with actual import path
+from attention_motifs.train_util import (
+	contrastive_loss,
+)  # replace with actual import path
 
 
 @pytest.mark.parametrize(
@@ -4828,6 +5974,7 @@ dependencies = [
     "numpy>=1.26.1,<2.0.0",
     "torch>=2.5.1",
     "jaxtyping>=0.2.33",
+	"einops>=0.8.0",
     "tqdm>=4.66.5",
     "pandas>=2.2.2",
     "scipy>=1.14.1",
@@ -4844,7 +5991,7 @@ dependencies = [
     # custom utils
     "muutils>=0.6.21",
 	"zanj>=0.3.1",
-	"trnbl[tensorboard]>=0.1.0",
+	"trnbl[tensorboard]>=0.1.1",
     # TL
     "transformer-lens>=2.10.0",
     # this TL dep not listed? is this in an extra?
