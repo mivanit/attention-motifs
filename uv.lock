@@ -196,7 +196,7 @@ requires-dist = [
     { name = "torch", specifier = ">=2.5.1" },
     { name = "tqdm", specifier = ">=4.66.5" },
     { name = "transformer-lens", specifier = ">=2.10.0" },
-    { name = "trnbl", extras = ["tensorboard"], specifier = ">=0.1.0" },
+    { name = "trnbl", extras = ["tensorboard"], specifier = ">=0.1.1" },
     { name = "typeguard", specifier = ">=4.4.1" },
     { name = "typing-extensions", specifier = "==4.12.2" },
     { name = "zanj", specifier = ">=0.3.1" },
@@ -2492,16 +2492,16 @@ wheels = [
 
 [[package]]
 name = "trnbl"
-version = "0.1.0"
+version = "0.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "muutils" },
     { name = "pyyaml" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ac/92/8717b359c0bf61c2732c4da655ab2204804edb17e73504054ff9982ce38d/trnbl-0.1.0.tar.gz", hash = "sha256:d9a9373efce810e91b785ddb255f25434acfadd9b7f5d42c27079f334891d797", size = 4011862 }
+sdist = { url = "https://files.pythonhosted.org/packages/40/d9/862be4b7200a4629c5b05801f53ba3a64785d3fc19697cc9667afd844d95/trnbl-0.1.1.tar.gz", hash = "sha256:526c0abe0a91ecf6ed3247cf076c4fd32512539000af5873b602bcc185d32b3a", size = 4011471 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/76/f09f5442c54956e4c1556e184086c1504cb5eccbb1bb11966e7b754ef22a/trnbl-0.1.0-py3-none-any.whl", hash = "sha256:bd4036f8c773819d29fb878ccdcdd738b7dd9ae9b9a54ac469a037b52be93553", size = 64343 },
+    { url = "https://files.pythonhosted.org/packages/e8/7f/115ed48031cc6659f0b04e3ef8b57683ce27dfa59b5a7fe8d59a2fba5a10/trnbl-0.1.1-py3-none-any.whl", hash = "sha256:fb29241f306628e2d1c6079da0a68190c40a3b6d9c7014b954d27803887ff6ea", size = 64297 },
 ]
 
 [package.optional-dependencies]

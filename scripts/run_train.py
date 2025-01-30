@@ -16,12 +16,12 @@ from attention_motifs.dataset.dataset import DataloaderMock
 # Configuration
 # ==================================================
 
-DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE: torch.device = torch.device("cuda:2")
 
 # training data
 ACTIVATIONS_PATH: Path = Path("data/activations/medium")
-BATCH_SIZE: int = 10
-N_TRAIN_BATCHES: int = 50
+BATCH_SIZE: int = 32
+N_TRAIN_BATCHES: int = 100000
 
 # validation data
 VAL_ACTIVATIONS_PATH: Path = Path("data/activations/small_val")
@@ -30,8 +30,13 @@ N_VAL_BATCHES: int = 8
 
 # model
 MODEL_CONFIG: VitAEConfig = VitAEConfig(
-	d_latent=128,
-	num_epochs=1,
+	d_latent=64,
+	num_epochs=10,
+	d_model=128,
+	mlp_dim=256,
+	num_heads=8,
+	encoder_depth=3,
+	decoder_depth=3,
 )
 
 
@@ -88,5 +93,5 @@ MODEL = train(
 	lr_scheduler=LR_SCHEDULER,
 	train_loader=TRAIN_LOADER,
 	val_loader=VAL_LOADER,
-	eval_plots_interval="1/4 run",
+	eval_plots_interval="1/10 run",
 )

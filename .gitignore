@@ -16,6 +16,8 @@ notebooks/profiles/**
 notebooks/miv/**
 notebooks/wandb/**
 *.pickle
+miv/**
+wandb/**
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Byte-compiled / optimized / DLL files
