@@ -11,7 +11,7 @@ from muutils.json_serialize import (
 )
 from zanj.torchutil import ConfiguredModel, set_config_class
 
-from attention_motifs.train import convert_tril_rowstoch
+from attention_motifs.train_util import convert_tril_rowstoch
 
 
 @serializable_dataclass
