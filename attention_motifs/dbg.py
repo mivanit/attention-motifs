@@ -18,38 +18,38 @@ cwd: Path = Path.cwd()
 
 
 def dbg(exp: _ExpType) -> _ExpType:
-    """Call dbg with any variable or expression.
+	"""Call dbg with any variable or expression.
 
-    Calling dbg will print to stderr the current filename and lineno,
-    as well as the passed expression and what the expression evaluates to:
+	Calling dbg will print to stderr the current filename and lineno,
+	as well as the passed expression and what the expression evaluates to:
 
-        from pydbg import dbg
+		from pydbg import dbg
 
-        a = 2
-        b = 5
+		a = 2
+		b = 5
 
-        dbg(a+b)
+		dbg(a+b)
 
-        def square(x: int) -> int:
-            return x * x
+		def square(x: int) -> int:
+			return x * x
 
-        dbg(square(a))
+		dbg(square(a))
 
-    """
+	"""
 
-    for frame in inspect.stack():
-        line = frame.code_context[0]
-        if "dbg" in line:
-            start = line.find('(') + 1
-            end =  line.rfind(')')
-            if end == -1:
-                end = len(line)
-                
+	for frame in inspect.stack():
+		line = frame.code_context[0]
+		if "dbg" in line:
+			start = line.find('(') + 1
+			end =  line.rfind(')')
+			if end == -1:
+				end = len(line)
+				
 			fname: str = Path(frame.filename).relative_to(cwd).as_posix()
-            print(
-                f"[{frame.filename}:{frame.lineno}] {line[start:end]} = {exp!r}",
-                file=sys.stderr,
-            )
-            break
+			print(
+				f"[{frame.filename}:{frame.lineno}] {line[start:end]} = {exp!r}",
+				file=sys.stderr,
+			)
+			break
 
-    return exp
+	return exp
