@@ -81,7 +81,7 @@ def get_dataset(
 	dataset_info: dict = dict(
 		summary_short_str=summary_short_str,
 		batch_size=batch_size,
-		n_patterns=len(dataset),
+		n_patterns=dataset.n_total_samples,
 		n_batches=(
 			len(loader)
 			if return_loader

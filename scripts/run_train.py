@@ -10,7 +10,10 @@ from trnbl.loggers.wandb import WandbLogger
 
 from attention_motifs.vit_ae import VitAEConfig, VitAE
 from attention_motifs.train import get_dataset, set_up_model, train
-from attention_motifs.dataset.dataset import DataloaderMock
+from attention_motifs.dataset.dataset import (
+	CollectedAttentionPatternDataloader,
+	DataloaderMock,
+)
 
 
 # Configuration
@@ -44,8 +47,8 @@ MODEL_CONFIG: VitAEConfig = VitAEConfig(
 # ==================================================
 
 
-TRAIN_DATASET: DataloaderMock
-TRAIN_DATASET, DATASET_INFO, _, _ = get_dataset(
+TRAIN_DATASET: CollectedAttentionPatternDataloader
+TRAIN_DATASET, DATASET_INFO = get_dataset(
 	activations_path=ACTIVATIONS_PATH,
 	batch_size=BATCH_SIZE,
 	n_batches=N_TRAIN_BATCHES,
@@ -54,7 +57,7 @@ TRAIN_DATASET, DATASET_INFO, _, _ = get_dataset(
 )
 
 VAL_LOADER: DataloaderMock
-VAL_LOADER, VAL_DATASET_INFO, _, _ = get_dataset(
+VAL_LOADER, VAL_DATASET_INFO = get_dataset(
 	activations_path=VAL_ACTIVATIONS_PATH,
 	batch_size=VAL_BATCH_SIZE,
 	n_batches=N_VAL_BATCHES,
