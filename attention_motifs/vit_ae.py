@@ -1,9 +1,10 @@
-import warnings
+from typing import Tuple, Dict, Any, Type
+
 import torch
 import torch.nn as nn
-from torch import Tensor
 import torch.nn.functional as F
-from jaxtyping import Float, Int, Bool
+from torch import Tensor
+from jaxtyping import Float
 
 # custom utils
 from muutils.json_serialize import (
@@ -14,95 +15,75 @@ from muutils.json_serialize import (
 from zanj.torchutil import ConfiguredModel, set_config_class
 
 
-@serializable_dataclass
-class Conv2DConfig(SerializableDataclass):
-	channels: int
-	kernel_size: int = serializable_field(default=3)
-	stride: int = serializable_field(default=1)
-	padding: int = serializable_field(default=1)
-
-	def create(self, in_channels: int) -> nn.Conv2d:
-		return nn.Conv2d(
-			in_channels=in_channels,
-			out_channels=self.channels,
-			kernel_size=self.kernel_size,
-			stride=self.stride,
-			padding=self.padding,
-		)
-
-	def create_decoder(self, out_channels: int) -> nn.Conv2d:
-		return nn.ConvTranspose2d(
-			in_channels=self.channels,
-			out_channels=out_channels,
-			kernel_size=self.kernel_size,
-			stride=self.stride,
-			padding=self.padding,
-		)
-
-
 @serializable_dataclass(kw_only=True)
 class VitAEConfig(SerializableDataclass):
-	"""Configuration for square matrix contrastive autoencoder
+	"""Configuration for a Vision Transformer Autoencoder
 
 	# Parameters:
 	 - `latent_dim : int`
-	    Dimension of latent space
-	 - `encoder_channels : Sequence[int]`
-	    Number of channels in each encoder layer
-	 - `kernel_size : int`
-	    Kernel size for conv layers
-	 - `margin : float`
-	    Margin for contrastive loss
-	 - `activation : type[nn.Module]`
-	    activation function to use. will define `act_fn = activation()`
-	 - `pooling : str`
-	    One of 'max' or 'avg'
+	    Dimension of the final latent space (for contrastive usage).
+	 - `in_channels : int`
+	    Number of input channels.
+	 - `image_size : int`
+	    Assumes square images of size (image_size x image_size).
+	 - `patch_size : int`
+	    Size of each patch (image is split into patches).
+	 - `embed_dim : int`
+	    Dimension of the patch embeddings.
+	 - `num_heads : int`
+	    Number of attention heads.
+	 - `mlp_dim : int`
+	    MLP dimension inside the Transformer blocks.
+	 - `encoder_depth : int`
+	    Number of Transformer blocks for the encoder.
+	 - `decoder_depth : int`
+	    Number of Transformer blocks for the decoder.
+	 - `contrast_temperature : float`
+	    Temperature for contrastive loss.
+	 - `recon_weight : float`
+	    Weight on reconstruction loss.
+	 - `contrast_weight : float`
+	    Weight on contrastive loss.
+	 - `optimizer : Type[torch.optim.Optimizer]`
+	    Optimizer class.
+	 - `learning_rate : float`
+	    Initial learning rate.
+	 - `lr_scheduler : Type[torch.optim.lr_scheduler._LRScheduler]`
+	    LR scheduler class.
+	 - `lr_scheduler_kwargs : Dict[str, Any]`
+	    Keyword arguments for the LR scheduler.
+	 - `num_epochs : int`
+	    Number of training epochs.
 	"""
 
-	# architecture
 	latent_dim: int
 	in_channels: int = serializable_field(default=1)
-	conv_encoder: list[Conv2DConfig] = serializable_field(
-		default_factory=lambda: [
-			Conv2DConfig(channels=16),
-			Conv2DConfig(channels=64),
-			Conv2DConfig(channels=64),
-			Conv2DConfig(channels=64),
-			Conv2DConfig(channels=128),
-		],
-		serialization_fn=lambda x: [c.serialize() for c in x],
-		deserialize_fn=lambda x: [Conv2DConfig.load(c) for c in x],
-	)
+	image_size: int = serializable_field(default=28)
+	patch_size: int = serializable_field(default=4)
 
-	mlp_prepool: list[int] = serializable_field(default_factory=lambda: [128, 128])
-	mlp_postpool: list[int] = serializable_field(default_factory=lambda: [128, 128])
+	embed_dim: int = serializable_field(default=64)
+	num_heads: int = serializable_field(default=8)
+	mlp_dim: int = serializable_field(default=128)
+	encoder_depth: int = serializable_field(default=4)
+	decoder_depth: int = serializable_field(default=4)
 
-	activation: type[nn.Module] = serializable_field(
-		default=nn.ReLU,
-		serialization_fn=lambda x: x.__name__,
-		deserialize_fn=lambda x: getattr(nn, x),
-	)
-
-	# loss
 	contrast_temperature: float = serializable_field(default=0.07)
 	recon_weight: float = serializable_field(default=1.0)
 	contrast_weight: float = serializable_field(default=1.0)
 
-	# optimizer
-	optimizer: type[torch.optim.Optimizer] = serializable_field(
+	optimizer: Type[torch.optim.Optimizer] = serializable_field(
 		default=torch.optim.Adam,
 		serialization_fn=lambda x: x.__name__,
 		deserialize_fn=lambda x: getattr(torch.optim, x),
 	)
 
-	# lr scheduler
 	learning_rate: float = serializable_field(default=1e-4)
-	lr_scheduler: type[torch.optim.lr_scheduler._LRScheduler] = serializable_field(
+	lr_scheduler: Type[torch.optim.lr_scheduler._LRScheduler] = serializable_field(
 		default=torch.optim.lr_scheduler.ReduceLROnPlateau,
 		serialization_fn=lambda x: x.__name__,
 		deserialize_fn=lambda x: getattr(torch.optim.lr_scheduler, x),
 	)
-	lr_scheduler_kwargs: dict = serializable_field(
+	lr_scheduler_kwargs: Dict[str, Any] = serializable_field(
 		default_factory=lambda: dict(
 			mode="min",
 			factor=0.1,
@@ -115,21 +96,24 @@ class VitAEConfig(SerializableDataclass):
 		)
 	)
 
-	# epochs
 	num_epochs: int = serializable_field(default=5)
 
-	def __post_init__(self):
-		assert all(c.channels > 0 for c in self.conv_encoder)
-		assert all(d > 0 for d in self.mlp_prepool)
-		assert all(d > 0 for d in self.mlp_postpool)
+	def __post_init__(self) -> None:
+		"""Checks and validations after initialization."""
+		assert self.latent_dim > 0, "latent_dim must be positive"
+		assert self.in_channels > 0, "in_channels must be positive"
+		assert self.image_size >= self.patch_size, "image_size must be >= patch_size"
+		assert self.embed_dim > 0, "embed_dim must be positive"
+		assert self.num_heads > 0, "num_heads must be positive"
+		assert self.mlp_dim > 0, "mlp_dim must be positive"
+		assert self.encoder_depth > 0, "encoder_depth must be positive"
+		assert self.decoder_depth > 0, "decoder_depth must be positive"
 
 	def get_optim_and_lrs(
 		self,
 		model: "VitAE",
-	) -> tuple[
-		torch.optim.Optimizer,
-		torch.optim.lr_scheduler._LRScheduler,
-	]:
+	) -> Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler._LRScheduler]:
+		"""Utility to create optimizer and learning rate scheduler from config."""
 		optimizer: torch.optim.Optimizer = self.optimizer(
 			model.parameters(),
 			lr=self.learning_rate,
@@ -141,279 +125,348 @@ class VitAEConfig(SerializableDataclass):
 		return optimizer, lr_scheduler
 
 
-@set_config_class(VitAEConfig)
-class Encoder(ConfiguredModel[VitAEConfig]):
-	def __init__(self, config: VitAEConfig):
-		super().__init__(config)
-		self.config: VitAEConfig = config
-
-		# Convolutional encoder
-		in_ch: int = config.in_channels
-		conv_layers: list[nn.Module] = []
-
-		for conv_cfg in config.conv_encoder:
-			conv_layers.append(conv_cfg.create(in_ch))
-			conv_layers.append(config.activation())
-			in_ch = conv_cfg.channels
-
-		self.conv: nn.Module = nn.Sequential(*conv_layers)
-
-		# linear map on each pixel
-		linear_layers_prepool: list[nn.Module] = []
-		for out_dim in config.mlp_prepool:
-			linear_layers_prepool.append(nn.Linear(in_ch, out_dim))
-			linear_layers_prepool.append(config.activation())
-			in_ch = out_dim
-
-		self.linear_prepool: nn.Module = nn.Sequential(*linear_layers_prepool)
-
-		# linear map on pooled features
-		linear_layers_postpool: list[nn.Module] = []
-		for out_dim in config.mlp_postpool:
-			linear_layers_postpool.append(nn.Linear(in_ch, out_dim))
-			linear_layers_postpool.append(config.activation())
-			in_ch = out_dim
-
-		self.linear_postpool: nn.Module = nn.Sequential(*linear_layers_postpool)
-
-	def forward(
-		self, x: Float[Tensor, "batch 1 n_ctx n_ctx"]
-	) -> Float[Tensor, "batch latent_dim"]:
-		# conv layers
-		h: Float[Tensor, "batch channels n_ctx n_ctx"] = self.conv(x)
-		# apply linear layers to each pixel
-		# TODO: add pos embeds?
-		h_reshape = h.flatten(2).reshape(h.size(0), -1, h.size(1))
-		h = self.linear_prepool(h_reshape)
-
-		# mean pool over pixels
-		h = h.mean(dim=-2)
-		# apply linear layers to pooled features
-		h = self.linear_postpool(h)
-		return h
-
-
-@set_config_class(VitAEConfig)
-class Decoder(ConfiguredModel[VitAEConfig]):
-	"""Decoder stage of the AttnAE architecture
-
-	This mirrors the `Encoder` by:
-	  1. Taking a latent vector of shape (batch, latent_dim)
-	  2. Passing it through the inverse MLP layers
-	  3. "Un-pooling" or broadcasting back to a spatial grid
-	  4. Passing the resulting feature maps through transposed convolution layers
-	  5. Producing a reconstructed image of shape (batch, in_channels, H, W)
+class PatchEmbed(nn.Module):
+	"""2D Patch Embedding with linear projection.
 
 	# Parameters:
-	 - `config : AttnAEConfig`
-	    The model configuration
-
-	# Usage:
-	```python
-	>>> decoder = Decoder(config)
-	>>> z = torch.randn(16, config.latent_dim)
-	>>> x_recon = decoder(z)
-	>>> x_recon.shape
-	torch.Size([16, config.in_channels, H, W])
-	```
+	 - `in_channels : int`
+	    Number of input channels
+	 - `embed_dim : int`
+	    Dimension of embedded patch
+	 - `patch_size : int`
+	    The patch size (square patches)
+	 - `img_size : int`
+	    The (square) input image size
 	"""
 
-	def __init__(self, config: VitAEConfig):
-		super().__init__(config)
-		self.config: VitAEConfig = config
+	def __init__(
+		self,
+		in_channels: int,
+		embed_dim: int,
+		patch_size: int,
+		img_size: int,
+	) -> None:
+		super().__init__()
+		self.in_channels: int = in_channels
+		self.embed_dim: int = embed_dim
+		self.patch_size: int = patch_size
+		self.img_size: int = img_size
 
-		# Inverse of post-pool MLP
-		postunpool_layers: list[nn.Module] = []
-		in_dim: int = config.latent_dim
-		# We'll reverse the mlp_postpool layers used in the encoder
-		for out_dim in reversed(config.mlp_postpool):
-			postunpool_layers.append(nn.Linear(in_dim, out_dim))
-			postunpool_layers.append(config.activation())
-			in_dim = out_dim
+		assert img_size % patch_size == 0, (
+			f"img_size ({img_size}) must be divisible by patch_size ({patch_size})"
+		)
 
-		self.linear_postunpool: nn.Module = nn.Sequential(*postunpool_layers)
+		self.num_patches: int = (img_size // patch_size) * (img_size // patch_size)
 
-		# Inverse of pre-pool MLP
-		preunpool_layers: list[nn.Module] = []
-		for out_dim in reversed(config.mlp_prepool):
-			preunpool_layers.append(nn.Linear(in_dim, out_dim))
-			preunpool_layers.append(config.activation())
-			in_dim = out_dim
-
-		self.linear_preunpool: nn.Module = nn.Sequential(*preunpool_layers)
-
-		# TODO: first conv doesn't correctly read last preunpool layer size
-
-		# Transposed convolution layers
-		rev_conv_cfgs = list(reversed(config.conv_encoder))
-		conv_layers: list[nn.Module] = []
-		for i, conv_cfg in enumerate(rev_conv_cfgs):
-			# Decide what the output channels of this transpose conv should be
-			# If not at the last reversed conv, next out is rev_conv_cfgs[i+1].channels
-			# Otherwise, decode to the original in_channels
-			if i < len(rev_conv_cfgs) - 1:
-				out_ch = rev_conv_cfgs[i + 1].channels
-			else:
-				out_ch = config.in_channels
-
-			conv_layers.append(conv_cfg.create_decoder(out_ch))
-			# add activation except perhaps after the final layer
-			if i < len(rev_conv_cfgs) - 1:
-				conv_layers.append(config.activation())
-
-		self.conv: nn.Module = nn.Sequential(*conv_layers)
-
-	@classmethod
-	def convert_tril_rowstoch(
-		cls,
-		x: Float[Tensor, "batch in_channels n_ctx n_ctx"],
-	) -> Float[Tensor, "batch in_channels n_ctx n_ctx"]:
-		# set the upper triangle to -inf
-		# print(f"{x.shape = }")
-		# print(f"x before convert triu {x}")
-		x += torch.triu(torch.ones_like(x) * float("-inf"), diagonal=1)
-		# apply softmax
-		# print(f"x after convert triu {x}")
-		x = F.softmax(x, dim=-1)
-		# print(f"x after softmax {x}")
-		return x
+		self.proj: nn.Conv2d = nn.Conv2d(
+			in_channels=self.in_channels,
+			out_channels=self.embed_dim,
+			kernel_size=self.patch_size,
+			stride=self.patch_size,
+		)
 
 	def forward(
 		self,
-		z: Float[Tensor, "batch latent_dim"],
-		n_ctx: int,
-	) -> Float[Tensor, "batch in_channels n_ctx n_ctx"]:
-		"""Forward pass of the Decoder"""
-		# 1) Inverse of the post-pool MLP
-		h: Float[Tensor, "batch mid_dim"] = self.linear_postunpool(z)  # (B, ?)
-		# 2) Broadcast to spatial dimension
-		h = h.unsqueeze(-1)
-		h = h.expand(-1, -1, n_ctx * n_ctx)
-		h = h.permute(0, 2, 1)
-		# 3) Inverse of the pre-pool MLP => shape (B, channels, H*W)
-		h = self.linear_preunpool(h)  # (B, channels, H*W)
-		# reshape => (B, channels, H, W)
-		h = h.permute(0, 2, 1)
-		h = h.view(
-			h.shape[0],
-			h.shape[1],
-			n_ctx,
-			n_ctx,
+		x: Float[Tensor, "batch in_channels H W"],
+	) -> Float[Tensor, "batch num_patches embed_dim"]:
+		"""Applies patch embedding to input images."""
+		# batch_size: int = x.shape[0]
+		x_proj: Float[Tensor, "batch embed_dim patchH patchW"] = self.proj(x)
+		x_proj = x_proj.flatten(2)  # => (B, embed_dim, num_patches)
+		x_proj = x_proj.transpose(1, 2)  # => (B, num_patches, embed_dim)
+		return x_proj
+
+
+class TransformerEncoderBlock(nn.Module):
+	"""A Transformer Encoder Block (pre-LayerNorm)."""
+
+	def __init__(
+		self,
+		embed_dim: int,
+		num_heads: int,
+		mlp_dim: int,
+		drop: float = 0.0,
+		attn_drop: float = 0.0,
+	) -> None:
+		super().__init__()
+		self.norm1: nn.LayerNorm = nn.LayerNorm(embed_dim)
+		self.attn: nn.MultiheadAttention = nn.MultiheadAttention(
+			embed_dim=embed_dim,
+			num_heads=num_heads,
+			dropout=attn_drop,
+			batch_first=True,
+		)
+		self.drop_attn: nn.Dropout = nn.Dropout(drop)
+
+		self.norm2: nn.LayerNorm = nn.LayerNorm(embed_dim)
+		self.mlp: nn.Sequential = nn.Sequential(
+			nn.Linear(embed_dim, mlp_dim),
+			nn.GELU(),
+			nn.Linear(mlp_dim, embed_dim),
+		)
+		self.drop_mlp: nn.Dropout = nn.Dropout(drop)
+
+	def forward(
+		self, x: Float[Tensor, "batch seq_len embed_dim"]
+	) -> Float[Tensor, "batch seq_len embed_dim"]:
+		"""Forward pass of a single Transformer encoder block."""
+		h: Float[Tensor, "batch seq_len embed_dim"] = self.norm1(x)
+		attn_out, _ = self.attn(h, h, h)
+		x = x + self.drop_attn(attn_out)
+
+		h = self.norm2(x)
+		h = self.mlp(h)
+		x = x + self.drop_mlp(h)
+		return x
+
+
+class TransformerDecoderBlock(nn.Module):
+	"""A Transformer Decoder Block (no cross-attention, pre-LayerNorm)."""
+
+	def __init__(
+		self,
+		embed_dim: int,
+		num_heads: int,
+		mlp_dim: int,
+		drop: float = 0.0,
+		attn_drop: float = 0.0,
+	) -> None:
+		super().__init__()
+		self.norm1: nn.LayerNorm = nn.LayerNorm(embed_dim)
+		self.attn: nn.MultiheadAttention = nn.MultiheadAttention(
+			embed_dim=embed_dim,
+			num_heads=num_heads,
+			dropout=attn_drop,
+			batch_first=True,
+		)
+		self.drop_attn: nn.Dropout = nn.Dropout(drop)
+
+		self.norm2: nn.LayerNorm = nn.LayerNorm(embed_dim)
+		self.mlp: nn.Sequential = nn.Sequential(
+			nn.Linear(embed_dim, mlp_dim),
+			nn.GELU(),
+			nn.Linear(mlp_dim, embed_dim),
+		)
+		self.drop_mlp: nn.Dropout = nn.Dropout(drop)
+
+	def forward(
+		self, x: Float[Tensor, "batch seq_len embed_dim"]
+	) -> Float[Tensor, "batch seq_len embed_dim"]:
+		"""Forward pass of a single Transformer decoder block."""
+		h: Float[Tensor, "batch seq_len embed_dim"] = self.norm1(x)
+		attn_out, _ = self.attn(h, h, h)
+		x = x + self.drop_attn(attn_out)
+
+		h = self.norm2(x)
+		h = self.mlp(h)
+		x = x + self.drop_mlp(h)
+		return x
+
+
+@set_config_class(VitAEConfig)
+class VisionTransformerEncoder(ConfiguredModel[VitAEConfig]):
+	"""Vision Transformer Encoder.
+	Splits the input into patches, uses a stack of
+	Transformer blocks, then outputs a `latent_dim` vector
+	by average pooling the final patch embeddings.
+	"""
+
+	def __init__(self, config: VitAEConfig) -> None:
+		super().__init__(config)
+		self.config: VitAEConfig = config
+
+		# Patch embedding
+		self.patch_embed: PatchEmbed = PatchEmbed(
+			in_channels=config.in_channels,
+			embed_dim=config.embed_dim,
+			patch_size=config.patch_size,
+			img_size=config.image_size,
+		)
+		self.num_patches: int = self.patch_embed.num_patches
+
+		# Learnable position embeddings
+		self.pos_embed: nn.Parameter = nn.Parameter(
+			torch.zeros(1, self.num_patches, config.embed_dim),
+			requires_grad=True,
+		)
+		nn.init.normal_(self.pos_embed, std=0.02)
+
+		# Transformer encoder blocks
+		self.blocks: nn.ModuleList = nn.ModuleList(
+			[
+				TransformerEncoderBlock(
+					embed_dim=config.embed_dim,
+					num_heads=config.num_heads,
+					mlp_dim=config.mlp_dim,
+					drop=0.0,
+					attn_drop=0.0,
+				)
+				for _ in range(config.encoder_depth)
+			]
+		)
+		self.norm: nn.LayerNorm = nn.LayerNorm(config.embed_dim)
+
+		# Final projection to latent space
+		self.to_latent: nn.Linear = nn.Linear(config.embed_dim, config.latent_dim)
+
+	def forward(
+		self, x: Float[Tensor, "batch in_channels H W"]
+	) -> Float[Tensor, "batch latent_dim"]:
+		"""Forward pass of the ViT encoder."""
+		x_patches: Float[Tensor, "batch num_patches embed_dim"] = self.patch_embed(x)
+		x_patches = x_patches + self.pos_embed  # shape => (B, num_patches, embed_dim)
+
+		# Pass through encoder blocks
+		for blk in self.blocks:
+			x_patches = blk(x_patches)
+
+		# Final layer norm
+		x_patches = self.norm(x_patches)
+
+		# Mean pool -> single vector per sample
+		x_mean: Float[Tensor, "batch embed_dim"] = x_patches.mean(dim=1)
+		# Project to latent_dim
+		z: Float[Tensor, "batch latent_dim"] = self.to_latent(x_mean)
+		return z
+
+
+@set_config_class(VitAEConfig)
+class VisionTransformerDecoder(ConfiguredModel[VitAEConfig]):
+	"""Vision Transformer Decoder.
+	Takes a (batch, latent_dim) vector, replicates it
+	across the same number of patches, passes it through
+	decoder Transformer blocks, then projects back to
+	patches and unpatchifies to the original image shape.
+	"""
+
+	def __init__(self, config: VitAEConfig) -> None:
+		super().__init__(config)
+		self.config: VitAEConfig = config
+
+		self.num_patches: int = (config.image_size // config.patch_size) ** 2
+
+		# Map latent -> embed_dim
+		self.from_latent: nn.Linear = nn.Linear(config.latent_dim, config.embed_dim)
+
+		# Decoder position embeddings
+		self.pos_embed_dec: nn.Parameter = nn.Parameter(
+			torch.zeros(1, self.num_patches, config.embed_dim),
+			requires_grad=True,
+		)
+		nn.init.normal_(self.pos_embed_dec, std=0.02)
+
+		# Decoder transformer blocks
+		self.blocks: nn.ModuleList = nn.ModuleList(
+			[
+				TransformerDecoderBlock(
+					embed_dim=config.embed_dim,
+					num_heads=config.num_heads,
+					mlp_dim=config.mlp_dim,
+					drop=0.0,
+					attn_drop=0.0,
+				)
+				for _ in range(config.decoder_depth)
+			]
+		)
+		self.norm: nn.LayerNorm = nn.LayerNorm(config.embed_dim)
+
+		# Final projection from embed_dim -> patch pixels
+		self.patch_dim: int = config.in_channels * config.patch_size * config.patch_size
+		self.head: nn.Linear = nn.Linear(config.embed_dim, self.patch_dim)
+
+	def convert_tril_rowstoch(
+		self,
+		x: Float[Tensor, "batch c H W"],
+	) -> Float[Tensor, "batch c H W"]:
+		"""Example row-stochastic transform (rare for typical image AEs)."""
+		x = x + torch.triu(torch.ones_like(x) * float("-inf"), diagonal=1)
+		x = F.softmax(x, dim=-1)
+		return x
+
+	def forward(
+		self, z: Float[Tensor, "batch latent_dim"]
+	) -> Float[Tensor, "batch in_channels H W"]:
+		"""Forward pass of the ViT decoder."""
+		batch_size: int = z.shape[0]
+
+		# (1) Map latent -> embed_dim
+		latent_embed: Float[Tensor, "batch embed_dim"] = self.from_latent(z)
+		# (2) Expand across all patches => (B, num_patches, embed_dim)
+		latent_embed = latent_embed.unsqueeze(1).expand(
+			batch_size, self.num_patches, -1
+		)
+		# (3) Add decoder pos embeddings
+		latent_embed = latent_embed + self.pos_embed_dec
+
+		# (4) Pass through decoder blocks
+		for blk in self.blocks:
+			latent_embed = blk(latent_embed)
+
+		# (5) Final norm
+		latent_embed = self.norm(latent_embed)
+
+		# (6) Project to patch pixels => (B, num_patches, patch_dim)
+		patches: Float[Tensor, "batch num_patches patch_dim"] = self.head(latent_embed)
+
+		# (7) Unpatchify
+		# => (B, num_patches, in_channels, patch_size^2)
+		patches = patches.view(
+			batch_size,
+			self.num_patches,
+			self.config.in_channels,
+			self.config.patch_size * self.config.patch_size,
+		)
+		# => (B, num_patches, in_channels, patch_size, patch_size)
+		patches = patches.view(
+			batch_size,
+			self.num_patches,
+			self.config.in_channels,
+			self.config.patch_size,
+			self.config.patch_size,
+		)
+		patches_per_dim: int = self.config.image_size // self.config.patch_size
+		# => (B, p_per_dim, p_per_dim, in_ch, p_size, p_size)
+		patches = patches.reshape(
+			batch_size,
+			patches_per_dim,
+			patches_per_dim,
+			self.config.in_channels,
+			self.config.patch_size,
+			self.config.patch_size,
+		)
+		patches = patches.permute(0, 3, 1, 4, 2, 5).contiguous()
+		x_recon: Float[Tensor, "batch in_channels H W"] = patches.view(
+			batch_size,
+			self.config.in_channels,
+			self.config.image_size,
+			self.config.image_size,
 		)
 
-		# 4) Run transposed convolution => (B, in_channels, H, W)
-		x_recon: Float[Tensor, "batch in_channels H W"] = self.conv(h)
-
-		# 5) Convert to row-stochastic
-		x_recon = self.convert_tril_rowstoch(x_recon)
-
+		# (Optional) row-stochastic step:
+		# x_recon = self.convert_tril_rowstoch(x_recon)
 		return x_recon
 
 
 @set_config_class(VitAEConfig)
 class VitAE(ConfiguredModel[VitAEConfig]):
-	config: VitAEConfig
+	"""Vision Transformer Autoencoder with a
+	separate encoder and decoder. Produces
+	a latent vector of shape (batch, latent_dim).
+	"""
 
-	def __init__(self, config: VitAEConfig):
+	def __init__(self, config: VitAEConfig) -> None:
 		super().__init__(config)
 		self.config: VitAEConfig = config
-
-		self.encoder: Encoder = Encoder(config)
-		self.decoder: Decoder = Decoder(config)
+		self.encoder: VisionTransformerEncoder = VisionTransformerEncoder(config)
+		self.decoder: VisionTransformerDecoder = VisionTransformerDecoder(config)
 
 	def forward(
 		self,
-		x: Float[Tensor, "*batch n n"],
-	) -> tuple[Float[Tensor, "*batch n n"], Float[Tensor, "batch latent_dim"]]:
-		n_ctx: int = x.shape[-1]
-		h: Float[Tensor, "batch latent_dim"] = self.encoder(x)
-		x_recon: Float[Tensor, "batch 1 n n"] = self.decoder(h, n_ctx=n_ctx)
-		return x_recon, h
-
-
-def contrastive_loss(
-	h: Float[Tensor, "batch latent_dim"],
-	classes: Int[Tensor, " batch"],
-	temperature: float = 0.07,
-) -> Float[Tensor, ""]:
-	"""Compute a supervised contrastive loss.
-
-	Pushes samples of the same class together and pushes
-	samples from different classes apart.
-
-	# Parameters:
-	 - `h : Float[Tensor, "batch latent_dim"]`
-	    latent embeddings
-	 - `classes : Int[Tensor, " batch"]`
-	    class labels (integer) for each sample in the batch
-	 - `temperature : float`
-	    temperature for scaling similarities
-	    (defaults to 0.07)
-
-	# Returns:
-	 - `Float[Tensor, ""]`
-	    the scalar contrastive loss
-
-	# Usage:
-	```python
-	>>> batch_size = 8
-	>>> latent_dim = 16
-	>>> h = torch.randn(batch_size, latent_dim)
-	>>> classes = torch.randint(0, 3, (batch_size,))
-	>>> loss_val = contrastive_loss(h, classes, temperature=0.07)
-	>>> print(loss_val)
-	```
-
-	# Raises:
-	 - `ValueError` : if all samples belong to distinct classes (no positives)
-	"""
-
-	batch_size: int = h.shape[0]
-	# Normalize the embeddings
-	h_norm: Float[Tensor, "batch latent_dim"] = F.normalize(h, dim=1)
-
-	# Compute pairwise cosine similarities
-	sim: Float[Tensor, "batch batch"] = h_norm @ h_norm.T
-
-	# Scale the similarities by the temperature
-	sim_scaled: Float[Tensor, "batch batch"] = sim / temperature
-
-	# Create a mask for all positives: same class and not self
-	positive_mask: Bool[Tensor, "batch batch"] = (
-		classes.unsqueeze(1) == classes.unsqueeze(0)
-	) & (~torch.eye(batch_size, dtype=torch.bool, device=h.device))
-
-	# Ensure there's at least one positive for each sample
-	# (if there's a class with exactly 1 sample in the batch, that sample has no positives)
-	# We'll allow those samples to have zero contribution, though sometimes you'd skip them or handle separately.
-	if positive_mask.sum() == 0:
-		warnings.warn("No positive pairs found in batch")
-
-	# Exponentiate scaled similarities
-	exp_sim: Float[Tensor, "batch batch"] = torch.exp(sim_scaled)
-
-	# For each anchor i, we exclude itself from the denominator
-	# so we zero out the diagonal
-	exp_sim_masked: Float[Tensor, "batch batch"] = exp_sim * (
-		~torch.eye(batch_size, device=h.device, dtype=torch.bool)
-	)
-
-	# Sum over all (masked) exponentiated similarities for the denominator
-	denom: Float[Tensor, " batch"] = exp_sim_masked.sum(dim=1)
-
-	# log_prob[i, j] = sim[i,j]/temp - log( sum_{k != i}(exp(sim[i,k]/temp)) )
-	log_prob: Float[Tensor, "batch batch"] = (sim_scaled) - torch.log(denom).unsqueeze(
-		1
-	)
-
-	# For each anchor i, we only want the log_probs for positives
-	# We'll sum over those positives and then divide by the number of positives
-	positive_log_prob: Float[Tensor, " batch"] = (
-		(log_prob * positive_mask).sum(dim=1)
-		/ (positive_mask.sum(dim=1) + 1e-8)  # add epsilon to avoid div by zero
-	)
-
-	# Our loss is the negative mean of these average positive log probs
-	loss: Float[Tensor, ""] = -positive_log_prob.mean()
-
-	return loss
+		x: Float[Tensor, "batch in_channels H W"],
+	) -> Tuple[
+		Float[Tensor, "batch in_channels H W"], Float[Tensor, "batch latent_dim"]
+	]:
+		"""Forward pass of VitAE."""
+		z: Float[Tensor, "batch latent_dim"] = self.encoder(x)
+		x_recon: Float[Tensor, "batch in_channels H W"] = self.decoder(z)
+		return x_recon, z

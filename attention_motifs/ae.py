@@ -1,9 +1,8 @@
-import warnings
 import torch
 import torch.nn as nn
 from torch import Tensor
 import torch.nn.functional as F
-from jaxtyping import Float, Int, Bool
+from jaxtyping import Float
 
 # custom utils
 from muutils.json_serialize import (
@@ -12,8 +11,6 @@ from muutils.json_serialize import (
 	serializable_field,
 )
 from zanj.torchutil import ConfiguredModel, set_config_class
-from trnbl import TrainingManager
-from trnbl.loggers.local import LocalLogger
 
 
 @serializable_dataclass
@@ -331,91 +328,3 @@ class AttnAE(ConfiguredModel[AttnAEConfig]):
 		h: Float[Tensor, "batch latent_dim"] = self.encoder(x)
 		x_recon: Float[Tensor, "batch 1 n n"] = self.decoder(h, n_ctx=n_ctx)
 		return x_recon, h
-
-
-def contrastive_loss(
-	h: Float[Tensor, "batch latent_dim"],
-	classes: Int[Tensor, " batch"],
-	temperature: float = 0.07,
-) -> Float[Tensor, ""]:
-	"""Compute a supervised contrastive loss.
-
-	Pushes samples of the same class together and pushes
-	samples from different classes apart.
-
-	# Parameters:
-	 - `h : Float[Tensor, "batch latent_dim"]`
-	    latent embeddings
-	 - `classes : Int[Tensor, " batch"]`
-	    class labels (integer) for each sample in the batch
-	 - `temperature : float`
-	    temperature for scaling similarities
-	    (defaults to 0.07)
-
-	# Returns:
-	 - `Float[Tensor, ""]`
-	    the scalar contrastive loss
-
-	# Usage:
-	```python
-	>>> batch_size = 8
-	>>> latent_dim = 16
-	>>> h = torch.randn(batch_size, latent_dim)
-	>>> classes = torch.randint(0, 3, (batch_size,))
-	>>> loss_val = contrastive_loss(h, classes, temperature=0.07)
-	>>> print(loss_val)
-	```
-
-	# Raises:
-	 - `ValueError` : if all samples belong to distinct classes (no positives)
-	"""
-
-	batch_size: int = h.shape[0]
-	# Normalize the embeddings
-	h_norm: Float[Tensor, "batch latent_dim"] = F.normalize(h, dim=1)
-
-	# Compute pairwise cosine similarities
-	sim: Float[Tensor, "batch batch"] = h_norm @ h_norm.T
-
-	# Scale the similarities by the temperature
-	sim_scaled: Float[Tensor, "batch batch"] = sim / temperature
-
-	# Create a mask for all positives: same class and not self
-	positive_mask: Bool[Tensor, "batch batch"] = (
-		classes.unsqueeze(1) == classes.unsqueeze(0)
-	) & (~torch.eye(batch_size, dtype=torch.bool, device=h.device))
-
-	# Ensure there's at least one positive for each sample
-	# (if there's a class with exactly 1 sample in the batch, that sample has no positives)
-	# We'll allow those samples to have zero contribution, though sometimes you'd skip them or handle separately.
-	if positive_mask.sum() == 0:
-		warnings.warn("No positive pairs found in batch")
-
-	# Exponentiate scaled similarities
-	exp_sim: Float[Tensor, "batch batch"] = torch.exp(sim_scaled)
-
-	# For each anchor i, we exclude itself from the denominator
-	# so we zero out the diagonal
-	exp_sim_masked: Float[Tensor, "batch batch"] = exp_sim * (
-		~torch.eye(batch_size, device=h.device, dtype=torch.bool)
-	)
-
-	# Sum over all (masked) exponentiated similarities for the denominator
-	denom: Float[Tensor, " batch"] = exp_sim_masked.sum(dim=1)
-
-	# log_prob[i, j] = sim[i,j]/temp - log( sum_{k != i}(exp(sim[i,k]/temp)) )
-	log_prob: Float[Tensor, "batch batch"] = (sim_scaled) - torch.log(denom).unsqueeze(
-		1
-	)
-
-	# For each anchor i, we only want the log_probs for positives
-	# We'll sum over those positives and then divide by the number of positives
-	positive_log_prob: Float[Tensor, " batch"] = (
-		(log_prob * positive_mask).sum(dim=1)
-		/ (positive_mask.sum(dim=1) + 1e-8)  # add epsilon to avoid div by zero
-	)
-
-	# Our loss is the negative mean of these average positive log probs
-	loss: Float[Tensor, ""] = -positive_log_prob.mean()
-
-	return loss
