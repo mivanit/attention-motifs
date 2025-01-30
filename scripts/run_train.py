@@ -40,6 +40,7 @@ MODEL_CONFIG: VitAEConfig = VitAEConfig(
 	num_heads=8,
 	encoder_depth=3,
 	decoder_depth=3,
+	contrast_temperature=0.01,
 )
 
 
