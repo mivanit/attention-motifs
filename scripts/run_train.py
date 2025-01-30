@@ -34,7 +34,7 @@ N_VAL_BATCHES: int = 8
 # model
 MODEL_CONFIG: VitAEConfig = VitAEConfig(
 	d_latent=64,
-	num_epochs=10,
+	num_epochs=100,
 	d_model=128,
 	mlp_dim=256,
 	num_heads=8,

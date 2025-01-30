@@ -88,7 +88,7 @@ class VitAEConfig(SerializableDataclass):
 
 	# optimizer and scheduler
 	optimizer: Type[torch.optim.Optimizer] = serializable_field(
-		default=torch.optim.Adam,
+		default=torch.optim.AdamW,
 		serialization_fn=lambda x: x.__name__,
 		deserialize_fn=lambda x: getattr(torch.optim, x),
 	)
