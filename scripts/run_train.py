@@ -39,12 +39,13 @@ MODEL_CONFIG: VitAEConfig = VitAEConfig(
 # ==================================================
 
 
-TRAIN_LOADER: DataloaderMock
-TRAIN_LOADER, DATASET_INFO, _, _ = get_dataset(
+TRAIN_DATASET: DataloaderMock
+TRAIN_DATASET, DATASET_INFO, _, _ = get_dataset(
 	activations_path=ACTIVATIONS_PATH,
 	batch_size=BATCH_SIZE,
 	n_batches=N_TRAIN_BATCHES,
 	show=False,
+	return_loader=False,
 )
 
 VAL_LOADER: DataloaderMock
@@ -86,7 +87,9 @@ MODEL = train(
 	model=MODEL,
 	optimizer=OPTIMIZER,
 	lr_scheduler=LR_SCHEDULER,
-	train_loader=TRAIN_LOADER,
+	train_dataset=TRAIN_DATASET,
+	batch_size=BATCH_SIZE,
+	n_batches=N_TRAIN_BATCHES,
 	val_loader=VAL_LOADER,
 	eval_plots_interval="1/4 run",
 )
