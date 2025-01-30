@@ -150,35 +150,41 @@ class PatchEmbed(nn.Module):
 		self,
 		x: Float[Tensor, "batch channels=1 n_ctx n_ctx"],
 	) -> Float[Tensor, "batch num_patches embed_dim"]:
-		# convolutional projection
+		# 1) Convolutional projection
 		x_proj: Float[Tensor, "batch embed_dim ax_patches ax_patches"] = self.proj(x)
-
 		ax_patches: int = x_proj.shape[2]
-		assert tuple(x_proj.shape) == (
-			x.shape[0],
-			self.embed_dim,
-			ax_patches,
-			ax_patches,
-		)
+		assert tuple(x_proj.shape) == (x.shape[0], self.embed_dim, ax_patches, ax_patches)
 
-		# create positional embeddings
+		# 2) Build separate positional embeddings for x and y, shape = (2, ax_patches, embed_dim)
 		positions: Int[Tensor, "ax_patches"] = torch.arange(ax_patches, device=x.device)
-		pos_embeds: Float[Tensor, "xy=2 ax_patches embed_dim"] = torch.stack(
-			[p(positions) for p in self.pos_embeds]
+		pos_embeds: Float[Tensor, "2 ax_patches embed_dim"] = torch.stack([
+			p(positions) for p in self.pos_embeds
+		])
+		# pos_embeds[0] = x-embeddings (ax_patches, embed_dim)
+		# pos_embeds[1] = y-embeddings (ax_patches, embed_dim)
+
+		# 3) "Outer add" to get a 2D embedding grid for each (row, col)
+		# pos2d will have shape (ax_patches, ax_patches, embed_dim)
+		pos2d: Float[Tensor, "ax_patches ax_patches embed_dim"] = (
+			pos_embeds[0].unsqueeze(1) + pos_embeds[1].unsqueeze(0)
 		)
 
-		# add positional embeddings
+		# 4) Reshape for broadcast-add to x_proj
+		# pos2d_perm: (embed_dim, ax_patches, ax_patches)
+		# then unsqueeze -> (1, embed_dim, ax_patches, ax_patches)
+		pos2d_perm = pos2d.permute(2, 0, 1).unsqueeze(0)
 
-		# flatten to patches
-		x_seq: Float[Tensor, "batch embed_dim num_patches"] = x_proj.flatten(2)
+		# 5) Add to the convolution outputs
+		x_proj = x_proj + pos2d_perm  # broadcast over batch dim
 
-		# transpose so that embed_dim is last
-		x_out: Float[Tensor, "batch num_patches embed_dim"] = x_seq.transpose(1, 2)
+		# 6) Flatten to patches and transpose so embed_dim is last
+		# x_seq: Float[Tensor, "batch embed_dim num_patches"]
+		# x_out: Float[Tensor, "batch num_patches embed_dim"]
+		return x_proj.flatten(2).transpose(1, 2)
 
-		return x_out
 
 
-class TransformerEncoderBlock(nn.Module):
+class TransformerBlock(nn.Module):
 	"""A Transformer Encoder Block (pre-LayerNorm)
 
 	# Parameters:
@@ -188,12 +194,6 @@ class TransformerEncoderBlock(nn.Module):
 		number of attention heads
 	 - `mlp_dim : int`
 		dimension of hidden layer in the MLP
-	 - `drop : float`
-		dropout probability
-		(defaults to 0.0)
-	 - `attn_drop : float`
-		dropout probability for attention
-		(defaults to 0.0)
 	"""
 
 	def __init__(
@@ -201,6 +201,7 @@ class TransformerEncoderBlock(nn.Module):
 		embed_dim: int,
 		num_heads: int,
 		mlp_dim: int,
+		act_fn: type[nn.Module] = nn.GELU,
 		# drop: float = 0.0,
 		# attn_drop: float = 0.0,
 	) -> None:
@@ -217,7 +218,7 @@ class TransformerEncoderBlock(nn.Module):
 		self.norm2: nn.LayerNorm = nn.LayerNorm(embed_dim)
 		self.mlp: nn.Sequential = nn.Sequential(
 			nn.Linear(embed_dim, mlp_dim),
-			nn.GELU(),
+			act_fn(),
 			nn.Linear(mlp_dim, embed_dim),
 		)
 		# self.drop_mlp: nn.Dropout = nn.Dropout(drop)
@@ -235,81 +236,6 @@ class TransformerEncoderBlock(nn.Module):
 		h = self.norm2(x)
 		h = self.mlp(h)
 		x = residual + h
-		return x
-
-
-class TransformerDecoderBlock(nn.Module):
-	"""A Transformer Decoder Block (no cross-attention, pre-LayerNorm)."""
-
-	def __init__(
-		self,
-		embed_dim: int,
-		num_heads: int,
-		mlp_dim: int,
-		drop: float = 0.0,
-		attn_drop: float = 0.0,
-	) -> None:
-		"""summary
-
-		extended summary
-
-		# Parameters:
-		 - `embed_dim : int`
-		    dimension of token embeddings
-		 - `num_heads : int`
-		    number of attention heads
-		 - `mlp_dim : int`
-		    dimension of hidden layer in the MLP
-		 - `drop : float`
-		    dropout probability
-		    (defaults to 0.0)
-		 - `attn_drop : float`
-		    dropout probability for attention
-		    (defaults to 0.0)
-		"""
-		super().__init__()
-		self.norm1: nn.LayerNorm = nn.LayerNorm(embed_dim)
-		self.attn: nn.MultiheadAttention = nn.MultiheadAttention(
-			embed_dim=embed_dim,
-			num_heads=num_heads,
-			dropout=attn_drop,
-			batch_first=True,
-		)
-		self.drop_attn: nn.Dropout = nn.Dropout(drop)
-
-		self.norm2: nn.LayerNorm = nn.LayerNorm(embed_dim)
-		self.mlp: nn.Sequential = nn.Sequential(
-			nn.Linear(embed_dim, mlp_dim),
-			nn.GELU(),
-			nn.Linear(mlp_dim, embed_dim),
-		)
-		self.drop_mlp: nn.Dropout = nn.Dropout(drop)
-
-	def forward(
-		self,
-		x: Float[Tensor, "batch seq_len embed_dim"],
-	) -> Float[Tensor, "batch seq_len embed_dim"]:
-		"""summary
-
-		extended summary
-
-		# Parameters:
-		 - `x : Float[Tensor, "batch seq_len embed_dim"]`
-		    input token embeddings
-
-		# Returns:
-		 - `Float[Tensor, "batch seq_len embed_dim"]`
-		    output token embeddings
-		"""
-		residual: Float[Tensor, "batch seq_len embed_dim"] = x
-		h: Float[Tensor, "batch seq_len embed_dim"] = self.norm1(x)
-		attn_out, _ = self.attn(h, h, h)
-		x = residual + self.drop_attn(attn_out)
-
-		residual = x
-		h = self.norm2(x)
-		h = self.mlp(h)
-		x = residual + self.drop_mlp(h)
 		return x
 
 
