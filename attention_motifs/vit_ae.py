@@ -150,23 +150,24 @@ class PatchEmbed(nn.Module):
 		self,
 		x: Float[Tensor, "batch channels=1 n_ctx n_ctx"],
 	) -> Float[Tensor, "batch num_patches embed_dim"]:
-		
 		# convolutional projection
 		x_proj: Float[Tensor, "batch embed_dim ax_patches ax_patches"] = self.proj(x)
 
 		ax_patches: int = x_proj.shape[2]
-		assert tuple(x_proj.shape) == (x.shape[0], self.embed_dim, ax_patches, ax_patches)
+		assert tuple(x_proj.shape) == (
+			x.shape[0],
+			self.embed_dim,
+			ax_patches,
+			ax_patches,
+		)
 
 		# create positional embeddings
 		positions: Int[Tensor, "ax_patches"] = torch.arange(ax_patches, device=x.device)
-		pos_embeds: Float[Tensor, "xy=2 ax_patches embed_dim"] = torch.stack([
-			p(positions) 
-			for p in self.pos_embeds
-		])
+		pos_embeds: Float[Tensor, "xy=2 ax_patches embed_dim"] = torch.stack(
+			[p(positions) for p in self.pos_embeds]
+		)
 
 		# add positional embeddings
-		
-
 
 		# flatten to patches
 		x_seq: Float[Tensor, "batch embed_dim num_patches"] = x_proj.flatten(2)
@@ -179,7 +180,7 @@ class PatchEmbed(nn.Module):
 
 class TransformerEncoderBlock(nn.Module):
 	"""A Transformer Encoder Block (pre-LayerNorm)
-	
+
 	# Parameters:
 	 - `embed_dim : int`
 		dimension of token embeddings
