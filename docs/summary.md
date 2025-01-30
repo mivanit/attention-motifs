@@ -1,8 +1,8 @@
 # Stats
 - 31 files
-- 6090 (6.1K) lines
-- 170648 (171K) chars
-- 68804 (69K) `gpt2` tokens
+- 6103 (6.1K) lines
+- 170917 (171K) chars
+- 68937 (69K) `gpt2` tokens
 
 # File Tree
 
@@ -11,7 +11,7 @@ attention-motifs
 ├── attention_motifs               
 │   ├── dataset                    
 │   │   ├── __init__.py            [    0L         0C         0T]
-│   │   ├── dataset.py             [  554L    15,908C     6,428T]
+│   │   ├── dataset.py             [  556L    15,923C     6,436T]
 │   │   ├── prompts.py             [  296L     8,377C     3,336T]
 │   │   └── util.py                [  410L    11,214C     4,474T]
 │   ├── __init__.py                [    0L         0C         0T]
@@ -20,13 +20,13 @@ attention-motifs
 │   ├── dbg.py                     [   77L     1,515C       636T]
 │   ├── figure_funcs.py            [  186L     5,070C     2,141T]
 │   ├── profiling.py               [  296L     7,531C     2,804T]
-│   ├── train.py                   [  290L     7,618C     3,174T]
+│   ├── train.py                   [  303L     7,887C     3,303T]
 │   ├── train_util.py              [  152L     4,689C     1,687T]
 │   └── vit_ae.py                  [  567L    16,384C     6,909T]
 ├── data                           
 │   └── pile_example.jsonl         [    2L     1,797C       440T]
 ├── notebooks                      
-│   ├── contrastive_AE.ipynb       [  405L    54,070C    33,199T]
+│   ├── contrastive_AE.ipynb       [  436L    58,936C    36,847T]
 │   ├── demo.ipynb                 [  173L     4,889C     2,394T]
 │   ├── demo_dataset.ipynb         [  348L    46,072C    31,645T]
 │   ├── fit_patterns_manual.ipynb  [  546L   538,141C   404,452T]
@@ -144,8 +144,10 @@ class DataloaderMock:
 		return self.n_batches
 
 	def __iter__(self):
-		for x in self.iter_func():
-			yield x
+		try:
+			yield from self.iter_func()
+		except StopIteration:
+			pass
 
 
 class CollectedAttentionPatternDataloader:
@@ -348,7 +350,7 @@ class CollectedAttentionPatternDataloader:
 					yield batch, metadata
 					batches_count += 1
 					if max_batches is not None and batches_count >= max_batches:
-						raise StopIteration()
+						return
 
 	def dataloader(
 		self,
@@ -2441,9 +2443,7 @@ def get_dataset(
 	)
 
 	# print info
-	print(
-		f"Train loader: {len(train_loader)} batches, {len(train_loader.dataset)} samples"
-	)
+	print(f"loader: {len(train_loader)} batches, {len(train_loader.dataset)} samples")
 
 	# show example pattern
 	x_mat, x_meta = next(
@@ -2515,13 +2515,14 @@ def eval_plots(
 
 	with torch.no_grad():
 		for batch_idx, (patterns, metadata) in enumerate(dataloader):
-			
-			x_recon, x_latent = model(patterns.to(device).to(torch.float32).unsqueeze(1))
+			x_recon, x_latent = model(
+				patterns.to(device).to(torch.float32).unsqueeze(1)
+			)
 
 			latent_std.append(x_latent.std(dim=0).mean().item())
 
 			x_recon_mean = x_recon.mean(dim=0)[0].detach().cpu().numpy()
-			
+
 			for i in range(len(metadata)):
 				x_recon_np = x_recon[i, 0].detach().cpu().numpy()
 				fig, axs = plt.subplots(1, 4, figsize=(12, 4))
@@ -2543,8 +2544,6 @@ def eval_plots(
 				mean_std.append(mean_diff.std())
 				axs[3].axis("off")
 
-
-
 				fig.suptitle(metadata[i])
 
 				try:
@@ -2561,6 +2560,9 @@ def eval_plots(
 					except Exception as e:
 						warnings.warn(f"failed to save or show pattern {i}: {e}")
 
+				finally:
+					plt.close(fig)
+
 	model.train()
 
 	return {
@@ -2568,6 +2570,13 @@ def eval_plots(
 		"val/mean_diff": sum(mean_diffs) / len(mean_diffs),
 		"val/latent_std": sum(latent_std) / len(latent_std),
 	}
+
+
+_TRAINING_MANAGER_KWARGS_DEFAULT: dict = dict(
+	checkpoint_interval="1/2 run",
+	model_save_path="{run_path}/checkpoints/model.checkpoint-{latest_checkpoint}.zanj",
+	model_save_path_special="{run_path}/model.{alias}.zanj",
+)
 
 
 def train(
@@ -2578,34 +2587,40 @@ def train(
 	lr_scheduler: torch.optim.lr_scheduler._LRScheduler,
 	train_loader: DataloaderMock,
 	val_loader: DataloaderMock | None = None,
-	training_manager_kwargs: dict = dict(
-		checkpoint_interval="1/2 run",
-		model_save_path="{run_path}/checkpoints/model.checkpoint-{latest_checkpoint}.zanj",
-		model_save_path_special="{run_path}/model.{alias}.zanj",
-	),
+	training_manager_kwargs: dict | None = None,
 ) -> ConfiguredModel[T_Config]:
 	model_config: T_Config = model.config
 
+	if training_manager_kwargs is None:
+		training_manager_kwargs = dict()
+
+	training_manager_kwargs = {
+		**_TRAINING_MANAGER_KWARGS_DEFAULT,
+		**training_manager_kwargs,
+	}
+
 	evals = list()
-	
-	if val_loader is not None: 
-		evals.append((
-		"1/10 run",
-		functools.partial(
-			eval_plots,
-			dataloader=val_loader,
-			device=device,
-			logger=logger,
-			show=False,
-		),
-	))
+
+	if val_loader is not None:
+		evals.append(
+			(
+				"1/10 run",
+				functools.partial(
+					eval_plots,
+					dataloader=val_loader,
+					device=device,
+					logger=logger,
+					show=False,
+				),
+			)
+		)
 
 	with TrainingManager(
 		model=model,
 		logger=logger,
 		save_model=ZANJ().save,
 		evals=evals,
-		** training_manager_kwargs,
+		**training_manager_kwargs,
 	) as tr:
 		for epoch in tr.epoch_loop(range(model_config.num_epochs), use_tqdm=False):
 			patterns: Float[torch.Tensor, "*batch n_ctx n_ctx"]
@@ -3416,7 +3431,7 @@ from trnbl.loggers.wandb import WandbLogger
 
 
 from attention_motifs.vit_ae import VitAEConfig, VitAE
-from attention_motifs.train import get_dataset, set_up_model, train, eval_plots
+from attention_motifs.train import get_dataset, set_up_model, train
 from attention_motifs.dataset.dataset import DataloaderMock
 ```
 
@@ -3434,7 +3449,7 @@ DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cp
 # training data
 ACTIVATIONS_PATH: Path = Path("../data/activations/medium")
 BATCH_SIZE: int = 10
-N_TRAIN_BATCHES: int = 500
+N_TRAIN_BATCHES: int = 50
 
 # validation data
 VAL_ACTIVATIONS_PATH: Path = Path("../data/activations/small_val")
@@ -3465,8 +3480,6 @@ VAL_LOADER, VAL_DATASET_INFO, _, _ = get_dataset(
 	n_batches=N_VAL_BATCHES,
 	shuffle=False,
 )
-
-
 ```
 
 # set up model and train
