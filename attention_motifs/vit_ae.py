@@ -159,13 +159,15 @@ class PatchEmbed(nn.Module):
 		)
 
 		# positional embeddings for x and y
-		self.pos_embeds: nn.ModuleList = nn.ModuleList([
-			nn.Embedding(
-				num_embeddings=max_patches,
-				embedding_dim=d_model,
-			)
-			for _ in range(2)
-		])
+		self.pos_embeds: nn.ModuleList = nn.ModuleList(
+			[
+				nn.Embedding(
+					num_embeddings=max_patches,
+					embedding_dim=d_model,
+				)
+				for _ in range(2)
+			]
+		)
 
 	def forward(
 		self,
@@ -336,13 +338,15 @@ class VitDecoder(ConfiguredModel[VitAEConfig]):
 		self.from_latent: nn.Linear = nn.Linear(config.d_latent, config.d_model)
 
 		# positional embeddings for x and y
-		self.pos_embeds: nn.ModuleList = nn.ModuleList([
-			nn.Embedding(
-				num_embeddings=config.max_patches,
-				embedding_dim=config.d_model,
-			)
-			for _ in range(2)
-		])
+		self.pos_embeds: nn.ModuleList = nn.ModuleList(
+			[
+				nn.Embedding(
+					num_embeddings=config.max_patches,
+					embedding_dim=config.d_model,
+				)
+				for _ in range(2)
+			]
+		)
 
 		# Decoder transformer blocks
 		self.blocks: nn.Module = nn.Sequential(
