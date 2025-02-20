@@ -126,9 +126,78 @@ filterwarnings = [
     "ignore: PEP 484 type hint*:beartype.roar._roarwarn.BeartypeDecorHintPep585DeprecationWarning",
 ]
 
+# `make lmcat` depends on the lmcat and can be configured here
 [tool.lmcat]
-ignore_patterns_files = [".lmignore", ".gitignore"]
+	output = "docs/other/lmcat.txt" # changing this might mean it wont be accessible from the docs
+	ignore_patterns = [
+		"!docs/resources/make_docs.py",
+		"docs/**",
+		".venv/**",
+		".git/**",
+		".meta/**",
+		"uv.lock",
+		"LICENSE",
+	]
+	[tool.lmcat.glob_process]
+		"[mM]akefile" = "makefile_recipes"
+		"*.ipynb" = "ipynb_to_md"
 
-[tool.lmcat.glob_process]
-"[mM]akefile" = "makefile_recipes"
-"*.ipynb" = "ipynb_to_md"
+
+# for configuring this tool (makefile, make_docs.py)
+# ============================================================
+[tool.makefile]
+
+# documentation configuration, for `make docs` and `make docs-clean`
+[tool.makefile.docs]
+    output_dir = "docs"
+    no_clean = [
+        ".nojekyll",  # For GitHub Pages
+		"demo/",
+        # "resources/", # Templates, CSS, etc. this, or whatever is specified as DOCS_RESOURCES_DIR in makefile will always be preserved
+    ]
+
+    # optional generation of notebooks as html pages
+    [tool.makefile.docs.notebooks]
+        enabled = true
+        source_path = "notebooks"
+        output_path_relative = "notebooks"
+        
+        #[tool.makefile.docs.notebooks.descriptions]
+            # "example" = "Example notebook showing basic usage"
+        
+
+[tool.makefile.uv-exports]
+	args = [
+		"--no-hashes"
+	]
+	exports = [
+		# no groups, no extras, just the base dependencies
+		{ name = "base", groups = false, extras = false },
+		# all groups
+		{ name = "groups", groups = true, extras = false },
+		# only the lint group -- custom options for this
+		{ name = "lint", options = ["--only-group", "lint"] },
+		# # all groups and extras
+		{ name = "all", filename="requirements.txt", groups = true, extras=true },
+		# # all groups and extras, a different way
+		{ name = "all", groups = true, options = ["--all-extras"] },
+	]
+
+[tool.makefile.inline-todo]
+	search_dir = "."
+	out_file = "docs/other/todo-inline.md"
+	context_lines = 2
+	extensions = ["py", "md"]
+	tags = ["CRIT", "TODO", "FIXME", "HACK", "BUG", "DOC"]
+	exclude = [
+		"docs/**",
+		".venv/**",
+		"scripts/get_todos.py",
+	]
+	branch = "main"
+    [tool.makefile.inline-todo.tag_label_map]
+        "BUG" = "bug"
+        "TODO" = "enhancement"
+		"DOC" = "documentation"
+
+# ============================================================
