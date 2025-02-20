@@ -1,8 +1,8 @@
 # Stats
 - 31 files
-- 6192 (6.2K) lines
-- 172882 (173K) chars
-- 69717 (70K) `gpt2` tokens
+- 6409 (6.4K) lines
+- 180036 (180K) chars
+- 73114 (73K) `gpt2` tokens
 
 # File Tree
 
@@ -13,29 +13,29 @@ attention-motifs
 │   │   ├── __init__.py            [    0L         0C         0T]
 │   │   ├── dataset.py             [  556L    15,923C     6,436T]
 │   │   ├── prompts.py             [  296L     8,377C     3,336T]
-│   │   └── util.py                [  410L    11,214C     4,474T]
+│   │   └── util.py                [  412L    11,258C     4,498T]
 │   ├── __init__.py                [    0L         0C         0T]
 │   ├── ae.py                      [  316L     9,376C     3,818T]
 │   ├── consts.py                  [  152L     4,188C     1,644T]
 │   ├── dbg.py                     [   77L     1,515C       636T]
 │   ├── figure_funcs.py            [  186L     5,070C     2,141T]
 │   ├── profiling.py               [  296L     7,531C     2,804T]
-│   ├── train.py                   [  303L     7,887C     3,303T]
+│   ├── train.py                   [  327L     8,329C     3,505T]
 │   ├── train_util.py              [  152L     4,689C     1,687T]
-│   └── vit_ae.py                  [  567L    16,384C     6,909T]
+│   └── vit_ae.py                  [  567L    16,385C     6,910T]
 ├── data                           
 │   └── pile_example.jsonl         [    2L     1,797C       440T]
 ├── notebooks                      
-│   ├── contrastive_AE.ipynb       [  436L    58,936C    36,847T]
+│   ├── contrastive_AE.ipynb       [  436L    58,937C    36,849T]
 │   ├── demo.ipynb                 [  173L     4,889C     2,394T]
 │   ├── demo_dataset.ipynb         [  348L    46,072C    31,645T]
 │   ├── fit_patterns_manual.ipynb  [  546L   538,141C   404,452T]
 │   ├── fit_patterns_pysr.ipynb    [2,679L 1,932,395C 1,433,747T]
-│   ├── markov_absorption.ipynb    [  413L   361,334C   271,241T]
+│   ├── markov_absorption.ipynb    [  768L 2,472,284C 1,858,124T]
 │   └── view_profiling.ipynb       [  150L     9,976C     4,894T]
 ├── scripts                        
 │   ├── gen_data.py                [   44L       949C       407T]
-│   └── run_train.py               [   89L     1,965C       783T]
+│   └── run_train.py               [  105L     2,242C       917T]
 ├── tests                          
 │   ├── dataset                    
 │   │   ├── test_integration.py    [  197L     5,831C     2,209T]
@@ -44,8 +44,8 @@ attention-motifs
 │   ├── test_ae.py                 [  106L     3,840C     1,307T]
 │   └── test_consts.py             [   85L     2,428C     1,001T]
 ├── README.md                      [    2L        23C        10T]
-├── makefile                       [  719L    24,356C     8,746T]
-├── pyproject.toml                 [  134L     3,145C     1,420T]
+├── makefile                       [1,442L    43,780C    16,859T]
+├── pyproject.toml                 [  185L     4,619C     2,083T]
 ```
 
 # File Contents
@@ -1047,9 +1047,11 @@ class AttentionPatternMetadataArray(SerializableDataclass):
 					idx_layer=layer,
 					idx_head=head,
 					n_ctx=n_ctx,
-					prompt_hash=self.prompt_hash[idx],
+					prompt_hash=prompt_hash,
 				)
-				for model_name_idx, layer, head, n_ctx in self.data[idx]
+				for (model_name_idx, layer, head, n_ctx), prompt_hash in zip(
+					self.data[idx], self.prompt_hash[idx]
+				)
 			]
 		elif isinstance(idx, int):
 			model_name_idx, layer, head, n_ctx = self.data[idx]
@@ -2424,31 +2426,34 @@ def get_dataset(
 	n_batches: int,
 	shuffle: bool = True,
 	show: bool = True,
-) -> tuple[DataloaderMock, dict, torch.Tensor, list]:
+	return_loader: bool = True,
+) -> tuple[
+	CollectedAttentionPatternDataloader | DataloaderMock,
+	dict,
+]:
 	"returns dataloader, dataset info, example patterns, example metadata"
 	activations_path = Path(activations_path)
 
 	# load dataset and print summary
-	train_dataset: CollectedAttentionPatternDataloader = (
+	dataset: CollectedAttentionPatternDataloader = (
 		CollectedAttentionPatternDataloader.read(activations_path)
 	)
-	summary_short_str: str = json.dumps(train_dataset.summary_short(), indent=2)
+	summary_short_str: str = json.dumps(dataset.summary_short(), indent=2)
 	print(summary_short_str)
 
 	# turn dataset into dataloader
-	train_loader: DataloaderMock = train_dataset.dataloader(
-		batch_size=batch_size,
-		shuffle=shuffle,
-		max_batches=n_batches,
-	)
+	if return_loader:
+		loader: DataloaderMock = dataset.dataloader(
+			batch_size=batch_size,
+			shuffle=shuffle,
+			max_batches=n_batches,
+		)
 
-	# print info
-	print(f"loader: {len(train_loader)} batches, {len(train_loader.dataset)} samples")
+		# print info
+		print(f"loader: {len(loader)} batches, {len(loader.dataset)} samples")
 
 	# show example pattern
-	x_mat, x_meta = next(
-		iter(train_dataset.dataloader(10, shuffle=shuffle, max_batches=1))
-	)
+	x_mat, x_meta = next(iter(dataset.dataloader(10, shuffle=shuffle, max_batches=1)))
 	x_mat.shape
 	print(x_meta[0])
 	plt.matshow(x_mat[0])
@@ -2459,16 +2464,23 @@ def get_dataset(
 
 	dataset_info: dict = dict(
 		summary_short_str=summary_short_str,
-		n_patterns=len(train_loader.dataset),
 		batch_size=batch_size,
-		n_batches=len(train_loader),
+		n_patterns=dataset.n_total_samples,
+		n_batches=(
+			min(float(n_batches), dataset.n_total_samples / batch_size)
+			if not return_loader
+			else len(loader)
+		),
 		activations_path=activations_path.as_posix(),
-		summary_short=train_dataset.summary_short(),
-		summary=train_dataset.summary(),
-		dataset_str=str(train_dataset),
+		summary_short=dataset.summary_short(),
+		summary=dataset.summary(),
+		dataset_str=str(dataset),
 	)
 
-	return train_loader, dataset_info, x_mat, x_meta
+	if return_loader:
+		return loader, dataset_info
+	else:
+		return dataset, dataset_info
 
 
 T_Config = TypeVar("T_Config", bound=SerializableDataclass)
@@ -2573,7 +2585,7 @@ def eval_plots(
 
 
 _TRAINING_MANAGER_KWARGS_DEFAULT: dict = dict(
-	checkpoint_interval="1/2 run",
+	checkpoint_interval="1/10 run",
 	model_save_path="{run_path}/checkpoints/model.checkpoint-{latest_checkpoint}.zanj",
 	model_save_path_special="{run_path}/model.{alias}.zanj",
 )
@@ -2585,10 +2597,14 @@ def train(
 	model: ConfiguredModel[T_Config],
 	optimizer: torch.optim.Optimizer,
 	lr_scheduler: torch.optim.lr_scheduler._LRScheduler,
-	train_loader: DataloaderMock,
+	train_dataset: CollectedAttentionPatternDataloader,
+	batch_size: int,
+	n_batches: int,
 	val_loader: DataloaderMock | None = None,
 	training_manager_kwargs: dict | None = None,
+	eval_plots_interval: str = "1/10 run",
 ) -> ConfiguredModel[T_Config]:
+	# setup
 	model_config: T_Config = model.config
 
 	if training_manager_kwargs is None:
@@ -2604,7 +2620,7 @@ def train(
 	if val_loader is not None:
 		evals.append(
 			(
-				"1/10 run",
+				eval_plots_interval,
 				functools.partial(
 					eval_plots,
 					dataloader=val_loader,
@@ -2615,6 +2631,7 @@ def train(
 			)
 		)
 
+	# training loop
 	with TrainingManager(
 		model=model,
 		logger=logger,
@@ -2625,7 +2642,14 @@ def train(
 		for epoch in tr.epoch_loop(range(model_config.num_epochs), use_tqdm=False):
 			patterns: Float[torch.Tensor, "*batch n_ctx n_ctx"]
 			metadata: list[AttentionPatternMetadata]
-			for patterns, metadata in tr.batch_loop(train_loader, use_tqdm=True):
+			for patterns, metadata in tr.batch_loop(
+				train_dataset.dataloader(
+					batch_size=batch_size,
+					max_batches=n_batches,
+					shuffle=True,
+				),
+				use_tqdm=True,
+			):
 				this_batch_size: int = len(metadata)
 
 				# move to device, convert type, add channel dim
@@ -2647,7 +2671,9 @@ def train(
 				)
 
 				# compute contrastive loss
-				contrast_loss = contrastive_loss(embeddings, classes)
+				contrast_loss = contrastive_loss(
+					embeddings, classes, temperature=model_config.contrast_temperature
+				)
 
 				# combined loss and backward pass
 				total_loss = (
@@ -2933,7 +2959,7 @@ class VitAEConfig(SerializableDataclass):
 
 	# optimizer and scheduler
 	optimizer: Type[torch.optim.Optimizer] = serializable_field(
-		default=torch.optim.Adam,
+		default=torch.optim.AdamW,
 		serialization_fn=lambda x: x.__name__,
 		deserialize_fn=lambda x: getattr(torch.optim, x),
 	)
@@ -3512,7 +3538,7 @@ MODEL = train(
 	model=MODEL,
 	optimizer=OPTIMIZER,
 	lr_scheduler=LR_SCHEDULER,
-	train_loader=TRAIN_LOADER,
+	train_dataset=TRAIN_LOADER,
 	val_loader=VAL_LOADER,
 )
 ```
@@ -4454,50 +4480,49 @@ compare_patterns(
 
 ``````{ path="notebooks/markov_absorption.ipynb" processed_with="ipynb_to_md" }
 ```python
-import numpy as np
-import matplotlib.pyplot as plt
-```
-
-```python
-# start with a random square matrix, make it LT, normalize rows
-n: int = 20
-A: np.ndarray = np.random.rand(n, n)
-# add salt and pepper noise
-A[A < 0.9] = 0
-A = A + np.random.rand(n, n) * 0.01
-A = np.tril(A)
-A = A / np.sum(A, axis=1)[:, np.newaxis]
-
-plt.matshow(A)
-```
-
-```python
 import json
 from pathlib import Path
-from jaxtyping import Float
+from typing import overload, Callable
 
+import numpy as np
+from jaxtyping import Float, Int
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 
-# load activations for each prompt
+```
+
+```python
 def load_activations(
 	model_name: str,
 	base_path: Path = Path("../docs/demo"),
 ) -> tuple[
+	dict,
 	list[dict],
 	list[np.lib.npyio.NpzFile],
 ]:
+	"returns (model_config, prompts, activations)"
 	model_path: Path = base_path / model_name
+
+	# prompts
 	with open(model_path / "prompts.jsonl") as f:
 		prompts = [json.loads(line) for line in f]
-
-	activations = [
+	
+	# activations
+	activations: list[np.ndarray] = [
 		np.load(model_path / "prompts" / p["hash"] / "activations.npz") for p in prompts
 	]
 
-	return prompts, activations
+	# model config
+	model_config: dict = json.loads((model_path / "model_cfg.json").read_text())
 
+	return model_config, prompts, activations
 
-PROMPTS, ACTIVATIONS = load_activations("pythia-14m")
+```
 
+```python
+MODEL_NAME: str = "pythia-14m"
+MODEL_CFG: dict; PROMPTS: list[dict]; ACTIVATIONS: list[np.lib.npyio.NpzFile]
+MODEL_CFG, PROMPTS, ACTIVATIONS = load_activations(MODEL_NAME)
 
 def get_single_attn_pattern(
 	sample: int,
@@ -4506,73 +4531,219 @@ def get_single_attn_pattern(
 	activations=ACTIVATIONS,
 ) -> Float[np.ndarray, "n_ctx n_ctx"]:
 	return activations[sample][f"blocks.{layer}.attn.hook_pattern"][0, head]
-
-
-A = get_single_attn_pattern(0, 1, 0)
-n: int = A.shape[0]
 ```
 
 ```python
-def transition_tensor(A: np.ndarray, K: int) -> np.ndarray:
+def cross_entropy(
+	p: Float[np.ndarray, " d"],
+	q: Float[np.ndarray, " d"],
+) -> float:
+	"$H(p,q)=-\sum _{x\in {\mathcal {X}}}p(x)\,\log q(x)$"
+	return -np.sum(p * np.log(q))
+
+def sigmoid(
+	x: Float[np.ndarray, " d"], # input
+	x0: float,     # x-value of the sigmoid's midpoint
+	k: float,         # steepness of the sigmoid
+	L: float = 1.0, 	   # curve's maximum value
+	b: float = 0.0,        # curve's minimum value
+) -> Float[np.ndarray, " d"]:
+	"""Sigmoid function
+	
+	- `x: Float[np.ndarray, " d"]`
+	  input
+	- `x0: float`
+	  x-value of the sigmoid's midpoint
+	- `k: float`
+	  steepness of the sigmoid
+	- `L: float`
+	  curve's maximum value
+	  (default: `1.0`)
+	- `b: float`
+	  curve's minimum value
+	  (default: `0.0`)
+	
+	"""	
+	return L / (1 + np.exp(-k * (x - x0))) + b
+```
+
+```python
+
+
+def transition_tensor(
+	A: Float[np.ndarray, "n_ctx n_ctx"],
+	exact: int = 10,
+	approx_l10: int = 3,
+	approx_pts: int = 20,
+	res_norm: Callable[[Float[np.ndarray, "d"], Float[np.ndarray, "d"]], float] = cross_entropy,
+) -> tuple[
+	Int[np.ndarray, "n_idxs"],               # idxs
+	Float[np.ndarray, "n_idxs n_ctx n_ctx"], # resampled transition tensor
+	Float[np.ndarray, "n_idxs n_ctx"],       # resampled residuals
+]:
 	"""
-	Compute the 3D array `X` of shape `(n, n, K+1)` such that `X[i, j, k]` = Probability of being in state j at step k if we start in state i at step 0.
+	Compute the 3D transition tensor, residuals, and then resample
+	
+	- compute: `X` of shape `(K, n_ctx, n_ctx)` such that `X[t, i, j]` = Probability of being in state j at step k if we start in state i at step 0. `X[t, i, j] = A^t_[i, j]`
+	- compute: `residuals` of shape `(K, n_ctx)` such that `residuals[t, i] = res_norm(X[t, i, :], X[t-1, i, :])`
+	- resample both with the first `exact` points and then `approx_pts` points between `exact` and `approx_l10**10` on a log scale.
 
 	# Parameters
 	- `A: np.ndarray`
 	    An n x n transition matrix (row-stochastic for a standard Markov chain).
-	- `K: int`
-	    The maximum number of steps for which to compute transition probabilities.
+	- `exact: int`
+	    The number of exact points to include in the resampling.
+	- `approx_l10: int`
+	    The log base 10 of the maximum number of points to include in the resampling.
+	- `approx_pts: int`
+	    The number of points to include in the resampling between `exact` and `approx_l10**10`.
 
 	# Returns
-	`X: np.ndarray`
-	    A 3D NumPy array of shape (n, n, K+1).
-	    - X[:, :, 0] is the identity matrix (k=0).
-	    - X[:, :, k] is A^k for k >= 1.
+	- `idxs: Int[np.ndarray, "n_idxs"]`
+	- `X: Float[np.ndarray, "n_idxs n_ctx n_ctx"]`
+	    A 3D NumPy array of shape `(K, n, n)` such that:
+	    - X[k, :, k] is A^(idxs[k]) for k >= 1.
+	    - X[0, :, :] is the identity matrix (k=0).
+	- `residuals: Float[np.ndarray, "n_idxs n_ctx"]`
+	    A 2D NumPy array of shape `(K, n)` such that:
+	    - residuals[k, i] is the residual between X[k, i, :] and X[k-1, i, :].
+		- residuals[0, i] is NaN.
 	"""
-	n: int = A.shape[0]
-	# Allocate output array
-	X = np.zeros((n, n, K + 1), dtype=A.dtype)
+	max_K: int = np.power(10, approx_l10)
+	assert max_K > exact, "approx_l10 must be greater than exact"
 
-	# Step 0: identity distribution
-	X[:, :, 0] = np.eye(n, dtype=A.dtype)
+	# compute original transition tensor
+	n: int = A.shape[0]
+	X: Float[np.ndarray, "K n_ctx n_ctx"] = np.full((2, n, n, max_K), fill_value=np.nan, dtype=A.dtype)
+	X[0, :, :] = np.eye(n, dtype=A.dtype)
 
 	# Compute powers of A iteratively
-	for k in range(1, K + 1):
-		X[:, :, k] = X[:, :, k - 1] @ A
+	# TODO: do this more cleverly
+	for t in range(1, max_K):
+		X[t, :, :] = X[t-1, :, :] @ A
 
-	return X
+	# compute residuals
+	residuals: Float[np.ndarray, "n_idxs n_ctx"] = np.full((max_K, n), fill_value=np.nan, dtype=A.dtype)
+	residuals[1:, :] = np.abs(X[1:, :, :] - X[:-1, :, :])
 
+	# resample
+	resampled_idxs: Int[np.ndarray, "approx_pts"] = np.logspace(np.log10(exact), approx_l10, approx_pts, base=10, dtype=int)
+	idxs: Int[np.ndarray, "n_idxs"] = np.concatenate([np.arange(exact), resampled_idxs])
+	n_idxs: int = len(idxs)	
 
-def resampled_tt(
-	matrix,
-	exact_l10: int = 1,
-	approx_l10: int = 3,
-	approx_pts: int = 20,
-):
-	resampled_idxs = np.logspace(exact_l10, approx_l10, approx_pts, base=10, dtype=int)
+	tt_resampled: Float[np.ndarray, "n_idxs n_ctx n_ctx"] = X[idxs, :, :]
+	res_resampled: Float[np.ndarray, "n_idxs n_ctx"] = residuals[idxs, :]
 
-	tt = transition_tensor(matrix, resampled_idxs[-1])
-
-	tt_resampled = np.concatenate(
-		[
-			tt[:, :, :exact_l10],
-			tt[:, :, resampled_idxs],
-		],
-		axis=-1,
-	)
-
-	return tt_resampled
+	return idxs, tt_resampled, res_resampled 
 ```
 
 ```python
-fig, axs = plt.subplots(1, 6, figsize=(10, 5))
-for i in range(6):
-	A = get_single_attn_pattern(1, i, 0)
-	tt = resampled_tt(A, exact_l10=1, approx_l10=2.5, approx_pts=10)
-	axs[i].matshow(tt[:, 0, :])
-	axs[i].set_title(f"L{i}")
-	axs[i].axis("off")
+def plot_figs(
+	n_figures: int,
+	figure_func: Callable,
+	prompts: list[int] = None,
+	layers: list[int]|None = None,
+	heads: list[int]|None = None,
+	model_cfg: dict = MODEL_CFG,
+	prompt_dicts: list[dict] = PROMPTS,
+	activations: list[np.lib.npyio.NpzFile] = ACTIVATIONS,
+):
+	
+	n_lyrs: int = model_cfg["n_layers"]
+	n_heads: int = model_cfg["n_heads"]
 
+	if layers is None:
+		layers = list(range(n_lyrs))
+
+	if heads is None:
+		heads = list(range(n_heads))
+
+	if prompts is None:
+		prompts = list(range(len(prompt_dicts)))
+
+	for p_idx in prompts:
+		for lyr in range(n_lyrs): 
+			for head in range(n_heads):
+				fig, axs = plt.subplots(1, n_figures, figsize=(n_figures*5, 5))
+				A = get_single_attn_pattern(p_idx, lyr, head)				
+				figure_func(A, axs, p_idx, lyr, head)
+				prompt: dict = prompt_dicts[p_idx]
+				fig.suptitle(f"model {model_cfg['model_name']} L{lyr}H{head}, prompt {p_idx}\n{prompt['hash'] = }, {prompt['n_tokens'] = }")
+				plt.show()
+				
+				
+				
+def fig(
+	A: np.ndarray,
+	axs: np.ndarray,
+	p_idx: int,
+	lyr: int,
+	head: int,
+):
+	#
+	axs[0].set_title(f"raw attention")
+	axs[0].matshow(A)
+
+	# compute transition_tensor
+	idxs, tt, res = transition_tensor(A, exact=20, approx_l10=3.0, approx_pts=20)
+
+	#
+	axs[1].set_title(f"transition tensor")
+	axs[1].matshow(np.log10(1 - tt[:, 0, :]))
+	axs[1].set_xticks(range(len(idxs)))
+	axs[1].set_xticklabels(idxs)
+	axs[1].tick_params(axis='x', rotation=90)
+	
+	#
+	axs[2].set_title(f"transition curves")
+	cmap = plt.get_cmap('viridis')
+	for i in range(tt.shape[0]):
+		axs[2].plot(tt[i, 0, :], label=f"i={i}", color=cmap(i / tt.shape[0]))
+		x: np.ndarray = np.arange(tt.shape[2])
+		y: np.ndarray = tt[i, 0, :]
+		# Initial parameter guess: amplitude, midpoint, steepness, baseline
+		p0: list[float] = [max(y) - min(y), np.median(x), 1.0, min(y)]
+		try:
+			popt: np.ndarray
+			popt, _ = curve_fit(sigmoid, x, y, p0=p0)
+			y_fit: np.ndarray = sigmoid(x, *popt)
+			axs[2].plot(x, y_fit, ":", label=f"i={i} fit", color=cmap(i / tt.shape[0]))
+		except Exception as e:
+			# Fallback: plot raw data if the fit fails
+			axs[2].plot(x, y, label=f"i={i}", color=cmap(i / tt.shape[0]))
+
+	# 
+	axs[3].set_title(f"residuals tensor")
+	axs[3].matshow(res)
+	axs[3].set_xticks(range(len(idxs)))
+	axs[3].set_xticklabels(idxs)
+	axs[3].tick_params(axis='x', rotation=90)
+
+	#
+	axs[4].set_title(f"residuals curves")
+	for i in range(res.shape[0]):
+		axs[4].plot(res[i, :], label=f"i={i}")
+		axs[4].set_xticks(range(len(idxs)))
+		axs[4].set_xticklabels(idxs)
+		axs[4].tick_params(axis='x', rotation=90)
+
+plot_figs(5, fig, prompts=[0], layers=[0], heads=[0])
+	
+plt.show()
+```
+
+```python
+for lyr in range(n_lyrs): 
+	fig, axs = plt.subplots(1, n_heads, figsize=(15, 5))
+	for head in range(n_heads):
+		for i in range(T.shape[0]):
+			A = get_single_attn_pattern(lyr, head, 0)
+			axs[2*head].matshow(A)
+			idxs, tt = resampled_tt(A, exact=20, approx_l10=3.0, approx_pts=20)
+			axs[head].plot(T[i, 0, :], label=f"i={i}")
+# plt.legend()
+plt.xscale("log")
+# plt.yscale("log")
 plt.show()
 ```
 
@@ -4698,28 +4869,37 @@ from trnbl.loggers.wandb import WandbLogger
 
 from attention_motifs.vit_ae import VitAEConfig, VitAE
 from attention_motifs.train import get_dataset, set_up_model, train
-from attention_motifs.dataset.dataset import DataloaderMock
+from attention_motifs.dataset.dataset import (
+	CollectedAttentionPatternDataloader,
+	DataloaderMock,
+)
 
 
 # Configuration
 # ==================================================
 
-DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE: torch.device = torch.device("cuda:2")
 
 # training data
-ACTIVATIONS_PATH: Path = Path("../data/activations/medium")
-BATCH_SIZE: int = 10
-N_TRAIN_BATCHES: int = 50
+ACTIVATIONS_PATH: Path = Path("data/activations/medium")
+BATCH_SIZE: int = 32
+N_TRAIN_BATCHES: int = 12750
 
 # validation data
-VAL_ACTIVATIONS_PATH: Path = Path("../data/activations/small_val")
+VAL_ACTIVATIONS_PATH: Path = Path("data/activations/small_val")
 VAL_BATCH_SIZE: int = 8
 N_VAL_BATCHES: int = 8
 
 # model
 MODEL_CONFIG: VitAEConfig = VitAEConfig(
-	d_latent=128,
-	num_epochs=1,
+	d_latent=64,
+	num_epochs=100,
+	d_model=128,
+	mlp_dim=256,
+	num_heads=8,
+	encoder_depth=3,
+	decoder_depth=3,
+	contrast_temperature=0.05,
 )
 
 
@@ -4727,19 +4907,23 @@ MODEL_CONFIG: VitAEConfig = VitAEConfig(
 # ==================================================
 
 
-TRAIN_LOADER: DataloaderMock
-TRAIN_LOADER, DATASET_INFO, _, _ = get_dataset(
+TRAIN_DATASET: CollectedAttentionPatternDataloader
+TRAIN_DATASET, DATASET_INFO = get_dataset(
 	activations_path=ACTIVATIONS_PATH,
 	batch_size=BATCH_SIZE,
 	n_batches=N_TRAIN_BATCHES,
+	show=False,
+	return_loader=False,
 )
 
 VAL_LOADER: DataloaderMock
-VAL_LOADER, VAL_DATASET_INFO, _, _ = get_dataset(
+VAL_LOADER, VAL_DATASET_INFO = get_dataset(
 	activations_path=VAL_ACTIVATIONS_PATH,
 	batch_size=VAL_BATCH_SIZE,
 	n_batches=N_VAL_BATCHES,
 	shuffle=False,
+	show=False,
+	return_loader=True,
 )
 
 
@@ -4772,8 +4956,11 @@ MODEL = train(
 	model=MODEL,
 	optimizer=OPTIMIZER,
 	lr_scheduler=LR_SCHEDULER,
-	train_loader=TRAIN_LOADER,
+	train_dataset=TRAIN_DATASET,
+	batch_size=BATCH_SIZE,
+	n_batches=N_TRAIN_BATCHES,
 	val_loader=VAL_LOADER,
+	eval_plots_interval="1/10 run",
 )
 
 ``````{ end_of_file="scripts/run_train.py" }
@@ -5839,7 +6026,7 @@ default: help
 
 # this recipe is weird. we need it because:
 # - a one liner for getting the version with toml is unwieldy, and using regex is fragile
-# - using $$GET_VERSION_SCRIPT within $(shell ...) doesn't work because of escaping issues
+# - using $$SCRIPT_GET_VERSION within $(shell ...) doesn't work because of escaping issues
 # - trying to write to the file inside the `gen-version-info` recipe doesn't work, 
 # 	shell eval happens before our `python -c ...` gets run and `cat` doesn't see the new file
 .PHONY: write-proj-version
@@ -5864,7 +6051,7 @@ gen-commit-log: gen-version-info
 # also force the commit log to be generated, and cat it out
 .PHONY: version
 version: gen-commit-log
-	@echo "Current version is $(VERSION), last auto-uploaded version is $(LAST_VERSION)"
+	@echo "Current version is $(PROJ_VERSION), last auto-uploaded version is $(LAST_VERSION)"
 	...
 
 .PHONY: setup
@@ -5872,21 +6059,13 @@ setup: dep-check
 	@echo "install and update via uv"
 	...
 
-.PHONY: get-cuda-info
-get-cuda-info:
-	...
-
 .PHONY: dep-check-torch
 dep-check-torch:
 	@echo "see if torch is installed, and which CUDA version and devices it sees"
 	...
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~
-# added --compile-bytecode
-# also the custom install of typing extensions is due to
-# https://github.com/pydantic/pydantic/issues/11348
 .PHONY: dep
-dep: get-cuda-info
+dep:
 	@echo "Exporting dependencies as per $(PYPROJECT) section 'tool.uv-exports.exports'"
 	...
 
@@ -5932,13 +6111,13 @@ check: clean format-check test typing
 	...
 
 # generates a whole tree of documentation in html format.
-# see `docs/make_docs.py` and the templates in `docs/templates/html/` for more info
+# see `$(MAKE_DOCS_SCRIPT_PATH)` and the templates in `$(DOCS_RESOURCES_DIR)/templates/html/` for more info
 .PHONY: docs-html
 docs-html:
 	@echo "generate html docs"
 	...
 
-# instead of a whole website, generates a single markdown file with all docs using the templates in `docs/templates/markdown/`.
+# instead of a whole website, generates a single markdown file with all docs using the templates in `$(DOCS_RESOURCES_DIR)/templates/markdown/`.
 # this is useful if you want to have a copy that you can grep/search, but those docs are much messier.
 # docs-combined will use pandoc to convert them to other formats.
 .PHONY: docs-md
@@ -5965,15 +6144,32 @@ cov:
 
 # runs the coverage report, then the docs, then the combined docs
 .PHONY: docs
-docs: cov docs-html docs-combined
+docs: cov docs-html docs-combined todo lmcat
 	@echo "generate all documentation and coverage reports"
 	...
 
-# removed all generated documentation files, but leaves the templates and the `docs/make_docs.py` script
+# removed all generated documentation files, but leaves everything in `$DOCS_RESOURCES_DIR`
+# and leaves things defined in `pyproject.toml:tool.makefile.docs.no_clean`
+# (templates, svg, css, make_docs.py script)
 # distinct from `make clean`
 .PHONY: docs-clean
 docs-clean:
-	@echo "remove generated docs"
+	@echo "remove generated docs except resources"
+	...
+
+.PHONY: todo
+todo:
+	@echo "get all TODO's from the code"
+	...
+
+.PHONY: lmcat-tree
+lmcat-tree:
+	@echo "show in console the lmcat tree view"
+	...
+
+.PHONY: lmcat
+lmcat:
+	@echo "write the lmcat full output to pyproject.toml:[tool.lmcat.output]"
 	...
 
 # verifies that the current branch is $(PUBLISH_BRANCH) and that git is clean
@@ -6007,12 +6203,12 @@ clean:
 	...
 
 .PHONY: clean-all
-clean-all: clean dep-clean docs-clean
+clean-all: clean docs-clean dep-clean
 	@echo "clean up all temporary files, dep files, venv, and generated docs"
 	...
 
 .PHONY: info
-info: gen-version-info get-cuda-info
+info: gen-version-info
 	@echo "# makefile variables"
 	...
 
@@ -6025,37 +6221,6 @@ info-long: info
 .PHONY: help
 help: help-targets info
 	@echo -n ""
-	...
-
-.PHONY: demo-clean
-demo-clean:
-	...
-
-.PHONY: demo-activations
-demo-activations:
-	...
-
-.PHONY: demo-figures
-demo-figures:
-	...
-
-.PHONY: demo-server
-demo-server:
-	...
-
-.PHONY: demo
-demo: demo-activations demo-figures demo-server
-	@echo "generate demo"
-	...
-
-.PHONY: demo-docs
-demo-docs: demo-clean demo-activations demo-figures
-	@echo "generate demo for docs (no server)"
-	...
-
-.PHONY: lmcat
-lmcat:
-	@echo "write docs/summary.md using lmcat"
 	...
 
 ``````{ end_of_file="makefile" }
@@ -6107,92 +6272,144 @@ dependencies = [
 	# "pattern-lens @ git+https://github.com/mivanit/pattern-lens",
 ]
 
-[project.optional-dependencies]
-# for example purposes only
-cli = [
-	"fire>=0.6.0",
-]
 
 [dependency-groups]
-dev = [	
-	# lmcat
-    "lmcat>=0.1.1",
-	# test
-	"pytest>=8.2.2",
-	# coverage
-	"pytest-cov>=4.1.0",
-	"coverage-badge>=1.1.0",
-	# type checking
-	"mypy>=1.0.1",
-	# docs
-	'pdoc>=14.6.0',
-	# tomli since no tomlib in python < 3.11
-	"tomli>=2.1.0; python_version < '3.11'",
-]
-lint = [
-	# lint
-	"pycln>=2.1.3",
-	"ruff>=0.4.8",
-]
+	dev = [	
+		# lmcat
+		"lmcat>=0.2.0",
+		# test
+		"pytest>=8.2.2",
+		# coverage
+		"pytest-cov>=4.1.0",
+		"coverage-badge>=1.1.0",
+		# type checking
+		"mypy>=1.0.1",
+		# docs
+		'pdoc>=14.6.0',
+		# tomli since no tomlib in python < 3.11
+		"tomli>=2.1.0; python_version < '3.11'",
+	]
+	lint = [
+		# lint
+		"pycln>=2.1.3",
+		"ruff>=0.4.8",
+	]
 
 [tool.uv]
-default-groups = ["dev", "lint"]
+	default-groups = ["dev", "lint"]
 
 [project.urls]
-Homepage = "https://miv.name/attention-motifs"
-Documentation = "https://miv.name/attention-motifs"
-Repository = "https://github.com/mivanit/attention-motifs"
-Issues = "https://github.com/mivanit/attention-motifs/issues"
+	Homepage = "https://miv.name/attention-motifs"
+	Documentation = "https://miv.name/attention-motifs"
+	Repository = "https://github.com/mivanit/attention-motifs"
+	Issues = "https://github.com/mivanit/attention-motifs/issues"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+	requires = ["hatchling"]
+	build-backend = "hatchling.build"
 
 # ruff config
 [tool.ruff]
 exclude = ["__pycache__"]
-# ignore F722
-[tool.ruff.lint]
-ignore = ["F722"]
 
-[tool.ruff.format]
-indent-style = "tab"
-skip-magic-trailing-comma = false
+	[tool.ruff.lint]
+		ignore = ["F722"]
+
+	[tool.ruff.format]
+		indent-style = "tab"
+		skip-magic-trailing-comma = false
 
 [tool.hatch.metadata]
-allow-direct-references = true
-
-# Custom export configurations
-[tool.uv-exports]
-args = [
-	"--no-hashes"
-]
-exports = [
-	# no groups, no extras, just the base dependencies
-    { name = "base", groups = false, extras = false },
-	# all extras but no groups
-    { name = "extras", groups = false, extras = true },
-	# include the dev group (this is the default behavior)
-    { name = "dev", groups = ["dev"] },
-	# only the lint group -- custom options for this
-	{ name = "lint", options = ["--only-group", "lint"] },
-	# all groups and extras
-    { name = "all", filename="requirements.txt", groups = true, extras=true },
-	# all groups and extras, a different way
-	{ name = "all", groups = true, options = ["--all-extras"] },
-]
-
+	allow-direct-references = true
 
 [tool.pytest.ini_options]
-addopts = "--jaxtyping-packages=pattern_lens,beartype.beartype"
-filterwarnings = [
-    "ignore: PEP 484 type hint*:beartype.roar._roarwarn.BeartypeDecorHintPep585DeprecationWarning",
-]
+	addopts = "--jaxtyping-packages=pattern_lens,beartype.beartype"
+	filterwarnings = [
+		"ignore: PEP 484 type hint*:beartype.roar._roarwarn.BeartypeDecorHintPep585DeprecationWarning",
+	]
 
+# `make lmcat` depends on the lmcat and can be configured here
 [tool.lmcat]
-ignore_patterns_files = [".lmignore", ".gitignore"]
+	output = "docs/other/lmcat.txt" # changing this might mean it wont be accessible from the docs
+	ignore_patterns = [
+		".git/**",
+		".meta/**",
+		".mypy_cache/**",
+		".pytest_cache/**",
+		".ruff_cache/**",
+		".venv/**",
+		"docs/**",
+		"data/pile_100.jsonl",
+		"data/pile_50.jsonl",
+		"data/pile_5_val.jsonl",
+		"data/pile_5.jsonl",
+		"data/pile_1k.jsonl",
+		"uv.lock",
+		"LICENSE",
+		"*.png",
+	]
+	[tool.lmcat.glob_process]
+		"[mM]akefile" = "makefile_recipes"
+		"*.ipynb" = "ipynb_to_md"
 
-[tool.lmcat.glob_process]
-"[mM]akefile" = "makefile_recipes"
-"*.ipynb" = "ipynb_to_md"
+
+# for configuring this tool (makefile, make_docs.py)
+# ============================================================
+[tool.makefile]
+
+# documentation configuration, for `make docs` and `make docs-clean`
+[tool.makefile.docs]
+    output_dir = "docs"
+    no_clean = [
+        ".nojekyll",  # For GitHub Pages
+		"demo/",
+        # "resources/", # Templates, CSS, etc. this, or whatever is specified as DOCS_RESOURCES_DIR in makefile will always be preserved
+    ]
+
+    # optional generation of notebooks as html pages
+    [tool.makefile.docs.notebooks]
+        enabled = true
+        source_path = "notebooks"
+        output_path_relative = "notebooks"
+        
+        #[tool.makefile.docs.notebooks.descriptions]
+            # "example" = "Example notebook showing basic usage"
+        
+
+[tool.makefile.uv-exports]
+	args = [
+		"--no-hashes"
+	]
+	exports = [
+		# no groups, no extras, just the base dependencies
+		{ name = "base", groups = false, extras = false },
+		# all groups
+		{ name = "groups", groups = true, extras = false },
+		# only the lint group -- custom options for this
+		{ name = "lint", options = ["--only-group", "lint"] },
+		# # all groups and extras
+		{ name = "all", filename="requirements.txt", groups = true, extras=true },
+		# # all groups and extras, a different way
+		{ name = "all", groups = true, options = ["--all-extras"] },
+	]
+
+[tool.makefile.inline-todo]
+	search_dir = "."
+	out_file = "docs/other/todo-inline.md"
+	context_lines = 2
+	extensions = ["py", "md"]
+	tags = ["CRIT", "TODO", "FIXME", "HACK", "BUG", "DOC"]
+	exclude = [
+		"docs/**",
+		".venv/**",
+		"scripts/get_todos.py",
+	]
+	branch = "main"
+    [tool.makefile.inline-todo.tag_label_map]
+        "BUG" = "bug"
+        "TODO" = "enhancement"
+		"DOC" = "documentation"
+
+# ============================================================
+
 ``````{ end_of_file="pyproject.toml" }

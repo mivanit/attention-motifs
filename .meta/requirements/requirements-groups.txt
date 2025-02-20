@@ -58,7 +58,7 @@ jupyterlab-widgets==3.0.13
 kiwisolver==1.4.8
 lib-detect-testenv==2.0.8
 libcst==1.6.0
-lmcat==0.1.1
+lmcat==0.2.0
 markdown==3.7
 markdown-it-py==3.0.0
 markupsafe==3.0.2
