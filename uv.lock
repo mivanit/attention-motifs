@@ -179,7 +179,7 @@ requires-dist = [
     { name = "ipywidgets", specifier = ">=8.1.5" },
     { name = "jaxtyping", specifier = ">=0.2.33" },
     { name = "matplotlib", specifier = ">=3.8.0" },
-    { name = "muutils", specifier = ">=0.6.21" },
+    { name = "muutils", specifier = ">=0.8.3" },
     { name = "numpy", specifier = ">=1.26.1,<2.0.0" },
     { name = "pandas", specifier = ">=2.2.2" },
     { name = "pattern-lens", specifier = ">=0.2.0" },
@@ -1208,11 +1208,11 @@ wheels = [
 
 [[package]]
 name = "muutils"
-version = "0.6.21"
+version = "0.8.3"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/c8/c4/2fd7d9676618d785602f4b115d2269d70fac8a09b76d9bbb5552769c7d67/muutils-0.6.21.tar.gz", hash = "sha256:7ba2c9a5e0d8299bd642fa12bf42e6a1520a5d5cd1cb000446a36506ae7817b9", size = 2212610 }
+sdist = { url = "https://files.pythonhosted.org/packages/21/47/45fd223b4352e02336ea88ee65146fc4a317f90d5513370c405fd7349d0c/muutils-0.8.3.tar.gz", hash = "sha256:4e32cf6dc0df6e6df3387555eaf6229b76b0a8972fcf8424b3afcfa207d3d6e1", size = 2485047 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6b/79/c73abcc9a532460b8898e0ad5eebb094cbaeaefe25bd0ea788c68dd548bb/muutils-0.6.21-py3-none-any.whl", hash = "sha256:6f2fbd483890d41131ede2f9dcf396e9b874e227c5917342a738b37c56f4b689", size = 104363 },
+    { url = "https://files.pythonhosted.org/packages/00/77/9e33fc2d024d1892460bb91c6354f24288fdc5e340d96cd302931a305651/muutils-0.8.3-py3-none-any.whl", hash = "sha256:abc37da649b18e534e0fc7b0a47bac4aec395f6b057756bf30271d31e710e8e3", size = 110987 },
 ]
 
 [package.optional-dependencies]
@@ -2709,13 +2709,13 @@ wheels = [
 
 [[package]]
 name = "zanj"
-version = "0.3.1"
+version = "0.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "muutils", extra = ["array"] },
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a2/90/e72fd26bb8ef5469feec2e587d555ac2667c6661f29c410e0f2cf6d9eabe/zanj-0.3.1.tar.gz", hash = "sha256:caedd60fc66174efb0dab5f757612114fb6157cd7c44200a4488bb65b0c8d9b1", size = 32664 }
+sdist = { url = "https://files.pythonhosted.org/packages/fe/da/5b0a50e1a388d900d0a13a906950009f63a9daaa4d0f3a70893bd46827a1/zanj-0.4.0.tar.gz", hash = "sha256:6a70478ac857086dcc490133a38f11d4f8e49e0b8fc9aded8b50bfdd2dba83a4", size = 1147679 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2a/b8/35a197ecddc0368228833c69018c148e3954210632d689b9ba6230ab0920/zanj-0.3.1-py3-none-any.whl", hash = "sha256:9a8ea449f95c49ee8823499e79311332c5fcc05e9a2ab46d413db8593a554e3f", size = 33438 },
+    { url = "https://files.pythonhosted.org/packages/56/0e/9b5d39ba122235334a1a94c565df9de94a775a8f293406be874b301a42ec/zanj-0.4.0-py3-none-any.whl", hash = "sha256:750ed1f833b842f37941e68bb7d2a1a81afaf9d26f32d59930b3cbb3f564a896", size = 31894 },
 ]
