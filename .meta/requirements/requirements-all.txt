@@ -32,6 +32,7 @@ docker-pycreds==0.4.0
 einops==0.8.1
 executing==2.2.0
 fancy-einsum==0.0.3
+fastjsonschema==2.21.1
 filelock==3.18.0
 fonttools==4.56.0
 frozenlist==1.5.0
@@ -51,6 +52,8 @@ jaxtyping==0.3.0
 jedi==0.19.2
 jinja2==3.1.6
 joblib==1.4.2
+jsonschema==4.23.0
+jsonschema-specifications==2024.10.1
 juliacall==0.9.24
 juliapkg==0.1.16
 jupyter-client==8.6.3
@@ -72,6 +75,8 @@ multiprocess==0.70.16
 muutils==0.8.3
 mypy==1.15.0
 mypy-extensions==1.0.0
+narwhals==1.32.0
+nbformat==5.10.4
 nest-asyncio==1.6.0
 networkx==3.4.2
 numpy==1.26.4
@@ -97,6 +102,7 @@ pdoc==15.0.1
 pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
 pillow==11.1.0
 platformdirs==4.3.7
+plotly==6.0.1
 pluggy==1.5.0
 prompt-toolkit==3.0.50
 propcache==0.3.0
@@ -119,9 +125,11 @@ pytz==2025.1
 pywin32==310 ; platform_python_implementation != 'PyPy' and sys_platform == 'win32'
 pyyaml==6.0.2
 pyzmq==26.3.0
+referencing==0.36.2
 regex==2024.11.6
 requests==2.32.3
 rich==13.9.4
+rpds-py==0.23.1
 ruff==0.11.2
 safetensors==0.5.3
 scikit-learn==1.6.1
