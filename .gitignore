@@ -18,6 +18,7 @@ notebooks/wandb/**
 *.pickle
 miv/**
 wandb/**
+.meta/local/**
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Byte-compiled / optimized / DLL files

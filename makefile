@@ -1441,10 +1441,10 @@ help: help-targets info
 # ==================================================
 # (put them down here, or delimit with ~~~~~)
 
-
-DEMO_MODEL ?= pythia-14m,tiny-stories-1M
-DEMO_PROMPTS ?= data/pile_100.jsonl
-DEMO_N_SAMPLES ?= 10
+HF_TOKEN ?= $(shell cat .meta/local/.hf_token)
+DEMO_MODEL ?= pythia-14m,tiny-stories-1M,gpt2-small,meta-llama/Llama-3.2-1B
+DEMO_PROMPTS ?= data/pile_demo.jsonl
+DEMO_N_SAMPLES ?= 32
 DEMO_ARGS ?= --min-chars 128 --max-chars 256
 DEMO_DATA ?= docs/demo
 
@@ -1454,11 +1454,11 @@ demo-clean:
 
 .PHONY: demo-activations
 demo-activations:
-	$(PYTHON) -m pattern_lens.activations --model $(DEMO_MODEL) --prompts $(DEMO_PROMPTS) --raw-prompts --save-path $(DEMO_DATA) --n-samples $(DEMO_N_SAMPLES) $(DEMO_ARGS)
+	HF_TOKEN=$(HF_TOKEN) $(PYTHON) -m pattern_lens.activations --model $(DEMO_MODEL) --prompts $(DEMO_PROMPTS) --raw-prompts --save-path $(DEMO_DATA) --n-samples $(DEMO_N_SAMPLES) $(DEMO_ARGS)
 
 .PHONY: demo-figures
 demo-figures:
-	$(PYTHON) -m pattern_lens.figures --model $(DEMO_MODEL) --save-path $(DEMO_DATA)
+	$(PYTHON) -m attention_motifs.figure_funcs --model $(DEMO_MODEL) --save-path $(DEMO_DATA) -p 12
 
 .PHONY: demo-server
 demo-server:
@@ -1468,6 +1468,6 @@ demo-server:
 demo: demo-clean demo-activations demo-figures demo-server
 	@echo "generate demo"
 
-.PHONY: demo-docs
+.PHONY: demo-docs		
 demo-docs: demo-clean demo-activations demo-figures
 	@echo "generate demo for docs (no server)"

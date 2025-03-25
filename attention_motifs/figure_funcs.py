@@ -1,3 +1,4 @@
+from matplotlib.path import Path
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.fft import fft2  # type: ignore[import-untyped]
@@ -11,7 +12,8 @@ from pattern_lens.figure_util import (
 	AttentionMatrix,
 	Matrix2D,
 )
-from pattern_lens.attn_figure_funcs import register_attn_figure_func
+from pattern_lens.attn_figure_funcs import register_attn_figure_func, register_attn_figure_multifunc
+from pattern_lens.figure_util import matplotlib_multifigure_saver
 from pattern_lens.figures import figures_main
 
 
@@ -40,18 +42,12 @@ from pattern_lens.figures import figures_main
 """
 
 
-@register_attn_figure_func
-@save_matrix_wrapper(fmt="png", normalize=True)
-def fft(attn_matrix: AttentionMatrix) -> Matrix2D:
+@matplotlib_multifigure_saver(["fft", "fft_abs"])
+def fft(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -> None:
 	"abs of 2D fft of raw attention matrix"
-	return fft2(attn_matrix)
-
-
-@register_attn_figure_func
-@save_matrix_wrapper(fmt="png", normalize=True)
-def fft_abs(attn_matrix: AttentionMatrix) -> Matrix2D:
-	"abs of 2D fft of raw attention matrix"
-	return np.abs(fft2(attn_matrix))
+	fft = fft2(attn_matrix)
+	axes["fft"].matshow(fft.real, cmap="viridis")
+	axes["fft_abs"].matshow(np.abs(fft), cmap="viridis")
 
 
 @register_attn_figure_func
