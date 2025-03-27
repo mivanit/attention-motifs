@@ -3,11 +3,11 @@ from pathlib import Path
 from typing import Callable
 
 import numpy as np
-from jaxtyping import Float, Int
+from jaxtyping import Float
 import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
 
-from muutils.dbg import dbg, dbg_tensor
+from muutils.dbg import dbg
+
 
 def load_activations(
 	model_name: str,
@@ -34,6 +34,7 @@ def load_activations(
 
 	return model_config, prompts, activations
 
+
 def get_single_attn_pattern(
 	sample: int,
 	layer: int,
@@ -41,6 +42,7 @@ def get_single_attn_pattern(
 	activations,
 ) -> Float[np.ndarray, "n_ctx n_ctx"]:
 	return activations[sample][f"blocks.{layer}.attn.hook_pattern"][0, head]
+
 
 def plot_figs(
 	n_figures: int,

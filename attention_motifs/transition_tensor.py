@@ -1,5 +1,3 @@
-import json
-from pathlib import Path
 from typing import Callable
 
 import numpy as np
@@ -7,7 +5,8 @@ from jaxtyping import Float, Int
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
-from muutils.dbg import dbg, dbg_tensor
+from muutils.dbg import dbg
+
 
 def cross_entropy(
 	p: Float[np.ndarray, " d"],
@@ -119,8 +118,6 @@ def transition_tensor(
 	res_resampled: Float[np.ndarray, "n_idxs n_ctx"] = residuals[idxs, :]
 
 	return idxs, tt_resampled, res_resampled
-
-
 
 
 def tt_fig(

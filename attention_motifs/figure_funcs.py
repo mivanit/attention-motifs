@@ -1,4 +1,3 @@
-from matplotlib.path import Path
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.fft import fft2  # type: ignore[import-untyped]
@@ -7,12 +6,11 @@ from muutils.spinner import SpinnerContext
 
 from pattern_lens.consts import DIVIDER_S1, DIVIDER_S2, SPINNER_KWARGS
 from pattern_lens.figure_util import (
-	matplotlib_figure_saver,
-	save_matrix_wrapper,
 	AttentionMatrix,
-	Matrix2D,
 )
-from pattern_lens.attn_figure_funcs import register_attn_figure_func, register_attn_figure_multifunc
+from pattern_lens.attn_figure_funcs import (
+	register_attn_figure_func,
+)
 from pattern_lens.figure_util import matplotlib_multifigure_saver
 from pattern_lens.figures import figures_main
 
@@ -40,6 +38,7 @@ from pattern_lens.figures import figures_main
 		"Shifted FFT (log abs real)": np.log(np.abs(np.real(fft_shifted))),
 		"Shifted FFT (imag)": np.imag(fft_shifted),
 """
+
 
 @register_attn_figure_func
 @matplotlib_multifigure_saver(["fft", "fft_abs"])
