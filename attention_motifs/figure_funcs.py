@@ -10,6 +10,7 @@ from pattern_lens.figure_util import (
 )
 from pattern_lens.attn_figure_funcs import (
 	register_attn_figure_func,
+	register_attn_figure_multifunc,
 )
 from pattern_lens.figure_util import matplotlib_multifigure_saver
 from pattern_lens.figures import figures_main
@@ -40,21 +41,21 @@ from pattern_lens.figures import figures_main
 """
 
 
-@register_attn_figure_func
-@matplotlib_multifigure_saver(["fft", "fft_abs"])
-def fft(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -> None:
-	"abs of 2D fft of raw attention matrix"
-	fft = fft2(attn_matrix)
-	axes["fft"].matshow(fft.real, cmap="viridis")
-	axes["fft_abs"].matshow(np.abs(fft), cmap="viridis")
+# @register_attn_figure_func
+# @matplotlib_multifigure_saver(["fft", "fft_abs"])
+# def fft(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -> None:
+# 	"abs of 2D fft of raw attention matrix"
+# 	fft = fft2(attn_matrix)
+# 	axes["fft"].matshow(fft.real, cmap="viridis")
+# 	axes["fft_abs"].matshow(np.abs(fft), cmap="viridis")
 
 
-@register_attn_figure_func
+@register_attn_figure_multifunc(["diag_wgts", "first_tok_wgts"])
 @matplotlib_multifigure_saver(["diag_wgts", "first_tok_wgts"])
 def basic(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -> None:
 	"abs of 2D fft of raw attention matrix"
-	axes["diag_wgts"].plot(np.diag(attn_matrix))
-	axes["first_tok_wgts"].plot(attn_matrix[0])
+	axes["diag_wgts"].plot(np.diag(attn_matrix), "o")
+	axes["first_tok_wgts"].plot(attn_matrix[0], "o")
 
 
 # @register_attn_figure_func
