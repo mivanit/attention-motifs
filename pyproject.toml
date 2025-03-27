@@ -44,7 +44,7 @@ dependencies = [
 	# pattern-lens
 	# "pattern-lens>=0.3.0",
 	# pattern-lens from git
-	"pattern-lens @ git+https://github.com/mivanit/pattern-lens",
+	"pattern-lens @ git+https://github.com/mivanit/pattern-lens@6e2a777b1b0c4c6a8364dd3f6df5c4a3d910e183",
 ]
 
 
