@@ -41,7 +41,7 @@ from pattern_lens.figures import figures_main
 		"Shifted FFT (imag)": np.imag(fft_shifted),
 """
 
-
+@register_attn_figure_func
 @matplotlib_multifigure_saver(["fft", "fft_abs"])
 def fft(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -> None:
 	"abs of 2D fft of raw attention matrix"
@@ -51,59 +51,67 @@ def fft(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -> None:
 
 
 @register_attn_figure_func
-@save_matrix_wrapper(fmt="png", diverging_colormap=True)
-def gram(attn_matrix: AttentionMatrix) -> Matrix2D:
-	"Gram matrix A A^T"
-	return attn_matrix @ attn_matrix.T
+@matplotlib_multifigure_saver(["diag_wgts", "first_tok_wgts"])
+def basic(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -> None:
+	"abs of 2D fft of raw attention matrix"
+	axes["diag_wgts"].plot(np.diag(attn_matrix))
+	axes["first_tok_wgts"].plot(attn_matrix[0])
 
 
-@register_attn_figure_func
-@save_matrix_wrapper(fmt="png", diverging_colormap=True, normalize=True)
-def gram_col(attn_matrix: AttentionMatrix) -> Matrix2D:
-	"Column-wise Gram matrix A^T A"
-	return attn_matrix.T @ attn_matrix
+# @register_attn_figure_func
+# @save_matrix_wrapper(fmt="png", diverging_colormap=True)
+# def gram(attn_matrix: AttentionMatrix) -> Matrix2D:
+# 	"Gram matrix A A^T"
+# 	return attn_matrix @ attn_matrix.T
 
 
-@register_attn_figure_func
-@save_matrix_wrapper(fmt="png", diverging_colormap=True, normalize=True)
-def gram_fft(attn_matrix: AttentionMatrix) -> Matrix2D:
-	"2D fft of Gram matrix A A^T"
-	gram = attn_matrix @ attn_matrix.T
-	return np.abs(fft2(gram))
+# @register_attn_figure_func
+# @save_matrix_wrapper(fmt="png", diverging_colormap=True, normalize=True)
+# def gram_col(attn_matrix: AttentionMatrix) -> Matrix2D:
+# 	"Column-wise Gram matrix A^T A"
+# 	return attn_matrix.T @ attn_matrix
 
 
-@register_attn_figure_func
-@save_matrix_wrapper(fmt="png", diverging_colormap=True, normalize=True)
-def gram_col_fft(attn_matrix: AttentionMatrix) -> Matrix2D:
-	"2D fft of column-wise Gram matrix A^T A"
-	col_gram = attn_matrix.T @ attn_matrix
-	return np.abs(fft2(col_gram))
+# @register_attn_figure_func
+# @save_matrix_wrapper(fmt="png", diverging_colormap=True, normalize=True)
+# def gram_fft(attn_matrix: AttentionMatrix) -> Matrix2D:
+# 	"2D fft of Gram matrix A A^T"
+# 	gram = attn_matrix @ attn_matrix.T
+# 	return np.abs(fft2(gram))
 
 
-@register_attn_figure_func
-@matplotlib_figure_saver(fmt="svgz")
-def gram_hist(attn_matrix: AttentionMatrix, ax: plt.Axes) -> None:
-	gram = attn_matrix @ attn_matrix.T
-	flat_gram = gram.flatten()
-
-	ax.hist(flat_gram, bins=50, density=True, alpha=0.7)
-	# x = np.linspace(0, 1, 100)
-	# ax.plot(x, beta.pdf(x, a, b), "r-", lw=2, label="Beta fit")
-	# ax.set_title(f"Histogram of Gram Matrix Values (Beta: a={a:.2f}, b={b:.2f})")
-	ax.set_title("Histogram of Gram Matrix Values")
-	# ax.legend()
+# @register_attn_figure_func
+# @save_matrix_wrapper(fmt="png", diverging_colormap=True, normalize=True)
+# def gram_col_fft(attn_matrix: AttentionMatrix) -> Matrix2D:
+# 	"2D fft of column-wise Gram matrix A^T A"
+# 	col_gram = attn_matrix.T @ attn_matrix
+# 	return np.abs(fft2(col_gram))
 
 
-@register_attn_figure_func
-@matplotlib_figure_saver(fmt="svgz")
-def degree_dist(attn_matrix: AttentionMatrix, ax: plt.Axes) -> None:
-	"sum each column, plot histogram"
-	degrees_ax0 = np.sum(attn_matrix, axis=0)
-	ax.hist(degrees_ax0, bins=50, density=True, alpha=0.7, label="Ax0")
-	degrees_ax1 = np.sum(attn_matrix, axis=1)
-	ax.hist(degrees_ax1, bins=50, density=True, alpha=0.7, label="Ax1")
-	ax.legend()
-	ax.set_title("Histogram of Node Degrees")
+# @register_attn_figure_func
+# @matplotlib_figure_saver(fmt="svgz")
+# def gram_hist(attn_matrix: AttentionMatrix, ax: plt.Axes) -> None:
+# 	gram = attn_matrix @ attn_matrix.T
+# 	flat_gram = gram.flatten()
+
+# 	ax.hist(flat_gram, bins=50, density=True, alpha=0.7)
+# 	# x = np.linspace(0, 1, 100)
+# 	# ax.plot(x, beta.pdf(x, a, b), "r-", lw=2, label="Beta fit")
+# 	# ax.set_title(f"Histogram of Gram Matrix Values (Beta: a={a:.2f}, b={b:.2f})")
+# 	ax.set_title("Histogram of Gram Matrix Values")
+# 	# ax.legend()
+
+
+# @register_attn_figure_func
+# @matplotlib_figure_saver(fmt="svgz")
+# def degree_dist(attn_matrix: AttentionMatrix, ax: plt.Axes) -> None:
+# 	"sum each column, plot histogram"
+# 	degrees_ax0 = np.sum(attn_matrix, axis=0)
+# 	ax.hist(degrees_ax0, bins=50, density=True, alpha=0.7, label="Ax0")
+# 	degrees_ax1 = np.sum(attn_matrix, axis=1)
+# 	ax.hist(degrees_ax1, bins=50, density=True, alpha=0.7, label="Ax1")
+# 	ax.legend()
+# 	ax.set_title("Histogram of Node Degrees")
 
 
 if __name__ == "__main__":
