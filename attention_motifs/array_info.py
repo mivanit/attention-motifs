@@ -31,6 +31,7 @@ COLORS: Dict[str, Dict[str, str]] = {
 		"std": "",
 		"median": "",
 		"warning": "",
+		"shape": "",
 		"meta": "",
 		"sparkline": "",
 		"reset": "",
@@ -65,12 +66,12 @@ SYMBOLS: Dict[OutputFormat, Dict[str, str]] = {
 "Symbols for different formats"
 
 SPARK_CHARS: Dict[OutputFormat, List[str]] = {
-	"unicode": ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'],
-	"ascii": ['_', '.',  ':', '|', '#'],
-	"latex": [r"\textbf{.}", r"\textbf{-}", r"\textbf{=}", r"\textbf{+}", r"\textbf{*}", r"\textbf{\\#}"]
+	"unicode": list(" ▁▂▃▄▅▆▇█"),
+	"ascii": list(" _.-~=#"),
+	"latex": list(" ▁▂▃▄▅▆▇█"),
+	# "latex": [r"\textbf{.}", r"\textbf{-}", r"\textbf{=}", r"\textbf{+}", r"\textbf{*}", r"\textbf{\\#}"],
 }
 "characters for sparklines in different formats"
-
 
 def array_info(
 	A: Any,
@@ -273,21 +274,40 @@ def generate_sparkline(
 	
 	return spark
 
+DEFAULT_SETTINGS: Dict[str, Any] = dict(
+	fmt="unicode",
+	precision=2,
+	stats=True,
+	shape=True,
+	dtype=True,
+	device=True,
+	sparkline=False,
+	sparkline_bins=5,
+	sparkline_logy=False,
+	colored=False,
+	as_list=False,
+	eq_char="=",
+)
+
+class _UseDefaultType:
+	pass
+
+_USE_DEFAULT = _UseDefaultType()
 
 def array_summary(
 	array,
-	fmt: OutputFormat = "unicode",
-	precision: int = 2,
-	stats: bool = True,
-	shape: bool = True,
-	dtype: bool = True,
-	device: bool = True,
-	sparkline: bool = False,
-	sparkline_bins: int = 5,
-	log_y: bool = False,
-	colored: bool = False,
-	as_list: bool = False,
-	eq_char: str = "=",
+	fmt: OutputFormat = _USE_DEFAULT,
+	precision: int = _USE_DEFAULT,
+	stats: bool = _USE_DEFAULT,
+	shape: bool = _USE_DEFAULT,
+	dtype: bool = _USE_DEFAULT,
+	device: bool = _USE_DEFAULT,
+	sparkline: bool = _USE_DEFAULT,
+	sparkline_bins: int = _USE_DEFAULT,
+	sparkline_logy: bool = _USE_DEFAULT,
+	colored: bool = _USE_DEFAULT,
+	as_list: bool = _USE_DEFAULT,
+	eq_char: str = _USE_DEFAULT,
 ) -> Union[str, List[str]]:
 	"""Format array information into a readable summary.
 	
@@ -297,7 +317,7 @@ def array_summary(
 	 - `precision : int`
 		Decimal places (defaults to `2`)
 	 - `format : Literal["unicode", "latex", "ascii"]`
-		Output format (defaults to `"unicode"`)
+		Output format (defaults to `{default_fmt}`)
 	 - `stats : bool`
 		Whether to include statistical info (μ, σ, x̃) (defaults to `True`)
 	 - `shape : bool`
@@ -310,7 +330,7 @@ def array_summary(
 		Whether to include a sparkline visualization (defaults to `False`)
 	 - `sparkline_width : int`
 		Width of the sparkline (defaults to `20`)
-	 - `log_y : bool`
+	 - `sparkline_logy : bool`
 		Whether to use logarithmic y-scale for sparkline (defaults to `False`)
 	 - `colored : bool`
 		Whether to add color to output (defaults to `False`)
@@ -321,6 +341,19 @@ def array_summary(
 	 - `Union[str, List[str]]`
 		Formatted statistical summary, either as string or list of strings
 	"""
+	if fmt is _USE_DEFAULT: fmt = DEFAULT_SETTINGS["fmt"]
+	if precision is _USE_DEFAULT: precision = DEFAULT_SETTINGS["precision"]
+	if stats is _USE_DEFAULT: stats = DEFAULT_SETTINGS["stats"]
+	if shape is _USE_DEFAULT: shape = DEFAULT_SETTINGS["shape"]
+	if dtype is _USE_DEFAULT: dtype = DEFAULT_SETTINGS["dtype"]
+	if device is _USE_DEFAULT: device = DEFAULT_SETTINGS["device"]
+	if sparkline is _USE_DEFAULT: sparkline = DEFAULT_SETTINGS["sparkline"]
+	if sparkline_bins is _USE_DEFAULT: sparkline_bins = DEFAULT_SETTINGS["sparkline_bins"]
+	if sparkline_logy is _USE_DEFAULT: sparkline_logy = DEFAULT_SETTINGS["sparkline_logy"]
+	if colored is _USE_DEFAULT: colored = DEFAULT_SETTINGS["colored"]
+	if as_list is _USE_DEFAULT: as_list = DEFAULT_SETTINGS["as_list"]
+	if eq_char is _USE_DEFAULT: eq_char = DEFAULT_SETTINGS["eq_char"]
+	
 	array_data: Dict[str, Any] = array_info(array, hist_bins=sparkline_bins)
 	result_parts: List[str] = []
 	using_tex: bool = (fmt == "latex")
@@ -403,14 +436,16 @@ def array_summary(
 
 	# Add sparkline if requested
 	if sparkline and array_data["histogram"] is not None:
+		print(array_data["histogram"])
+		print(array_data["bins"])
 		spark = generate_sparkline(
 			array_data["histogram"],
 			format=fmt,
-			log_y=log_y
+			log_y=sparkline_logy
 		)
 		if spark:
 			spark_colored = colorize(spark, "sparkline")
-			result_parts.append(spark_colored)
+			result_parts.append(f"|{spark_colored}|")
 	
 	# Return as list if requested, otherwise join with spaces
 	if as_list:
