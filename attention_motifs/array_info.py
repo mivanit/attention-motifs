@@ -1,0 +1,420 @@
+import numpy as np
+from typing import Optional, Union, Any, Tuple, Literal, List, Dict, Set, cast
+
+# Global color definitions
+COLORS: Dict[str, Dict[str, str]] = {
+	"latex": {
+		"range": r"\textcolor{purple}",
+		"mean": r"\textcolor{teal}",
+		"std": r"\textcolor{orange}",
+		"median": r"\textcolor{green}",
+		"warning": r"\textcolor{red}",
+		"shape": r"\textcolor{magenta}",
+		"meta": r"\textcolor{gray}",
+		"sparkline": r"\textcolor{blue}",
+		"reset": "",
+	},
+	"terminal": {
+		"range": "\033[35m",	 # purple
+		"mean": "\033[36m",	  # cyan/teal
+		"std": "\033[33m",	   # yellow/orange
+		"median": "\033[32m",	# green
+		"warning": "\033[31m",   # red
+		"shape": "\033[95m",  # bright magenta
+		"meta": "\033[90m",	  # gray
+		"sparkline": "\033[34m", # blue
+		"reset": "\033[0m",
+	},
+	"none": {
+		"range": "",
+		"mean": "",
+		"std": "",
+		"median": "",
+		"warning": "",
+		"meta": "",
+		"sparkline": "",
+		"reset": "",
+	}
+}
+
+OutputFormat = Literal["unicode", "latex", "ascii"]
+
+SYMBOLS: Dict[OutputFormat, Dict[str, str]] = {
+	"latex": {
+		"range": r"\mathcal{R}",
+		"mean": r"\mu",
+		"std": r"\sigma",
+		"median": r"\tilde{x}",
+		"nan_prefix": "!!! NANvals="
+	},
+	"unicode": {
+		"range": "𝓡",
+		"mean": "μ",
+		"std": "σ",
+		"median": "x̃",
+		"nan_prefix": "🚨 NANvals=",
+	},
+	"ascii": {
+		"range": "range",
+		"mean": "mean",
+		"std": "std",
+		"median": "med",
+		"nan_prefix": "!!! NANvals="
+	}
+}
+"Symbols for different formats"
+
+SPARK_CHARS: Dict[OutputFormat, List[str]] = {
+	"unicode": ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'],
+	"ascii": ['_', '.',  ':', '|', '#'],
+	"latex": [r"\textbf{.}", r"\textbf{-}", r"\textbf{=}", r"\textbf{+}", r"\textbf{*}", r"\textbf{\\#}"]
+}
+"characters for sparklines in different formats"
+
+
+def array_info(
+	A: Any,
+	hist_bins: int = 5,
+) -> Dict[str, Any]:
+	"""Extract statistical information from an array-like object.
+	
+	# Parameters:
+	 - `A : array-like`
+		Array to analyze (numpy array or torch tensor)
+	
+	# Returns:
+	 - `Dict[str, Any]`
+		Dictionary containing raw statistical information with numeric values
+	"""
+	result: Dict[str, Any] = {
+		"is_tensor": None,
+		"device": None,
+		"shape": None,
+		"dtype": None,
+		"size": None,
+		"has_nans": None,
+		"nan_count": None,
+		"nan_percent": None,
+		"min": None,
+		"max": None,
+		"range": None,
+		"mean": None,
+		"std": None,
+		"median": None,
+		"histogram": None,
+		"bins": None,
+		"status": None,
+	}
+	
+	# Check if it's a tensor by looking at its class name
+	# This avoids importing torch directly
+	A_type: str = type(A).__name__
+	result["is_tensor"] = A_type == "Tensor"
+	
+	# Try to get device information if it's a tensor
+	if result["is_tensor"]:
+		try:
+			result["device"] = str(getattr(A, "device", None))
+		except:
+			pass
+	
+	# Convert to numpy array for calculations
+	try:
+		# For PyTorch tensors
+		if result["is_tensor"]:
+			# Check if tensor is on GPU
+			is_cuda: bool = False
+			try:
+				is_cuda = bool(getattr(A, "is_cuda", False))
+			except:
+				pass
+				
+			if is_cuda:
+				try:
+					# Try to get CPU tensor first
+					cpu_tensor = getattr(A, "cpu", lambda: A)()
+				except:
+					A_np = np.array([])
+			else:
+				cpu_tensor = A
+			try:
+				# For CPU tensor, just detach and convert
+				detached = getattr(A, "detach", lambda: A)()
+				A_np = getattr(detached, "numpy", lambda: np.array([]))()
+			except:
+				A_np = np.array([])
+		else:
+			# For numpy arrays and other array-like objects
+			A_np = np.asarray(A)
+	except:
+		A_np = np.array([])
+	
+	# Get basic information
+	try:
+		result["shape"] = A_np.shape
+		result["dtype"] = str(A.dtype if result["is_tensor"] else A_np.dtype)
+		result["size"] = A_np.size
+	except:
+		pass
+	
+	# If array is empty, return early
+	if result["size"] == 0:
+		result["status"] = "empty array"
+		return result
+	
+	# Flatten array for statistics if it's multi-dimensional
+	try:
+		if len(A_np.shape) > 1:
+			A_flat = A_np.flatten()
+		else:
+			A_flat = A_np
+	except:
+		A_flat = A_np
+	
+	# Check for NaN values
+	try:
+		nan_mask = np.isnan(A_flat)
+		result["nan_count"] = np.sum(nan_mask)
+		result["has_nans"] = result["nan_count"] > 0
+		if result["size"] > 0:
+			result["nan_percent"] = (result["nan_count"] / result["size"]) * 100
+	except:
+		pass
+	
+	# If all values are NaN, return early
+	if result["has_nans"] and result["nan_count"] == result["size"]:
+		result["status"] = "all NaN"
+		return result
+	
+	# Calculate statistics
+	try:
+		if result["has_nans"]:
+			result["min"] = float(np.nanmin(A_flat))
+			result["max"] = float(np.nanmax(A_flat))
+			result["mean"] = float(np.nanmean(A_flat))
+			result["std"] = float(np.nanstd(A_flat))
+			result["median"] = float(np.nanmedian(A_flat))
+			result["range"] = (result["min"], result["max"])
+			
+			# Remove NaNs for histogram
+			A_hist = A_flat[~nan_mask]
+		else:
+			result["min"] = float(np.min(A_flat))
+			result["max"] = float(np.max(A_flat))
+			result["mean"] = float(np.mean(A_flat))
+			result["std"] = float(np.std(A_flat))
+			result["median"] = float(np.median(A_flat))
+			result["range"] = (result["min"], result["max"])
+			
+			A_hist = A_flat
+		
+		# Calculate histogram data for sparklines
+		if A_hist.size > 0:
+			try:
+				hist, bins = np.histogram(A_hist, bins=hist_bins)
+				result["histogram"] = hist
+				result["bins"] = bins
+			except:
+				pass
+		
+		result["status"] = "ok"
+	except Exception as e:
+		result["status"] = f"error: {str(e)}"
+	
+	return result
+
+
+def generate_sparkline(
+	histogram: np.ndarray,
+	format: Literal["unicode", "latex", "ascii"] = "unicode",
+	log_y: bool = False
+) -> str:
+	"""Generate a sparkline visualization of the histogram.
+	
+	# Parameters:
+	 - `histogram : np.ndarray`
+		Histogram data
+	 - `format : Literal["unicode", "latex", "ascii"]`
+		Output format (defaults to `"unicode"`)
+	 - `log_y : bool`
+		Whether to use logarithmic y-scale (defaults to `False`)
+	
+	# Returns:
+	 - `str`
+		Sparkline visualization
+	"""
+	if histogram is None or len(histogram) == 0:
+		return ""
+	
+	# Get the appropriate character set
+	if format in SPARK_CHARS:
+		chars = SPARK_CHARS[format]
+	else:
+		chars = SPARK_CHARS["ascii"]
+	
+	# Handle log scale
+	if log_y:
+		# Add small value to avoid log(0)
+		hist_data = np.log1p(histogram)
+	else:
+		hist_data = histogram
+	
+	# Normalize to character set range
+	if hist_data.max() > 0:
+		normalized = hist_data / hist_data.max() * (len(chars) - 1)
+	else:
+		normalized = np.zeros_like(hist_data)
+	
+	# Convert to characters
+	spark = ""
+	for val in normalized:
+		idx = int(val)
+		spark += chars[idx]
+	
+	return spark
+
+
+def array_summary(
+	array,
+	fmt: OutputFormat = "unicode",
+	precision: int = 2,
+	stats: bool = True,
+	shape: bool = True,
+	dtype: bool = True,
+	device: bool = True,
+	sparkline: bool = False,
+	sparkline_bins: int = 5,
+	log_y: bool = False,
+	colored: bool = False,
+	as_list: bool = False,
+	eq_char: str = "=",
+) -> Union[str, List[str]]:
+	"""Format array information into a readable summary.
+	
+	# Parameters:
+	 - `array`
+		array-like object (numpy array or torch tensor)
+	 - `precision : int`
+		Decimal places (defaults to `2`)
+	 - `format : Literal["unicode", "latex", "ascii"]`
+		Output format (defaults to `"unicode"`)
+	 - `stats : bool`
+		Whether to include statistical info (μ, σ, x̃) (defaults to `True`)
+	 - `shape : bool`
+		Whether to include shape info (defaults to `True`)
+	 - `dtype : bool`
+		Whether to include dtype info (defaults to `True`)
+	 - `device : bool`
+		Whether to include device info for torch tensors (defaults to `True`)
+	 - `sparkline : bool`
+		Whether to include a sparkline visualization (defaults to `False`)
+	 - `sparkline_width : int`
+		Width of the sparkline (defaults to `20`)
+	 - `log_y : bool`
+		Whether to use logarithmic y-scale for sparkline (defaults to `False`)
+	 - `colored : bool`
+		Whether to add color to output (defaults to `False`)
+	 - `as_list : bool`
+		Whether to return as list of strings instead of joined string (defaults to `False`)
+	
+	# Returns:
+	 - `Union[str, List[str]]`
+		Formatted statistical summary, either as string or list of strings
+	"""
+	array_data: Dict[str, Any] = array_info(array, hist_bins=sparkline_bins)
+	result_parts: List[str] = []
+	using_tex: bool = (fmt == "latex")
+	
+	# Set color scheme based on format and colored flag
+	if colored:
+		colors = COLORS["latex"] if using_tex else COLORS["terminal"]
+	else:
+		colors = COLORS["none"]
+	
+	# Get symbols for the current format
+	symbols = SYMBOLS[fmt]
+	
+	# Helper function to colorize text
+	def colorize(text: str, color_key: str) -> str:
+		if using_tex:
+			return f"{colors[color_key]}{{{text}}}" if colors[color_key] else text
+		else:
+			return f"{colors[color_key]}{text}{colors['reset']}" if colors[color_key] else text
+	
+	# Format string for numbers
+	float_fmt: str = f".{precision}f"
+	
+	# Handle error status or empty array
+	if array_data["status"] in ["empty array", "all NaN", "unknown"] or array_data["size"] == 0:
+		status = array_data["status"]
+		result_parts.append(colorize(status, "warning"))
+	else:
+		# Add NaN warning at the beginning if there are NaNs
+		if array_data["has_nans"]:
+			nan_str = f"{symbols['nan_prefix']}{array_data['nan_count']} ({array_data['nan_percent']:.1f}{'\\' if using_tex else ""}%)"
+			result_parts.append(colorize(nan_str, "warning"))
+		
+		# Range (min, max)
+		if array_data["range"] is not None:
+			min_val, max_val = array_data["range"]
+			min_str = f"{min_val:{float_fmt}}"
+			max_str = f"{max_val:{float_fmt}}"
+			min_colored = colorize(min_str, "range")
+			max_colored = colorize(max_str, "range")
+			range_str = f"{symbols['range']}=[{min_colored},{max_colored}]"
+			result_parts.append(range_str)
+		
+		# Statistics
+		if stats:
+			# Mean
+			if array_data["mean"] is not None:
+				mean_str = f"{array_data['mean']:{float_fmt}}"
+				mean_colored = colorize(mean_str, "mean")
+				result_parts.append(f"{symbols['mean']}={mean_colored}")
+			
+			# Standard deviation
+			if array_data["std"] is not None:
+				std_str = f"{array_data['std']:{float_fmt}}"
+				std_colored = colorize(std_str, "std")
+				result_parts.append(f"{symbols['std']}={std_colored}")
+			
+			# Median
+			if array_data["median"] is not None:
+				median_str = f"{array_data['median']:{float_fmt}}"
+				median_colored = colorize(median_str, "median")
+				result_parts.append(f"{symbols['median']}={median_colored}")
+	
+	# Add shape if requested
+	if shape and array_data["shape"] is not None:
+		shape_val = array_data["shape"]
+		if len(shape_val) == 1:
+			shape_str = str(shape_val[0])
+		else:
+			shape_str = "(" + ",".join(colorize(str(dim), "shape") for dim in shape_val) + ")"
+		result_parts.append(f"shape={shape_str}")
+	
+	# Add dtype if requested
+	if dtype and array_data["dtype"] is not None:
+		result_parts.append(colorize(f"dtype={array_data['dtype']}", "meta"))
+	
+	# Add device if requested and it's a tensor with device info
+	if device and array_data["is_tensor"] and array_data["device"] is not None:
+		result_parts.append(colorize(f"device={array_data['device']}", "meta"))
+
+	# Add sparkline if requested
+	if sparkline and array_data["histogram"] is not None:
+		spark = generate_sparkline(
+			array_data["histogram"],
+			format=fmt,
+			log_y=log_y
+		)
+		if spark:
+			spark_colored = colorize(spark, "sparkline")
+			result_parts.append(spark_colored)
+	
+	# Return as list if requested, otherwise join with spaces
+	if as_list:
+		return result_parts
+	else:
+		joinchar: str = r" \quad " if using_tex else " "
+		return joinchar.join(result_parts)
