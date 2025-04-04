@@ -46,21 +46,24 @@ SYMBOLS: Dict[OutputFormat, Dict[str, str]] = {
 		"mean": r"\mu",
 		"std": r"\sigma",
 		"median": r"\tilde{x}",
-		"nan_prefix": "!!! NANvals="
+		"nan_values": "NANvals=",
+		"warning": "!!!",
 	},
 	"unicode": {
-		"range": "𝓡",
+		"range": "R",
 		"mean": "μ",
 		"std": "σ",
 		"median": "x̃",
-		"nan_prefix": "🚨 NANvals=",
+		"nan_values": "NANvals=",
+		"warning": "🚨",
 	},
 	"ascii": {
 		"range": "range",
 		"mean": "mean",
 		"std": "std",
 		"median": "med",
-		"nan_prefix": "!!! NANvals="
+		"nan_values": r"\texttt{NANvals}=",
+		"warning": "!!!",
 	}
 }
 "Symbols for different formats"
@@ -384,39 +387,40 @@ def array_summary(
 	else:
 		# Add NaN warning at the beginning if there are NaNs
 		if array_data["has_nans"]:
-			nan_str = f"{symbols['nan_prefix']}{array_data['nan_count']} ({array_data['nan_percent']:.1f}{'\\' if using_tex else ""}%)"
+			nan_str: str = f"{symbols['warning']} {symbols['nan_values']}{array_data['nan_count']} ({array_data['nan_percent']:.1f}{'\\' if using_tex else ""}%)"
 			result_parts.append(colorize(nan_str, "warning"))
-		
-		# Range (min, max)
-		if array_data["range"] is not None:
-			min_val, max_val = array_data["range"]
-			min_str = f"{min_val:{float_fmt}}"
-			max_str = f"{max_val:{float_fmt}}"
-			min_colored = colorize(min_str, "range")
-			max_colored = colorize(max_str, "range")
-			range_str = f"{symbols['range']}=[{min_colored},{max_colored}]"
-			result_parts.append(range_str)
 		
 		# Statistics
 		if stats:
-			# Mean
-			if array_data["mean"] is not None:
-				mean_str = f"{array_data['mean']:{float_fmt}}"
-				mean_colored = colorize(mean_str, "mean")
-				result_parts.append(f"{symbols['mean']}={mean_colored}")
+			for stat_key in ["mean", "std", "median"]:
+				if array_data[stat_key] is not None:
+					stat_str: str = f"{array_data[stat_key]:{float_fmt}}"
+					stat_colored: str = colorize(stat_str, stat_key)
+					result_parts.append(f"{symbols[stat_key]}={stat_colored}")
 			
-			# Standard deviation
-			if array_data["std"] is not None:
-				std_str = f"{array_data['std']:{float_fmt}}"
-				std_colored = colorize(std_str, "std")
-				result_parts.append(f"{symbols['std']}={std_colored}")
-			
-			# Median
-			if array_data["median"] is not None:
-				median_str = f"{array_data['median']:{float_fmt}}"
-				median_colored = colorize(median_str, "median")
-				result_parts.append(f"{symbols['median']}={median_colored}")
+			# Range (min, max)
+			if array_data["range"] is not None:
+				min_val, max_val = array_data["range"]
+				min_str: str = f"{min_val:{float_fmt}}"
+				max_str: str = f"{max_val:{float_fmt}}"
+				min_colored: str = colorize(min_str, "range")
+				max_colored: str = colorize(max_str, "range")
+				range_str: str = f"{symbols['range']}=[{min_colored},{max_colored}]"
+				result_parts.append(range_str)
 	
+	# Add sparkline if requested
+	if sparkline and array_data["histogram"] is not None:
+		print(array_data["histogram"])
+		print(array_data["bins"])
+		spark = generate_sparkline(
+			array_data["histogram"],
+			format=fmt,
+			log_y=sparkline_logy
+		)
+		if spark:
+			spark_colored = colorize(spark, "sparkline")
+			result_parts.append(f"|{spark_colored}|")
+
 	# Add shape if requested
 	if shape and array_data["shape"] is not None:
 		shape_val = array_data["shape"]
@@ -433,19 +437,6 @@ def array_summary(
 	# Add device if requested and it's a tensor with device info
 	if device and array_data["is_tensor"] and array_data["device"] is not None:
 		result_parts.append(colorize(f"device={array_data['device']}", "meta"))
-
-	# Add sparkline if requested
-	if sparkline and array_data["histogram"] is not None:
-		print(array_data["histogram"])
-		print(array_data["bins"])
-		spark = generate_sparkline(
-			array_data["histogram"],
-			format=fmt,
-			log_y=sparkline_logy
-		)
-		if spark:
-			spark_colored = colorize(spark, "sparkline")
-			result_parts.append(f"|{spark_colored}|")
 	
 	# Return as list if requested, otherwise join with spaces
 	if as_list:
