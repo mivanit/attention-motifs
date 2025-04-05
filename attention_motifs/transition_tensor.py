@@ -97,6 +97,7 @@ def transition_tensor(
 	# TODO: do this more cleverly
 	for t in range(1, max_K):
 		X[t, :, :] = X[t - 1, :, :] @ A
+		np.linalg.matrix_power(A, power)
 
 	# compute residuals
 	residuals: Float[np.ndarray, "n_idxs n_ctx"] = np.full(
