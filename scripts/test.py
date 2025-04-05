@@ -1,3 +1,8 @@
+import sys
+from importlib.metadata import version
+
+import torch
+import transformers
 from transformer_lens import HookedTransformer, HookedTransformerConfig
 
 model_trained = HookedTransformer.from_pretrained("gpt2-small", device="cpu")
@@ -15,12 +20,11 @@ for k, tensor in model.state_dict().items():
 		print(f"{tensor.device = }")
 		print(tensor.isnan().nonzero(as_tuple=True))
 
-import sys
+
 print("python:", sys.version)
-import torch
+
 print("torch:", torch.__version__)
-import transformers
+
 print("transformers:", transformers.__version__)
-import transformer_lens
-from importlib.metadata import version
+
 print("transformer_lens: ", version("transformer_lens"))

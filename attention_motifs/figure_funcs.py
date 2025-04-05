@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.fft import fft2  # type: ignore[import-untyped]
 
 from muutils.spinner import SpinnerContext
 from muutils.tensor_info import array_summary
@@ -10,7 +9,6 @@ from pattern_lens.figure_util import (
 	AttentionMatrix,
 )
 from pattern_lens.attn_figure_funcs import (
-	register_attn_figure_func,
 	register_attn_figure_multifunc,
 )
 from pattern_lens.figure_util import matplotlib_multifigure_saver
@@ -67,23 +65,28 @@ def basic(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -> None:
 def markov_transition(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -> None:
 	# manual config here
 	p_threshold: float = 0.95
-	idxs, tt, res = transition_tensor(attn_matrix, exact=100, approx_l10=7.0, approx_pts=100)
+	idxs, tt, res = transition_tensor(
+		attn_matrix, exact=100, approx_l10=7.0, approx_pts=100
+	)
 	n_ctx: int = attn_matrix.shape[0]
 
 	#
 	axes["tensor"].set_title("transition tensor")
-	axes["tensor"].matshow(np.log1p(1 - tt[:, :, 0].T), aspect=(tt.shape[0] / tt.shape[1]))
+	axes["tensor"].matshow(
+		np.log1p(1 - tt[:, :, 0].T), aspect=(tt.shape[0] / tt.shape[1])
+	)
 	axes["tensor"].set_xticks(range(len(idxs)))
 	axes["tensor"].set_xticklabels(idxs)
 	axes["tensor"].tick_params(axis="x", rotation=90)
 	axes["tensor"].set_xlabel("markov iteration")
 	axes["tensor"].set_ylabel("token idx")
 
-
 	#
 	axes["time"].set_title(f"time to transition probability > {p_threshold}")
 	indices_raw = np.apply_along_axis(
-		lambda row: np.searchsorted(row, p_threshold, side="right"), axis=0, arr=tt[:, :, 0]
+		lambda row: np.searchsorted(row, p_threshold, side="right"),
+		axis=0,
+		arr=tt[:, :, 0],
 	)
 	axes["tensor"].plot(indices_raw, np.arange(indices_raw.shape[0]), "r.")
 	idxs_with_inf = np.concatenate((idxs, [1e10]))
@@ -94,7 +97,7 @@ def markov_transition(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -
 	axes["time"].plot(indices_adjusted_l10, "ro")
 	axes["time"].set_xlabel("token idx")
 	axes["time"].set_ylabel("log10(iters to transition)")
-	idxs_x = np.arange(len(indices_adjusted_l10))	
+	idxs_x = np.arange(len(indices_adjusted_l10))
 	for envtype in ("lower", "upper", "bestfit"):
 		env_lower = compute_envelope_params(
 			x=idxs_x,
@@ -110,7 +113,9 @@ def markov_transition(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -
 
 	#
 	indices_adjusted_diff = np.diff(indices_adjusted)
-	axes["time_diffs"].set_title(f"dist of transition times diff\n${array_summary(indices_adjusted_diff, fmt='latex', dtype=False)}$")
+	axes["time_diffs"].set_title(
+		f"dist of transition times diff\n${array_summary(indices_adjusted_diff, fmt='latex', dtype=False)}$"
+	)
 	axes["time_diffs"].hist(indices_adjusted_diff, bins=10)
 	axes["time_diffs"].set_xlabel("diff")
 	axes["time_diffs"].set_ylabel("count")

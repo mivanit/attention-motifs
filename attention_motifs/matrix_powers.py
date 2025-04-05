@@ -2,22 +2,23 @@ from typing import Sequence
 import numpy as np
 from jaxtyping import Float, Int
 
+
 def matrix_powers(
-	A: Float[np.ndarray, "n n"], 
+	A: Float[np.ndarray, "n n"],
 	powers: Sequence[int],
 ) -> Float[np.ndarray, "n_powers n n"]:
 	"""Compute multiple powers of a matrix efficiently.
-	
-	Uses binary exponentiation to compute powers in O(log max(powers)) 
-	matrix multiplications, avoiding redundant calculations when 
+
+	Uses binary exponentiation to compute powers in O(log max(powers))
+	matrix multiplications, avoiding redundant calculations when
 	computing multiple powers.
-	
+
 	# Parameters:
 	 - `A : Float[np.ndarray, "n n"]`
 		Square matrix to exponentiate
 	 - `powers : Sequence[int]`
 		List of powers to compute (non-negative integers)
-	
+
 	# Returns:
 	 - `dict[int, Float[np.ndarray, "n n"]]`
 		Dictionary mapping each requested power to the corresponding matrix power
@@ -25,38 +26,39 @@ def matrix_powers(
 	n_powers: int = len(powers)
 	dim_n: int = A.shape[0]
 	assert A.shape[0] == A.shape[1], f"Matrix must be square, but got {A.shape = }"
-	powers_np: Int[np.ndarray, "n_powers_unique"] = np.array(sorted(set(powers)), dtype=int)
+	powers_np: Int[np.ndarray, "n_powers_unique"] = np.array(
+		sorted(set(powers)), dtype=int
+	)
 	n_powers_unique: int = len(powers_np)
 
 	if n_powers_unique < 1:
 		raise ValueError(f"No powers requested: {powers = }")
-	
+
 	output: Float[np.ndarray, "n_powers_unique n n"] = np.full(
 		(n_powers_unique, dim_n, dim_n),
 		fill_value=np.nan,
 		dtype=A.dtype,
 	)
-	
+
 	# Find the maximum power to compute
 	max_power: int = max(powers_np)
-	
+
 	# Precompute all powers of 2 up to the largest power needed
 	# This forms our basis for binary decomposition
 	powers_of_two: dict[int, Float[np.ndarray, "n n"]] = {}
 	powers_of_two[0] = np.eye(dim_n, dtype=A.dtype)
 	powers_of_two[1] = A.copy()
-	
+
 	# Compute powers of 2: A^2, A^4, A^8, ...
 	p: int = 1
 	while p < max_power:
 		if p <= max_power:
-			A_power_p = powers_of_two[p]			
-			powers_of_two[p*2] = A_power_p @ A_power_p
-		p = p*2
-	
+			A_power_p = powers_of_two[p]
+			powers_of_two[p * 2] = A_power_p @ A_power_p
+		p = p * 2
+
 	# For each requested power, compute it using the powers of 2
 	for p_idx, power in enumerate(powers_np):
-
 		# Decompose power into sum of powers of 2
 		temp_result: Float[np.ndarray, "n n"] = powers_of_two[0].copy()
 		temp_power: int = power
@@ -67,7 +69,7 @@ def matrix_powers(
 				temp_result = temp_result @ powers_of_two[p_temp]
 			temp_power = temp_power // 2
 			p_temp *= 2
-		
+
 		output[p_idx] = temp_result
-	
+
 	return output

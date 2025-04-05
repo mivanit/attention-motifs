@@ -17,17 +17,20 @@ def cross_entropy(
 	"$H(p,q)=-\sum _{x\in {\mathcal {X}}}p(x)\,\log q(x)$"
 	return -np.sum(p * np.log(q))
 
+
 def l2_norm(
 	p: Float[np.ndarray, " d"],
 	q: Float[np.ndarray, " d"],
 ) -> float:
 	return np.linalg.norm(p - q, ord=2)
 
+
 def kl_divergence(
 	p: Float[np.ndarray, " d"],
 	q: Float[np.ndarray, " d"],
 ) -> float:
 	return np.sum(p * np.log(p / q))
+
 
 def sigmoid(
 	x: Float[np.ndarray, " d"],  # input
@@ -97,7 +100,9 @@ def transition_tensor(
 		- residuals[0, i] is NaN.
 	"""
 	max_K: int = int(np.power(10, approx_l10)) + 1
-	assert max_K > exact, f"approx_l10 must be greater than exact {exact = } {max_K = } {approx_l10 = }"
+	assert max_K > exact, (
+		f"approx_l10 must be greater than exact {exact = } {max_K = } {approx_l10 = }"
+	)
 
 	n_ctx: int = A.shape[0]
 	assert A.shape[0] == A.shape[1], f"Matrix must be square, but got {A.shape = }"
@@ -109,12 +114,9 @@ def transition_tensor(
 	idxs: Int[np.ndarray, "n_idxs"] = np.concatenate([np.arange(exact), resampled_idxs])
 	n_idxs: int = len(idxs)
 
-
 	# Compute powers of A iteratively
 	needed_powers: list[int] = sorted(
-		p
-		for p in set(idxs).union(set(idxs - 1))
-		if p >= 0
+		p for p in set(idxs).union(set(idxs - 1)) if p >= 0
 	)
 	A_powers_arr: Float[np.ndarray, "len(needed_powers) n_ctx n_ctx"] = matrix_powers(
 		A, powers=needed_powers
