@@ -5,7 +5,9 @@ from jaxtyping import Float, Int
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
-from muutils.dbg import dbg
+from muutils.dbg import dbg, dbg_tensor
+
+from attention_motifs.matrix_powers import matrix_powers
 
 
 def cross_entropy(
@@ -15,6 +17,17 @@ def cross_entropy(
 	"$H(p,q)=-\sum _{x\in {\mathcal {X}}}p(x)\,\log q(x)$"
 	return -np.sum(p * np.log(q))
 
+def l2_norm(
+	p: Float[np.ndarray, " d"],
+	q: Float[np.ndarray, " d"],
+) -> float:
+	return np.linalg.norm(p - q, ord=2)
+
+def kl_divergence(
+	p: Float[np.ndarray, " d"],
+	q: Float[np.ndarray, " d"],
+) -> float:
+	return np.sum(p * np.log(p / q))
 
 def sigmoid(
 	x: Float[np.ndarray, " d"],  # input
@@ -49,7 +62,7 @@ def transition_tensor(
 	approx_pts: int = 20,
 	res_norm: Callable[
 		[Float[np.ndarray, " d"], Float[np.ndarray, " d"]], float
-	] = cross_entropy,
+	] = l2_norm,
 ) -> tuple[
 	Int[np.ndarray, " n_idxs"],  # idxs
 	Float[np.ndarray, "n_idxs n_ctx n_ctx"],  # resampled transition tensor
@@ -84,39 +97,59 @@ def transition_tensor(
 		- residuals[0, i] is NaN.
 	"""
 	max_K: int = int(np.power(10, approx_l10)) + 1
-	assert max_K > exact, "approx_l10 must be greater than exact"
+	assert max_K > exact, f"approx_l10 must be greater than exact {exact = } {max_K = } {approx_l10 = }"
 
-	# compute original transition tensor
-	n: int = A.shape[0]
-	X: Float[np.ndarray, "K n_ctx n_ctx"] = np.full(
-		(max_K, n, n), fill_value=np.nan, dtype=A.dtype
-	)
-	X[0] = np.eye(n, dtype=A.dtype)
+	n_ctx: int = A.shape[0]
+	assert A.shape[0] == A.shape[1], f"Matrix must be square, but got {A.shape = }"
 
-	# Compute powers of A iteratively
-	# TODO: do this more cleverly
-	for t in range(1, max_K):
-		X[t, :, :] = X[t - 1, :, :] @ A
-		np.linalg.matrix_power(A, power)
-
-	# compute residuals
-	residuals: Float[np.ndarray, "n_idxs n_ctx"] = np.full(
-		(max_K, n), fill_value=np.nan, dtype=A.dtype
-	)
-	residuals[1:, :] = np.sum(
-		np.abs(X[1:, :, :] - X[:-1, :, :]),
-		axis=-2,  # TODO: unsure if this is the right way to do this
-	)
-
-	# resample
+	# indices we want
 	resampled_idxs: Int[np.ndarray, "approx_pts"] = np.logspace(
 		np.log10(exact), approx_l10, approx_pts, base=10, dtype=int
 	)
 	idxs: Int[np.ndarray, "n_idxs"] = np.concatenate([np.arange(exact), resampled_idxs])
 	n_idxs: int = len(idxs)
 
-	tt_resampled: Float[np.ndarray, "n_idxs n_ctx n_ctx"] = X[idxs, :, :]
-	res_resampled: Float[np.ndarray, "n_idxs n_ctx"] = residuals[idxs, :]
+
+	# Compute powers of A iteratively
+	needed_powers: list[int] = sorted(
+		p
+		for p in set(idxs).union(set(idxs - 1))
+		if p >= 0
+	)
+	A_powers_arr: Float[np.ndarray, "len(needed_powers) n_ctx n_ctx"] = matrix_powers(
+		A, powers=needed_powers
+	)
+	A_powers: dict[int, Float[np.ndarray, "n_ctx n_ctx"]] = {
+		p: A_powers_arr[i] for i, p in enumerate(needed_powers)
+	}
+	A_powers[-1] = np.eye(n_ctx, dtype=A.dtype)
+	tt_resampled: Float[np.ndarray, "n_idxs n_ctx n_ctx"] = np.array(
+		[A_powers[p] for p in idxs],
+		dtype=A.dtype,
+	)
+
+	# compute residuals
+	res_resampled: Float[np.ndarray, "n_idxs n_ctx"] = np.full(
+		(n_idxs, n_ctx), np.nan, dtype=A.dtype
+	)
+	for i_idx in range(n_idxs):
+		for i_ctx in range(n_ctx):
+			res_resampled[i_idx, i_ctx] = res_norm(
+				tt_resampled[i_idx, i_ctx, :], tt_resampled[i_idx - 1, i_ctx, :]
+			)
+
+	dbg_tensor(res_resampled)
+
+	# )
+	# 	[
+	# 		[
+	# 			res_norm(A_powers[p][i, :], A_powers[p - 1][i, :])
+	# 			for i in range(n_ctx)
+	# 		]
+	# 		for p in idxs
+	# 	],
+	# 	dtype=A.dtype,
+	# )
 
 	return idxs, tt_resampled, res_resampled
 

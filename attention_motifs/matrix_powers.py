@@ -39,8 +39,6 @@ def matrix_powers(
 	
 	# Find the maximum power to compute
 	max_power: int = max(powers_np)
-	print(f"{powers_np = }")
-	print(f"{max_power = }")
 	
 	# Precompute all powers of 2 up to the largest power needed
 	# This forms our basis for binary decomposition
