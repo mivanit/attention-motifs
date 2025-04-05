@@ -140,7 +140,7 @@ def transition_tensor(
 				tt_resampled[i_idx, i_ctx, :], tt_resampled[i_idx - 1, i_ctx, :]
 			)
 
-	dbg_tensor(res_resampled)
+	# dbg_tensor(res_resampled)
 
 	# )
 	# 	[
