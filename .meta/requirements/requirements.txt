@@ -223,7 +223,7 @@ multidict==6.2.0
     #   yarl
 multiprocess==0.70.16
     # via datasets
-muutils==0.8.6
+muutils==0.8.7
     # via
     #   attention-motifs
     #   lmcat
