@@ -5,7 +5,7 @@ import torch
 # attention-motifs
 from attention_motifs.features.vec_features import vec_features
 from attention_motifs.math.math import compute_envelope_params
-from attention_motifs.transition_tensor import transition_tensor
+from attention_motifs.transition_tensor import transition_tensor, transition_tensor_torch
 from attention_motifs.util import prefix_dict
 
 
@@ -13,7 +13,10 @@ def tt_features(
 	A: Float[np.ndarray, "n_ctx n_ctx"],
 	p_threshold: float = 0.0,
 ) -> dict[str, float]:
-	idxs, tt, res = transition_tensor(A, exact=32, approx_l10=5.0, approx_pts=32)
+	idxs_tr, tt_tr, _ = transition_tensor_torch(torch.tensor(A, device="cuda"), exact=32, approx_l10=5.0, approx_pts=32)
+	idxs = idxs_tr.cpu().numpy()
+	tt = tt_tr.cpu().numpy()
+	# idxs, tt, _ = transition_tensor(A, exact=32, approx_l10=5.0, approx_pts=32)
 
 	output: dict[str, float] = dict()
 
