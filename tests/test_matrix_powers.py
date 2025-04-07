@@ -46,7 +46,9 @@ class TestMatrixPowers:
 				# Compute with our function
 				dbg_tensor(matrix)
 				result = matrix_powers(matrix, powers)
-				result_torch = matrix_powers_torch(torch.tensor(matrix), powers).cpu().numpy()
+				result_torch = (
+					matrix_powers_torch(torch.tensor(matrix), powers).cpu().numpy()
+				)
 
 				# Get dimension information
 				n_powers = len(set(powers))

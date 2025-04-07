@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.stats as stats
 from jaxtyping import Float
 
 # muutils
@@ -7,7 +6,6 @@ from jaxtyping import Float
 # attention-motifs
 from attention_motifs.bins import Bins
 from attention_motifs.features.vec_features import vec_features
-from attention_motifs.math.math import scaled_beta
 from attention_motifs.util import prefix_dict
 
 

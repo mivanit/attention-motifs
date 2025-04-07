@@ -4,6 +4,7 @@ import scipy.signal as signal
 
 from muutils.dbg import dbg_tensor
 
+
 def vec_features(
 	arr: np.ndarray,
 	compute_distribution: bool = True,

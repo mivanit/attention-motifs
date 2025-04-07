@@ -72,7 +72,7 @@ def transition_tensor(
 ) -> tuple[
 	Int[np.ndarray, " n_idxs"],  # idxs
 	Float[np.ndarray, "n_idxs n_ctx n_ctx"],  # resampled transition tensor
-	Float[np.ndarray, "n_idxs n_ctx"]|None,  # resampled residuals
+	Float[np.ndarray, "n_idxs n_ctx"] | None,  # resampled residuals
 ]:
 	"""
 	Compute the 3D transition tensor, residuals, and then resample
@@ -119,13 +119,13 @@ def transition_tensor(
 
 	# Compute powers of A iteratively
 	# Compute powers of A iteratively
-	needed_powers: list[int] = sorted(
-		p.item() for p in set(idxs) if p >= 0
-	)
+	needed_powers: list[int] = sorted(p.item() for p in set(idxs) if p >= 0)
 	# Only add powers-1 if we're computing residuals
 	if residuals:
 		prev_powers = set(idxs - 1)
-		needed_powers = sorted(set(needed_powers).union(p for p in prev_powers if p >= 0))
+		needed_powers = sorted(
+			set(needed_powers).union(p for p in prev_powers if p >= 0)
+		)
 
 	A_powers_arr: Float[np.ndarray, "len(needed_powers) n_ctx n_ctx"] = matrix_powers(
 		A, powers=needed_powers
@@ -140,11 +140,9 @@ def transition_tensor(
 	)
 
 	# compute residuals
-	res_resampled: Float[np.ndarray, "n_idxs n_ctx"]|None
+	res_resampled: Float[np.ndarray, "n_idxs n_ctx"] | None
 	if residuals:
-		res_resampled = np.full(
-			(n_idxs, n_ctx), np.nan, dtype=A.dtype
-		)
+		res_resampled = np.full((n_idxs, n_ctx), np.nan, dtype=A.dtype)
 		for i_idx in range(n_idxs):
 			for i_ctx in range(n_ctx):
 				res_resampled[i_idx, i_ctx] = res_norm(
@@ -156,17 +154,14 @@ def transition_tensor(
 	return idxs, tt_resampled, res_resampled
 
 
-
-
-
 def transition_tensor_torch(
 	A: Float[Tensor, "n_ctx n_ctx"],
 	exact: int = 10,
 	approx_l10: int = 3,
 	approx_pts: int = 20,
-	res_norm: Optional[Callable[
-		[Float[Tensor, " d"], Float[Tensor, " d"]], float
-	]] = None,
+	res_norm: Optional[
+		Callable[[Float[Tensor, " d"], Float[Tensor, " d"]], float]
+	] = None,
 	residuals: bool = False,
 ) -> tuple[
 	Int[Tensor, " n_idxs"],  # idxs
@@ -198,7 +193,7 @@ def transition_tensor_torch(
 	 - `residuals : bool`
 		Whether to compute residuals.
 		(defaults to `False`)
-	
+
 	# Returns:
 	 - `Int[Tensor, " n_idxs"]`
 		Indices of powers computed
@@ -211,7 +206,7 @@ def transition_tensor_torch(
 		- residuals[k, i] is the residual between X[k, i, :] and X[k-1, i, :].
 		- residuals[0, i] is NaN.
 	"""
-	max_K: int = int(torch.pow(torch.tensor(10.), approx_l10)) + 1
+	max_K: int = int(torch.pow(torch.tensor(10.0), approx_l10)) + 1
 	assert max_K > exact, (
 		f"approx_l10 must be greater than exact {exact = } {max_K = } {approx_l10 = }"
 	)
@@ -221,11 +216,11 @@ def transition_tensor_torch(
 
 	# indices we want
 	resampled_idxs: Int[Tensor, "approx_pts"] = torch.logspace(
-		torch.log10(torch.tensor(exact, dtype=torch.float)), 
-		approx_l10, 
-		approx_pts, 
-		base=10, 
-		dtype=torch.int64
+		torch.log10(torch.tensor(exact, dtype=torch.float)),
+		approx_l10,
+		approx_pts,
+		base=10,
+		dtype=torch.int64,
 	)
 	idxs: Int[Tensor, "n_idxs"] = torch.cat([torch.arange(exact), resampled_idxs])
 	# Remove any duplicates that might occur between the ranges
@@ -233,27 +228,27 @@ def transition_tensor_torch(
 	n_idxs: int = len(idxs)
 
 	# Compute powers of A iteratively
-	needed_powers: list[int] = sorted(
-		p.item() for p in set(idxs) if p >= 0
-	)
+	needed_powers: list[int] = sorted(p.item() for p in set(idxs) if p >= 0)
 	# Only add powers-1 if we're computing residuals
 	if residuals:
 		prev_powers = set(idxs - 1)
-		needed_powers = sorted(set(needed_powers).union(p for p in prev_powers if p >= 0))
-	
+		needed_powers = sorted(
+			set(needed_powers).union(p for p in prev_powers if p >= 0)
+		)
+
 	A_powers_arr: Float[Tensor, "len(needed_powers) n_ctx n_ctx"] = matrix_powers_torch(
 		A, powers=needed_powers
 	)
-	
+
 	# Create a dictionary mapping power values to their corresponding matrices
 	A_powers: dict[int, Float[Tensor, "n_ctx n_ctx"]] = {}
 	for i, p in enumerate(needed_powers):
 		A_powers[p] = A_powers_arr[i]
-	
+
 	# Add identity matrix for power -1 if needed for residuals
 	if residuals:
 		A_powers[-1] = torch.eye(n_ctx, dtype=A.dtype, device=A.device)
-	
+
 	# Stack the matrices in the order specified by idxs
 	tt_resampled: Float[Tensor, "n_idxs n_ctx n_ctx"] = torch.stack(
 		[A_powers[p.item()] for p in idxs],
@@ -264,18 +259,18 @@ def transition_tensor_torch(
 	res_resampled: Optional[Float[Tensor, "n_idxs n_ctx"]] = None
 	if residuals and res_norm is not None:
 		res_resampled = torch.full(
-			(n_idxs, n_ctx), float('nan'), dtype=A.dtype, device=A.device
+			(n_idxs, n_ctx), float("nan"), dtype=A.dtype, device=A.device
 		)
 		for i_idx in range(n_idxs):
 			for i_ctx in range(n_ctx):
-				prev_power = idxs[i_idx-1].item() if i_idx > 0 else -1
+				prev_power = idxs[i_idx - 1].item() if i_idx > 0 else -1
 				if prev_power in A_powers:
 					res_resampled[i_idx, i_ctx] = res_norm(
-						tt_resampled[i_idx, i_ctx, :], 
-						A_powers[prev_power][i_ctx, :]
+						tt_resampled[i_idx, i_ctx, :], A_powers[prev_power][i_ctx, :]
 					)
 
 	return idxs, tt_resampled, res_resampled
+
 
 def tt_fig(
 	A: np.ndarray,

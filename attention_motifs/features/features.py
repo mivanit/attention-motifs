@@ -86,7 +86,7 @@ def scalar_feature_table(
 
 	# output has cols:
 	# model, prompt, layer_idx, head_idx, feature_name, feature_value
-	output: list[dict[str, int|float|str]] = list()
+	output: list[dict[str, int | float | str]] = list()
 
 	for idx, model in enumerate(models):
 		print(f"model: '{model}'")
@@ -108,13 +108,17 @@ def scalar_feature_table(
 
 		with mp.Pool(processes=mp.cpu_count()) as pool:
 			# process each prompt in parallel
-			prompt_func: Callable[[dict], list[dict[str, int|float|str]]] = functools.partial(
-				process_prompt,
-				model_name=model,
-				save_path=save_path,
-				features_func=features_func,
+			prompt_func: Callable[[dict], list[dict[str, int | float | str]]] = (
+				functools.partial(
+					process_prompt,
+					model_name=model,
+					save_path=save_path,
+					features_func=features_func,
+				)
 			)
-			model_out: list[dict] = tqdm.tqdm(pool.imap(prompt_func, prompts), total=len(prompts))
+			model_out: list[dict] = tqdm.tqdm(
+				pool.imap(prompt_func, prompts), total=len(prompts)
+			)
 			output.extend(itertools.chain.from_iterable(model_out))
 
 	return pd.DataFrame(output)
