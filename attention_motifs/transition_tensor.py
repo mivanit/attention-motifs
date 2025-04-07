@@ -5,7 +5,7 @@ from jaxtyping import Float, Int
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
-from muutils.dbg import dbg, dbg_tensor
+from muutils.dbg import dbg
 
 from attention_motifs.matrix_powers import matrix_powers
 

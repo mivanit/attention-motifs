@@ -1,10 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from muutils.spinner import SpinnerContext
 from muutils.tensor_info import array_summary
 
-from pattern_lens.consts import DIVIDER_S1, DIVIDER_S2, SPINNER_KWARGS
 from pattern_lens.figure_util import (
 	AttentionMatrix,
 )
@@ -12,8 +10,11 @@ from pattern_lens.attn_figure_funcs import (
 	register_attn_figure_multifunc,
 	register_attn_figure_func,
 )
-from pattern_lens.figure_util import matplotlib_multifigure_saver, save_matrix_wrapper, Matrix2D
-from pattern_lens.figures import figures_main
+from pattern_lens.figure_util import (
+	matplotlib_multifigure_saver,
+	save_matrix_wrapper,
+	Matrix2D,
+)
 from pattern_lens.figures import main as pl_main
 
 from attention_motifs.math import compute_envelope_params, linear_plot

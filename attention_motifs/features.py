@@ -1,19 +1,15 @@
 import json
 from pathlib import Path
-from typing import Any, Optional, Callable
+from typing import Callable
 
 
-import matplotlib.pyplot as plt
 import torch
 from jaxtyping import Float
 import pandas as pd
 import tqdm
-import plotly.express as px
-from dash import Dash, dcc, html, Input, Output, State, callback_context
 
 # custom utils
 from muutils.spinner import SpinnerContext
-from muutils.jsonlines import jsonl_load
 
 # pattern_lens
 from pattern_lens.consts import (
@@ -21,6 +17,7 @@ from pattern_lens.consts import (
 )
 from pattern_lens.load_activations import load_activations
 from pattern_lens.figures import HTConfigMock
+
 
 def scalar_feature_table(
 	features_func: Callable[
