@@ -206,7 +206,7 @@ requires-dist = [
     { name = "nbformat", specifier = ">=4.2.0" },
     { name = "numpy", specifier = ">=1.26.1,<2.0.0" },
     { name = "pandas", specifier = ">=2.2.2" },
-    { name = "pattern-lens", git = "https://github.com/mivanit/pattern-lens?rev=6e2a777b1b0c4c6a8364dd3f6df5c4a3d910e183" },
+    { name = "pattern-lens", specifier = ">=0.4.0" },
     { name = "pillow", specifier = ">=11.0.0" },
     { name = "plotly" },
     { name = "pydantic", specifier = "==2.10.4" },
@@ -1810,8 +1810,8 @@ wheels = [
 
 [[package]]
 name = "pattern-lens"
-version = "0.3.0"
-source = { git = "https://github.com/mivanit/pattern-lens?rev=6e2a777b1b0c4c6a8364dd3f6df5c4a3d910e183#6e2a777b1b0c4c6a8364dd3f6df5c4a3d910e183" }
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beartype" },
     { name = "ipykernel" },
@@ -1828,6 +1828,10 @@ dependencies = [
     { name = "transformer-lens" },
     { name = "typeguard" },
     { name = "zanj" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/dc/76/51d575bd0c9de866ebe0642b1c9ffc5870aec235a353d4dc9608f4fc00a3/pattern_lens-0.4.0.tar.gz", hash = "sha256:86b912803781697df8e341e522395c156ea2acf4d585533b601421b5ab03285e", size = 58315540 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2b/d4/35179fea6fff2639ac30e8f1ee9886d1461e060b78af623dc656fcb5323c/pattern_lens-0.4.0-py3-none-any.whl", hash = "sha256:ecd506b056d6c5e7582538a65019a750d28a582cf41229a0ca41473b9e70c850", size = 51633 },
 ]
 
 [[package]]

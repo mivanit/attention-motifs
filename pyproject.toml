@@ -42,9 +42,9 @@ dependencies = [
 	"typing_extensions==4.12.2",
 	"pydantic==2.10.4",
 	# pattern-lens
-	# "pattern-lens>=0.3.0",
+	"pattern-lens>=0.4.0",
 	# pattern-lens from git
-	"pattern-lens @ git+https://github.com/mivanit/pattern-lens@6e2a777b1b0c4c6a8364dd3f6df5c4a3d910e183",
+	# "pattern-lens @ git+https://github.com/mivanit/pattern-lens",
 ]
 
 

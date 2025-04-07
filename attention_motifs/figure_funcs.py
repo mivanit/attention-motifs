@@ -14,6 +14,7 @@ from pattern_lens.attn_figure_funcs import (
 )
 from pattern_lens.figure_util import matplotlib_multifigure_saver, save_matrix_wrapper, Matrix2D
 from pattern_lens.figures import figures_main
+from pattern_lens.figures import main as pl_main
 
 from attention_motifs.math import compute_envelope_params, linear_plot
 from attention_motifs.transition_tensor import transition_tensor
@@ -177,76 +178,4 @@ def markov_transition(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -
 
 
 if __name__ == "__main__":
-	import argparse
-
-	print(DIVIDER_S1)
-	with SpinnerContext(message="parsing args", **SPINNER_KWARGS):
-		arg_parser: argparse.ArgumentParser = argparse.ArgumentParser()
-		# input and output
-		arg_parser.add_argument(
-			"--model",
-			"-m",
-			type=str,
-			required=True,
-			help="The model name(s) to use. comma separated with no whitespace if multiple",
-		)
-		arg_parser.add_argument(
-			"--save-path",
-			"-s",
-			type=str,
-			required=False,
-			help="The path to save the attention patterns",
-		)
-		# number of samples
-		arg_parser.add_argument(
-			"--n-samples",
-			"-n",
-			type=int,
-			required=False,
-			help="The max number of samples to process, do all in the file if None",
-			default=None,
-		)
-		# force overwrite of existing figures
-		arg_parser.add_argument(
-			"--force",
-			"-f",
-			type=bool,
-			required=False,
-			help="Force overwrite of existing figures",
-			default=False,
-		)
-
-		# parallel processing
-		arg_parser.add_argument(
-			"--parallel",
-			"-p",
-			type=int,
-			required=False,
-			help="Use parallel processing",
-			default=1,
-		)
-
-		args: argparse.Namespace = arg_parser.parse_args()
-
-	print(f"args parsed: {args}")
-
-	models: list[str]
-	if "," in args.model:
-		models = args.model.split(",")
-	else:
-		models = [args.model]
-
-	n_models: int = len(models)
-	for idx, model in enumerate(models):
-		print(DIVIDER_S2)
-		print(f"processing model {idx + 1} / {n_models}: {model}")
-		print(DIVIDER_S2)
-		figures_main(
-			model_name=model,
-			save_path=args.save_path,
-			n_samples=args.n_samples,
-			force=args.force,
-			parallel=bool(args.parallel),
-		)
-
-	print(DIVIDER_S1)
+	pl_main()

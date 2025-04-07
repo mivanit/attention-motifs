@@ -317,7 +317,7 @@ parso==0.8.4
     # via jedi
 pathspec==0.12.1
     # via pycln
-pattern-lens @ git+https://github.com/mivanit/pattern-lens@6e2a777b1b0c4c6a8364dd3f6df5c4a3d910e183
+pattern-lens==0.4.0
     # via attention-motifs
 pdoc==15.0.1
 pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
