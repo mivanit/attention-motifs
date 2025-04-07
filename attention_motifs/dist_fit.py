@@ -5,6 +5,8 @@ from jaxtyping import Float
 from scipy.stats import beta, gamma
 from scipy.optimize import curve_fit
 
+from attention_motifs.bins import Bins
+
 
 class FitFunction(Protocol):
 	def __call__(self, x: Float, *params: float) -> Float:
@@ -67,10 +69,3 @@ FIT_FUNCTIONS: dict[str, tuple[Sequence[float], FitFunction]] = dict(
 	),
 )
 
-
-def hist_beta_fit(x: Float[np.ndarray, " n_ctx"]):
-	popt, pcov = curve_fit(
-		FIT_FUNCTIONS["beta"][1],
-		x,
-		FIT_FUNCTIONS["beta"][1](x, *FIT_FUNCTIONS["beta"][0]),
-	)
