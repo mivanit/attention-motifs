@@ -21,10 +21,50 @@ from pattern_lens.figures import HTConfigMock
 from attention_motifs.util import prefix_dict
 
 
+def process_prompt(
+	model_name: str,
+	prompt: dict,
+	save_path: Path,
+	features_func: Callable[
+		[Float[torch.Tensor, "n_ctx n_ctx"]],
+		dict[str, float],
+	],
+):
+	activations_path, cache = load_activations(
+		model_name=model_name,
+		prompt=prompt,
+		save_path=save_path,
+		return_fmt="numpy",
+	)
+
+	for cache_key, head_batch in cache.items():
+		layer_idx: int = int(cache_key.split(".")[1])
+		for head_idx, A in enumerate(head_batch[0]):
+			output.append(
+				{
+					**prefix_dict(
+						dict(
+							model=model,
+							layer=layer_idx,
+							cache_key=cache_key,
+							head=head_idx,
+							cls=f"{model}:L{layer_idx}:H{head_idx}",
+							prompt=prompt["hash"],
+						),
+						prefix="activation",
+					),
+					**prefix_dict(
+						features_func(A),
+						prefix="feat",
+					),
+				}
+			)
+
+
 def scalar_feature_table(
 	features_func: Callable[
-		[Float[torch.Tensor, "batch n_ctx n_ctx"]],
-		dict[str, Float[torch.Tensor, " batch"]],
+		[Float[torch.Tensor, "n_ctx n_ctx"]],
+		dict[str, float],
 	],
 	save_path: Path = Path("../docs/temp"),
 	models: list[str] | None = None,
