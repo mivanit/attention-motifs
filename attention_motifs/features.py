@@ -18,6 +18,13 @@ from pattern_lens.consts import (
 from pattern_lens.load_activations import load_activations
 from pattern_lens.figures import HTConfigMock
 
+def prefix_dict(
+	d: dict[str, float],
+	prefix: str|list[str],
+	sep: str = ".",
+) -> dict[str, float]:
+	prefix_str: str = prefix if isinstance(prefix, str) else sep.join(prefix)
+	return {f"{prefix_str}{sep}{k}": v for k, v in d.items()}
 
 def scalar_feature_table(
 	features_func: Callable[
@@ -63,19 +70,25 @@ def scalar_feature_table(
 				return_fmt="numpy",
 			)
 
-			for key, head_batch in cache.items():
-				features = features_func(torch.tensor(head_batch[0]))
-				for feature_name, feature_value in features.items():
-					for head_idx in range(feature_value.shape[0]):
-						output.append(
+			for cache_key, head_batch in cache.items():
+				layer_idx: int = int(cache_key.split(".")[1])
+				for head_idx, A in enumerate(head_batch[0]):
+					output.append({
+						**prefix_dict(
 							dict(
 								model=model,
-								prompt=prompt["hash"],
-								layer=idx,
+								layer=layer_idx,
+								cache_key=cache_key,
 								head=head_idx,
-								feat_name=feature_name,
-								feat_val=feature_value[head_idx].item(),
-							)
-						)
+								cls=f"{model}:L{layer_idx}:H{head_idx}",
+								prompt=prompt["hash"],
+							),
+							prefix="activation",
+						),
+						**prefix_dict(
+							features_func(A),
+							prefix="feat",
+						),
+					})
 
 	return pd.DataFrame(output)
