@@ -66,10 +66,11 @@ def transition_tensor(
 	res_norm: Callable[
 		[Float[np.ndarray, " d"], Float[np.ndarray, " d"]], float
 	] = l2_norm,
+	residuals: bool = True,
 ) -> tuple[
 	Int[np.ndarray, " n_idxs"],  # idxs
 	Float[np.ndarray, "n_idxs n_ctx n_ctx"],  # resampled transition tensor
-	Float[np.ndarray, "n_idxs n_ctx"],  # resampled residuals
+	Float[np.ndarray, "n_idxs n_ctx"]|None,  # resampled residuals
 ]:
 	"""
 	Compute the 3D transition tensor, residuals, and then resample
@@ -131,27 +132,18 @@ def transition_tensor(
 	)
 
 	# compute residuals
-	res_resampled: Float[np.ndarray, "n_idxs n_ctx"] = np.full(
-		(n_idxs, n_ctx), np.nan, dtype=A.dtype
-	)
-	for i_idx in range(n_idxs):
-		for i_ctx in range(n_ctx):
-			res_resampled[i_idx, i_ctx] = res_norm(
-				tt_resampled[i_idx, i_ctx, :], tt_resampled[i_idx - 1, i_ctx, :]
-			)
-
-	# dbg_tensor(res_resampled)
-
-	# )
-	# 	[
-	# 		[
-	# 			res_norm(A_powers[p][i, :], A_powers[p - 1][i, :])
-	# 			for i in range(n_ctx)
-	# 		]
-	# 		for p in idxs
-	# 	],
-	# 	dtype=A.dtype,
-	# )
+	res_resampled: Float[np.ndarray, "n_idxs n_ctx"]|None
+	if residuals:
+		res_resampled = np.full(
+			(n_idxs, n_ctx), np.nan, dtype=A.dtype
+		)
+		for i_idx in range(n_idxs):
+			for i_ctx in range(n_ctx):
+				res_resampled[i_idx, i_ctx] = res_norm(
+					tt_resampled[i_idx, i_ctx, :], tt_resampled[i_idx - 1, i_ctx, :]
+				)
+	else:
+		res_resampled = None
 
 	return idxs, tt_resampled, res_resampled
 

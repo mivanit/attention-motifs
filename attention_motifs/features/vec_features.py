@@ -2,11 +2,7 @@ import numpy as np
 import scipy.stats as stats
 import scipy.signal as signal
 
-# muutils
 from muutils.dbg import dbg_tensor
-
-# attention-motifs
-
 
 def vec_features(
 	arr: np.ndarray,

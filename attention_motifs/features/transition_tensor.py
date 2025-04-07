@@ -1,7 +1,6 @@
 import numpy as np
 from jaxtyping import Float
-
-# muutils
+import torch
 
 # attention-motifs
 from attention_motifs.features.vec_features import vec_features
@@ -14,7 +13,7 @@ def tt_features(
 	A: Float[np.ndarray, "n_ctx n_ctx"],
 	p_threshold: float = 0.0,
 ) -> dict[str, float]:
-	idxs, tt, res = transition_tensor(A, exact=100, approx_l10=7.0, approx_pts=100)
+	idxs, tt, res = transition_tensor(A, exact=32, approx_l10=5.0, approx_pts=32)
 
 	output: dict[str, float] = dict()
 
@@ -36,7 +35,7 @@ def tt_features(
 		)
 	)
 	idxs_x = np.arange(len(indices_adjusted_l10))
-	for envtype in ("lower", "upper", "bestfit"):
+	for envtype in ("lower", "upper"):
 		m, b, r2 = compute_envelope_params(
 			x=idxs_x,
 			y=indices_adjusted_l10,
