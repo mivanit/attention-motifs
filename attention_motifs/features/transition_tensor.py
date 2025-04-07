@@ -1,21 +1,14 @@
 import numpy as np
-import scipy.stats as stats
-import scipy.signal as signal
 from jaxtyping import Float
-import pandas as pd
-import matplotlib.pyplot as plt
 
 # muutils
-from muutils.dbg import dbg_tensor
-from muutils.jsonlines import jsonl_write, jsonl_load
 
 # attention-motifs
-from attention_motifs.bins import Bins
-from attention_motifs.features import scalar_feature_table, prefix_dict
 from attention_motifs.features.vec_features import vec_features
 from attention_motifs.math.math import compute_envelope_params
 from attention_motifs.transition_tensor import transition_tensor
 from attention_motifs.util import prefix_dict
+
 
 def tt_features(
 	A: Float[np.ndarray, "n_ctx n_ctx"],

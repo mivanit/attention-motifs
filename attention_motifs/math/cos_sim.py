@@ -1,16 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from jaxtyping import Float
-import scipy.stats as stats
 
-import muutils.dbg
-from muutils.dbg import dbg, dbg_tensor
-from muutils.tensor_info import array_summary
-
-from attention_motifs.util import plot_figs, load_activations, get_single_attn_pattern
-from attention_motifs.transition_tensor import transition_tensor
-from attention_motifs.math.math import compute_envelope_params, linear_plot
-from attention_motifs.bins import Bins
 
 def cosine_similarity_matrix(
 	X: Float[np.ndarray, "n n"], col: bool = False, eps: float = 1e-10

@@ -21,7 +21,6 @@ from pattern_lens.figures import HTConfigMock
 from attention_motifs.util import prefix_dict
 
 
-
 def scalar_feature_table(
 	features_func: Callable[
 		[Float[torch.Tensor, "batch n_ctx n_ctx"]],
