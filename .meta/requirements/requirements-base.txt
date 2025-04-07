@@ -300,6 +300,8 @@ plotly==6.0.1
     # via
     #   attention-motifs
     #   dash
+polars==1.26.0
+    # via attention-motifs
 prompt-toolkit==3.0.50
     # via ipython
 propcache==0.3.0

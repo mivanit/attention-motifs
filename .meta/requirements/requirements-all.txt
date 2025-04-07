@@ -332,6 +332,8 @@ plotly==6.0.1
     #   dash
 pluggy==1.5.0
     # via pytest
+polars==1.26.0
+    # via attention-motifs
 prompt-toolkit==3.0.50
     # via ipython
 propcache==0.3.0
