@@ -1,6 +1,7 @@
 import numpy as np
 from jaxtyping import Float
 from scipy.optimize import linprog
+import scipy.stats as stats
 
 import muutils.dbg
 
@@ -12,6 +13,9 @@ def compute_r2(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 	ss_tot: float = np.sum((y_true - np.mean(y_true)) ** 2)
 	return 1 - ss_res / ss_tot if ss_tot != 0 else (1.0 if ss_res == 0 else 0.0)
 
+def scaled_beta(x: np.ndarray, alpha: float, beta: float, scale: float) -> np.ndarray:
+	"""Scaled beta distribution."""
+	return stats.beta.pdf(x, alpha, beta) * scale
 
 def compute_envelope_params(
 	x: list[float],
