@@ -1,6 +1,9 @@
+import itertools
 import json
 from pathlib import Path
 from typing import Callable
+import functools
+import multiprocessing as mp
 
 
 import torch
@@ -22,20 +25,22 @@ from attention_motifs.util import prefix_dict
 
 
 def process_prompt(
-	model_name: str,
 	prompt: dict,
+	model_name: str,
 	save_path: Path,
 	features_func: Callable[
 		[Float[torch.Tensor, "n_ctx n_ctx"]],
 		dict[str, float],
 	],
-):
+) -> list[dict[str, int | float | str]]:
 	activations_path, cache = load_activations(
 		model_name=model_name,
 		prompt=prompt,
 		save_path=save_path,
 		return_fmt="numpy",
 	)
+
+	output: list[dict[str, int | float | str]] = list()
 
 	for cache_key, head_batch in cache.items():
 		layer_idx: int = int(cache_key.split(".")[1])
@@ -44,11 +49,11 @@ def process_prompt(
 				{
 					**prefix_dict(
 						dict(
-							model=model,
+							model=model_name,
 							layer=layer_idx,
 							cache_key=cache_key,
 							head=head_idx,
-							cls=f"{model}:L{layer_idx}:H{head_idx}",
+							cls=f"{model_name}:L{layer_idx}:H{head_idx}",
 							prompt=prompt["hash"],
 						),
 						prefix="activation",
@@ -59,6 +64,8 @@ def process_prompt(
 					),
 				}
 			)
+
+	return output
 
 
 def scalar_feature_table(
@@ -79,7 +86,7 @@ def scalar_feature_table(
 
 	# output has cols:
 	# model, prompt, layer_idx, head_idx, feature_name, feature_value
-	output: list[dict] = list()
+	output: list[dict[str, int|float|str]] = list()
 
 	for idx, model in enumerate(models):
 		print(f"model: '{model}'")
@@ -97,35 +104,17 @@ def scalar_feature_table(
 
 		print(f"{len(prompts)} prompts loaded")
 
-		for prompt in tqdm.tqdm(prompts, desc="prompts", total=len(prompts)):
-			activations_path, cache = load_activations(
-				model_name=model_cfg.model_name,
-				prompt=prompt,
-				save_path=save_path,
-				return_fmt="numpy",
-			)
+		# for prompt in tqdm.tqdm(prompts, desc="prompts", total=len(prompts)):
 
-			for cache_key, head_batch in cache.items():
-				layer_idx: int = int(cache_key.split(".")[1])
-				for head_idx, A in enumerate(head_batch[0]):
-					output.append(
-						{
-							**prefix_dict(
-								dict(
-									model=model,
-									layer=layer_idx,
-									cache_key=cache_key,
-									head=head_idx,
-									cls=f"{model}:L{layer_idx}:H{head_idx}",
-									prompt=prompt["hash"],
-								),
-								prefix="activation",
-							),
-							**prefix_dict(
-								features_func(A),
-								prefix="feat",
-							),
-						}
-					)
+		with mp.Pool(processes=mp.cpu_count()) as pool:
+			# process each prompt in parallel
+			prompt_func: Callable[[dict], list[dict[str, int|float|str]]] = functools.partial(
+				process_prompt,
+				model_name=model,
+				save_path=save_path,
+				features_func=features_func,
+			)
+			model_out: list[dict] = tqdm.tqdm(pool.imap(prompt_func, prompts), total=len(prompts))
+			output.extend(itertools.chain.from_iterable(model_out))
 
 	return pd.DataFrame(output)
