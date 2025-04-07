@@ -3,9 +3,7 @@ from typing import Protocol, Sequence
 import numpy as np
 from jaxtyping import Float
 from scipy.stats import beta, gamma
-from scipy.optimize import curve_fit
 
-from attention_motifs.bins import Bins
 
 
 class FitFunction(Protocol):
@@ -68,4 +66,3 @@ FIT_FUNCTIONS: dict[str, tuple[Sequence[float], FitFunction]] = dict(
 		lambda x, *params: gamma.pdf(x, params[0], scale=params[1]),
 	),
 )
-

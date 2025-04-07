@@ -18,13 +18,15 @@ from pattern_lens.consts import (
 from pattern_lens.load_activations import load_activations
 from pattern_lens.figures import HTConfigMock
 
+
 def prefix_dict(
 	d: dict[str, float],
-	prefix: str|list[str],
+	prefix: str | list[str],
 	sep: str = ".",
 ) -> dict[str, float]:
 	prefix_str: str = prefix if isinstance(prefix, str) else sep.join(prefix)
 	return {f"{prefix_str}{sep}{k}": v for k, v in d.items()}
+
 
 def scalar_feature_table(
 	features_func: Callable[
@@ -73,22 +75,24 @@ def scalar_feature_table(
 			for cache_key, head_batch in cache.items():
 				layer_idx: int = int(cache_key.split(".")[1])
 				for head_idx, A in enumerate(head_batch[0]):
-					output.append({
-						**prefix_dict(
-							dict(
-								model=model,
-								layer=layer_idx,
-								cache_key=cache_key,
-								head=head_idx,
-								cls=f"{model}:L{layer_idx}:H{head_idx}",
-								prompt=prompt["hash"],
+					output.append(
+						{
+							**prefix_dict(
+								dict(
+									model=model,
+									layer=layer_idx,
+									cache_key=cache_key,
+									head=head_idx,
+									cls=f"{model}:L{layer_idx}:H{head_idx}",
+									prompt=prompt["hash"],
+								),
+								prefix="activation",
 							),
-							prefix="activation",
-						),
-						**prefix_dict(
-							features_func(A),
-							prefix="feat",
-						),
-					})
+							**prefix_dict(
+								features_func(A),
+								prefix="feat",
+							),
+						}
+					)
 
 	return pd.DataFrame(output)
