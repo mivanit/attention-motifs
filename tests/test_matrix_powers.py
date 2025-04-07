@@ -3,7 +3,7 @@ import pytest
 from numpy.linalg import matrix_power
 from jaxtyping import Float
 
-from attention_motifs.matrix_powers import matrix_powers
+from attention_motifs.math.matrix_powers import matrix_powers
 
 
 class TestMatrixPowers:

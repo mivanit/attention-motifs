@@ -17,7 +17,7 @@ from pattern_lens.figure_util import (
 )
 from pattern_lens.figures import main as pl_main
 
-from attention_motifs.math import compute_envelope_params, linear_plot
+from attention_motifs.math.math import compute_envelope_params, linear_plot
 from attention_motifs.transition_tensor import transition_tensor
 
 

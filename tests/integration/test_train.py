@@ -12,7 +12,7 @@ from attention_motifs.dataset.dataset import (
 	CollectedAttentionPatternDataloader,
 )
 from attention_motifs.dataset.prompts import PromptDataset, PromptDatasetConfig
-from attention_motifs.vit_ae import VitAEConfig
+from attention_motifs.autoencoder.vit_ae import VitAEConfig
 
 
 @pytest.mark.integration

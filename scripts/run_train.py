@@ -8,8 +8,8 @@ import torch
 from trnbl.loggers.wandb import WandbLogger
 
 
-from attention_motifs.vit_ae import VitAEConfig, VitAE
-from attention_motifs.train import get_dataset, set_up_model, train
+from attention_motifs.autoencoder.vit_ae import VitAEConfig, VitAE
+from attention_motifs.autoencoder.train import get_dataset, set_up_model, train
 from attention_motifs.dataset.dataset import (
 	CollectedAttentionPatternDataloader,
 	DataloaderMock,

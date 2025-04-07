@@ -33,7 +33,7 @@ from attention_motifs.dataset.dataset import (
 	CollectedAttentionPatternDataloader,
 )
 from attention_motifs.dataset.util import AttentionPatternMetadata
-from attention_motifs.train_util import contrastive_loss
+from attention_motifs.autoencoder.train_util import contrastive_loss
 
 
 def get_dataset(
