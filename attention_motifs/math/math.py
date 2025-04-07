@@ -101,3 +101,22 @@ def linear_plot(
 ) -> Float[np.ndarray, " len(x)"]:
 	"""Compute the linear function L(x) = m*x + b."""
 	return m * x + b
+
+def skew_lt(
+	L: Float[np.ndarray, "n n"],
+) -> Float[np.ndarray, "n n"]:
+	"""Shift rows of a lower-triangular matrix so that its diagonal becomes the rightmost column.
+
+	# Parameters:
+	 - `L : Float[np.ndarray, "n n"]`
+	   A square lower-triangular matrix of shape `(n, n)`.
+
+	# Returns:
+	 - `Float[np.ndarray, "n n"]`
+	   A matrix of shape `(n, n)` with rows shifted so the original diagonal is in the rightmost column.
+	"""
+	n: int = L.shape[0]
+	S: Float[np.ndarray, "n n"] = np.zeros_like(L)
+	i, j = np.tril_indices(n)  # row indices i, col indices j of the lower triangle
+	S[i, j + (n - i - 1)] = L[i, j]  # shift columns so diagonal ends up at column n-1
+	return S
