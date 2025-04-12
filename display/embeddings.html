@@ -12,6 +12,8 @@
   <script src="dataframe.js"></script>
   <!-- Load color utilities -->
   <script src="colorutil.js"></script>
+  <!-- Load plotting utilities -->
+  <script src="plotutil.js"></script>
   <!-- Load styles -->
   <link rel="stylesheet" href="style.css">
   <!-- load app -->
@@ -76,12 +78,6 @@
         <div class="config-section">
           <h4>Non-selected Points</h4>
           <div class="control-row">
-            <div class="control-label">Color:</div>
-            <div class="control-input">
-              <input type="color" v-model="nonSelectedColor" @change="updatePlot">
-            </div>
-          </div>
-          <div class="control-row">
             <div class="control-label">Opacity:</div>
             <div class="control-input">
               <input type="range" min="0" max="1" step="0.1" v-model.number="nonSelectedOpacity" @change="updatePlot">
@@ -93,6 +89,12 @@
             <div class="control-input">
               <input type="range" min="1" max="10" step="0.5" v-model.number="nonSelectedSize" @change="updatePlot">
               <input type="number" min="1" max="10" step="0.5" v-model.number="nonSelectedSize" @change="updatePlot">
+            </div>
+          </div>
+          <div class="control-row">
+            <div class="control-label">Color:</div>
+            <div class="control-input">
+              <input type="color" v-model="nonSelectedColor" @change="updatePlot">
             </div>
           </div>
         </div>

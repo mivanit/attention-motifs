@@ -1,0 +1,1819 @@
+# Stats
+- 7 files
+- 1813 (1.8K) lines
+- 49927 (50K) chars
+- 19406 (19K) `gpt2` tokens
+
+# File Tree
+
+```
+display              
+├── app.js           [615L 20,611C 7,376T]
+├── array.js         [370L  9,746C 3,781T]
+├── colorutil.js     [ 60L  1,600C   675T]
+├── dataframe.js     [211L  5,212C 1,982T]
+├── embeddings.html  [137L  5,781C 2,552T]
+├── plotutil.js      [ 40L  1,197C   473T]
+└── style.css        [343L  4,952C 2,135T]
+```
+
+# File Contents
+
+``````{ path="app.js"  }
+
+// Create Vue app
+const app = Vue.createApp({
+	data() {
+		return {
+			title: 'Interactive 3D PCA Plot',
+			statusMessage: 'Loading data...',
+			isLoading: true,
+			loadingMessage: 'Loading data...',
+			loadingDetail: 'Initializing...',
+			loadingProgress: false,
+			loadingProgressPercent: 0,
+			processingSelection: false,
+			selectedValues: [],
+			plotData: null,
+			pcaArray: null,
+			dataFrame: null,
+			showDropdown: false,
+			selectedColumn: '', // Will be set after loading data
+			availableColumns: [],
+			pcaAxes: { x: 0, y: 1, z: 2 },
+			availablePcaAxes: [], // Will be populated with available components
+			selectionColors: [
+				'#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
+				'#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+			],
+			initialSelectionColors: [
+				'#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
+				'#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+			],
+			nonSelectedColor: '#969696', // Gray for non-selected points
+			nonSelectedOpacity: 0.4,
+			nonSelectedSize: 4,
+			selectedOpacity: 1.0,
+			selectedSize: 6,
+			baseUrl: 'https://miv.name/pattern-lens/demo/?',
+			dropdownTimeout: null,
+			configCollapsed: false,
+			// Default trace configuration
+			defaultTraceConfig: createDefaultTraceConfig(),
+			// Store current camera position
+			currentCameraPosition: null,
+			// Store selection timing information
+			lastSelectionTime: 0,
+			// Debounce timeout
+			updatePlotTimeout: null
+		};
+	},
+
+	computed: {
+		// Compute combined URL with all selected values
+		combinedUrl() {
+			if (!this.selectedValues.length) return this.baseUrl;
+			return this.baseUrl + this.selectedValues.map(val => encodeURIComponent(val)).join('&');
+		}
+	},
+
+	methods: {
+		// Load PCA data and metadata
+		async loadData() {
+			this.isLoading = true;
+			this.loadingMessage = 'Loading PCA data...';
+			this.loadingDetail = 'Requesting NPY file';
+			this.statusMessage = 'Loading PCA data...';
+			console.log('Starting data loading process');
+
+			try {
+				console.time('Load PCA NPY');
+				// Start loading PCA data file
+				this.loadingDetail = 'Downloading NPY file...';
+				console.log('Requesting PCA data file');
+
+				// actually load
+				// ----------------------------------------
+				this.pcaArray = await NDArray.load("../data/features/pca_data.npy");
+				// ----------------------------------------
+
+				console.timeEnd('Load PCA NPY');
+				console.log('PCA data loaded:', this.pcaArray);
+				console.log('PCA data shape:', this.pcaArray.shape);
+				console.log('PCA data type:', this.pcaArray.dtype);
+
+				this.loadingProgressPercent = 30;
+				this.loadingProgress = true;
+
+				// Setup available PCA axes
+				// ----------------------------------------
+				this.availablePcaAxes = new Array(this.pcaArray.shape[1]).fill(0).map((_, i) => i);
+				// ----------------------------------------
+				console.log('Available PCA components:', this.availablePcaAxes.length);
+
+				// Load metadata
+				this.loadingMessage = 'Loading metadata...';
+				this.loadingDetail = 'Requesting JSONL file';
+				this.statusMessage = 'Loading feature metadata...';
+				console.time('Load JSONL');
+
+				console.log('Requesting metadata file');
+				// ----------------------------------------
+				const response = await fetch("../data/features/features_scaled.jsonl");
+				// ----------------------------------------
+
+				this.loadingProgressPercent = 50;
+				this.loadingDetail = 'Processing JSONL file (takes a while)...';
+				console.log('Metadata file received, processing text...');
+				// ----------------------------------------
+				const text = await response.text();
+				// ----------------------------------------
+				console.log('JSONL text length:', text.length);
+
+				this.loadingProgressPercent = 70;
+				console.log('Parsing JSONL into DataFrame...');
+				// ----------------------------------------
+				this.dataFrame = DataFrame.from_jsonl(text);
+				// ----------------------------------------
+				console.timeEnd('Load JSONL');
+				console.log('DataFrame loaded:', this.dataFrame);
+				console.log('DataFrame columns:', this.dataFrame.columns);
+				console.log('DataFrame rows:', this.dataFrame.length);
+
+				// Process data
+				this.loadingMessage = 'Processing data...';
+				this.loadingDetail = 'Preparing plot data';
+				this.loadingProgressPercent = 80;
+				console.time('Process Data');
+				// ----------------------------------------
+				this.processData();
+				// ----------------------------------------
+				console.timeEnd('Process Data');
+
+				this.loadingProgressPercent = 90;
+
+				// Set available columns for selection
+				console.log('Finding categorical columns...');
+				// ----------------------------------------
+				this.availableColumns = this.dataFrame.columns.filter(col => {
+					try {
+						const uniqueCount = this.dataFrame.col_unique(col).size;
+						// At least 2 unique values but not too many (fewer than 50)
+						return uniqueCount < 50;
+					} catch (e) {
+						console.error(`Error checking column ${col}:`, e);
+						return false;
+					}
+				});
+				// ----------------------------------------
+
+				console.log('Available categorical columns:', this.availableColumns);
+
+				// Set default selected column
+				this.selectedColumn = 'activation.model';
+
+				console.log('Selected column for coloring:', this.selectedColumn);
+
+				this.loadingProgressPercent = 95;
+				this.statusMessage = 'Data loaded successfully';
+				this.loadingMessage = 'Rendering plot...';
+				this.loadingDetail = 'Creating visualization';
+
+				// Initialize the plot after data is loaded
+				this.initPlot();
+
+				this.loadingProgressPercent = 100;
+				this.isLoading = false;
+				console.log('Data loading complete');
+			} catch (error) {
+				console.error("Error loading data:", error);
+				this.statusMessage = `Error loading data: ${error.message}`;
+				this.loadingMessage = 'Error loading data';
+				this.loadingDetail = error.message;
+				this.isLoading = false;
+				this.loadingProgress = false;
+			}
+		},
+
+		// Process loaded data into a format suitable for plotting
+		processData() {
+			if (!this.pcaArray || !this.dataFrame) {
+				throw new Error("PCA data or metadata not loaded");
+			}
+
+			console.log('Processing data for plotting...');
+			const pcaData = this.pcaArray;
+
+			// Create the plot data object with arrays for all available PCA components
+			this.plotData = {
+				// Initialize empty arrays for all PCA components
+				pcaComponents: []
+			};
+
+			// Initialize arrays for each PCA component
+			for (let i = 0; i < pcaData.shape[1]; i++) {
+				console.log(`Extracting PCA component ${i + 1}...`);
+				// Use the get method with null to get all values for a specific component
+				this.plotData.pcaComponents[i] = Array.from(pcaData.get(null, i).data);
+			}
+
+			// Add metadata columns from the DataFrame to plotData
+			console.log('Adding metadata columns...');
+			for (const column of this.dataFrame.columns) {
+				this.plotData[column] = this.dataFrame.col(column);
+			}
+
+			// Initialize with current axes selection
+			this.updatePlotCoordinates();
+
+			console.log('Data processing complete');
+		},
+
+		// Update x, y, z arrays based on current PCA axis selection
+		updatePlotCoordinates() {
+			console.log(`Updating coordinates to PC${this.pcaAxes.x}, PC${this.pcaAxes.y}, PC${this.pcaAxes.z}`);
+
+			// Set x, y, z from the selected PCA components
+			this.plotData.x = this.plotData.pcaComponents[this.pcaAxes.x];
+			this.plotData.y = this.plotData.pcaComponents[this.pcaAxes.y];
+			this.plotData.z = this.plotData.pcaComponents[this.pcaAxes.z];
+		},
+
+		// Handle change of PCA axes
+		updatePlotAxes() {
+			console.log('PCA axes changed', this.pcaAxes);
+			this.updatePlotCoordinates();
+			this.updatePlot();
+		},
+
+		// Get current camera position from the plot
+		getCurrentCameraPosition() {
+			if (this.$refs.plotContainer && this.$refs.plotContainer._fullLayout) {
+				try {
+					// Deep clone to avoid reference issues
+					return JSON.parse(JSON.stringify(
+						this.$refs.plotContainer._fullLayout.scene.camera
+					));
+				} catch (e) {
+					console.warn("Could not get camera position:", e);
+					return null;
+				}
+			}
+			return null;
+		},
+
+		// Select a column from the dropdown
+		selectColumn(column) {
+			console.log(`Selected column changed from ${this.selectedColumn} to ${column}`);
+			this.selectedColumn = column;
+			this.showDropdown = false;
+			this.selectedValues = []; // Clear selection when changing column
+			this.updatePlot();
+		},
+
+		// Hide dropdown with delay to allow for click
+		hideDropdownDelayed() {
+			this.dropdownTimeout = setTimeout(() => {
+				this.showDropdown = false;
+			}, 200);
+		},
+
+		// Create traces grouped by categorical value (for initial view)
+		createTracesByCategory() {
+			console.log('Creating traces by category...');
+			if (!this.plotData || !this.selectedColumn) return [];
+
+			console.time('Create Category Traces');
+			const uniqueValues = [...this.dataFrame.col_unique(this.selectedColumn)];
+			console.log(`Found ${uniqueValues.length} unique values for ${this.selectedColumn}`);
+
+			const traces = [];
+
+			// Colors for category differentiation
+			const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
+
+			// Create a trace for each unique value
+			uniqueValues.forEach((value, index) => {
+				console.log(`Creating trace for ${value}...`);
+				const indices = [];
+
+				// Find all points with this value
+				for (let i = 0; i < this.plotData[this.selectedColumn].length; i++) {
+					if (this.plotData[this.selectedColumn][i] === value) {
+						indices.push(i);
+					}
+				}
+
+				console.log(`Found ${indices.length} points for ${value}`);
+
+				traces.push({
+					...this.defaultTraceConfig,
+					x: indices.map(i => this.plotData.x[i]),
+					y: indices.map(i => this.plotData.y[i]),
+					z: indices.map(i => this.plotData.z[i]),
+					name: String(value),
+					marker: {
+						size: this.selectedSize,
+						color: colors[index % colors.length],
+						opacity: this.selectedOpacity // Use the selected opacity for better visibility
+					},
+					customdata: indices.map(i => `${this.selectedColumn}: ${this.plotData[this.selectedColumn][i]}`)
+				});
+			});
+
+			console.timeEnd('Create Category Traces');
+			return traces;
+		},
+
+		// Create traces with selection highlighting
+		createTracesWithSelection() {
+			console.time('Create Selection Traces');
+			console.log('Creating traces with selection highlighting...');
+
+			if (!this.plotData) return [];
+
+			// First, separate points into selected and non-selected
+			const selectedIndices = {};
+			const nonSelectedIndices = [];
+
+			console.log(`Processing ${this.plotData[this.selectedColumn].length} points for selection...`);
+
+			// Group points by selection status
+			for (let i = 0; i < this.plotData[this.selectedColumn].length; i++) {
+				const value = this.plotData[this.selectedColumn][i];
+
+				if (this.selectedValues.includes(value)) {
+					if (!selectedIndices[value]) {
+						selectedIndices[value] = [];
+					}
+					selectedIndices[value].push(i);
+				} else {
+					nonSelectedIndices.push(i);
+				}
+			}
+
+			console.log(`Selection counts: ${Object.keys(selectedIndices).length} selected values, ${nonSelectedIndices.length} non-selected points`);
+
+			const traces = [];
+
+			// Add non-selected points (with configurable color/opacity)
+			if (nonSelectedIndices.length > 0) {
+				console.log(`Creating trace for ${nonSelectedIndices.length} non-selected points...`);
+				traces.push({
+					...this.defaultTraceConfig,
+					x: nonSelectedIndices.map(i => this.plotData.x[i]),
+					y: nonSelectedIndices.map(i => this.plotData.y[i]),
+					z: nonSelectedIndices.map(i => this.plotData.z[i]),
+					name: 'Other Points',
+					marker: {
+						size: this.nonSelectedSize,
+						color: this.nonSelectedColor,
+						opacity: this.nonSelectedOpacity
+					},
+					customdata: nonSelectedIndices.map(i => `${this.selectedColumn}: ${this.plotData[this.selectedColumn][i]}`)
+				});
+			}
+
+			// Add a trace for each selected value
+			Object.keys(selectedIndices).forEach((value, index) => {
+				const indices = selectedIndices[value];
+				console.log(`Creating trace for selected value "${value}" with ${indices.length} points...`);
+
+				traces.push({
+					...this.defaultTraceConfig,
+					x: indices.map(i => this.plotData.x[i]),
+					y: indices.map(i => this.plotData.y[i]),
+					z: indices.map(i => this.plotData.z[i]),
+					name: `Selected: ${value}`,
+					marker: {
+						size: this.selectedSize,
+						color: this.getSelectionColor(index),
+						opacity: this.selectedOpacity
+					},
+					customdata: indices.map(i => `${this.selectedColumn}: ${this.plotData[this.selectedColumn][i]}`)
+				});
+			});
+
+			console.timeEnd('Create Selection Traces');
+			return traces;
+		},
+
+		// Initialize the plot
+		initPlot() {
+			this.statusMessage = 'Creating plot...';
+			console.log('Initializing plot...');
+
+			if (!this.plotData) {
+				console.error("Plot data not available");
+				this.statusMessage = 'Error: Plot data not available';
+				return;
+			}
+
+			// Create initial traces by the selected categorical column
+			const traces = this.createTracesByCategory();
+
+			// Create the plot
+			console.log('Rendering initial plot...');
+			Plotly.newPlot(
+				this.$refs.plotContainer,
+				traces,
+				createPlotLayout(this.title, null, this.pcaAxes)
+			);
+
+			// Add click handler with proper binding
+			const boundHandlePointClick = this.handlePointClick.bind(this);
+			this.$refs.plotContainer.on('plotly_click', boundHandlePointClick);
+
+			// Add relayout event handler to capture camera position changes
+			this.$refs.plotContainer.on('plotly_relayout', (eventData) => {
+				// Update our stored camera position when user interacts with the plot
+				this.currentCameraPosition = this.getCurrentCameraPosition();
+			});
+
+			this.statusMessage = 'Plot ready - click points to select values';
+			console.log('Plot initialization complete');
+		},
+
+		// Handle point clicks
+		handlePointClick(data) {
+			if (data.points && data.points.length > 0) {
+				const point = data.points[0];
+				console.log("Clicked point:", point);
+
+				// Avoid processing clicks too rapidly
+				const now = Date.now();
+				if (now - this.lastSelectionTime < 300) { // 300ms debounce
+					console.log("Click ignored - too soon after previous click");
+					return;
+				}
+				this.lastSelectionTime = now;
+
+				if (point.customdata) {
+					// Extract value from customdata (format: "column: value")
+					const customData = point.customdata;
+					const match = customData.match(new RegExp(`${this.selectedColumn}: (.*)`));
+
+					if (match && match[1]) {
+						const value = match[1];
+						console.log(`Clicked ${this.selectedColumn}:`, value);
+
+						// Show processing indicator
+						this.processingSelection = true;
+
+						// Store current camera position before update
+						this.currentCameraPosition = this.getCurrentCameraPosition();
+
+						// Use setTimeout to avoid blocking the UI
+						setTimeout(() => {
+							console.time('Process Selection');
+
+							// Toggle selection
+							const index = this.selectedValues.indexOf(value);
+
+							if (index >= 0) {
+								// Remove if already selected
+								this.selectedValues.splice(index, 1);
+								console.log("Removed value:", value);
+							} else {
+								// Add if not already selected
+								this.selectedValues.push(value);
+								console.log("Added value:", value);
+							}
+
+							console.timeEnd('Process Selection');
+
+							// Update the visualization with some delay to prevent UI blocking
+							this.debounceUpdatePlot();
+						}, 10);
+					}
+				}
+			}
+		},
+
+		// Debounce the updatePlot call to prevent too frequent updates
+		debounceUpdatePlot() {
+			if (this.updatePlotTimeout) {
+				clearTimeout(this.updatePlotTimeout);
+			}
+
+			this.updatePlotTimeout = setTimeout(() => {
+				this.updatePlot();
+			}, 100);
+		},
+
+		// Update the plot based on selection
+		updatePlot() {
+			console.time('Update Plot');
+			try {
+				console.log('Updating plot...');
+
+				// Store current camera position before update if not already stored
+				if (!this.currentCameraPosition) {
+					this.currentCameraPosition = this.getCurrentCameraPosition();
+				}
+
+				// Create new traces based on selection state
+				console.log('Creating new traces...');
+				const traces = this.selectedValues.length > 0
+					? this.createTracesWithSelection()
+					: this.createTracesByCategory();
+
+				// First remove old click handlers to prevent duplicates
+				if (this.$refs.plotContainer && this.$refs.plotContainer.removeAllListeners) {
+					this.$refs.plotContainer.removeAllListeners('plotly_click');
+				}
+
+				// Use complete redraw with newPlot to avoid potential issues
+				// Apply saved camera position in the layout
+				console.log('Rendering plot with new data...');
+				Plotly.newPlot(
+					this.$refs.plotContainer,
+					traces,
+					createPlotLayout(this.title, this.currentCameraPosition, this.pcaAxes)
+				);
+
+				// Add click handler again after plot is redrawn with proper binding
+				const boundHandlePointClick = this.handlePointClick.bind(this);
+				this.$refs.plotContainer.on('plotly_click', boundHandlePointClick);
+
+				// Re-add the relayout event handler
+				this.$refs.plotContainer.on('plotly_relayout', (eventData) => {
+					this.currentCameraPosition = this.getCurrentCameraPosition();
+				});
+
+				// Hide processing indicator if it was shown
+				this.processingSelection = false;
+				this.statusMessage = 'Plot updated';
+				console.log('Plot update complete');
+			} catch (error) {
+				console.error("Error updating plot:", error);
+				this.statusMessage = `Error updating plot: ${error.message}`;
+				this.processingSelection = false;
+			}
+			console.timeEnd('Update Plot');
+		},
+
+		// Toggle config section collapse
+		toggleConfigCollapse() {
+			this.configCollapsed = !this.configCollapsed;
+			console.log(`Configuration ${this.configCollapsed ? 'collapsed' : 'expanded'}`);
+		},
+
+		// Clear selection
+		clearSelection() {
+			console.log('Clearing all selections');
+			// Store current camera position before clearing
+			this.currentCameraPosition = this.getCurrentCameraPosition();
+
+			this.selectedValues = [];
+			// Reset colors back to initial set
+			this.selectionColors = [...this.initialSelectionColors];
+			this.updatePlot();
+		},
+
+		// Remove a specific value from selection
+		removeSelectedValue(value) {
+			console.log(`Removing value from selection: ${value}`);
+			// Store current camera position before removing value
+			this.currentCameraPosition = this.getCurrentCameraPosition();
+
+			const index = this.selectedValues.indexOf(value);
+			if (index >= 0) {
+				this.selectedValues.splice(index, 1);
+				this.updatePlot();
+			}
+		},
+
+		// Get selection color for display
+		getSelectionColor(index) {
+			return this.selectionColors[index % this.selectionColors.length];
+		},
+
+		// Generate new random colors that are visually distinct
+		regenerateColors() {
+			console.log('Regenerating selection colors');
+			// Store current camera position before changing colors
+			this.currentCameraPosition = this.getCurrentCameraPosition();
+			// Using the imported generateDistinctColors function from colorutil.js
+			this.selectionColors = generateDistinctColors(9);
+			// Save the new colors as the initial set too
+			this.initialSelectionColors = [...this.selectionColors];
+			this.statusMessage = 'Colors regenerated';
+			// Always update the plot
+			this.updatePlot();
+		},
+
+		// Show performance information in console for debugging
+		logPerformanceInfo() {
+			console.log('Performance Information:');
+			console.log(`Total points: ${this.plotData?.x?.length || 'N/A'}`);
+			console.log(`Total unique ${this.selectedColumn} values: ${this.availableColumns.length > 0 ?
+				this.dataFrame.col_unique(this.selectedColumn).size : 'N/A'}`);
+			console.log(`Current selection: ${this.selectedValues.length} values`);
+			console.log(`Available PCA components: ${this.availablePcaAxes.length}`);
+			console.log(`Current axes: PC${this.pcaAxes.x + 1}, PC${this.pcaAxes.y + 1}, PC${this.pcaAxes.z + 1}`);
+
+			// Log memory usage if available
+			if (window.performance && window.performance.memory) {
+				const memory = window.performance.memory;
+				console.log(`Used JS heap: ${(memory.usedJSHeapSize / (1024 * 1024)).toFixed(2)} MB`);
+				console.log(`Total JS heap: ${(memory.totalJSHeapSize / (1024 * 1024)).toFixed(2)} MB`);
+			}
+		}
+	},
+
+	mounted() {
+		// Load data when component is mounted
+		this.loadData();
+
+		// Set up keyboard shortcuts for debugging
+		window.addEventListener('keydown', (e) => {
+			// Ctrl+Shift+P to log performance info
+			if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+				this.logPerformanceInfo();
+			}
+		});
+	}
+});
+``````{ end_of_file="app.js" }
+
+``````{ path="array.js"  }
+// ------------------------------------------------------------
+// this file has been modified from original code at:
+// https://github.com/aplbrain/npyjs
+// under Apache License
+// https://github.com/aplbrain/npyjs/blob/b0cd99b7f4c2bff791b4977e16dec3478519920b/LICENSE
+// removed float16 support for brevity -- we don't need it
+// ------------------------------------------------------------
+class npyjs {
+
+	constructor() {
+		this.dtypes = {
+			"<u1": {
+				name: "uint8",
+				size: 8,
+				arrayConstructor: Uint8Array,
+			},
+			"|u1": {
+				name: "uint8",
+				size: 8,
+				arrayConstructor: Uint8Array,
+			},
+			"<u2": {
+				name: "uint16",
+				size: 16,
+				arrayConstructor: Uint16Array,
+			},
+			"|i1": {
+				name: "int8",
+				size: 8,
+				arrayConstructor: Int8Array,
+			},
+			"<i2": {
+				name: "int16",
+				size: 16,
+				arrayConstructor: Int16Array,
+			},
+			"<u4": {
+				name: "uint32",
+				size: 32,
+				arrayConstructor: Uint32Array,
+			},
+			"<i4": {
+				name: "int32",
+				size: 32,
+				arrayConstructor: Int32Array,
+			},
+			"<u8": {
+				name: "uint64",
+				size: 64,
+				arrayConstructor: BigUint64Array,
+			},
+			"<i8": {
+				name: "int64",
+				size: 64,
+				arrayConstructor: BigInt64Array,
+			},
+			"<f4": {
+				name: "float32",
+				size: 32,
+				arrayConstructor: Float32Array
+			},
+			"<f8": {
+				name: "float64",
+				size: 64,
+				arrayConstructor: Float64Array
+			},
+			// "<f2": {
+			//     name: "float16",
+			//     size: 16,
+			//     arrayConstructor: Uint16Array,
+			//     converter: this.convertFloat16 ? this.float16ToFloat32Array : undefined
+			// },
+		};
+	}
+
+	parse(arrayBufferContents) {
+		// const version = arrayBufferContents.slice(6, 8); // Uint8-encoded
+		const headerLength = new DataView(arrayBufferContents.slice(8, 10)).getUint8(0);
+		const offsetBytes = 10 + headerLength;
+
+		const hcontents = new TextDecoder("utf-8").decode(
+			new Uint8Array(arrayBufferContents.slice(10, 10 + headerLength))
+		);
+		const header = JSON.parse(
+			hcontents
+				.toLowerCase() // True -> true
+				.replace(/'/g, '"')
+				.replace("(", "[")
+				.replace(/,*\),*/g, "]")
+		);
+		const shape = header.shape;
+		const dtype = this.dtypes[header.descr];
+
+		if (!dtype) {
+			console.error(`Unsupported dtype: ${header.descr}`);
+			return null;
+		}
+
+		const nums = new dtype.arrayConstructor(
+			arrayBufferContents,
+			offsetBytes
+		);
+
+		// Convert float16 to float32 if converter exists
+		const data = dtype.converter ? dtype.converter.call(this, nums) : nums;
+
+		return {
+			dtype: dtype.name,
+			data: data,
+			shape,
+			fortranOrder: header.fortran_order
+		};
+	}
+
+	async load(filename, callback, fetchArgs) {
+		/*
+		Loads an array from a stream of bytes.
+		*/
+		fetchArgs = fetchArgs || {};
+		let arrayBuf;
+		// If filename is ArrayBuffer
+		if (filename instanceof ArrayBuffer) {
+			arrayBuf = filename;
+		}
+		// If filename is a file path
+		else {
+			const resp = await fetch(filename, { ...fetchArgs });
+			arrayBuf = await resp.arrayBuffer();
+		}
+		const result = this.parse(arrayBuf);
+		if (callback) {
+			return callback(result);
+		}
+		return result;
+	}
+}
+
+
+class NDArray {
+	/**
+	 * Creates a multidimensional array similar to NumPy arrays
+	 * 
+	 * @param {any} data - The array data
+	 * @param {Array<number>} shape - The shape of the array
+	 * @param {string} dtype - The data type of the array
+	 */
+	constructor(data, shape, dtype) {
+		this.data = data;
+		this.shape = shape;
+		this.dtype = dtype;
+		this.ndim = shape.length;
+
+		// Calculate total size from shape
+		this._size = shape.reduce((acc, dim) => acc * dim, 1);
+
+		// Validate data length matches shape
+		if (data.length !== this._size) {
+			throw new Error(`Data length ${data.length} doesn't match shape ${shape} (expected ${this._size})`);
+		}
+	}
+
+	/**
+	 * Converts multidimensional indices to flat index
+	 * 
+	 * @param {Array<number|null>} indices - Array of indices, can contain null for slicing
+	 * @returns {number|Array<number>} - Flat index or array of indices for slicing
+	 * @private
+	 */
+	_getIndices(indices) {
+		// Handle case where all dimensions are requested (no indices)
+		if (indices.length === 0) {
+			return [...Array(this._size).keys()];
+		}
+
+		// Check that we don't have too many indices
+		if (indices.filter(idx => idx !== null).length > this.shape.length) {
+			throw new Error(`Too many indices for array with shape ${this.shape}`);
+		}
+
+		// If we have exact indices (no nulls), calculate flat index
+		if (!indices.includes(null) && indices.length === this.shape.length) {
+			// Validate all indices
+			for (let i = 0; i < indices.length; i++) {
+				if (indices[i] < 0) {
+					indices[i] = this.shape[i] + indices[i]; // Handle negative indices like numpy
+				}
+
+				if (indices[i] < 0 || indices[i] >= this.shape[i]) {
+					throw new Error(`Index ${indices[i]} is out of bounds for axis ${i} with size ${this.shape[i]}`);
+				}
+			}
+
+			// Calculate flat index using strides
+			let flatIndex = 0;
+			let stride = 1;
+
+			for (let i = this.shape.length - 1; i >= 0; i--) {
+				flatIndex += indices[i] * stride;
+				stride *= this.shape[i];
+			}
+
+			return flatIndex;
+		}
+
+		// Handle slicing (when some indices are null)
+		// This returns all flat indices that match the specified dimensions
+		const resultIndices = [];
+		const completeIndices = [...indices];
+
+		// Fill in missing indices with zeros
+		while (completeIndices.length < this.shape.length) {
+			completeIndices.push(0);
+		}
+
+		// Find which dimensions need to be iterated over (those with null)
+		const dimToIterate = [];
+		for (let i = 0; i < this.shape.length; i++) {
+			if (i >= indices.length || indices[i] === null) {
+				dimToIterate.push(i);
+			}
+		}
+
+		// Generate all combinations of indices for the dimensions to iterate over
+		const generateIndices = (currentDim, currentIndices) => {
+			if (currentDim >= dimToIterate.length) {
+				// Calculate flat index for this combination
+				let flatIndex = 0;
+				let stride = 1;
+
+				for (let i = this.shape.length - 1; i >= 0; i--) {
+					flatIndex += currentIndices[i] * stride;
+					stride *= this.shape[i];
+				}
+
+				resultIndices.push(flatIndex);
+				return;
+			}
+
+			const dim = dimToIterate[currentDim];
+			for (let i = 0; i < this.shape[dim]; i++) {
+				currentIndices[dim] = i;
+				generateIndices(currentDim + 1, currentIndices);
+			}
+		};
+
+		generateIndices(0, completeIndices);
+		return resultIndices;
+	}
+
+	/**
+	 * Gets values at specified indices
+	 * 
+	 * @param {...(number|null)} args - Indices for each dimension, null for full dimension
+	 * @returns {any} - Value or subarray at the specified location
+	 */
+	get(...args) {
+		// Handle case where args is array
+		let indices = args;
+		if (args.length === 1 && Array.isArray(args[0])) {
+			indices = args[0];
+		}
+
+		const flatIndices = this._getIndices(indices);
+
+		// If we got a single index, return the single value
+		if (typeof flatIndices === 'number') {
+			return this.data[flatIndices];
+		}
+
+		// Otherwise, create a new array with the values
+		// We need to calculate the shape of the result
+		const resultShape = [];
+		for (let i = 0; i < this.shape.length; i++) {
+			if (i >= indices.length || indices[i] === null) {
+				resultShape.push(this.shape[i]);
+			}
+		}
+
+		// If result is empty, it means we want the entire array
+		if (resultShape.length === 0) {
+			return this;
+		}
+
+		// Create new data array with the values at the flat indices
+		const resultData = new this.data.constructor(flatIndices.length);
+		for (let i = 0; i < flatIndices.length; i++) {
+			resultData[i] = this.data[flatIndices[i]];
+		}
+
+		return new NDArray(resultData, resultShape, this.dtype);
+	}
+
+	/**
+	 * Sets values at specified indices
+	 * 
+	 * @param {...*} args - Indices followed by value to set
+	 */
+	set(...args) {
+		// Handle case where args is array
+		let indices, value;
+		if (args.length === 2 && Array.isArray(args[0])) {
+			indices = args[0];
+			value = args[1];
+		} else {
+			value = args[args.length - 1];
+			indices = args.slice(0, args.length - 1);
+		}
+
+		const flatIndices = this._getIndices(indices);
+
+		// If we got a single index, set the single value
+		if (typeof flatIndices === 'number') {
+			this.data[flatIndices] = value;
+			return;
+		}
+
+		// Otherwise, set all indices to the value
+		// If value is an array, distribute its values
+		if (Array.isArray(value) || (value instanceof NDArray)) {
+			const valueArray = value instanceof NDArray ? value.data : value;
+			if (valueArray.length !== flatIndices.length) {
+				throw new Error(`Cannot broadcast ${valueArray.length} values to ${flatIndices.length} indices`);
+			}
+
+			for (let i = 0; i < flatIndices.length; i++) {
+				this.data[flatIndices[i]] = valueArray[i];
+			}
+		} else {
+			// Set all indices to the same value
+			for (const idx of flatIndices) {
+				this.data[idx] = value;
+			}
+		}
+	}
+
+	/**
+	 * Returns a string representation of the array
+	 * 
+	 * @returns {string} String representation of the array
+	 */
+	toString() {
+		// Simple representation for 1D arrays
+		if (this.shape.length === 1) {
+			return `[${Array.from(this.data).join(', ')}]`;
+		}
+
+		// For higher dimensions, we'll just show shape and type
+		return `NDArray(${this.shape.join('×')}, ${this.dtype})`;
+	}
+
+	static parse(arrayBufferContents) {
+		const npy = new npyjs();
+		const npyData = npy.parse(arrayBufferContents);
+		if (!npyData) {
+			throw new Error('Failed to parse NPY data');
+		}
+		// Convert data to NDArray
+		return new NDArray(npyData.data, npyData.shape, npyData.dtype);
+	}
+
+	static async load(filename, callback, fetchArgs) {
+		const npy = new npyjs();
+		const npyData = await npy.load(filename, null, fetchArgs);
+		if (!npyData) {
+			throw new Error('Failed to load NPY data');
+		}
+		// Convert data to NDArray
+		return new NDArray(npyData.data, npyData.shape, npyData.dtype);
+	}
+}
+``````{ end_of_file="array.js" }
+
+``````{ path="colorutil.js"  }
+/**
+ * Converts HSL color values to hexadecimal color representation
+ * @param {number} h - Hue value (0-360)
+ * @param {number} s - Saturation value (0-100)
+ * @param {number} l - Lightness value (0-100)
+ * @returns {string} Hexadecimal color string (e.g., "#ff0000")
+ */
+function hslToHex(h, s, l) {
+	s /= 100;
+	l /= 100;
+
+	const c = (1 - Math.abs(2 * l - 1)) * s;
+	const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+	const m = l - c / 2;
+
+	let r, g, b;
+
+	if (0 <= h && h < 60) {
+		[r, g, b] = [c, x, 0];
+	} else if (60 <= h && h < 120) {
+		[r, g, b] = [x, c, 0];
+	} else if (120 <= h && h < 180) {
+		[r, g, b] = [0, c, x];
+	} else if (180 <= h && h < 240) {
+		[r, g, b] = [0, x, c];
+	} else if (240 <= h && h < 300) {
+		[r, g, b] = [x, 0, c];
+	} else {
+		[r, g, b] = [c, 0, x];
+	}
+
+	const toHex = (value) => {
+		const hex = Math.round((value + m) * 255).toString(16);
+		return hex.length === 1 ? '0' + hex : hex;
+	};
+
+	return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+/**
+ * Generates an array of visually distinct colors
+ * @param {number} count - Number of colors to generate
+ * @returns {string[]} Array of hexadecimal color strings
+ */
+function generateDistinctColors(count) {
+	const colors = [];
+
+	for (let i = 0; i < count; i++) {
+		// Generate colors with good saturation and brightness
+		const h = Math.floor(Math.random() * 360); // Hue (0-360)
+		const s = Math.floor(50 + Math.random() * 50); // Saturation (50-100%)
+		const l = Math.floor(40 + Math.random() * 20); // Lightness (40-60%)
+
+		// Convert HSL to HEX
+		const color = hslToHex(h, s, l);
+		colors.push(color);
+	}
+
+	return colors;
+}
+``````{ end_of_file="colorutil.js" }
+
+``````{ path="dataframe.js"  }
+class DataFrame {
+	/**
+	 * Creates a DataFrame from a list of row objects
+	 * 
+	 * @param {Array<Object>} data - Array of row objects
+	 * @param {Array<string>} [columns] - Optional column names (will be inferred from data if not provided)
+	 */
+	constructor(data = [], columns = null) {
+		this.data = data;
+
+		// Infer columns from data if not provided
+		if (!columns && data.length > 0) {
+			this.columns = Object.keys(data[0]);
+		} else {
+			this.columns = columns || [];
+		}
+	}
+
+	/**
+	 * Returns the values for a specific column
+	 * 
+	 * @param {string} name - Column name
+	 * @returns {Array} - Values in the column
+	 */
+	col(name) {
+		if (!this.columns.includes(name)) {
+			throw new Error(`Column '${name}' not found in columns: ${this.columns.join(', ')}`);
+		}
+
+		return this.data.map(row => row[name]);
+	}
+
+	/**
+	 * Returns the values for a specific cell
+	 * @param {row_idx} row_idx - Row index
+	 * @param {col_name} col_name - Column name
+	 * @returns {any} - Value in the cell
+	 * @throws {Error} - If row index or column name is invalid
+	 */
+	get(row_idx, col_name) {
+		if (row_idx < 0 || row_idx >= this.data.length) {
+			throw new Error(`Row index ${row_idx} out of bounds (0 to ${this.data.length - 1})`);
+		}
+
+		if (!this.columns.includes(col_name)) {
+			throw new Error(`Column '${col_name}' not found in columns: ${this.columns.join(', ')}`);
+		}
+
+		return this.data[row_idx][col_name];
+	}
+
+	/**
+	 * Returns a specific row as an object
+	 * 
+	 * @param {number} rowIdx - Row index
+	 * @returns {Object} - Row as an object
+	 */
+	row(rowIdx) {
+		if (rowIdx < 0 || rowIdx >= this.data.length) {
+			throw new Error(`Row index ${rowIdx} out of bounds (0 to ${this.data.length - 1})`);
+		}
+
+		return this.data[rowIdx];
+	}
+
+	/**
+	 * Returns unique values in a specific column
+	 * @param {string} name - Column name
+	 * @returns {Set} - Unique values in the column
+	 */
+	col_unique(name) {
+		return new Set(this.col(name));
+	}
+
+	/**
+	 * Parses a CSV string into a DataFrame
+	 * 
+	 * @param {string} text - CSV text content
+	 * @returns {DataFrame} - New DataFrame instance
+	 */
+	static from_csv(text) {
+		// Split text into lines and filter out empty lines
+		const lines = text.split('\n').filter(line => line.trim().length > 0);
+
+		if (lines.length === 0) {
+			return new DataFrame();
+		}
+
+		// First line is the header
+		const header = lines[0].split(',').map(col => col.trim());
+
+		// Parse each line into a row object
+		const data = [];
+		for (let i = 1; i < lines.length; i++) {
+			const values = lines[i].split(',').map(val => val.trim());
+
+			// Create row object mapping column names to values
+			const row = {};
+			for (let j = 0; j < header.length; j++) {
+				// Try to convert to number if possible
+				const value = values[j];
+				if (value === undefined) continue;
+
+				// Handle quoted strings
+				if (value.startsWith('"') && value.endsWith('"')) {
+					row[header[j]] = value.slice(1, -1);
+				}
+				// Handle null values
+				else if (value === '' || value.toLowerCase() === 'null') {
+					row[header[j]] = null;
+				}
+				// Try converting to number
+				else if (!isNaN(value)) {
+					row[header[j]] = Number(value);
+				}
+				// Otherwise keep as string
+				else {
+					row[header[j]] = value;
+				}
+			}
+
+			data.push(row);
+		}
+
+		return new DataFrame(data, header);
+	}
+
+	/**
+	 * Converts DataFrame to CSV string
+	 * 
+	 * @returns {string} - CSV representation of the DataFrame
+	 */
+	to_csv() {
+		if (this.data.length === 0) {
+			return this.columns.join(',');
+		}
+
+		// Start with the header
+		const lines = [this.columns.join(',')];
+
+		// Add each row
+		for (const row of this.data) {
+			const values = this.columns.map(col => {
+				const val = row[col];
+
+				if (val === null || val === undefined) {
+					return '';
+				} else if (typeof val === 'string' && (val.includes(',') || val.includes('"'))) {
+					// Escape quotes and wrap in quotes
+					return `"${val.replace(/"/g, '""')}"`;
+				} else {
+					return String(val);
+				}
+			});
+
+			lines.push(values.join(','));
+		}
+
+		return lines.join('\n');
+	}
+
+	/**
+	 * Parses a JSONL string into a DataFrame
+	 * 
+	 * @param {string} text - JSONL text content
+	 * @returns {DataFrame} - New DataFrame instance
+	 */
+	static from_jsonl(text) {
+		// Parse each line as JSON
+		const data = text.trim().split('\n').map(line => JSON.parse(line));
+
+		// Extract all unique column names from all rows
+		const allColumns = new Set();
+		for (const row of data) {
+			Object.keys(row).forEach(key => allColumns.add(key));
+		}
+
+		return new DataFrame(data, Array.from(allColumns));
+	}
+
+	/**
+	 * Converts DataFrame to JSONL string
+	 * 
+	 * @returns {string} - JSONL representation of the DataFrame
+	 */
+	to_jsonl() {
+		return this.data.map(row => JSON.stringify(row)).join('\n');
+	}
+
+	/**
+	 * Returns the number of rows in the DataFrame
+	 * 
+	 * @returns {number} - Number of rows
+	 */
+	get length() {
+		return this.data.length;
+	}
+
+	/**
+	 * Returns a string representation of the DataFrame
+	 * 
+	 * @returns {string} - String representation
+	 */
+	toString() {
+		if (this.data.length === 0) {
+			return 'Empty DataFrame';
+		}
+
+		return `DataFrame with ${this.data.length} rows and ${this.columns.length} columns: ${this.columns.join(', ')}`;
+	}
+}
+
+``````{ end_of_file="dataframe.js" }
+
+``````{ path="embeddings.html"  }
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Vue-Based 3D PCA Plot</title>
+  <!-- Load Vue -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+  <!-- Load Plotly.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.2/plotly.min.js"></script>
+  <script src="array.js"></script>
+  <!-- implements `DataFrame` -->
+  <script src="dataframe.js"></script>
+  <!-- Load color utilities -->
+  <script src="colorutil.js"></script>
+  <!-- Load plotting utilities -->
+  <script src="plotutil.js"></script>
+  <!-- Load styles -->
+  <link rel="stylesheet" href="style.css">
+  <!-- load app -->
+  <script src="app.js"></script>
+</head>
+
+<body>
+  <div id="app">
+    <h1>{{ title }}</h1>
+    <div class="controls">
+      <div class="control-group">
+        <button @click="clearSelection">Clear Selection</button>
+        <button class="secondary" @click="regenerateColors">Regenerate Colors</button>
+        <div class="combo-select">
+          <input type="text" v-model="selectedColumn" @focus="showDropdown = true" @blur="hideDropdownDelayed" placeholder="Select column" />
+          <div class="dropdown" v-if="showDropdown">
+            <div v-for="column in availableColumns" class="dropdown-item" @mousedown.prevent="selectColumn(column)"> {{ column }} </div>
+          </div>
+        </div>
+      </div>
+      <div class="status-message">{{ statusMessage }}</div>
+    </div>
+    <!-- PCA Axis Selection -->
+    <div class="axis-controls">
+      <div v-for="(axis, axisName) in {x: 'X', y: 'Y', z: 'Z'}" class="axis-control">
+        <label>{{ axisName }}-Axis:</label>
+        <select v-model="pcaAxes[axis.toLowerCase()]" @change="updatePlotAxes">
+          <option v-for="(_, index) in availablePcaAxes" :value="index">PC{{ index }}</option>
+        </select>
+      </div>
+    </div>
+    <div id="plot-container" class="plot-container" ref="plotContainer">
+      <!-- Loading overlay -->
+      <div v-if="isLoading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <h3>{{ loadingMessage }}</h3>
+        <p>{{ loadingDetail }}</p>
+        <div v-if="loadingProgress" class="loading-progress">
+          <div class="loading-progress-bar" :style="{ width: loadingProgressPercent + '%' }"></div>
+        </div>
+      </div>
+      <!-- Processing selection indicator -->
+      <div v-if="processingSelection" class="processing-indicator">
+        <div class="mini-spinner"></div>
+        <span>Processing selection...</span>
+      </div>
+    </div>
+    <div>
+      <h3>Selected Values:</h3>
+      <div class="selection-display">
+        <template v-if="selectedValues.length === 0">None</template>
+        <span v-for="(val, i) in selectedValues" :key="val" class="selected-value" :style="{ backgroundColor: getSelectionColor(i) }"> {{ val }} <div class="remove-btn" @click="removeSelectedValue(val)" title="Remove">×</div>
+        </span>
+      </div>
+    </div>
+    <div class="config-display">
+      <div class="config-header" @click="toggleConfigCollapse">
+        <h3>Plot Configuration</h3>
+        <span class="collapse-icon" :class="{ rotated: configCollapsed }">▼</span>
+      </div>
+      <div class="config-content" v-show="!configCollapsed">
+        <div class="config-section">
+          <h4>Non-selected Points</h4>
+          <div class="control-row">
+            <div class="control-label">Opacity:</div>
+            <div class="control-input">
+              <input type="range" min="0" max="1" step="0.1" v-model.number="nonSelectedOpacity" @change="updatePlot">
+              <input type="number" min="0" max="1" step="0.1" v-model.number="nonSelectedOpacity" @change="updatePlot">
+            </div>
+          </div>
+          <div class="control-row">
+            <div class="control-label">Size:</div>
+            <div class="control-input">
+              <input type="range" min="1" max="10" step="0.5" v-model.number="nonSelectedSize" @change="updatePlot">
+              <input type="number" min="1" max="10" step="0.5" v-model.number="nonSelectedSize" @change="updatePlot">
+            </div>
+          </div>
+          <div class="control-row">
+            <div class="control-label">Color:</div>
+            <div class="control-input">
+              <input type="color" v-model="nonSelectedColor" @change="updatePlot">
+            </div>
+          </div>
+        </div>
+        <div class="config-section">
+          <h4>Selected Points</h4>
+          <div class="control-row">
+            <div class="control-label">Opacity:</div>
+            <div class="control-input">
+              <input type="range" min="0" max="1" step="0.1" v-model.number="selectedOpacity" @change="updatePlot">
+              <input type="number" min="0" max="1" step="0.1" v-model.number="selectedOpacity" @change="updatePlot">
+            </div>
+          </div>
+          <div class="control-row">
+            <div class="control-label">Size:</div>
+            <div class="control-input">
+              <input type="range" min="1" max="10" step="0.5" v-model.number="selectedSize" @change="updatePlot">
+              <input type="number" min="1" max="10" step="0.5" v-model.number="selectedSize" @change="updatePlot">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="url-section">
+      <h3>Generated Link:</h3>
+      <div>
+        <input type="text" v-model="baseUrl" placeholder="Enter base URL" />
+        <div class="generated-links" v-if="selectedValues.length > 0">
+          <h4>Combined Link:</h4>
+          <a :href="combinedUrl" target="_blank" class="generated-link"> {{ combinedUrl }} </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Mount the app to the container
+    app.mount('#app');
+  </script>
+</body>
+
+</html>
+``````{ end_of_file="embeddings.html" }
+
+``````{ path="plotutil.js"  }
+/**
+ * Creates a layout configuration for a Plotly 3D scatter plot
+ * @param {string} title - Title of the plot
+ * @param {Object|null} cameraPosition - Optional camera position to preserve
+ * @param {Object} axes - Object with x, y, z indices of PCA components to use
+ * @returns {Object} Layout configuration object for Plotly
+ */
+function createPlotLayout(title, cameraPosition = null, axes = { x: 0, y: 1, z: 2 }) {
+	const layout = {
+		title: title,
+		scene: {
+			xaxis: { title: `PC${axes.x}` },
+			yaxis: { title: `PC${axes.y}` },
+			zaxis: { title: `PC${axes.z}` },
+			camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
+		},
+		margin: { l: 0, r: 0, b: 0, t: 50 },
+		hovermode: 'closest'
+	};
+
+	// Apply saved camera position if provided
+	if (cameraPosition) {
+		layout.scene.camera = cameraPosition;
+	}
+
+	return layout;
+}
+
+/**
+ * Creates a default trace configuration for a Plotly 3D scatter plot
+ * @returns {Object} Base trace configuration
+ */
+function createDefaultTraceConfig() {
+	return {
+		mode: 'markers',
+		type: 'scatter3d',
+		// hovertemplate: '%{customdata}<br>X: %{x:.2f}<br>Y: %{y:.2f}<br>Z: %{z:.2f}',
+		hovertemplate: '%{customdata}<br>coord: [%{x:.2f}, %{y:.2f}, %{z:.2f}]',
+	};
+}
+
+``````{ end_of_file="plotutil.js" }
+
+``````{ path="style.css"  }
+body {
+	font-family: Arial, sans-serif;
+	margin: 0;
+	padding: 20px;
+	max-width: 1200px;
+	margin: 0 auto;
+}
+
+h1 {
+	color: #333;
+	text-align: center;
+	margin-bottom: 20px;
+}
+
+.controls {
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 15px;
+	align-items: center;
+}
+
+.control-group {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.status-message {
+	color: #666;
+	font-style: italic;
+}
+
+button {
+	padding: 8px 16px;
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+button:hover {
+	background-color: #45a049;
+}
+
+button.secondary {
+	background-color: #2196F3;
+}
+
+button.secondary:hover {
+	background-color: #0b7dda;
+}
+
+.plot-container {
+	height: 600px;
+	width: 100%;
+	margin: 20px 0;
+	position: relative;
+}
+
+.selection-display {
+	margin: 10px 0;
+	padding: 10px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	min-height: 30px;
+}
+
+.selected-value {
+	display: inline-block;
+	margin-right: 10px;
+	padding: 5px 10px;
+	border-radius: 3px;
+	font-weight: bold;
+	color: white;
+	position: relative;
+}
+
+.selected-value .remove-btn {
+	visibility: hidden;
+	position: absolute;
+	top: -10px;
+	right: -10px;
+	background-color: #f44336;
+	color: white;
+	border-radius: 50%;
+	width: 22px;
+	height: 22px;
+	font-size: 16px;
+	line-height: 20px;
+	text-align: center;
+	cursor: pointer;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.selected-value:hover .remove-btn {
+	visibility: visible;
+}
+
+.config-display {
+	margin-top: 20px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.config-header {
+	background-color: #f1f1f1;
+	padding: 10px 15px;
+	cursor: pointer;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.config-header h3 {
+	margin: 0;
+	font-size: 16px;
+}
+
+.config-content {
+	padding: 15px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 20px;
+}
+
+.config-section {
+	flex: 1;
+	min-width: 300px;
+	padding: 15px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+}
+
+.config-section h4 {
+	margin-top: 0;
+	margin-bottom: 15px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid #eee;
+}
+
+.control-row {
+	display: flex;
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+.control-label {
+	width: 80px;
+	flex-shrink: 0;
+}
+
+.control-input {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+input[type="range"] {
+	flex: 1;
+}
+
+input[type="color"] {
+	width: 40px;
+	height: 25px;
+}
+
+input[type="number"] {
+	width: 60px;
+	text-align: center;
+}
+
+.collapse-icon {
+	transition: transform 0.3s;
+}
+
+.collapse-icon.rotated {
+	transform: rotate(-90deg);
+}
+
+select,
+input {
+	padding: 8px;
+	border-radius: 4px;
+	border: 1px solid #ddd;
+}
+
+.combo-select {
+	position: relative;
+	display: inline-block;
+}
+
+.combo-select input {
+	width: 150px;
+}
+
+.combo-select .dropdown {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	background: white;
+	border: 1px solid #ddd;
+	border-top: none;
+	z-index: 10;
+	max-height: 200px;
+	overflow-y: auto;
+}
+
+.combo-select .dropdown-item {
+	padding: 8px;
+	cursor: pointer;
+}
+
+.combo-select .dropdown-item:hover {
+	background-color: #f1f1f1;
+}
+
+.url-section {
+	margin-top: 20px;
+	padding: 15px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+}
+
+.url-section input {
+	width: 100%;
+	margin-bottom: 10px;
+}
+
+.generated-links {
+	margin-top: 10px;
+}
+
+.generated-link {
+	display: block;
+	margin-bottom: 5px;
+	color: #2196F3;
+	text-decoration: none;
+}
+
+.generated-link:hover {
+	text-decoration: underline;
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+.axis-controls {
+	display: flex;
+	justify-content: center;
+	gap: 20px;
+	margin-bottom: 15px;
+	background-color: #f5f5f5;
+	padding: 10px;
+	border-radius: 4px;
+}
+
+.axis-control {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.axis-control label {
+	font-weight: bold;
+}
+
+.axis-control select {
+	min-width: 80px;
+	padding: 5px;
+	border-radius: 4px;
+	border: 1px solid #ddd;
+}
+
+.loading-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(255, 255, 255, 0.8);
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	z-index: 10;
+}
+
+.loading-spinner {
+	border: 4px solid rgba(0, 0, 0, 0.1);
+	border-radius: 50%;
+	border-top: 4px solid #3498db;
+	width: 40px;
+	height: 40px;
+	animation: spin 1s linear infinite;
+	margin-bottom: 15px;
+}
+
+.loading-progress {
+	width: 250px;
+	background-color: #f1f1f1;
+	border-radius: 4px;
+	margin: 10px 0;
+}
+
+.loading-progress-bar {
+	height: 10px;
+	border-radius: 4px;
+	background-color: #3498db;
+}
+
+.processing-indicator {
+	position: absolute;
+	bottom: 20px;
+	right: 20px;
+	background-color: rgba(255, 255, 255, 0.8);
+	padding: 10px;
+	border-radius: 4px;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	z-index: 5;
+}
+
+.mini-spinner {
+	border: 3px solid rgba(0, 0, 0, 0.1);
+	border-radius: 50%;
+	border-top: 3px solid #3498db;
+	width: 20px;
+	height: 20px;
+	animation: spin 1s linear infinite;
+}
+``````{ end_of_file="style.css" }
