@@ -239,3 +239,101 @@ def plot_embedding(
 
 	plt.tight_layout()
 	plt.show()
+
+
+def plot_embedding_kde(embedding: np.ndarray, labels: pl.Series, title: str) -> None:
+	"""Scatter plot of 2D embedding with KDE contours colored by label.
+
+	# Parameters:
+	 - `embedding : np.ndarray`
+	    2D embedding array with shape (n_samples, 2)
+	 - `labels : pl.Series`
+	    Labels for each point
+	 - `title : str`
+	    Plot title
+	"""
+	import scipy.stats as stats
+
+	fig: plt.Figure = plt.figure(figsize=(12, 10))
+	ax: plt.Axes = fig.add_subplot(111)
+
+	# Convert labels to numpy array
+	label_values = labels.to_numpy()
+
+	# Get unique labels for coloring
+	unique_labels = np.unique(label_values)
+
+	# Create colormap with enough colors
+	cmap = plt.cm.get_cmap("tab20" if len(unique_labels) <= 20 else "tab20b")
+
+	# Sample a subset of points for scatter plot (optional)
+	sample_size = min(5000, embedding.shape[0])
+	sample_indices = np.random.choice(embedding.shape[0], sample_size, replace=False)		
+
+	# Plot KDE contours for each label group
+	for i, label in enumerate(unique_labels):
+		mask = label_values == label
+		points = embedding[mask]
+
+		if len(points) > 50:  # Only compute KDE if enough points
+			# Perform KDE
+			try:
+				# Create grid for KDE evaluation
+				x_min, x_max = points[:, 0].min(), points[:, 0].max()
+				y_min, y_max = points[:, 1].min(), points[:, 1].max()
+	
+				# Add some padding	
+				x_range = x_max - x_min
+				y_range = y_max - y_min
+				x_min -= 0.1 * x_range
+				x_max += 0.1 * x_range
+				y_min -= 0.1 * y_range
+				y_max += 0.1 * y_range
+
+				# Create grid
+				xx, yy = np.mgrid[x_min:x_max:100j, y_min:y_max:100j]
+				positions = np.vstack([xx.ravel(), yy.ravel()])
+
+				# Compute kernel density
+				kde = stats.gaussian_kde(points.T, bw_method="scott")
+				f = kde(positions)
+				f = f.reshape(xx.shape)
+
+				# Plot contours
+				color = cmap(i)
+				contour = ax.contour(
+					xx, yy, f, levels=5, colors=[color], alpha=0.8, linewidths=1.5
+				)
+				contourf = ax.contourf(
+					xx,
+					yy,
+					f,
+					levels=8,
+					colors=[color + (a,) for a in np.linspace(0.05, 0.3, 8)],
+					antialiased=True,
+				)
+
+				# Add a label marker for the legend
+				ax.plot([], [], color=color, label=str(label), linewidth=2)
+
+			except Exception as e:
+				# Fall back to scatter if KDE fails
+				# ax.scatter(points[:, 0], points[:, 1],
+				#           c=[cmap(i)], label=str(label), alpha=0.1, s=10, edgecolors='none')
+				pass
+		else:
+			# Not enough points for KDE, use scatter
+			# ax.scatter(points[:, 0], points[:, 1],
+			#           c=[cmap(i)], label=str(label), alpha=0.2, s=10, edgecolors='none')
+			pass
+
+	# Add legend
+	ax.legend(title="Labels", loc="upper left", bbox_to_anchor=(1, 1))
+
+	ax.set_title(title)
+	ax.set_aspect("equal")
+	ax.set_xlabel("Dim 0")
+	ax.set_ylabel("Dim 1")
+
+	plt.tight_layout()
+	plt.show()
