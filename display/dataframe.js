@@ -31,6 +31,25 @@ class DataFrame {
 	}
 
 	/**
+	 * Returns the values for a specific cell
+	 * @param {row_idx} row_idx - Row index
+	 * @param {col_name} col_name - Column name
+	 * @returns {any} - Value in the cell
+	 * @throws {Error} - If row index or column name is invalid
+	 */
+	get(row_idx, col_name) {
+		if (row_idx < 0 || row_idx >= this.data.length) {
+			throw new Error(`Row index ${row_idx} out of bounds (0 to ${this.data.length - 1})`);
+		}
+
+		if (!this.columns.includes(col_name)) {
+			throw new Error(`Column '${col_name}' not found in columns: ${this.columns.join(', ')}`);
+		}
+
+		return this.data[row_idx][col_name];
+	}
+
+	/**
 	 * Returns a specific row as an object
 	 * 
 	 * @param {number} rowIdx - Row index

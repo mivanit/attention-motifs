@@ -1,22 +1,34 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Interactive 3D PCA Plot</title>
+  <title>Vue-Based 3D Plot with Simple Selection</title>
+  <!-- Load Vue -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+  <!-- Load Plotly.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.2/plotly.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/npyjs@0.7.0/index.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
       max-width: 1200px;
       margin: 0 auto;
-      padding: 20px;
     }
-    
-    #plot-container {
-      height: 800px;
-      width: 100%;
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 20px;
     }
-    
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      align-items: center;
+    }
+    .status-message {
+      color: #666;
+      font-style: italic;
+    }
     button {
       padding: 8px 16px;
       background-color: #4CAF50;
@@ -24,523 +36,423 @@
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      margin-right: 10px;
     }
-    
     button:hover {
       background-color: #45a049;
     }
-    
+    .plot-container {
+      height: 600px;
+      width: 100%;
+      margin: 20px 0;
+      position: relative;
+    }
     .selection-display {
-      margin-top: 10px;
+      margin: 10px 0;
       padding: 10px;
       border: 1px solid #ddd;
       border-radius: 4px;
-      min-height: 20px;
+      min-height: 30px;
     }
-    
-    .selection-item {
+    .selected-value {
       display: inline-block;
-      padding: 4px 8px;
-      margin-right: 8px;
-      margin-bottom: 8px;
-      border-radius: 16px;
+      margin-right: 10px;
+      padding: 5px 10px;
+      border-radius: 3px;
       font-weight: bold;
+      color: white;
     }
-    
     .config-display {
       margin-top: 20px;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      background-color: #f9f9f9;
-    }
-    
-    .config-item {
-      margin-bottom: 5px;
-    }
-    
-    .config-item strong {
-      display: inline-block;
-      width: 150px;
-    }
-    
-    #status-message {
-      margin: 10px 0;
-      padding: 10px;
-      border-radius: 4px;
-    }
-    
-    .success {
-      background-color: #dff0d8;
-      color: #3c763d;
-    }
-    
-    .error {
-      background-color: #f2dede;
-      color: #a94442;
-    }
-    
-    .controls {
-      margin: 10px 0;
     }
   </style>
 </head>
 <body>
-  <h1>Interactive 3D PCA Plot</h1>
-  
-  <div class="controls">
-    <div id="status-message"></div>
-    <button id="clear-selection">Clear Selection</button>
-  </div>
-  
-  <div id="plot-container"></div>
-  
-  <div>
-    <h3>Selected Values:</h3>
-    <div id="selection-display" class="selection-display">None</div>
-  </div>
-  
-  <div class="config-display">
-    <h3>Loaded Configuration:</h3>
-    <div id="config-display">Loading configuration...</div>
+  <div id="app">
+    <h1>{{ title }}</h1>
+    
+    <div class="controls">
+      <button @click="clearSelection">Clear Selection</button>
+      <div class="status-message">{{ statusMessage }}</div>
+    </div>
+    
+    <div id="plot-container" class="plot-container" ref="plotContainer"></div>
+    
+    <div>
+      <h3>Selected Classes:</h3>
+      <div class="selection-display">
+        <template v-if="selectedClasses.length === 0">None</template>
+        <span 
+          v-for="(val, i) in selectedClasses" 
+          :key="val"
+          class="selected-value"
+          :style="{ backgroundColor: getSelectionColor(i) }"
+        >
+          {{ val }}
+        </span>
+      </div>
+    </div>
+    
+    <!-- Space for future configuration options -->
+    <div class="config-display">
+      <h3>Plot Configuration:</h3>
+      <p>Future settings will appear here</p>
+    </div>
   </div>
   
   <script>
-    // Global variables
-    let jsonlData = null;
-    let pcaData = null;
-    let plotData = null;
-    let selectedValues = [];
-    let config = null;
-    let colorMapping = {};
+    // Create Vue app
+    const { createApp, ref, reactive, onMounted } = Vue;
     
-    // Initialize npyjs correctly
-    const npy = new npyjs();
-    
-    // D3 qualitative colors for selections
-    const D3_COLORS = [
-      '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
-      '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
-    ];
-    
-    // Plotly qualitative colors for categorical data
-    const PLOTLY_COLORS = [
-      '#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A',
-      '#19D3F3', '#FF6692', '#B6E880', '#FF97FF', '#FECB52'
-    ];
-    
-    // Set status message
-    function setStatus(message, isError = false) {
-      const statusElement = document.getElementById('status-message');
-      statusElement.textContent = message;
-      statusElement.className = isError ? 'error' : 'success';
-    }
-    
-    // Display configuration
-    function displayConfig(config) {
-      const configDisplay = document.getElementById('config-display');
-      let html = '';
-      
-      // Basic config values
-      html += `<div class="config-item"><strong>JSONL File:</strong> ${config.jsonlFile}</div>`;
-      html += `<div class="config-item"><strong>NPY File:</strong> ${config.npyFile}</div>`;
-      html += `<div class="config-item"><strong>Color Column:</strong> ${config.colorColumn}</div>`;
-      html += `<div class="config-item"><strong>Selection Column:</strong> ${config.selectColumn || 'None'}</div>`;
-      html += `<div class="config-item"><strong>Hover Columns:</strong> ${config.hoverColumns.join(', ')}</div>`;
-      
-      // Plot settings
-      html += `<div class="config-item"><strong>Title:</strong> ${config.title}</div>`;
-      html += `<div class="config-item"><strong>Alpha:</strong> ${config.alpha}</div>`;
-      html += `<div class="config-item"><strong>Marker Size:</strong> ${config.markerSize}</div>`;
-      html += `<div class="config-item"><strong>Dimensions:</strong> (${config.dimensions.join(', ')})</div>`;
-      
-      configDisplay.innerHTML = html;
-    }
-    
-    // Parse JSONL file
-    async function parseJSONL(text) {
-      try {
-        // Split by newlines and parse each line as JSON
-        const lines = text.trim().split('\n');
-        return lines.map(line => JSON.parse(line));
-      } catch (error) {
-        throw new Error(`Error parsing JSONL: ${error.message}`);
-      }
-    }
-    
-    // Create a hover template
-    function createHoverTemplate(hoverCols) {
-      let template = "<b>Point Info</b><br>";
-      for (let i = 0; i < hoverCols.length; i++) {
-        template += `${hoverCols[i]}: %{customdata[${i}]}<br>`;
-      }
-      template += "color value: %{marker.color}<br>";
-      template += "x: %{x:.2f}<br>y: %{y:.2f}<br>z: %{z:.2f}";
-      return template;
-    }
-    
-    // Load a file using fetch
-    async function loadFile(path) {
-      try {
-        const response = await fetch(path);
-        if (!response.ok) {
-          throw new Error(`Failed to load ${path}: ${response.statusText}`);
-        }
-        return response;
-      } catch (error) {
-        throw new Error(`Error loading ${path}: ${error.message}`);
-      }
-    }
-    
-    // Access element in 2D array using row-major indexing
-    function accessEmbedding(data, shape, row, col) {
-      if (row >= shape[0] || col >= shape[1]) {
-        throw new Error(`Index out of bounds: [${row}, ${col}] for shape [${shape[0]}, ${shape[1]}]`);
-      }
-      return data[row * shape[1] + col];
-    }
-    
-    // Get a nested property value from an object using a path string
-    function getNestedProperty(obj, path) {
-      return path.split('.').reduce((prev, curr) => {
-        return prev ? prev[curr] : undefined
-      }, obj);
-    }
-    
-    // Load configuration from cfg.json
-    async function loadConfig() {
-      try {
-        setStatus('Loading configuration...');
-        const response = await loadFile('cfg.json');
-        config = await response.json();
+    createApp({
+      setup() {
+        // Basic state
+        const title = ref('3D Scatter Plot by Model');
+        const statusMessage = ref('Initializing...');
+        const selectedClasses = ref([]);
+        const plotContainer = ref(null);
+        const plotData = ref(null);
         
-        // Validate required config fields
-        const requiredFields = ['jsonlFile', 'npyFile', 'colorColumn', 'hoverColumns'];
-        for (const field of requiredFields) {
-          if (!config[field]) {
-            throw new Error(`Missing required configuration field: ${field}`);
-          }
-        }
+        // Colors for selected classes
+        const selectionColors = [
+          '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
+          '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+        ];
         
-        // Set defaults for optional fields
-        config.title = config.title || 'PCA Embedding';
-        config.alpha = config.alpha || 0.8;
-        config.markerSize = config.markerSize || 3;
-        config.dimensions = config.dimensions || [0, 1, 2];
-        config.opacitySelected = config.opacitySelected || 1.0;
-        config.opacityUnselected = config.opacityUnselected || 0.3;
-        config.layoutOptions = config.layoutOptions || {};
-        
-        // Display the loaded configuration
-        displayConfig(config);
-        setStatus('Configuration loaded successfully');
-        
-        // Load data files
-        await loadDataFiles();
-      } catch (error) {
-        setStatus(`Failed to load configuration: ${error.message}`, true);
-        console.error(error);
-      }
-    }
-    
-    // Load data files based on configuration
-    async function loadDataFiles() {
-      try {
-        setStatus('Loading data files...');
-        
-        // Load JSONL file
-        const jsonlResponse = await loadFile(config.jsonlFile);
-        const jsonlText = await jsonlResponse.text();
-        jsonlData = await parseJSONL(jsonlText);
-        
-        // Load NPY file using npyjs
-        const npyResult = await npy.load(config.npyFile);
-        pcaData = {
-          data: npyResult.data,
-          shape: npyResult.shape,
-          dtype: npyResult.dtype
-        };
-        
-        if (jsonlData.length !== pcaData.shape[0]) {
-          throw new Error(`JSONL (${jsonlData.length} rows) and NPY (${pcaData.shape[0]} rows) files have different numbers of rows`);
-        }
-        
-        setStatus('Data files loaded successfully');
-        
-        // Prepare and create the plot
-        preparePlotData();
-        updatePlot();
-      } catch (error) {
-        setStatus(`Failed to load data files: ${error.message}`, true);
-        console.error(error);
-      }
-    }
-    
-    // Prepare data for plotting
-    function preparePlotData() {
-      const dims = config.dimensions;
-      
-      // Validate dimensions
-      if (Math.max(...dims) >= pcaData.shape[1]) {
-        throw new Error(`Dimension index out of bounds: [${dims.join(', ')}] for shape [${pcaData.shape[0]}, ${pcaData.shape[1]}]`);
-      }
-      
-      plotData = jsonlData.map((row, i) => {
-        const point = {
-          x: accessEmbedding(pcaData.data, pcaData.shape, i, dims[0]),
-          y: accessEmbedding(pcaData.data, pcaData.shape, i, dims[1]),
-          z: accessEmbedding(pcaData.data, pcaData.shape, i, dims[2]),
-          color: getNestedProperty(row, config.colorColumn),
-        };
-        
-        // Add hover and selection data
-        config.hoverColumns.forEach(col => {
-          point[col] = getNestedProperty(row, col);
-        });
-        
-        if (config.selectColumn) {
-          point[config.selectColumn] = getNestedProperty(row, config.selectColumn);
-        }
-        
-        return point;
-      });
-      
-      // Create color mapping for categorical data
-      const colorValues = plotData.map(p => p.color);
-      const uniqueColors = [...new Set(colorValues)];
-      
-      // Check if color is categorical (string or boolean)
-      if (typeof colorValues[0] === 'string' || typeof colorValues[0] === 'boolean') {
-        uniqueColors.forEach((val, i) => {
-          colorMapping[val] = PLOTLY_COLORS[i % PLOTLY_COLORS.length];
-        });
-      }
-    }
-    
-    // Update the plot based on selections
-    function updatePlot() {
-      const data = [];
-      
-      // Check if color is categorical
-      const isCategorical = typeof plotData[0].color === 'string' || typeof plotData[0].color === 'boolean';
-      
-      if (selectedValues.length > 0 && config.selectColumn) {
-        // Create a set of selected values for faster lookup
-        const selectedSet = new Set(selectedValues);
-        
-        // Handle non-selected points
-        const nonSelectedPoints = plotData.filter(p => !selectedSet.has(p[config.selectColumn]));
-        
-        if (nonSelectedPoints.length > 0) {
-          data.push({
-            type: 'scatter3d',
-            mode: 'markers',
-            x: nonSelectedPoints.map(p => p.x),
-            y: nonSelectedPoints.map(p => p.y),
-            z: nonSelectedPoints.map(p => p.z),
-            marker: {
-              size: config.markerSize,
-              color: config.unselectedColor || 'rgba(50, 50, 200, 0.5)',
-              opacity: config.opacityUnselected,
-              line: { width: 0 }
-            },
-            customdata: nonSelectedPoints.map(p => config.hoverColumns.map(col => p[col])),
-            hovertemplate: createHoverTemplate(config.hoverColumns),
-            name: 'Other Points',
-            showlegend: true
-          });
-        }
-        
-        // Handle selected points - one trace per selected value
-        selectedValues.forEach((val, idx) => {
-          const selectedPoints = plotData.filter(p => p[config.selectColumn] === val);
+        // Generate data for the plot
+        const generateData = () => {
+          statusMessage.value = 'Generating data...';
           
-          if (selectedPoints.length > 0) {
-            const color = D3_COLORS[idx % D3_COLORS.length];
+          // Generate 100 points with 3 dimensions
+          const numPoints = 100;
+          const classes = ["class-A", "class-B", "class-C"];
+          const models = ["model-1", "model-2", "model-3", "model-4"];
+          
+          const x = [];
+          const y = [];
+          const z = [];
+          const classValues = [];
+          const modelValues = [];
+          
+          // Generate points grouped by class for better visualization
+          for (let i = 0; i < numPoints; i++) {
+            // Determine which class group this point belongs to
+            const classIndex = Math.floor(i / (numPoints / classes.length));
+            const className = classes[Math.min(classIndex, classes.length - 1)];
             
-            data.push({
-              type: 'scatter3d',
+            // Add some clustering based on class
+            let xBase = 0, yBase = 0, zBase = 0;
+            
+            if (className === "class-A") {
+              xBase = -5;
+              yBase = -5;
+              zBase = -5;
+            } else if (className === "class-B") {
+              xBase = 5;
+              yBase = 5;
+              zBase = -5;
+            } else {
+              xBase = 0;
+              yBase = 0;
+              zBase = 5;
+            }
+            
+            // Add random variation around the class center
+            x.push(xBase + (Math.random() - 0.5) * 5);
+            y.push(yBase + (Math.random() - 0.5) * 5);
+            z.push(zBase + (Math.random() - 0.5) * 5);
+            
+            // Store class and model info
+            classValues.push(className);
+            modelValues.push(models[i % models.length]);
+          }
+          
+          return { x, y, z, classValues, modelValues };
+        };
+        
+        // Create traces grouped by model (for initial view)
+        const createTracesByModel = () => {
+          if (!plotData.value) return [];
+          
+          const uniqueModels = [...new Set(plotData.value.modelValues)];
+          const traces = [];
+          
+          // Create a trace for each model
+          uniqueModels.forEach((model, index) => {
+            const indices = [];
+            
+            // Find all points for this model
+            for (let i = 0; i < plotData.value.modelValues.length; i++) {
+              if (plotData.value.modelValues[i] === model) {
+                indices.push(i);
+              }
+            }
+            
+            // Create points array for this model
+            const x = indices.map(i => plotData.value.x[i]);
+            const y = indices.map(i => plotData.value.y[i]);
+            const z = indices.map(i => plotData.value.z[i]);
+            
+            // Create custom data for hovering and selection
+            const customdata = indices.map(i => [
+              plotData.value.classValues[i],
+              plotData.value.modelValues[i]
+            ]);
+            
+            // Choose color based on index
+            const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
+            const color = colors[index % colors.length];
+            
+            // Create the trace
+            traces.push({
+              x: x,
+              y: y,
+              z: z,
               mode: 'markers',
-              x: selectedPoints.map(p => p.x),
-              y: selectedPoints.map(p => p.y),
-              z: selectedPoints.map(p => p.z),
+              type: 'scatter3d',
+              name: model,
               marker: {
-                size: config.markerSize,
+                size: 5,
                 color: color,
-                opacity: config.opacitySelected,
-                line: { width: 0 }
+                opacity: 0.8
               },
-              customdata: selectedPoints.map(p => config.hoverColumns.map(col => p[col])),
-              hovertemplate: createHoverTemplate(config.hoverColumns),
-              name: `Selected: ${val}`,
-              showlegend: true
+              customdata: customdata,
+              hovertemplate: 'Class: %{customdata[0]}<br>Model: %{customdata[1]}<br>X: %{x:.2f}<br>Y: %{y:.2f}<br>Z: %{z:.2f}'
             });
-          }
-        });
-      } else {
-        // No selection, show all points colored by the color column
-        if (isCategorical) {
-          // One trace per unique color value for categorical data
-          const uniqueValues = [...new Set(plotData.map(p => p.color))];
+          });
           
-          uniqueValues.forEach(val => {
-            const points = plotData.filter(p => p.color === val);
+          return traces;
+        };
+        
+        // Create traces with selection highlighting
+        const createTracesWithSelection = () => {
+          if (!plotData.value) return [];
+          
+          // First, separate points into selected and non-selected
+          const selectedIndices = {};
+          const nonSelectedIndices = [];
+          
+          // Group points by selection status
+          for (let i = 0; i < plotData.value.classValues.length; i++) {
+            const className = plotData.value.classValues[i];
             
-            data.push({
-              type: 'scatter3d',
-              mode: 'markers',
-              x: points.map(p => p.x),
-              y: points.map(p => p.y),
-              z: points.map(p => p.z),
-              marker: {
-                size: config.markerSize,
-                color: colorMapping[val],
-                opacity: config.alpha,
-                line: { width: 0 }
-              },
-              customdata: points.map(p => config.hoverColumns.map(col => p[col])),
-              hovertemplate: createHoverTemplate(config.hoverColumns),
-              name: String(val),
-              showlegend: true
-            });
-          });
-        } else {
-          // Continuous color scale for numeric data
-          data.push({
-            type: 'scatter3d',
-            mode: 'markers',
-            x: plotData.map(p => p.x),
-            y: plotData.map(p => p.y),
-            z: plotData.map(p => p.z),
-            marker: {
-              size: config.markerSize,
-              color: plotData.map(p => p.color),
-              colorscale: 'Viridis',
-              opacity: config.alpha,
-              line: { width: 0 }
-            },
-            customdata: plotData.map(p => config.hoverColumns.map(col => p[col])),
-            hovertemplate: createHoverTemplate(config.hoverColumns),
-            name: 'Points',
-            showlegend: true
-          });
-        }
-      }
-      
-      // Layout configuration
-      const dims = config.dimensions;
-      const layout = {
-        title: {
-          text: selectedValues.length > 0 
-            ? `${config.title} - Selected: ${selectedValues.join(', ')}` 
-            : config.title,
-          y: 0.95,
-          x: 0.5,
-          xanchor: 'center',
-          yanchor: 'top'
-        },
-        scene: {
-          xaxis: { title: `Dimension ${dims[0]}` },
-          yaxis: { title: `Dimension ${dims[1]}` },
-          zaxis: { title: `Dimension ${dims[2]}` },
-          camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } },
-          aspectmode: 'cube'
-        },
-        legend: {
-          itemsizing: 'constant',
-          bgcolor: 'rgba(255, 255, 255, 0.8)'
-        },
-        margin: { l: 0, r: 0, b: 10, t: 50 },
-        hovermode: 'closest'
-      };
-      
-      // Apply any custom layout options from config
-      if (config.layoutOptions) {
-        // Merge scene options if present
-        if (config.layoutOptions.scene) {
-          layout.scene = { ...layout.scene, ...config.layoutOptions.scene };
-        }
-        
-        // Merge other top-level options
-        for (const key in config.layoutOptions) {
-          if (key !== 'scene') {
-            layout[key] = config.layoutOptions[key];
-          }
-        }
-      }
-      
-      Plotly.newPlot('plot-container', data, layout);
-      
-      // Add click event for point selection
-      document.getElementById('plot-container').on('plotly_click', function(data) {
-        if (!config.selectColumn) return;
-        
-        const point = data.points[0];
-        const pointIndex = point.pointIndex;
-        
-        // Get the trace index and find the actual data point
-        const traceIndex = point.curveNumber;
-        let clickedValue;
-        
-        // Find the selected value based on the point coordinates
-        const x = point.x;
-        const y = point.y;
-        const z = point.z;
-        
-        // Find the data point with these coordinates
-        for (const p of plotData) {
-          if (p.x === x && p.y === y && p.z === z) {
-            clickedValue = p[config.selectColumn];
-            break;
-          }
-        }
-        
-        if (clickedValue !== undefined) {
-          // Toggle selection
-          const valueIndex = selectedValues.indexOf(clickedValue);
-          if (valueIndex > -1) {
-            // Remove if already selected
-            selectedValues.splice(valueIndex, 1);
-          } else {
-            // Add if not selected
-            selectedValues.push(clickedValue);
+            if (selectedClasses.value.includes(className)) {
+              if (!selectedIndices[className]) {
+                selectedIndices[className] = [];
+              }
+              selectedIndices[className].push(i);
+            } else {
+              nonSelectedIndices.push(i);
+            }
           }
           
-          // Update plot and selection display
-          updatePlot();
-          updateSelectionDisplay();
-        }
-      });
-    }
-    
-    // Update the selection display
-    function updateSelectionDisplay() {
-      const displayElement = document.getElementById('selection-display');
-      
-      if (selectedValues.length === 0) {
-        displayElement.innerHTML = 'None';
-        return;
+          const traces = [];
+          
+          // Add non-selected points (with reduced opacity)
+          if (nonSelectedIndices.length > 0) {
+            const x = nonSelectedIndices.map(i => plotData.value.x[i]);
+            const y = nonSelectedIndices.map(i => plotData.value.y[i]);
+            const z = nonSelectedIndices.map(i => plotData.value.z[i]);
+            
+            const customdata = nonSelectedIndices.map(i => [
+              plotData.value.classValues[i],
+              plotData.value.modelValues[i]
+            ]);
+            
+            traces.push({
+              x: x,
+              y: y,
+              z: z,
+              mode: 'markers',
+              type: 'scatter3d',
+              name: 'Other Points',
+              marker: {
+                size: 5,
+                color: 'rgba(150, 150, 150, 0.5)',
+                opacity: 0.4  // Increased opacity to make points more visible
+              },
+              customdata: customdata,
+              hovertemplate: 'Class: %{customdata[0]}<br>Model: %{customdata[1]}<br>X: %{x:.2f}<br>Y: %{y:.2f}<br>Z: %{z:.2f}'
+            });
+          }
+          
+          // Add a trace for each selected class
+          Object.keys(selectedIndices).forEach((className, index) => {
+            const indices = selectedIndices[className];
+            const color = selectionColors[index % selectionColors.length];
+            
+            const x = indices.map(i => plotData.value.x[i]);
+            const y = indices.map(i => plotData.value.y[i]);
+            const z = indices.map(i => plotData.value.z[i]);
+            
+            const customdata = indices.map(i => [
+              plotData.value.classValues[i],
+              plotData.value.modelValues[i]
+            ]);
+            
+            traces.push({
+              x: x,
+              y: y,
+              z: z,
+              mode: 'markers',
+              type: 'scatter3d',
+              name: `Selected: ${className}`,
+              marker: {
+                size: 5,
+                color: color,
+                opacity: 1.0
+              },
+              customdata: customdata,
+              hovertemplate: 'Class: %{customdata[0]}<br>Model: %{customdata[1]}<br>X: %{x:.2f}<br>Y: %{y:.2f}<br>Z: %{z:.2f}'
+            });
+          });
+          
+          return traces;
+        };
+        
+        // Initialize the plot
+        const initPlot = () => {
+          statusMessage.value = 'Creating plot...';
+          
+          // Generate data if not already done
+          if (!plotData.value) {
+            plotData.value = generateData();
+          }
+          
+          // Create initial traces (by model)
+          const traces = createTracesByModel();
+          
+          // Define layout
+          const layout = {
+            title: title.value,
+            scene: {
+              xaxis: { title: 'X' },
+              yaxis: { title: 'Y' },
+              zaxis: { title: 'Z' },
+              camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
+            },
+            margin: { l: 0, r: 0, b: 0, t: 50 }
+          };
+          
+          // Create the plot
+          Plotly.newPlot(plotContainer.value, traces, layout);
+          
+          // Add click handler
+          plotContainer.value.on('plotly_click', handlePointClick);
+          
+          statusMessage.value = 'Plot ready - click points to select classes';
+        };
+        
+        // Handle point clicks
+        const handlePointClick = (data) => {
+          if (data.points && data.points.length > 0) {
+            const point = data.points[0];
+            console.log("Clicked point:", point);
+            
+            if (point.customdata && point.customdata.length > 0) {
+              // Get the class value from customdata
+              const className = point.customdata[0];
+              console.log("Clicked class:", className);
+              
+              // Toggle selection
+              const index = selectedClasses.value.indexOf(className);
+              
+              // Create a new array instead of modifying in place to ensure Vue detection
+              if (index >= 0) {
+                // Remove if already selected
+                const newSelection = [...selectedClasses.value];
+                newSelection.splice(index, 1);
+                selectedClasses.value = newSelection;
+                console.log("Removed class:", className);
+              } else {
+                // Add if not already selected
+                selectedClasses.value = [...selectedClasses.value, className];
+                console.log("Added class:", className);
+              }
+              
+              // Update the visualization after a short delay to avoid recursion
+              setTimeout(() => {
+                updatePlot();
+              }, 10);
+            }
+          }
+        };
+        
+        // Update the plot based on selection
+        const updatePlot = () => {
+          try {
+            // Update title based on selection
+            let plotTitle = '3D Scatter Plot by Model';
+            if (selectedClasses.value.length > 0) {
+              plotTitle += ` - Selected: ${selectedClasses.value.join(', ')}`;
+            }
+            title.value = plotTitle;
+            
+            // Create new traces based on selection state
+            const traces = selectedClasses.value.length > 0 
+              ? createTracesWithSelection() 
+              : createTracesByModel();
+            
+            // Get current layout and update title
+            const layout = {
+              title: plotTitle,
+              scene: {
+                xaxis: { title: 'X' },
+                yaxis: { title: 'Y' },
+                zaxis: { title: 'Z' },
+                camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
+              },
+              margin: { l: 0, r: 0, b: 0, t: 50 }
+            };
+            
+            // First remove old click handlers to prevent duplicates
+            if (plotContainer.value && plotContainer.value.removeAllListeners) {
+              plotContainer.value.removeAllListeners('plotly_click');
+            }
+            
+            // Use complete redraw with newPlot to avoid potential issues
+            Plotly.newPlot(plotContainer.value, traces, layout);
+            
+            // Add click handler again after plot is redrawn
+            plotContainer.value.on('plotly_click', handlePointClick);
+            
+            statusMessage.value = 'Plot updated';
+          } catch (error) {
+            console.error("Error updating plot:", error);
+            statusMessage.value = 'Error updating plot';
+          }
+        };
+        
+        // Clear selection
+        const clearSelection = () => {
+          // Replace the array entirely rather than modifying in place
+          selectedClasses.value = [];
+          
+          // Update the plot after a short delay
+          setTimeout(() => {
+            updatePlot();
+          }, 10);
+        };
+        
+        // Get selection color for display
+        const getSelectionColor = (index) => {
+          return selectionColors[index % selectionColors.length];
+        };
+        
+        // Initialize on mount
+        onMounted(() => {
+          initPlot();
+        });
+        
+        return {
+          title,
+          statusMessage,
+          selectedClasses,
+          plotContainer,
+          clearSelection,
+          getSelectionColor
+        };
       }
-      
-      let html = '';
-      selectedValues.forEach((val, i) => {
-        const color = D3_COLORS[i % D3_COLORS.length];
-        html += `<span class="selection-item" style="background-color: ${color}; color: white;">${val}</span>`;
-      });
-      
-      displayElement.innerHTML = html;
-    }
-    
-    // Clear selection button
-    document.getElementById('clear-selection').addEventListener('click', () => {
-      selectedValues = [];
-      updatePlot();
-      updateSelectionDisplay();
-    });
-    
-    // Initialize by loading configuration
-    window.addEventListener('load', loadConfig);
+    }).mount('#app');
   </script>
 </body>
 </html>
