@@ -1,21 +1,21 @@
 # Stats
 - 9 files
-- 2255 (2.3K) lines
-- 61824 (62K) chars
-- 23439 (23K) `gpt2` tokens
+- 2402 (2.4K) lines
+- 66308 (66K) chars
+- 24918 (25K) `gpt2` tokens
 
 # File Tree
 
 ```
 display              
-├── app.js           [515L 17,134C 5,988T]
+├── app.js           [568L 19,139C 6,762T]
 ├── array.js         [370L  9,746C 3,781T]
 ├── colorutil.js     [ 60L  1,600C   675T]
 ├── dataframe.js     [211L  5,212C 1,982T]
 ├── dataloader.js    [ 97L  3,119C 1,166T]
 ├── embeddings.html  [164L  7,138C 3,073T]
 ├── logger.js        [102L  1,798C   633T]
-├── plotutil.js      [257L  8,472C 2,803T]
+├── plotutil.js      [351L 10,951C 3,510T]
 └── style.css        [435L  6,555C 2,786T]
 ```
 
@@ -72,7 +72,9 @@ const app = Vue.createApp({
 			// Store selection timing information
 			lastSelectionTime: 0,
 			// Debounce timeout
-			updatePlotTimeout: null
+			updatePlotTimeout: null,
+			// Flag to enable/disable customdata caching
+			useCustomdataCache: true
 		};
 	},
 
@@ -91,6 +93,9 @@ const app = Vue.createApp({
 			logger.log('Starting data loading process');
 
 			try {
+				// Clear any existing customdata cache
+				clearCustomdataCache();
+				
 				// Load PCA data using the function from dataLoader.js
 				loading.updateProgress(this, 10, 'Downloading NPY file...');
 				
@@ -212,6 +217,9 @@ const app = Vue.createApp({
 
 			// Update the column and clear selection if needed
 			if (this.colorByColumn !== this.pendingColorByColumn) {
+				// Clear customdata cache when column changes
+				clearCustomdataCache();
+				
 				this.colorByColumn = this.pendingColorByColumn;
 				this.selectedValues = []; // Clear selection when changing default color column
 				this.updatePlot();
@@ -235,6 +243,9 @@ const app = Vue.createApp({
 
 			// Update the column and clear selection
 			if (this.selectionColumn !== this.pendingSelectionColumn) {
+				// Clear customdata cache when column changes
+				clearCustomdataCache();
+				
 				this.selectionColumn = this.pendingSelectionColumn;
 				this.selectedValues = []; // Clear selection when changing selection column
 				this.updatePlot();
@@ -271,7 +282,8 @@ const app = Vue.createApp({
 					selectedSize: this.selectedSize,
 					selectedOpacity: this.selectedOpacity,
 					// Add the selectionColumn so it's included in customdata
-					selectionColumn: this.selectionColumn
+					selectionColumn: this.selectionColumn,
+					useCache: this.useCustomdataCache
 				}
 			);
 		},
@@ -294,7 +306,8 @@ const app = Vue.createApp({
 					nonSelectedColor: this.nonSelectedColor,
 					getSelectionColor: this.getSelectionColor.bind(this),
 					// Add colorByColumn so it's included in customdata
-					colorByColumn: this.colorByColumn
+					colorByColumn: this.colorByColumn,
+					useCache: this.useCustomdataCache
 				}
 			);
 		},
@@ -339,54 +352,65 @@ const app = Vue.createApp({
 		handlePointClick(data) {
 			if (data.points && data.points.length > 0) {
 				const point = data.points[0];
-
+		
 				// Avoid processing clicks too rapidly
 				const now = Date.now();
 				if (now - this.lastSelectionTime < 300) { // 300ms debounce
 					return;
 				}
 				this.lastSelectionTime = now;
-
+		
 				if (point.customdata) {
-					// Extract value from customdata
-					const customData = point.customdata;
+					// Define the mapping of columns to customdata indices
+					const customDataIndices = {
+						'activation.cls': 0,
+						'activation.prompt': 1
+					};
 					
-					// Try to find the selectionColumn value in the customdata string
-					const match = typeof customData === 'string' ? 
-						customData.match(new RegExp(`${this.selectionColumn}: ([^,]+)`)) : null;
-
-					if (match && match[1]) {
-						const value = match[1].trim();
-						logger.log(`Selected ${this.selectionColumn}: ${value}`);
-
-						// Show processing indicator
-						loading.showUpdating(this, true);
-
-						// Store current camera position before update
-						this.currentCameraPosition = this.getCurrentCameraPosition();
-
-						// Use setTimeout to avoid blocking the UI
-						setTimeout(() => {
-							logger.time('Process Selection');
-
-							// Toggle selection
-							const index = this.selectedValues.indexOf(value);
-
-							if (index >= 0) {
-								// Remove if already selected
-								this.selectedValues.splice(index, 1);
-							} else {
-								// Add if not already selected
-								this.selectedValues.push(value);
-							}
-
-							logger.timeEnd('Process Selection');
-
-							// Update the visualization with some delay to prevent UI blocking
-							this.debounceUpdatePlot();
-						}, 10);
+					// If the selection column is not one of the first two, it will be the third element
+					if (this.selectionColumn !== 'activation.cls' && this.selectionColumn !== 'activation.prompt') {
+						customDataIndices[this.selectionColumn] = 2;
+					}
+					
+					// Check if the selection column is in our customdata indices mapping
+					if (this.selectionColumn in customDataIndices) {
+						const index = customDataIndices[this.selectionColumn];
+						const value = point.customdata[index];
+						
+						if (value !== undefined) {
+							logger.log(`Selected ${this.selectionColumn}: ${value}`);
+		
+							// Show processing indicator
+							loading.showUpdating(this, true);
+		
+							// Store current camera position before update
+							this.currentCameraPosition = this.getCurrentCameraPosition();
+		
+							// Use setTimeout to avoid blocking the UI
+							setTimeout(() => {
+								logger.time('Process Selection');
+		
+								// Toggle selection
+								const valueIndex = this.selectedValues.indexOf(value);
+		
+								if (valueIndex >= 0) {
+									// Remove if already selected
+									this.selectedValues.splice(valueIndex, 1);
+								} else {
+									// Add if not already selected
+									this.selectedValues.push(value);
+								}
+		
+								logger.timeEnd('Process Selection');
+		
+								// Update the visualization with some delay to prevent UI blocking
+								this.debounceUpdatePlot();
+							}, 10);
+						} else {
+							logger.error(`Could not find ${this.selectionColumn} value in customdata at index ${index}`);
+						}
 					} else {
-						logger.error(`Could not find ${this.selectionColumn} in customdata:`, customData);
+						logger.error(`Selection column ${this.selectionColumn} not found in customdata structure`);
 					}
 				}
 			}
@@ -514,6 +538,19 @@ const app = Vue.createApp({
 			logger.log(`Current selection: ${this.selectedValues.length} values`);
 			logger.log(`Available PCA components: ${this.availablePcaAxes.length}`);
 			logger.log(`Current axes: PC${this.pcaAxes.x + 1}, PC${this.pcaAxes.y + 1}, PC${this.pcaAxes.z + 1}`);
+			logger.log(`Customdata caching: ${this.useCustomdataCache ? 'Enabled' : 'Disabled'}`);
+			
+			// Log cache info if available
+			if (customdataCache && customdataCache.data) {
+				const cacheKeys = Object.keys(customdataCache.data);
+				logger.log(`Customdata cache entries: ${cacheKeys.length}`);
+				
+				if (cacheKeys.length > 0) {
+					const sampleKey = cacheKeys[0];
+					const sampleSize = customdataCache.data[sampleKey].length;
+					logger.log(`Sample cache entry (${sampleKey}): ${sampleSize} points`);
+				}
+			}
 
 			// Log memory usage if available
 			if (window.performance && window.performance.memory) {
@@ -521,6 +558,17 @@ const app = Vue.createApp({
 				logger.log(`Used JS heap: ${(memory.usedJSHeapSize / (1024 * 1024)).toFixed(2)} MB`);
 				logger.log(`Total JS heap: ${(memory.totalJSHeapSize / (1024 * 1024)).toFixed(2)} MB`);
 			}
+		},
+		
+		// Toggle customdata caching
+		toggleCustomdataCache() {
+			this.useCustomdataCache = !this.useCustomdataCache;
+			if (!this.useCustomdataCache) {
+				// Clear the cache when disabling
+				clearCustomdataCache();
+			}
+			logger.log(`Customdata caching ${this.useCustomdataCache ? 'enabled' : 'disabled'}`);
+			this.statusMessage = `Customdata caching ${this.useCustomdataCache ? 'enabled' : 'disabled'}`;
 		}
 	},
 
@@ -533,6 +581,11 @@ const app = Vue.createApp({
 			// Ctrl+Shift+P to log performance info
 			if (e.ctrlKey && e.shiftKey && e.key === 'P') {
 				this.logPerformanceInfo();
+			}
+			
+			// Ctrl+Shift+C to toggle customdata caching
+			if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+				this.toggleCustomdataCache();
 			}
 		});
 	}
@@ -1599,7 +1652,11 @@ function createDefaultTraceConfig() {
 	return {
 		mode: 'markers',
 		type: 'scatter3d',
-		hovertemplate: '%{customdata}<br>coord: [%{x:.2f}, %{y:.2f}, %{z:.2f}]',
+		// The hover template that matches the Python format
+		hovertemplate: '<b>Point Info</b><br>' +
+			'head: %{customdata[0]}<br>' +
+			'prompt: %{customdata[1]}<br>' +
+			'coord: [%{x:.2f}, %{y:.2f}, %{z:.2f}]<extra></extra>',
 	};
 }
 
@@ -1623,6 +1680,121 @@ function getCurrentCameraPosition(plotContainer) {
 	return null;
 }
 
+
+
+
+
+/**
+ * Generate customdata for points based on their indices
+ * 
+ * @param {Object} plotData - The plot data object with all data columns
+ * @param {Array<number>} indices - Array of point indices to generate customdata for
+ * @param {string} selectionColumn - Column used for selection (will be included if not one of the hover fields)
+ * @returns {Array<Array>} - Array of customdata arrays for each point
+ */
+function generateCustomdata(plotData, indices, selectionColumn = null) {
+	// Generate customdata for hover and selection
+	return indices.map(i => {
+		// Always include the two hover columns
+		const data = [
+			plotData['activation.cls'][i],    // head
+			plotData['activation.prompt'][i], // prompt
+		];
+
+		// Add the selection column as third element if it's different from the hover columns
+		if (selectionColumn &&
+			selectionColumn !== 'activation.cls' &&
+			selectionColumn !== 'activation.prompt') {
+			data.push(plotData[selectionColumn][i]);
+		}
+
+		return data;
+	});
+}
+
+/**
+ * Cache object for storing generated customdata
+ */
+const customdataCache = {
+	data: {},
+
+	/**
+	 * Get cached customdata if available
+	 * 
+	 * @param {string} cacheKey - Cache key
+	 * @returns {Array|null} - Cached customdata or null if not found
+	 */
+	get(cacheKey) {
+		return this.data[cacheKey] || null;
+	},
+
+	/**
+	 * Store customdata in cache
+	 * 
+	 * @param {string} cacheKey - Cache key
+	 * @param {Array} customdata - Customdata to store
+	 */
+	set(cacheKey, customdata) {
+		this.data[cacheKey] = customdata;
+	},
+
+	/**
+	 * Clear the entire cache or a specific key
+	 * 
+	 * @param {string|null} cacheKey - Optional specific key to clear
+	 */
+	clear(cacheKey = null) {
+		if (cacheKey) {
+			delete this.data[cacheKey];
+		} else {
+			this.data = {};
+		}
+	}
+};
+
+/**
+ * Generate customdata with caching support
+ * 
+ * @param {Object} plotData - The plot data object with all data columns
+ * @param {Array<number>} indices - Array of point indices to generate customdata for
+ * @param {string} selectionColumn - Column used for selection
+ * @param {boolean} useCache - Whether to use the cache
+ * @returns {Array<Array>} - Array of customdata arrays for each point
+ */
+function getCustomdata(plotData, indices, selectionColumn = null, useCache = true) {
+	// Only use cache if instructed and we have indices
+	if (useCache && indices && indices.length > 0) {
+		// Create a cache key based on indices and selection column
+		const cacheKey = `${selectionColumn || 'default'}_${indices[0]}_${indices.length}`;
+
+		// Try to get from cache first
+		const cachedData = customdataCache.get(cacheKey);
+		if (cachedData) {
+			return cachedData;
+		}
+
+		// Generate new data
+		const customdata = generateCustomdata(plotData, indices, selectionColumn);
+
+		// Store in cache for future use
+		customdataCache.set(cacheKey, customdata);
+
+		return customdata;
+	}
+
+	// If not using cache, generate directly
+	return generateCustomdata(plotData, indices, selectionColumn);
+}
+
+/**
+ * Clear the customdata cache when data changes
+ */
+function clearCustomdataCache() {
+	customdataCache.clear();
+}
+
+
+
 /**
  * Create traces grouped by categorical value (for initial view)
  * @param {Object} plotData - The plot data object with coordinates and metadata
@@ -1637,14 +1809,15 @@ function getCurrentCameraPosition(plotContainer) {
  */
 function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
 	console.time('Create Category Traces');
-	
+
 	if (!plotData || !selectedColumn) return [];
-	
+
 	const {
 		defaultTraceConfig = createDefaultTraceConfig(),
 		selectedSize = 6,
 		selectedOpacity = 1.0,
-		selectionColumn = selectedColumn // Default to selectedColumn if not provided
+		selectionColumn = selectedColumn, // Default to selectedColumn if not provided
+		useCache = true
 	} = options || {};
 
 	const uniqueValues = [...dataFrame.col_unique(selectedColumn)];
@@ -1669,17 +1842,8 @@ function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
 
 		console.log(`Found ${indices.length} points for ${value}`);
 
-		// Prepare custom data with both columns if they're different
-		const customdata = indices.map(i => {
-			let data = `${selectedColumn}: ${plotData[selectedColumn][i]}`;
-			
-			// Add selectionColumn data if different from selectedColumn
-			if (selectionColumn && selectionColumn !== selectedColumn) {
-				data += `, ${selectionColumn}: ${plotData[selectionColumn][i]}`;
-			}
-			
-			return data;
-		});
+		// Get customdata with caching for better performance
+		const customdata = getCustomdata(plotData, indices, selectionColumn, useCache);
 
 		traces.push({
 			...defaultTraceConfig,
@@ -1718,9 +1882,9 @@ function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
  */
 function createTracesWithSelection(plotData, selectedColumn, selectedValues, options) {
 	console.time('Create Selection Traces');
-	
+
 	if (!plotData) return [];
-	
+
 	const {
 		defaultTraceConfig = createDefaultTraceConfig(),
 		selectedSize = 6,
@@ -1729,7 +1893,8 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 		nonSelectedOpacity = 0.4,
 		nonSelectedColor = '#969696',
 		getSelectionColor = (index) => ['#ff7f0e', '#2ca02c', '#d62728'][index % 3],
-		colorByColumn = selectedColumn // Default to selectedColumn if not provided
+		colorByColumn = selectedColumn, // Default to selectedColumn if not provided
+		useCache = true
 	} = options || {};
 
 	// First, separate points into selected and non-selected
@@ -1757,19 +1922,10 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 	// Add non-selected points (with configurable color/opacity)
 	if (nonSelectedIndices.length > 0) {
 		console.log(`Creating trace for ${nonSelectedIndices.length} non-selected points...`);
-		
-		// Prepare custom data with both columns if they're different
-		const customdata = nonSelectedIndices.map(i => {
-			let data = `${selectedColumn}: ${plotData[selectedColumn][i]}`;
-			
-			// Add colorByColumn data if different from selectedColumn
-			if (colorByColumn && colorByColumn !== selectedColumn) {
-				data += `, ${colorByColumn}: ${plotData[colorByColumn][i]}`;
-			}
-			
-			return data;
-		});
-		
+
+		// Get customdata with caching for better performance
+		const customdata = getCustomdata(plotData, nonSelectedIndices, selectedColumn, useCache);
+
 		traces.push({
 			...defaultTraceConfig,
 			x: nonSelectedIndices.map(i => plotData.x[i]),
@@ -1790,17 +1946,8 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 		const indices = selectedIndices[value];
 		console.log(`Creating trace for selected value "${value}" with ${indices.length} points...`);
 
-		// Prepare custom data with both columns if they're different
-		const customdata = indices.map(i => {
-			let data = `${selectedColumn}: ${plotData[selectedColumn][i]}`;
-			
-			// Add colorByColumn data if different from selectedColumn
-			if (colorByColumn && colorByColumn !== selectedColumn) {
-				data += `, ${colorByColumn}: ${plotData[colorByColumn][i]}`;
-			}
-			
-			return data;
-		});
+		// Get customdata with caching for better performance
+		const customdata = getCustomdata(plotData, indices, selectedColumn, useCache);
 
 		traces.push({
 			...defaultTraceConfig,

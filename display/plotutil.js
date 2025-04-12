@@ -34,7 +34,11 @@ function createDefaultTraceConfig() {
 	return {
 		mode: 'markers',
 		type: 'scatter3d',
-		hovertemplate: '%{customdata}<br>coord: [%{x:.2f}, %{y:.2f}, %{z:.2f}]',
+		// The hover template that matches the Python format
+		hovertemplate: '<b>Point Info</b><br>' +
+			'head: %{customdata[0]}<br>' +
+			'prompt: %{customdata[1]}<br>' +
+			'coord: [%{x:.2f}, %{y:.2f}, %{z:.2f}]<extra></extra>',
 	};
 }
 
@@ -58,6 +62,121 @@ function getCurrentCameraPosition(plotContainer) {
 	return null;
 }
 
+
+
+
+
+/**
+ * Generate customdata for points based on their indices
+ * 
+ * @param {Object} plotData - The plot data object with all data columns
+ * @param {Array<number>} indices - Array of point indices to generate customdata for
+ * @param {string} selectionColumn - Column used for selection (will be included if not one of the hover fields)
+ * @returns {Array<Array>} - Array of customdata arrays for each point
+ */
+function generateCustomdata(plotData, indices, selectionColumn = null) {
+	// Generate customdata for hover and selection
+	return indices.map(i => {
+		// Always include the two hover columns
+		const data = [
+			plotData['activation.cls'][i],    // head
+			plotData['activation.prompt'][i], // prompt
+		];
+
+		// Add the selection column as third element if it's different from the hover columns
+		if (selectionColumn &&
+			selectionColumn !== 'activation.cls' &&
+			selectionColumn !== 'activation.prompt') {
+			data.push(plotData[selectionColumn][i]);
+		}
+
+		return data;
+	});
+}
+
+/**
+ * Cache object for storing generated customdata
+ */
+const customdataCache = {
+	data: {},
+
+	/**
+	 * Get cached customdata if available
+	 * 
+	 * @param {string} cacheKey - Cache key
+	 * @returns {Array|null} - Cached customdata or null if not found
+	 */
+	get(cacheKey) {
+		return this.data[cacheKey] || null;
+	},
+
+	/**
+	 * Store customdata in cache
+	 * 
+	 * @param {string} cacheKey - Cache key
+	 * @param {Array} customdata - Customdata to store
+	 */
+	set(cacheKey, customdata) {
+		this.data[cacheKey] = customdata;
+	},
+
+	/**
+	 * Clear the entire cache or a specific key
+	 * 
+	 * @param {string|null} cacheKey - Optional specific key to clear
+	 */
+	clear(cacheKey = null) {
+		if (cacheKey) {
+			delete this.data[cacheKey];
+		} else {
+			this.data = {};
+		}
+	}
+};
+
+/**
+ * Generate customdata with caching support
+ * 
+ * @param {Object} plotData - The plot data object with all data columns
+ * @param {Array<number>} indices - Array of point indices to generate customdata for
+ * @param {string} selectionColumn - Column used for selection
+ * @param {boolean} useCache - Whether to use the cache
+ * @returns {Array<Array>} - Array of customdata arrays for each point
+ */
+function getCustomdata(plotData, indices, selectionColumn = null, useCache = true) {
+	// Only use cache if instructed and we have indices
+	if (useCache && indices && indices.length > 0) {
+		// Create a cache key based on indices and selection column
+		const cacheKey = `${selectionColumn || 'default'}_${indices[0]}_${indices.length}`;
+
+		// Try to get from cache first
+		const cachedData = customdataCache.get(cacheKey);
+		if (cachedData) {
+			return cachedData;
+		}
+
+		// Generate new data
+		const customdata = generateCustomdata(plotData, indices, selectionColumn);
+
+		// Store in cache for future use
+		customdataCache.set(cacheKey, customdata);
+
+		return customdata;
+	}
+
+	// If not using cache, generate directly
+	return generateCustomdata(plotData, indices, selectionColumn);
+}
+
+/**
+ * Clear the customdata cache when data changes
+ */
+function clearCustomdataCache() {
+	customdataCache.clear();
+}
+
+
+
 /**
  * Create traces grouped by categorical value (for initial view)
  * @param {Object} plotData - The plot data object with coordinates and metadata
@@ -72,14 +191,15 @@ function getCurrentCameraPosition(plotContainer) {
  */
 function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
 	console.time('Create Category Traces');
-	
+
 	if (!plotData || !selectedColumn) return [];
-	
+
 	const {
 		defaultTraceConfig = createDefaultTraceConfig(),
 		selectedSize = 6,
 		selectedOpacity = 1.0,
-		selectionColumn = selectedColumn // Default to selectedColumn if not provided
+		selectionColumn = selectedColumn, // Default to selectedColumn if not provided
+		useCache = true
 	} = options || {};
 
 	const uniqueValues = [...dataFrame.col_unique(selectedColumn)];
@@ -104,17 +224,8 @@ function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
 
 		console.log(`Found ${indices.length} points for ${value}`);
 
-		// Prepare custom data with both columns if they're different
-		const customdata = indices.map(i => {
-			let data = `${selectedColumn}: ${plotData[selectedColumn][i]}`;
-			
-			// Add selectionColumn data if different from selectedColumn
-			if (selectionColumn && selectionColumn !== selectedColumn) {
-				data += `, ${selectionColumn}: ${plotData[selectionColumn][i]}`;
-			}
-			
-			return data;
-		});
+		// Get customdata with caching for better performance
+		const customdata = getCustomdata(plotData, indices, selectionColumn, useCache);
 
 		traces.push({
 			...defaultTraceConfig,
@@ -153,9 +264,9 @@ function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
  */
 function createTracesWithSelection(plotData, selectedColumn, selectedValues, options) {
 	console.time('Create Selection Traces');
-	
+
 	if (!plotData) return [];
-	
+
 	const {
 		defaultTraceConfig = createDefaultTraceConfig(),
 		selectedSize = 6,
@@ -164,7 +275,8 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 		nonSelectedOpacity = 0.4,
 		nonSelectedColor = '#969696',
 		getSelectionColor = (index) => ['#ff7f0e', '#2ca02c', '#d62728'][index % 3],
-		colorByColumn = selectedColumn // Default to selectedColumn if not provided
+		colorByColumn = selectedColumn, // Default to selectedColumn if not provided
+		useCache = true
 	} = options || {};
 
 	// First, separate points into selected and non-selected
@@ -192,19 +304,10 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 	// Add non-selected points (with configurable color/opacity)
 	if (nonSelectedIndices.length > 0) {
 		console.log(`Creating trace for ${nonSelectedIndices.length} non-selected points...`);
-		
-		// Prepare custom data with both columns if they're different
-		const customdata = nonSelectedIndices.map(i => {
-			let data = `${selectedColumn}: ${plotData[selectedColumn][i]}`;
-			
-			// Add colorByColumn data if different from selectedColumn
-			if (colorByColumn && colorByColumn !== selectedColumn) {
-				data += `, ${colorByColumn}: ${plotData[colorByColumn][i]}`;
-			}
-			
-			return data;
-		});
-		
+
+		// Get customdata with caching for better performance
+		const customdata = getCustomdata(plotData, nonSelectedIndices, selectedColumn, useCache);
+
 		traces.push({
 			...defaultTraceConfig,
 			x: nonSelectedIndices.map(i => plotData.x[i]),
@@ -225,17 +328,8 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 		const indices = selectedIndices[value];
 		console.log(`Creating trace for selected value "${value}" with ${indices.length} points...`);
 
-		// Prepare custom data with both columns if they're different
-		const customdata = indices.map(i => {
-			let data = `${selectedColumn}: ${plotData[selectedColumn][i]}`;
-			
-			// Add colorByColumn data if different from selectedColumn
-			if (colorByColumn && colorByColumn !== selectedColumn) {
-				data += `, ${colorByColumn}: ${plotData[colorByColumn][i]}`;
-			}
-			
-			return data;
-		});
+		// Get customdata with caching for better performance
+		const customdata = getCustomdata(plotData, indices, selectedColumn, useCache);
 
 		traces.push({
 			...defaultTraceConfig,

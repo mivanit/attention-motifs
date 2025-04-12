@@ -48,7 +48,9 @@ const app = Vue.createApp({
 			// Store selection timing information
 			lastSelectionTime: 0,
 			// Debounce timeout
-			updatePlotTimeout: null
+			updatePlotTimeout: null,
+			// Flag to enable/disable customdata caching
+			useCustomdataCache: true
 		};
 	},
 
@@ -67,6 +69,9 @@ const app = Vue.createApp({
 			logger.log('Starting data loading process');
 
 			try {
+				// Clear any existing customdata cache
+				clearCustomdataCache();
+				
 				// Load PCA data using the function from dataLoader.js
 				loading.updateProgress(this, 10, 'Downloading NPY file...');
 				
@@ -188,6 +193,9 @@ const app = Vue.createApp({
 
 			// Update the column and clear selection if needed
 			if (this.colorByColumn !== this.pendingColorByColumn) {
+				// Clear customdata cache when column changes
+				clearCustomdataCache();
+				
 				this.colorByColumn = this.pendingColorByColumn;
 				this.selectedValues = []; // Clear selection when changing default color column
 				this.updatePlot();
@@ -211,6 +219,9 @@ const app = Vue.createApp({
 
 			// Update the column and clear selection
 			if (this.selectionColumn !== this.pendingSelectionColumn) {
+				// Clear customdata cache when column changes
+				clearCustomdataCache();
+				
 				this.selectionColumn = this.pendingSelectionColumn;
 				this.selectedValues = []; // Clear selection when changing selection column
 				this.updatePlot();
@@ -247,7 +258,8 @@ const app = Vue.createApp({
 					selectedSize: this.selectedSize,
 					selectedOpacity: this.selectedOpacity,
 					// Add the selectionColumn so it's included in customdata
-					selectionColumn: this.selectionColumn
+					selectionColumn: this.selectionColumn,
+					useCache: this.useCustomdataCache
 				}
 			);
 		},
@@ -270,7 +282,8 @@ const app = Vue.createApp({
 					nonSelectedColor: this.nonSelectedColor,
 					getSelectionColor: this.getSelectionColor.bind(this),
 					// Add colorByColumn so it's included in customdata
-					colorByColumn: this.colorByColumn
+					colorByColumn: this.colorByColumn,
+					useCache: this.useCustomdataCache
 				}
 			);
 		},
@@ -315,54 +328,65 @@ const app = Vue.createApp({
 		handlePointClick(data) {
 			if (data.points && data.points.length > 0) {
 				const point = data.points[0];
-
+		
 				// Avoid processing clicks too rapidly
 				const now = Date.now();
 				if (now - this.lastSelectionTime < 300) { // 300ms debounce
 					return;
 				}
 				this.lastSelectionTime = now;
-
+		
 				if (point.customdata) {
-					// Extract value from customdata
-					const customData = point.customdata;
+					// Define the mapping of columns to customdata indices
+					const customDataIndices = {
+						'activation.cls': 0,
+						'activation.prompt': 1
+					};
 					
-					// Try to find the selectionColumn value in the customdata string
-					const match = typeof customData === 'string' ? 
-						customData.match(new RegExp(`${this.selectionColumn}: ([^,]+)`)) : null;
-
-					if (match && match[1]) {
-						const value = match[1].trim();
-						logger.log(`Selected ${this.selectionColumn}: ${value}`);
-
-						// Show processing indicator
-						loading.showUpdating(this, true);
-
-						// Store current camera position before update
-						this.currentCameraPosition = this.getCurrentCameraPosition();
-
-						// Use setTimeout to avoid blocking the UI
-						setTimeout(() => {
-							logger.time('Process Selection');
-
-							// Toggle selection
-							const index = this.selectedValues.indexOf(value);
-
-							if (index >= 0) {
-								// Remove if already selected
-								this.selectedValues.splice(index, 1);
-							} else {
-								// Add if not already selected
-								this.selectedValues.push(value);
-							}
-
-							logger.timeEnd('Process Selection');
-
-							// Update the visualization with some delay to prevent UI blocking
-							this.debounceUpdatePlot();
-						}, 10);
+					// If the selection column is not one of the first two, it will be the third element
+					if (this.selectionColumn !== 'activation.cls' && this.selectionColumn !== 'activation.prompt') {
+						customDataIndices[this.selectionColumn] = 2;
+					}
+					
+					// Check if the selection column is in our customdata indices mapping
+					if (this.selectionColumn in customDataIndices) {
+						const index = customDataIndices[this.selectionColumn];
+						const value = point.customdata[index];
+						
+						if (value !== undefined) {
+							logger.log(`Selected ${this.selectionColumn}: ${value}`);
+		
+							// Show processing indicator
+							loading.showUpdating(this, true);
+		
+							// Store current camera position before update
+							this.currentCameraPosition = this.getCurrentCameraPosition();
+		
+							// Use setTimeout to avoid blocking the UI
+							setTimeout(() => {
+								logger.time('Process Selection');
+		
+								// Toggle selection
+								const valueIndex = this.selectedValues.indexOf(value);
+		
+								if (valueIndex >= 0) {
+									// Remove if already selected
+									this.selectedValues.splice(valueIndex, 1);
+								} else {
+									// Add if not already selected
+									this.selectedValues.push(value);
+								}
+		
+								logger.timeEnd('Process Selection');
+		
+								// Update the visualization with some delay to prevent UI blocking
+								this.debounceUpdatePlot();
+							}, 10);
+						} else {
+							logger.error(`Could not find ${this.selectionColumn} value in customdata at index ${index}`);
+						}
 					} else {
-						logger.error(`Could not find ${this.selectionColumn} in customdata:`, customData);
+						logger.error(`Selection column ${this.selectionColumn} not found in customdata structure`);
 					}
 				}
 			}
@@ -490,6 +514,19 @@ const app = Vue.createApp({
 			logger.log(`Current selection: ${this.selectedValues.length} values`);
 			logger.log(`Available PCA components: ${this.availablePcaAxes.length}`);
 			logger.log(`Current axes: PC${this.pcaAxes.x + 1}, PC${this.pcaAxes.y + 1}, PC${this.pcaAxes.z + 1}`);
+			logger.log(`Customdata caching: ${this.useCustomdataCache ? 'Enabled' : 'Disabled'}`);
+			
+			// Log cache info if available
+			if (customdataCache && customdataCache.data) {
+				const cacheKeys = Object.keys(customdataCache.data);
+				logger.log(`Customdata cache entries: ${cacheKeys.length}`);
+				
+				if (cacheKeys.length > 0) {
+					const sampleKey = cacheKeys[0];
+					const sampleSize = customdataCache.data[sampleKey].length;
+					logger.log(`Sample cache entry (${sampleKey}): ${sampleSize} points`);
+				}
+			}
 
 			// Log memory usage if available
 			if (window.performance && window.performance.memory) {
@@ -497,6 +534,17 @@ const app = Vue.createApp({
 				logger.log(`Used JS heap: ${(memory.usedJSHeapSize / (1024 * 1024)).toFixed(2)} MB`);
 				logger.log(`Total JS heap: ${(memory.totalJSHeapSize / (1024 * 1024)).toFixed(2)} MB`);
 			}
+		},
+		
+		// Toggle customdata caching
+		toggleCustomdataCache() {
+			this.useCustomdataCache = !this.useCustomdataCache;
+			if (!this.useCustomdataCache) {
+				// Clear the cache when disabling
+				clearCustomdataCache();
+			}
+			logger.log(`Customdata caching ${this.useCustomdataCache ? 'enabled' : 'disabled'}`);
+			this.statusMessage = `Customdata caching ${this.useCustomdataCache ? 'enabled' : 'disabled'}`;
 		}
 	},
 
@@ -509,6 +557,11 @@ const app = Vue.createApp({
 			// Ctrl+Shift+P to log performance info
 			if (e.ctrlKey && e.shiftKey && e.key === 'P') {
 				this.logPerformanceInfo();
+			}
+			
+			// Ctrl+Shift+C to toggle customdata caching
+			if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+				this.toggleCustomdataCache();
 			}
 		});
 	}
