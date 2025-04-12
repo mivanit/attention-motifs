@@ -7,13 +7,10 @@
  * @returns {Promise<NDArray>} The loaded PCA array
  */
 function loadPcaData() {
-    console.time('Load PCA NPY');
-    console.log('Requesting PCA data file');
+    logger.time('Load PCA NPY');
     return NDArray.load("../data/features/pca_data.npy").then(pcaArray => {
-        console.timeEnd('Load PCA NPY');
-        console.log('PCA data loaded:', pcaArray);
-        console.log('PCA data shape:', pcaArray.shape);
-        console.log('PCA data type:', pcaArray.dtype);
+        logger.timeEnd('Load PCA NPY');
+        logger.log('PCA data shape:', pcaArray.shape);
         return pcaArray;
     });
 }
@@ -23,22 +20,15 @@ function loadPcaData() {
  * @returns {Promise<DataFrame>} The loaded DataFrame
  */
 function loadMetadata() {
-    console.time('Load JSONL');
-    console.log('Requesting metadata file');
+    logger.time('Load JSONL');
     
     return fetch("../data/features/features_meta.jsonl")
-        .then(response => {
-            console.log('Metadata file received, processing text...');
-            return response.text();
-        })
+        .then(response => response.text())
         .then(text => {
-            console.log('JSONL text length:', text.length);
-            console.log('Parsing JSONL into DataFrame...');
+            logger.log('JSONL text length:', text.length);
             const dataFrame = DataFrame.from_jsonl(text);
-            console.timeEnd('Load JSONL');
-            console.log('DataFrame loaded:', dataFrame);
-            console.log('DataFrame columns:', dataFrame.columns);
-            console.log('DataFrame rows:', dataFrame.length);
+            logger.timeEnd('Load JSONL');
+            logger.log('DataFrame rows:', dataFrame.length);
             return dataFrame;
         });
 }
@@ -54,7 +44,6 @@ function processData(pcaArray, dataFrame) {
         throw new Error("PCA data or metadata not loaded");
     }
 
-    console.log('Processing data for plotting...');
     const pcaData = pcaArray;
 
     // Create the plot data object with arrays for all available PCA components
@@ -65,18 +54,15 @@ function processData(pcaArray, dataFrame) {
 
     // Initialize arrays for each PCA component
     for (let i = 0; i < pcaData.shape[1]; i++) {
-        console.log(`Extracting PCA component ${i + 1}...`);
         // Use the get method with null to get all values for a specific component
         plotData.pcaComponents[i] = Array.from(pcaData.get(null, i).data);
     }
 
     // Add metadata columns from the DataFrame to plotData
-    console.log('Adding metadata columns...');
     for (const column of dataFrame.columns) {
         plotData[column] = dataFrame.col(column);
     }
 
-    console.log('Data processing complete');
     return plotData;
 }
 
@@ -86,8 +72,6 @@ function processData(pcaArray, dataFrame) {
  * @param {Object} pcaAxes - The selected PCA axes {x, y, z}
  */
 function updatePlotCoordinates(plotData, pcaAxes) {
-    console.log(`Updating coordinates to PC${pcaAxes.x}, PC${pcaAxes.y}, PC${pcaAxes.z}`);
-
     // Set x, y, z from the selected PCA components
     plotData.x = plotData.pcaComponents[pcaAxes.x];
     plotData.y = plotData.pcaComponents[pcaAxes.y];
@@ -106,7 +90,7 @@ function findCategoricalColumns(dataFrame) {
             // At least 2 unique values but not too many (fewer than 50)
             return uniqueCount < 50;
         } catch (e) {
-            console.error(`Error checking column ${col}:`, e);
+            logger.error(`Error checking column ${col}:`, e);
             return false;
         }
     });

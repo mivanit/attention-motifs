@@ -63,78 +63,72 @@ const app = Vue.createApp({
 	methods: {
 		// Load PCA data and metadata
 		async loadData() {
-			this.isLoading = true;
-			this.loadingMessage = 'Loading PCA data...';
-			this.loadingDetail = 'Requesting NPY file';
-			this.statusMessage = 'Loading PCA data...';
-			console.log('Starting data loading process');
+			loading.showLoading(this, 'Loading PCA data...', 'Requesting NPY file', true);
+			logger.log('Starting data loading process');
 
 			try {
 				// Load PCA data using the function from dataLoader.js
-				this.loadingDetail = 'Downloading NPY file...';
+				loading.updateProgress(this, 10, 'Downloading NPY file...');
+				
+				logger.time('Load PCA Data');
 				this.pcaArray = await loadPcaData();
+				logger.timeEnd('Load PCA Data');
 
-				this.loadingProgressPercent = 30;
-				this.loadingProgress = true;
+				loading.updateProgress(this, 30);
 
 				// Setup available PCA axes
 				this.availablePcaAxes = new Array(this.pcaArray.shape[1]).fill(0).map((_, i) => i);
-				console.log('Available PCA components:', this.availablePcaAxes.length);
+				logger.log('Available PCA components:', this.availablePcaAxes.length);
 
 				// Load metadata using the function from dataLoader.js
-				this.loadingMessage = 'Loading metadata...';
-				this.loadingDetail = 'Requesting JSONL file';
+				loading.updateProgress(this, 40, 'Loading metadata...');
 				this.statusMessage = 'Loading feature metadata...';
 
-				this.loadingProgressPercent = 50;
-				this.loadingDetail = 'Processing JSONL file (takes a while)...';
+				loading.updateProgress(this, 50, 'Processing JSONL file (takes a while)...');
+				
+				logger.time('Load Metadata');
 				this.dataFrame = await loadMetadata();
+				logger.timeEnd('Load Metadata');
 
-				this.loadingProgressPercent = 70;
+				loading.updateProgress(this, 70, 'Processing data...');
 
 				// Process data using the function from dataLoader.js
-				this.loadingMessage = 'Processing data...';
-				this.loadingDetail = 'Preparing plot data';
-				this.loadingProgressPercent = 80;
-				console.time('Process Data');
+				loading.updateProgress(this, 80, 'Preparing plot data');
+				
+				logger.time('Process Data');
 				this.plotData = processData(this.pcaArray, this.dataFrame);
 				// Update coordinates based on initial PCA axes selection
 				updatePlotCoordinates(this.plotData, this.pcaAxes);
-				console.timeEnd('Process Data');
+				logger.timeEnd('Process Data');
 
-				this.loadingProgressPercent = 90;
+				loading.updateProgress(this, 90, 'Finding categorical columns...');
 
 				// Find categorical columns using the function from dataLoader.js
-				console.log('Finding categorical columns...');
 				this.availableColumns = findCategoricalColumns(this.dataFrame);
-				console.log('Available categorical columns:', this.availableColumns);
+				logger.log('Available categorical columns:', this.availableColumns);
 
 				// Set default selected columns
 				this.colorByColumn = 'activation.model';
 				this.pendingColorByColumn = this.colorByColumn;
 				this.selectionColumn = 'activation.model'; // Initialize with the same default
 				this.pendingSelectionColumn = this.selectionColumn;
-				console.log('Initial color column:', this.colorByColumn);
-				console.log('Initial selection column:', this.selectionColumn);
 
-				this.loadingProgressPercent = 95;
+				loading.updateProgress(this, 95, 'Rendering plot...');
 				this.statusMessage = 'Data loaded successfully';
-				this.loadingMessage = 'Rendering plot...';
-				this.loadingDetail = 'Creating visualization';
 
 				// Initialize the plot after data is loaded
 				this.initPlot();
 
-				this.loadingProgressPercent = 100;
-				this.isLoading = false;
-				console.log('Data loading complete');
+				loading.updateProgress(this, 100, 'Completing setup...');
+				
+				loading.hideLoading(this);
+				logger.log('Data loading complete');
 			} catch (error) {
-				console.error("Error loading data:", error);
+				logger.error("Error loading data:", error);
 				this.statusMessage = `Error loading data: ${error.message}`;
-				this.loadingMessage = 'Error loading data';
-				this.loadingDetail = error.message;
-				this.isLoading = false;
-				this.loadingProgress = false;
+				
+				loading.showLoading(this, 'Error loading data', error.message, false);
+				loading.hideLoading(this);
 			}
 		},
 
@@ -158,7 +152,7 @@ const app = Vue.createApp({
 
 		// Handle change of PCA axes
 		updatePlotAxes() {
-			console.log('PCA axes changed', this.pcaAxes);
+			logger.log('PCA axes changed', this.pcaAxes);
 			this.updatePlotCoordinates();
 			this.updatePlot();
 		},
@@ -170,14 +164,12 @@ const app = Vue.createApp({
 
 		// Select a colorByColumn from the dropdown
 		selectColorByColumn(column) {
-			console.log(`Selected color-by column: ${column}`);
 			this.pendingColorByColumn = column;
 			this.showColorDropdown = false;
 		},
 
 		// Select a selectionColumn from the dropdown
 		selectSelectionColumn(column) {
-			console.log(`Selected selection column: ${column}`);
 			this.pendingSelectionColumn = column;
 			this.showSelectionDropdown = false;
 		},
@@ -186,13 +178,13 @@ const app = Vue.createApp({
 		applyColorByColumn() {
 			if (!this.pendingColorByColumn) return;
 
-			console.log(`Applying color-by column change from ${this.colorByColumn} to ${this.pendingColorByColumn}`);
+			logger.log(`Changing color-by column: ${this.colorByColumn} → ${this.pendingColorByColumn}`);
 
 			// Store current camera position before update
 			this.currentCameraPosition = this.getCurrentCameraPosition();
 
 			// Show plot updating indicator
-			this.isUpdatingPlot = true;
+			loading.showUpdating(this);
 
 			// Update the column and clear selection if needed
 			if (this.colorByColumn !== this.pendingColorByColumn) {
@@ -201,7 +193,7 @@ const app = Vue.createApp({
 				this.updatePlot();
 			} else {
 				// Hide updating indicator if no change
-				this.isUpdatingPlot = false;
+				loading.hideUpdating(this);
 			}
 		},
 
@@ -209,13 +201,13 @@ const app = Vue.createApp({
 		applySelectionColumn() {
 			if (!this.pendingSelectionColumn) return;
 
-			console.log(`Applying selection column change from ${this.selectionColumn} to ${this.pendingSelectionColumn}`);
+			logger.log(`Changing selection column: ${this.selectionColumn} → ${this.pendingSelectionColumn}`);
 
 			// Store current camera position before update
 			this.currentCameraPosition = this.getCurrentCameraPosition();
 
 			// Show plot updating indicator
-			this.isUpdatingPlot = true;
+			loading.showUpdating(this);
 
 			// Update the column and clear selection
 			if (this.selectionColumn !== this.pendingSelectionColumn) {
@@ -224,7 +216,7 @@ const app = Vue.createApp({
 				this.updatePlot();
 			} else {
 				// Hide updating indicator if no change
-				this.isUpdatingPlot = false;
+				loading.hideUpdating(this);
 			}
 		},
 
@@ -243,7 +235,7 @@ const app = Vue.createApp({
 
 		// Create traces grouped by categorical value (for initial view) - now using function from plotutil.js
 		createTracesByCategory() {
-			console.log('Creating traces by category...');
+			logger.log('Creating traces by category');
 
 			// Use the createTracesByCategory function from plotutil.js with colorByColumn
 			return createTracesByCategory(
@@ -262,7 +254,7 @@ const app = Vue.createApp({
 
 		// Create traces with selection highlighting - now using function from plotutil.js
 		createTracesWithSelection() {
-			console.log('Creating traces with selection highlighting...');
+			logger.log('Creating traces with selection highlighting');
 
 			// Use the createTracesWithSelection function from plotutil.js with selectionColumn
 			return createTracesWithSelection(
@@ -286,10 +278,10 @@ const app = Vue.createApp({
 		// Initialize the plot
 		initPlot() {
 			this.statusMessage = 'Creating plot...';
-			console.log('Initializing plot...');
+			logger.log('Initializing plot');
 
 			if (!this.plotData) {
-				console.error("Plot data not available");
+				logger.error("Plot data not available");
 				this.statusMessage = 'Error: Plot data not available';
 				return;
 			}
@@ -298,12 +290,13 @@ const app = Vue.createApp({
 			const traces = this.createTracesByCategory();
 
 			// Create the plot
-			console.log('Rendering initial plot...');
+			logger.time('Initial plot render');
 			Plotly.newPlot(
 				this.$refs.plotContainer,
 				traces,
 				createPlotLayout(this.title, null, this.pcaAxes)
 			);
+			logger.timeEnd('Initial plot render');
 
 			// Add click handler with proper binding
 			const boundHandlePointClick = this.handlePointClick.bind(this);
@@ -316,19 +309,16 @@ const app = Vue.createApp({
 			});
 
 			this.statusMessage = 'Plot ready - click points to select values';
-			console.log('Plot initialization complete');
 		},
 
 		// Handle point clicks
 		handlePointClick(data) {
 			if (data.points && data.points.length > 0) {
 				const point = data.points[0];
-				console.log("Clicked point:", point);
 
 				// Avoid processing clicks too rapidly
 				const now = Date.now();
 				if (now - this.lastSelectionTime < 300) { // 300ms debounce
-					console.log("Click ignored - too soon after previous click");
 					return;
 				}
 				this.lastSelectionTime = now;
@@ -336,7 +326,6 @@ const app = Vue.createApp({
 				if (point.customdata) {
 					// Extract value from customdata
 					const customData = point.customdata;
-					console.log("Custom data:", customData);
 					
 					// Try to find the selectionColumn value in the customdata string
 					const match = typeof customData === 'string' ? 
@@ -344,17 +333,17 @@ const app = Vue.createApp({
 
 					if (match && match[1]) {
 						const value = match[1].trim();
-						console.log(`Clicked ${this.selectionColumn}:`, value);
+						logger.log(`Selected ${this.selectionColumn}: ${value}`);
 
 						// Show processing indicator
-						this.processingSelection = true;
+						loading.showUpdating(this, true);
 
 						// Store current camera position before update
 						this.currentCameraPosition = this.getCurrentCameraPosition();
 
 						// Use setTimeout to avoid blocking the UI
 						setTimeout(() => {
-							console.time('Process Selection');
+							logger.time('Process Selection');
 
 							// Toggle selection
 							const index = this.selectedValues.indexOf(value);
@@ -362,20 +351,18 @@ const app = Vue.createApp({
 							if (index >= 0) {
 								// Remove if already selected
 								this.selectedValues.splice(index, 1);
-								console.log("Removed value:", value);
 							} else {
 								// Add if not already selected
 								this.selectedValues.push(value);
-								console.log("Added value:", value);
 							}
 
-							console.timeEnd('Process Selection');
+							logger.timeEnd('Process Selection');
 
 							// Update the visualization with some delay to prevent UI blocking
 							this.debounceUpdatePlot();
 						}, 10);
 					} else {
-						console.warn(`Could not find ${this.selectionColumn} in customdata:`, customData);
+						logger.error(`Could not find ${this.selectionColumn} in customdata:`, customData);
 					}
 				}
 			}
@@ -394,12 +381,10 @@ const app = Vue.createApp({
 
 		// Update the plot based on selection
 		updatePlot() {
-			console.time('Update Plot');
+			logger.time('Update Plot');
 			try {
-				console.log('Updating plot...');
-
 				// Show updating indicator
-				this.isUpdatingPlot = true;
+				loading.showUpdating(this);
 
 				// Store current camera position before update if not already stored
 				if (!this.currentCameraPosition) {
@@ -407,7 +392,6 @@ const app = Vue.createApp({
 				}
 
 				// Create new traces based on selection state
-				console.log('Creating new traces...');
 				const traces = this.selectedValues.length > 0
 					? this.createTracesWithSelection()
 					: this.createTracesByCategory();
@@ -419,12 +403,13 @@ const app = Vue.createApp({
 
 				// Use complete redraw with newPlot to avoid potential issues
 				// Apply saved camera position in the layout
-				console.log('Rendering plot with new data...');
+				logger.time('Plot Render');
 				Plotly.newPlot(
 					this.$refs.plotContainer,
 					traces,
 					createPlotLayout(this.title, this.currentCameraPosition, this.pcaAxes)
 				);
+				logger.timeEnd('Plot Render');
 
 				// Add click handler again after plot is redrawn with proper binding
 				const boundHandlePointClick = this.handlePointClick.bind(this);
@@ -435,31 +420,25 @@ const app = Vue.createApp({
 					this.currentCameraPosition = this.getCurrentCameraPosition();
 				});
 
-				// Hide processing indicator if it was shown
-				this.processingSelection = false;
-				// Hide updating indicator
-				this.isUpdatingPlot = false;
+				// Hide updating indicators
+				loading.hideUpdating(this);
 				this.statusMessage = 'Plot updated';
-				console.log('Plot update complete');
 			} catch (error) {
-				console.error("Error updating plot:", error);
+				logger.error("Error updating plot:", error);
 				this.statusMessage = `Error updating plot: ${error.message}`;
-				this.processingSelection = false;
-				// Hide updating indicator
-				this.isUpdatingPlot = false;
+				loading.hideUpdating(this);
 			}
-			console.timeEnd('Update Plot');
+			logger.timeEnd('Update Plot');
 		},
 
 		// Toggle config section collapse
 		toggleConfigCollapse() {
 			this.configCollapsed = !this.configCollapsed;
-			console.log(`Configuration ${this.configCollapsed ? 'collapsed' : 'expanded'}`);
 		},
 
 		// Clear selection
 		clearSelection() {
-			console.log('Clearing all selections');
+			logger.log('Clearing all selections');
 			// Store current camera position before clearing
 			this.currentCameraPosition = this.getCurrentCameraPosition();
 
@@ -471,7 +450,7 @@ const app = Vue.createApp({
 
 		// Remove a specific value from selection
 		removeSelectedValue(value) {
-			console.log(`Removing value from selection: ${value}`);
+			logger.log(`Removing from selection: ${value}`);
 			// Store current camera position before removing value
 			this.currentCameraPosition = this.getCurrentCameraPosition();
 
@@ -489,7 +468,7 @@ const app = Vue.createApp({
 
 		// Generate new random colors that are visually distinct
 		regenerateColors() {
-			console.log('Regenerating selection colors');
+			logger.log('Regenerating selection colors');
 			// Store current camera position before changing colors
 			this.currentCameraPosition = this.getCurrentCameraPosition();
 			// Using the imported generateDistinctColors function from colorutil.js
@@ -503,20 +482,20 @@ const app = Vue.createApp({
 
 		// Show performance information in console for debugging
 		logPerformanceInfo() {
-			console.log('Performance Information:');
-			console.log(`Total points: ${this.plotData?.x?.length || 'N/A'}`);
-			console.log(`Color by: ${this.colorByColumn}, Select by: ${this.selectionColumn}`);
-			console.log(`Total unique ${this.colorByColumn} values: ${this.availableColumns.length > 0 ?
+			logger.log('Performance Information:');
+			logger.log(`Total points: ${this.plotData?.x?.length || 'N/A'}`);
+			logger.log(`Color by: ${this.colorByColumn}, Select by: ${this.selectionColumn}`);
+			logger.log(`Total unique ${this.colorByColumn} values: ${this.availableColumns.length > 0 ?
 				this.dataFrame.col_unique(this.colorByColumn).size : 'N/A'}`);
-			console.log(`Current selection: ${this.selectedValues.length} values`);
-			console.log(`Available PCA components: ${this.availablePcaAxes.length}`);
-			console.log(`Current axes: PC${this.pcaAxes.x + 1}, PC${this.pcaAxes.y + 1}, PC${this.pcaAxes.z + 1}`);
+			logger.log(`Current selection: ${this.selectedValues.length} values`);
+			logger.log(`Available PCA components: ${this.availablePcaAxes.length}`);
+			logger.log(`Current axes: PC${this.pcaAxes.x + 1}, PC${this.pcaAxes.y + 1}, PC${this.pcaAxes.z + 1}`);
 
 			// Log memory usage if available
 			if (window.performance && window.performance.memory) {
 				const memory = window.performance.memory;
-				console.log(`Used JS heap: ${(memory.usedJSHeapSize / (1024 * 1024)).toFixed(2)} MB`);
-				console.log(`Total JS heap: ${(memory.totalJSHeapSize / (1024 * 1024)).toFixed(2)} MB`);
+				logger.log(`Used JS heap: ${(memory.usedJSHeapSize / (1024 * 1024)).toFixed(2)} MB`);
+				logger.log(`Total JS heap: ${(memory.totalJSHeapSize / (1024 * 1024)).toFixed(2)} MB`);
 			}
 		}
 	},
