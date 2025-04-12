@@ -24,7 +24,7 @@ class DataFrame {
 	 */
 	col(name) {
 		if (!this.columns.includes(name)) {
-			throw new Error(`Column '${name}' not found`);
+			throw new Error(`Column '${name}' not found in columns: ${this.columns.join(', ')}`);
 		}
 
 		return this.data.map(row => row[name]);
@@ -42,6 +42,15 @@ class DataFrame {
 		}
 
 		return this.data[rowIdx];
+	}
+
+	/**
+	 * Returns unique values in a specific column
+	 * @param {string} name - Column name
+	 * @returns {Set} - Unique values in the column
+	 */
+	col_unique(name) {
+		return new Set(this.col(name));
 	}
 
 	/**
@@ -138,22 +147,8 @@ class DataFrame {
 	 * @returns {DataFrame} - New DataFrame instance
 	 */
 	static from_jsonl(text) {
-		// Split text into lines and filter out empty lines
-		const lines = text.split('\n').filter(line => line.trim().length > 0);
-
-		if (lines.length === 0) {
-			return new DataFrame();
-		}
-
 		// Parse each line as JSON
-		const data = lines.map(line => {
-			try {
-				return JSON.parse(line);
-			} catch (e) {
-				console.error(`Failed to parse line as JSON: ${line}`);
-				return {};
-			}
-		});
+		const data = text.trim().split('\n').map(line => JSON.parse(line));
 
 		// Extract all unique column names from all rows
 		const allColumns = new Set();

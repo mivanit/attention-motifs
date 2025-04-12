@@ -4,6 +4,7 @@
   <title>Interactive 3D PCA Plot</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.2/plotly.min.js"></script>
   <script src="array.js"></script>
+  <script src="dataframe.js"></script>
 </head>
 <body>
   <h1>Interactive 3D PCA Plot</h1>
@@ -62,6 +63,15 @@
       console.log("arr.get(0, 1)", arr.get(0, 1));
       console.log("arr.get(0, null)", arr.get(0, null));
       console.log("arr.get(null, 0)", arr.get(null, 0));
+
+      r = await fetch("../data/features/features_scaled.jsonl");
+      text = await r.text();
+      console.log("text.length", text.length);
+      df = await DataFrame.from_jsonl(text);
+      console.log("df", df);
+      console.log("df.columns", df.columns);
+      console.log("df.col_unique('activation.model')", df.col_unique("activation.model"));
+      // console.log("df.col()
     };
 
     // Call the main function to execute the code
