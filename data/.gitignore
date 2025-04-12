@@ -1,3 +1,4 @@
-scalar_features_fixed.jsonl
-scalar_features.jsonl
-scalar_features.jsonl.gz
+features/**
+# scalar_features_fixed.jsonl
+# scalar_features.jsonl
+# scalar_features.jsonl.gz
