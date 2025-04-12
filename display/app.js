@@ -1,4 +1,3 @@
-
 // Create Vue app
 const app = Vue.createApp({
 	data() {
@@ -65,91 +64,47 @@ const app = Vue.createApp({
 			console.log('Starting data loading process');
 
 			try {
-				console.time('Load PCA NPY');
-				// Start loading PCA data file
+				// Load PCA data using the function from dataLoader.js
 				this.loadingDetail = 'Downloading NPY file...';
-				console.log('Requesting PCA data file');
-
-				// actually load
-				// ----------------------------------------
-				this.pcaArray = await NDArray.load("../data/features/pca_data.npy");
-				// ----------------------------------------
-
-				console.timeEnd('Load PCA NPY');
-				console.log('PCA data loaded:', this.pcaArray);
-				console.log('PCA data shape:', this.pcaArray.shape);
-				console.log('PCA data type:', this.pcaArray.dtype);
+				this.pcaArray = await loadPcaData();
 
 				this.loadingProgressPercent = 30;
 				this.loadingProgress = true;
 
 				// Setup available PCA axes
-				// ----------------------------------------
 				this.availablePcaAxes = new Array(this.pcaArray.shape[1]).fill(0).map((_, i) => i);
-				// ----------------------------------------
 				console.log('Available PCA components:', this.availablePcaAxes.length);
 
-				// Load metadata
+				// Load metadata using the function from dataLoader.js
 				this.loadingMessage = 'Loading metadata...';
 				this.loadingDetail = 'Requesting JSONL file';
 				this.statusMessage = 'Loading feature metadata...';
-				console.time('Load JSONL');
-
-				console.log('Requesting metadata file');
-				// ----------------------------------------
-				const response = await fetch("../data/features/features_scaled.jsonl");
-				// ----------------------------------------
-
+				
 				this.loadingProgressPercent = 50;
 				this.loadingDetail = 'Processing JSONL file (takes a while)...';
-				console.log('Metadata file received, processing text...');
-				// ----------------------------------------
-				const text = await response.text();
-				// ----------------------------------------
-				console.log('JSONL text length:', text.length);
-
+				this.dataFrame = await loadMetadata();
+				
 				this.loadingProgressPercent = 70;
-				console.log('Parsing JSONL into DataFrame...');
-				// ----------------------------------------
-				this.dataFrame = DataFrame.from_jsonl(text);
-				// ----------------------------------------
-				console.timeEnd('Load JSONL');
-				console.log('DataFrame loaded:', this.dataFrame);
-				console.log('DataFrame columns:', this.dataFrame.columns);
-				console.log('DataFrame rows:', this.dataFrame.length);
 
-				// Process data
+				// Process data using the function from dataLoader.js
 				this.loadingMessage = 'Processing data...';
 				this.loadingDetail = 'Preparing plot data';
 				this.loadingProgressPercent = 80;
 				console.time('Process Data');
-				// ----------------------------------------
-				this.processData();
-				// ----------------------------------------
+				this.plotData = processData(this.pcaArray, this.dataFrame);
+				// Update coordinates based on initial PCA axes selection
+				updatePlotCoordinates(this.plotData, this.pcaAxes);
 				console.timeEnd('Process Data');
 
 				this.loadingProgressPercent = 90;
 
-				// Set available columns for selection
+				// Find categorical columns using the function from dataLoader.js
 				console.log('Finding categorical columns...');
-				// ----------------------------------------
-				this.availableColumns = this.dataFrame.columns.filter(col => {
-					try {
-						const uniqueCount = this.dataFrame.col_unique(col).size;
-						// At least 2 unique values but not too many (fewer than 50)
-						return uniqueCount < 50;
-					} catch (e) {
-						console.error(`Error checking column ${col}:`, e);
-						return false;
-					}
-				});
-				// ----------------------------------------
-
+				this.availableColumns = findCategoricalColumns(this.dataFrame);
 				console.log('Available categorical columns:', this.availableColumns);
 
 				// Set default selected column
 				this.selectedColumn = 'activation.model';
-
 				console.log('Selected column for coloring:', this.selectedColumn);
 
 				this.loadingProgressPercent = 95;
@@ -178,43 +133,17 @@ const app = Vue.createApp({
 			if (!this.pcaArray || !this.dataFrame) {
 				throw new Error("PCA data or metadata not loaded");
 			}
-
-			console.log('Processing data for plotting...');
-			const pcaData = this.pcaArray;
-
-			// Create the plot data object with arrays for all available PCA components
-			this.plotData = {
-				// Initialize empty arrays for all PCA components
-				pcaComponents: []
-			};
-
-			// Initialize arrays for each PCA component
-			for (let i = 0; i < pcaData.shape[1]; i++) {
-				console.log(`Extracting PCA component ${i + 1}...`);
-				// Use the get method with null to get all values for a specific component
-				this.plotData.pcaComponents[i] = Array.from(pcaData.get(null, i).data);
-			}
-
-			// Add metadata columns from the DataFrame to plotData
-			console.log('Adding metadata columns...');
-			for (const column of this.dataFrame.columns) {
-				this.plotData[column] = this.dataFrame.col(column);
-			}
-
+			
+			// Use the processData function from dataLoader.js
+			this.plotData = processData(this.pcaArray, this.dataFrame);
 			// Initialize with current axes selection
 			this.updatePlotCoordinates();
-
-			console.log('Data processing complete');
 		},
 
 		// Update x, y, z arrays based on current PCA axis selection
 		updatePlotCoordinates() {
-			console.log(`Updating coordinates to PC${this.pcaAxes.x}, PC${this.pcaAxes.y}, PC${this.pcaAxes.z}`);
-
-			// Set x, y, z from the selected PCA components
-			this.plotData.x = this.plotData.pcaComponents[this.pcaAxes.x];
-			this.plotData.y = this.plotData.pcaComponents[this.pcaAxes.y];
-			this.plotData.z = this.plotData.pcaComponents[this.pcaAxes.z];
+			// Use the updatePlotCoordinates function from dataLoader.js
+			updatePlotCoordinates(this.plotData, this.pcaAxes);
 		},
 
 		// Handle change of PCA axes
