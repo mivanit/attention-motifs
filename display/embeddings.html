@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>Vue-Based 3D PCA Plot</title>
   <!-- Load Vue -->
@@ -16,36 +17,23 @@
   <!-- load app -->
   <script src="app.js"></script>
 </head>
+
 <body>
   <div id="app">
     <h1>{{ title }}</h1>
-    
     <div class="controls">
       <div class="control-group">
         <button @click="clearSelection">Clear Selection</button>
         <button class="secondary" @click="regenerateColors">Regenerate Colors</button>
         <div class="combo-select">
-          <input 
-            type="text" 
-            v-model="selectedColumn" 
-            @focus="showDropdown = true"
-            @blur="hideDropdownDelayed"
-            placeholder="Select column"
-          />
+          <input type="text" v-model="selectedColumn" @focus="showDropdown = true" @blur="hideDropdownDelayed" placeholder="Select column" />
           <div class="dropdown" v-if="showDropdown">
-            <div 
-              v-for="column in availableColumns" 
-              class="dropdown-item"
-              @mousedown.prevent="selectColumn(column)"
-            >
-              {{ column }}
-            </div>
+            <div v-for="column in availableColumns" class="dropdown-item" @mousedown.prevent="selectColumn(column)"> {{ column }} </div>
           </div>
         </div>
       </div>
       <div class="status-message">{{ statusMessage }}</div>
     </div>
-    
     <!-- PCA Axis Selection -->
     <div class="axis-controls">
       <div v-for="(axis, axisName) in {x: 'X', y: 'Y', z: 'Z'}" class="axis-control">
@@ -55,7 +43,6 @@
         </select>
       </div>
     </div>
-    
     <div id="plot-container" class="plot-container" ref="plotContainer">
       <!-- Loading overlay -->
       <div v-if="isLoading" class="loading-overlay">
@@ -66,30 +53,20 @@
           <div class="loading-progress-bar" :style="{ width: loadingProgressPercent + '%' }"></div>
         </div>
       </div>
-      
       <!-- Processing selection indicator -->
       <div v-if="processingSelection" class="processing-indicator">
         <div class="mini-spinner"></div>
         <span>Processing selection...</span>
       </div>
     </div>
-    
     <div>
       <h3>Selected Values:</h3>
       <div class="selection-display">
         <template v-if="selectedValues.length === 0">None</template>
-        <span 
-          v-for="(val, i) in selectedValues" 
-          :key="val"
-          class="selected-value"
-          :style="{ backgroundColor: getSelectionColor(i) }"
-        >
-          {{ val }}
-          <div class="remove-btn" @click="removeSelectedValue(val)" title="Remove">×</div>
+        <span v-for="(val, i) in selectedValues" :key="val" class="selected-value" :style="{ backgroundColor: getSelectionColor(i) }"> {{ val }} <div class="remove-btn" @click="removeSelectedValue(val)" title="Remove">×</div>
         </span>
       </div>
     </div>
-    
     <div class="config-display">
       <div class="config-header" @click="toggleConfigCollapse">
         <h3>Plot Configuration</h3>
@@ -138,29 +115,17 @@
         </div>
       </div>
     </div>
-    
     <div class="url-section">
       <h3>Generated Link:</h3>
       <div>
-        <input 
-          type="text" 
-          v-model="baseUrl" 
-          placeholder="Enter base URL"
-        />
+        <input type="text" v-model="baseUrl" placeholder="Enter base URL" />
         <div class="generated-links" v-if="selectedValues.length > 0">
           <h4>Combined Link:</h4>
-          <a 
-            :href="combinedUrl"
-            target="_blank"
-            class="generated-link"
-          >
-            {{ combinedUrl }}
-          </a>
+          <a :href="combinedUrl" target="_blank" class="generated-link"> {{ combinedUrl }} </a>
         </div>
       </div>
     </div>
   </div>
-  
   <script>
     // Mount the app to the container
     app.mount('#app');
