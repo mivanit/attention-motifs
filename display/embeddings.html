@@ -44,10 +44,43 @@
       <div class="status-message">{{ statusMessage }}</div>
     </div>
     
+    <!-- PCA Axis Selection -->
+    <div class="axis-controls">
+      <div class="axis-control">
+        <label>X-Axis:</label>
+        <select v-model="pcaAxes.x" @change="updatePlotAxes">
+          <option v-for="(axis, index) in availablePcaAxes" :value="index">PC{{ index + 1 }}</option>
+        </select>
+      </div>
+      <div class="axis-control">
+        <label>Y-Axis:</label>
+        <select v-model="pcaAxes.y" @change="updatePlotAxes">
+          <option v-for="(axis, index) in availablePcaAxes" :value="index">PC{{ index + 1 }}</option>
+        </select>
+      </div>
+      <div class="axis-control">
+        <label>Z-Axis:</label>
+        <select v-model="pcaAxes.z" @change="updatePlotAxes">
+          <option v-for="(axis, index) in availablePcaAxes" :value="index">PC{{ index + 1 }}</option>
+        </select>
+      </div>
+    </div>
+    
     <div id="plot-container" class="plot-container" ref="plotContainer">
-      <div v-if="isLoading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-        <div style="border: 4px solid rgba(0, 0, 0, 0.1); border-radius: 50%; border-top: 4px solid #3498db; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
-        <p style="text-align: center;">Loading data...</p>
+      <!-- Loading overlay -->
+      <div v-if="isLoading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <h3>{{ loadingMessage }}</h3>
+        <p>{{ loadingDetail }}</p>
+        <div v-if="loadingProgress" class="loading-progress">
+          <div class="loading-progress-bar" :style="{ width: loadingProgressPercent + '%' }"></div>
+        </div>
+      </div>
+      
+      <!-- Processing selection indicator -->
+      <div v-if="processingSelection" class="processing-indicator">
+        <div class="mini-spinner"></div>
+        <span>Processing selection...</span>
       </div>
     </div>
     
@@ -139,39 +172,31 @@
   </div>
   
   <script>
-    // Add a style for the spinner animation
-    const styleSheet = document.createElement('style');
-    styleSheet.innerText = `
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    `;
-    document.head.appendChild(styleSheet);
-
     /**
-     * Creates a layout configuration for a Plotly 3D scatter plot
-     * @param {string} title - Title of the plot
-     * @param {Object|null} cameraPosition - Optional camera position to preserve
-     * @returns {Object} Layout configuration object for Plotly
-     */
-    function createPlotLayout(title, cameraPosition = null) {
+ * Creates a layout configuration for a Plotly 3D scatter plot
+ * @param {string} title - Title of the plot
+ * @param {Object|null} cameraPosition - Optional camera position to preserve
+ * @param {Object} axes - Object with x, y, z indices of PCA components to use
+ * @returns {Object} Layout configuration object for Plotly
+ */
+    function createPlotLayout(title, cameraPosition = null, axes = { x: 0, y: 1, z: 2 }) {
       const layout = {
         title: title,
         scene: {
-          xaxis: { title: 'PC1' },
-          yaxis: { title: 'PC2' },
-          zaxis: { title: 'PC3' },
+          xaxis: { title: `PC${axes.x + 1}` },
+          yaxis: { title: `PC${axes.y + 1}` },
+          zaxis: { title: `PC${axes.z + 1}` },
           camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
         },
-        margin: { l: 0, r: 0, b: 0, t: 50 }
+        margin: { l: 0, r: 0, b: 0, t: 50 },
+        hovermode: 'closest'
       };
-      
+
       // Apply saved camera position if provided
       if (cameraPosition) {
         layout.scene.camera = cameraPosition;
       }
-      
+
       return layout;
     }
 
@@ -194,6 +219,11 @@
           title: 'Interactive 3D PCA Plot',
           statusMessage: 'Loading data...',
           isLoading: true,
+          loadingMessage: 'Loading data...',
+          loadingDetail: 'Initializing...',
+          loadingProgress: false,
+          loadingProgressPercent: 0,
+          processingSelection: false,
           selectedValues: [],
           plotData: null,
           pcaArray: null,
@@ -201,12 +231,18 @@
           showDropdown: false,
           selectedColumn: '', // Will be set after loading data
           availableColumns: [],
+          pcaAxes: {
+            x: 0, // Default to PC1
+            y: 1, // Default to PC2
+            z: 2  // Default to PC3
+          },
+          availablePcaAxes: [], // Will be populated with available components
           selectionColors: [
-            '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
+            '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
             '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
           ],
           initialSelectionColors: [
-            '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
+            '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
             '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
           ],
           nonSelectedColor: '#969696', // Gray for non-selected points
@@ -220,94 +256,182 @@
           // Default trace configuration
           defaultTraceConfig: createDefaultTraceConfig(),
           // Store current camera position
-          currentCameraPosition: null
+          currentCameraPosition: null,
+          // Store selection timing information
+          lastSelectionTime: 0,
+          // Debounce timeout
+          updatePlotTimeout: null
         };
       },
-      
+
       computed: {
         // Compute combined URL with all selected values
         combinedUrl() {
           if (!this.selectedValues.length) return this.baseUrl || 'https://miv.name/pattern-lens/demo/?';
-          
+
           const base = this.baseUrl || 'https://miv.name/pattern-lens/demo/?';
           return base + this.selectedValues.map(val => encodeURIComponent(val)).join('&');
         }
       },
-      
+
       methods: {
         // Load PCA data and metadata
         async loadData() {
           this.isLoading = true;
+          this.loadingMessage = 'Loading PCA data...';
+          this.loadingDetail = 'Requesting NPY file';
           this.statusMessage = 'Loading PCA data...';
-          
+          console.log('Starting data loading process');
+
           try {
-            // Load PCA data from NPY file
+            console.time('Load PCA NPY');
+            // Start loading PCA data file
+            this.loadingDetail = 'Downloading NPY file...';
+            console.log('Requesting PCA data file');
             this.pcaArray = await NDArray.load("../data/features/pca_data.npy");
+
+            console.timeEnd('Load PCA NPY');
+            console.log('PCA data loaded:', this.pcaArray);
+            console.log('PCA data shape:', this.pcaArray.shape);
+            console.log('PCA data type:', this.pcaArray.dtype);
+
+            this.loadingProgressPercent = 30;
+            this.loadingProgress = true;
+
+            // Setup available PCA axes
+            this.availablePcaAxes = new Array(this.pcaArray.shape[1]).fill(0).map((_, i) => i);
+            console.log('Available PCA components:', this.availablePcaAxes.length);
+
+            // Load metadata
+            this.loadingMessage = 'Loading metadata...';
+            this.loadingDetail = 'Requesting JSONL file';
             this.statusMessage = 'Loading feature metadata...';
-            
-            // Load metadata from JSONL file
+            console.time('Load JSONL');
+
+            console.log('Requesting metadata file');
             const response = await fetch("../data/features/features_scaled.jsonl");
+
+            this.loadingProgressPercent = 50;
+            this.loadingDetail = 'Processing JSONL file (takes a while)...';
+            console.log('Metadata file received, processing text...');
             const text = await response.text();
+            console.log('JSONL text length:', text.length);
+
+            this.loadingProgressPercent = 70;
+            console.log('Parsing JSONL into DataFrame...');
             this.dataFrame = DataFrame.from_jsonl(text);
-            
-            // Prepare the data for plotting
+            console.timeEnd('Load JSONL');
+            console.log('DataFrame loaded:', this.dataFrame);
+            console.log('DataFrame columns:', this.dataFrame.columns);
+            console.log('DataFrame rows:', this.dataFrame.length);
+
+            // Process data
+            this.loadingMessage = 'Processing data...';
+            this.loadingDetail = 'Preparing plot data';
+            this.loadingProgressPercent = 80;
+            console.time('Process Data');
             this.processData();
-            
+            console.timeEnd('Process Data');
+
+            this.loadingProgressPercent = 90;
+
             // Set available columns for selection
-            this.availableColumns = this.dataFrame.columns.filter(col => 
-              // Exclude numerical columns, keep only categorical ones
-              // Assuming categorical columns have a reasonable number of unique values
-              this.dataFrame.col_unique(col).size < 50
-            );
-            
+            console.log('Finding categorical columns...');
+            this.availableColumns = this.dataFrame.columns.filter(col => {
+              try {
+                const uniqueCount = this.dataFrame.col_unique(col).size;
+                console.log(`Column ${col}: ${uniqueCount} unique values`);
+                // At least 2 unique values but not too many (fewer than 50)
+                return uniqueCount < 50 && uniqueCount > 1;
+              } catch (e) {
+                console.error(`Error checking column ${col}:`, e);
+                return false;
+              }
+            });
+
+            console.log('Available categorical columns:', this.availableColumns);
+
             // Set default selected column
             if (this.availableColumns.includes('activation.model')) {
               this.selectedColumn = 'activation.model';
             } else if (this.availableColumns.length > 0) {
               this.selectedColumn = this.availableColumns[0];
             }
-            
+
+            console.log('Selected column for coloring:', this.selectedColumn);
+
+            this.loadingProgressPercent = 95;
             this.statusMessage = 'Data loaded successfully';
-            this.isLoading = false;
-            
+            this.loadingMessage = 'Rendering plot...';
+            this.loadingDetail = 'Creating visualization';
+
             // Initialize the plot after data is loaded
             this.initPlot();
+
+            this.loadingProgressPercent = 100;
+            this.isLoading = false;
+            console.log('Data loading complete');
           } catch (error) {
             console.error("Error loading data:", error);
             this.statusMessage = `Error loading data: ${error.message}`;
+            this.loadingMessage = 'Error loading data';
+            this.loadingDetail = error.message;
             this.isLoading = false;
+            this.loadingProgress = false;
           }
         },
-        
+
         // Process loaded data into a format suitable for plotting
         processData() {
           if (!this.pcaArray || !this.dataFrame) {
             throw new Error("PCA data or metadata not loaded");
           }
-          
-          // Extract the first 3 principal components for the 3D plot
+
+          console.log('Processing data for plotting...');
           const pcaData = this.pcaArray;
-          
-          // Create the plot data object
+
+          // Create the plot data object with arrays for all available PCA components
           this.plotData = {
-            x: [], 
-            y: [], 
-            z: [],
+            // Initialize empty arrays for all PCA components
+            pcaComponents: []
           };
-          
+
+          // Initialize arrays for each PCA component
+          for (let i = 0; i < pcaData.shape[1]; i++) {
+            console.log(`Extracting PCA component ${i + 1}...`);
+            // Use the get method with null to get all values for a specific component
+            this.plotData.pcaComponents[i] = Array.from(pcaData.get(null, i).data);
+          }
+
           // Add metadata columns from the DataFrame to plotData
+          console.log('Adding metadata columns...');
           for (const column of this.dataFrame.columns) {
             this.plotData[column] = this.dataFrame.col(column);
           }
-          
-          // Extract X, Y, Z coordinates from PCA data
-          for (let i = 0; i < pcaData.shape[0]; i++) {
-            this.plotData.x.push(pcaData.get(i, 0));
-            this.plotData.y.push(pcaData.get(i, 1));
-            this.plotData.z.push(pcaData.get(i, 2));
-          }
+
+          // Initialize with current axes selection
+          this.updatePlotCoordinates();
+
+          console.log('Data processing complete');
         },
-        
+
+        // Update x, y, z arrays based on current PCA axis selection
+        updatePlotCoordinates() {
+          console.log(`Updating coordinates to PC${this.pcaAxes.x + 1}, PC${this.pcaAxes.y + 1}, PC${this.pcaAxes.z + 1}`);
+
+          // Set x, y, z from the selected PCA components
+          this.plotData.x = this.plotData.pcaComponents[this.pcaAxes.x];
+          this.plotData.y = this.plotData.pcaComponents[this.pcaAxes.y];
+          this.plotData.z = this.plotData.pcaComponents[this.pcaAxes.z];
+        },
+
+        // Handle change of PCA axes
+        updatePlotAxes() {
+          console.log('PCA axes changed', this.pcaAxes);
+          this.updatePlotCoordinates();
+          this.updatePlot();
+        },
+
         // Get current camera position from the plot
         getCurrentCameraPosition() {
           if (this.$refs.plotContainer && this.$refs.plotContainer._fullLayout) {
@@ -323,43 +447,51 @@
           }
           return null;
         },
-        
+
         // Select a column from the dropdown
         selectColumn(column) {
+          console.log(`Selected column changed from ${this.selectedColumn} to ${column}`);
           this.selectedColumn = column;
           this.showDropdown = false;
           this.selectedValues = []; // Clear selection when changing column
           this.updatePlot();
         },
-        
+
         // Hide dropdown with delay to allow for click
         hideDropdownDelayed() {
           this.dropdownTimeout = setTimeout(() => {
             this.showDropdown = false;
           }, 200);
         },
-        
+
         // Create traces grouped by categorical value (for initial view)
         createTracesByCategory() {
+          console.log('Creating traces by category...');
           if (!this.plotData || !this.selectedColumn) return [];
-          
+
+          console.time('Create Category Traces');
           const uniqueValues = [...this.dataFrame.col_unique(this.selectedColumn)];
+          console.log(`Found ${uniqueValues.length} unique values for ${this.selectedColumn}`);
+
           const traces = [];
-          
+
           // Colors for category differentiation
           const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
-          
+
           // Create a trace for each unique value
           uniqueValues.forEach((value, index) => {
+            console.log(`Creating trace for ${value}...`);
             const indices = [];
-            
+
             // Find all points with this value
             for (let i = 0; i < this.plotData[this.selectedColumn].length; i++) {
               if (this.plotData[this.selectedColumn][i] === value) {
                 indices.push(i);
               }
             }
-            
+
+            console.log(`Found ${indices.length} points for ${value}`);
+
             traces.push({
               ...this.defaultTraceConfig,
               x: indices.map(i => this.plotData.x[i]),
@@ -369,27 +501,33 @@
               marker: {
                 size: this.nonSelectedSize,
                 color: colors[index % colors.length],
-                opacity: 0.8
+                opacity: this.selectedOpacity // Use the selected opacity for better visibility
               },
               customdata: indices.map(i => `${this.selectedColumn}: ${this.plotData[this.selectedColumn][i]}`)
             });
           });
-          
+
+          console.timeEnd('Create Category Traces');
           return traces;
         },
-        
+
         // Create traces with selection highlighting
         createTracesWithSelection() {
+          console.time('Create Selection Traces');
+          console.log('Creating traces with selection highlighting...');
+
           if (!this.plotData) return [];
-          
+
           // First, separate points into selected and non-selected
           const selectedIndices = {};
           const nonSelectedIndices = [];
-          
+
+          console.log(`Processing ${this.plotData[this.selectedColumn].length} points for selection...`);
+
           // Group points by selection status
           for (let i = 0; i < this.plotData[this.selectedColumn].length; i++) {
             const value = this.plotData[this.selectedColumn][i];
-            
+
             if (this.selectedValues.includes(value)) {
               if (!selectedIndices[value]) {
                 selectedIndices[value] = [];
@@ -399,11 +537,14 @@
               nonSelectedIndices.push(i);
             }
           }
-          
+
+          console.log(`Selection counts: ${Object.keys(selectedIndices).length} selected values, ${nonSelectedIndices.length} non-selected points`);
+
           const traces = [];
-          
+
           // Add non-selected points (with configurable color/opacity)
           if (nonSelectedIndices.length > 0) {
+            console.log(`Creating trace for ${nonSelectedIndices.length} non-selected points...`);
             traces.push({
               ...this.defaultTraceConfig,
               x: nonSelectedIndices.map(i => this.plotData.x[i]),
@@ -418,11 +559,12 @@
               customdata: nonSelectedIndices.map(i => `${this.selectedColumn}: ${this.plotData[this.selectedColumn][i]}`)
             });
           }
-          
+
           // Add a trace for each selected value
           Object.keys(selectedIndices).forEach((value, index) => {
             const indices = selectedIndices[value];
-            
+            console.log(`Creating trace for selected value "${value}" with ${indices.length} points...`);
+
             traces.push({
               ...this.defaultTraceConfig,
               x: indices.map(i => this.plotData.x[i]),
@@ -437,190 +579,265 @@
               customdata: indices.map(i => `${this.selectedColumn}: ${this.plotData[this.selectedColumn][i]}`)
             });
           });
-          
+
+          console.timeEnd('Create Selection Traces');
           return traces;
         },
-        
+
         // Initialize the plot
         initPlot() {
           this.statusMessage = 'Creating plot...';
-          
+          console.log('Initializing plot...');
+
           if (!this.plotData) {
             console.error("Plot data not available");
             this.statusMessage = 'Error: Plot data not available';
             return;
           }
-          
+
           // Create initial traces by the selected categorical column
           const traces = this.createTracesByCategory();
-          
+
           // Create the plot
+          console.log('Rendering initial plot...');
           Plotly.newPlot(
-            this.$refs.plotContainer, 
-            traces, 
-            createPlotLayout(this.title)
+            this.$refs.plotContainer,
+            traces,
+            createPlotLayout(this.title, null, this.pcaAxes)
           );
-          
+
           // Add click handler with proper binding
           const boundHandlePointClick = this.handlePointClick.bind(this);
           this.$refs.plotContainer.on('plotly_click', boundHandlePointClick);
-          
+
           // Add relayout event handler to capture camera position changes
           this.$refs.plotContainer.on('plotly_relayout', (eventData) => {
             // Update our stored camera position when user interacts with the plot
             this.currentCameraPosition = this.getCurrentCameraPosition();
           });
-          
+
           this.statusMessage = 'Plot ready - click points to select values';
+          console.log('Plot initialization complete');
         },
-        
+
         // Handle point clicks
         handlePointClick(data) {
           if (data.points && data.points.length > 0) {
             const point = data.points[0];
             console.log("Clicked point:", point);
-            
+
+            // Avoid processing clicks too rapidly
+            const now = Date.now();
+            if (now - this.lastSelectionTime < 300) { // 300ms debounce
+              console.log("Click ignored - too soon after previous click");
+              return;
+            }
+            this.lastSelectionTime = now;
+
             if (point.customdata) {
               // Extract value from customdata (format: "column: value")
               const customData = point.customdata;
               const match = customData.match(new RegExp(`${this.selectedColumn}: (.*)`));
-              
+
               if (match && match[1]) {
                 const value = match[1];
                 console.log(`Clicked ${this.selectedColumn}:`, value);
-                
+
+                // Show processing indicator
+                this.processingSelection = true;
+
                 // Store current camera position before update
                 this.currentCameraPosition = this.getCurrentCameraPosition();
-                
-                // Toggle selection
-                const index = this.selectedValues.indexOf(value);
-                
-                if (index >= 0) {
-                  // Remove if already selected
-                  this.selectedValues.splice(index, 1);
-                  console.log("Removed value:", value);
-                } else {
-                  // Add if not already selected
-                  this.selectedValues.push(value);
-                  console.log("Added value:", value);
-                }
-                
-                // Update the visualization after a short delay to avoid recursion
-                const boundUpdatePlot = this.updatePlot.bind(this);
-                setTimeout(boundUpdatePlot, 10);
+
+                // Use setTimeout to avoid blocking the UI
+                setTimeout(() => {
+                  console.time('Process Selection');
+
+                  // Toggle selection
+                  const index = this.selectedValues.indexOf(value);
+
+                  if (index >= 0) {
+                    // Remove if already selected
+                    this.selectedValues.splice(index, 1);
+                    console.log("Removed value:", value);
+                  } else {
+                    // Add if not already selected
+                    this.selectedValues.push(value);
+                    console.log("Added value:", value);
+                  }
+
+                  console.timeEnd('Process Selection');
+
+                  // Update the visualization with some delay to prevent UI blocking
+                  this.debounceUpdatePlot();
+                }, 10);
               }
             }
           }
         },
-        
+
+        // Debounce the updatePlot call to prevent too frequent updates
+        debounceUpdatePlot() {
+          if (this.updatePlotTimeout) {
+            clearTimeout(this.updatePlotTimeout);
+          }
+
+          this.updatePlotTimeout = setTimeout(() => {
+            this.updatePlot();
+          }, 100);
+        },
+
         // Update the plot based on selection
         updatePlot() {
+          console.time('Update Plot');
           try {
+            console.log('Updating plot...');
+
             // Store current camera position before update if not already stored
             if (!this.currentCameraPosition) {
               this.currentCameraPosition = this.getCurrentCameraPosition();
             }
-            
+
             // Update title based on selection
             let plotTitle = 'Interactive 3D PCA Plot';
             if (this.selectedValues.length > 0) {
               plotTitle += ` - Selected ${this.selectedColumn}: ${this.selectedValues.join(', ')}`;
             }
             this.title = plotTitle;
-            
+
             // Create new traces based on selection state
-            const traces = this.selectedValues.length > 0 
-              ? this.createTracesWithSelection() 
+            console.log('Creating new traces...');
+            const traces = this.selectedValues.length > 0
+              ? this.createTracesWithSelection()
               : this.createTracesByCategory();
-            
+
             // First remove old click handlers to prevent duplicates
             if (this.$refs.plotContainer && this.$refs.plotContainer.removeAllListeners) {
               this.$refs.plotContainer.removeAllListeners('plotly_click');
             }
-            
+
             // Use complete redraw with newPlot to avoid potential issues
             // Apply saved camera position in the layout
+            console.log('Rendering plot with new data...');
             Plotly.newPlot(
-              this.$refs.plotContainer, 
-              traces, 
-              createPlotLayout(this.title, this.currentCameraPosition)
+              this.$refs.plotContainer,
+              traces,
+              createPlotLayout(this.title, this.currentCameraPosition, this.pcaAxes)
             );
-            
+
             // Add click handler again after plot is redrawn with proper binding
             const boundHandlePointClick = this.handlePointClick.bind(this);
             this.$refs.plotContainer.on('plotly_click', boundHandlePointClick);
-            
+
             // Re-add the relayout event handler
             this.$refs.plotContainer.on('plotly_relayout', (eventData) => {
               this.currentCameraPosition = this.getCurrentCameraPosition();
             });
-            
+
+            // Hide processing indicator if it was shown
+            this.processingSelection = false;
             this.statusMessage = 'Plot updated';
+            console.log('Plot update complete');
           } catch (error) {
             console.error("Error updating plot:", error);
-            this.statusMessage = 'Error updating plot';
+            this.statusMessage = `Error updating plot: ${error.message}`;
+            this.processingSelection = false;
           }
+          console.timeEnd('Update Plot');
         },
-        
+
         // Toggle config section collapse
         toggleConfigCollapse() {
           this.configCollapsed = !this.configCollapsed;
+          console.log(`Configuration ${this.configCollapsed ? 'collapsed' : 'expanded'}`);
         },
-        
+
         // Clear selection
         clearSelection() {
+          console.log('Clearing all selections');
           // Store current camera position before clearing
           this.currentCameraPosition = this.getCurrentCameraPosition();
-          
+
           this.selectedValues = [];
           // Reset colors back to initial set
           this.selectionColors = [...this.initialSelectionColors];
           this.updatePlot();
         },
-        
+
         // Remove a specific value from selection
         removeSelectedValue(value) {
+          console.log(`Removing value from selection: ${value}`);
           // Store current camera position before removing value
           this.currentCameraPosition = this.getCurrentCameraPosition();
-          
+
           const index = this.selectedValues.indexOf(value);
           if (index >= 0) {
             this.selectedValues.splice(index, 1);
             this.updatePlot();
           }
         },
-        
+
         // Get selection color for display
         getSelectionColor(index) {
           return this.selectionColors[index % this.selectionColors.length];
         },
-        
+
         // Generate new random colors that are visually distinct
         regenerateColors() {
+          console.log('Regenerating selection colors');
           // Store current camera position before changing colors
           this.currentCameraPosition = this.getCurrentCameraPosition();
-          
+
           const colorCount = 9; // Number of colors to generate
           // Using the imported generateDistinctColors function from colorutil.js
           const newColors = generateDistinctColors(colorCount);
-          
+          console.log('New colors generated:', newColors);
+
           this.selectionColors = newColors;
           // Save the new colors as the initial set too
           this.initialSelectionColors = [...newColors];
           this.statusMessage = 'Colors regenerated';
-          
+
           // Always update the plot
           this.updatePlot();
+        },
+
+        // Show performance information in console for debugging
+        logPerformanceInfo() {
+          console.log('Performance Information:');
+          console.log(`Total points: ${this.plotData?.x?.length || 'N/A'}`);
+          console.log(`Total unique ${this.selectedColumn} values: ${this.availableColumns.length > 0 ?
+            this.dataFrame.col_unique(this.selectedColumn).size : 'N/A'}`);
+          console.log(`Current selection: ${this.selectedValues.length} values`);
+          console.log(`Available PCA components: ${this.availablePcaAxes.length}`);
+          console.log(`Current axes: PC${this.pcaAxes.x + 1}, PC${this.pcaAxes.y + 1}, PC${this.pcaAxes.z + 1}`);
+
+          // Log memory usage if available
+          if (window.performance && window.performance.memory) {
+            const memory = window.performance.memory;
+            console.log(`Used JS heap: ${(memory.usedJSHeapSize / (1024 * 1024)).toFixed(2)} MB`);
+            console.log(`Total JS heap: ${(memory.totalJSHeapSize / (1024 * 1024)).toFixed(2)} MB`);
+          }
         }
       },
-      
+
       mounted() {
         // Load data when component is mounted
         this.loadData();
+
+        // Set up keyboard shortcuts for debugging
+        window.addEventListener('keydown', (e) => {
+          // Ctrl+Shift+P to log performance info
+          if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+            this.logPerformanceInfo();
+          }
+        });
       }
     });
-    
+
+    // Mount the app to the container
     app.mount('#app');
   </script>
 </body>
+
 </html>

@@ -244,3 +244,100 @@ input {
 .generated-link:hover {
 	text-decoration: underline;
 }
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+.axis-controls {
+	display: flex;
+	justify-content: center;
+	gap: 20px;
+	margin-bottom: 15px;
+	background-color: #f5f5f5;
+	padding: 10px;
+	border-radius: 4px;
+}
+
+.axis-control {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.axis-control label {
+	font-weight: bold;
+}
+
+.axis-control select {
+	min-width: 80px;
+	padding: 5px;
+	border-radius: 4px;
+	border: 1px solid #ddd;
+}
+
+.loading-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(255, 255, 255, 0.8);
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	z-index: 10;
+}
+
+.loading-spinner {
+	border: 4px solid rgba(0, 0, 0, 0.1);
+	border-radius: 50%;
+	border-top: 4px solid #3498db;
+	width: 40px;
+	height: 40px;
+	animation: spin 1s linear infinite;
+	margin-bottom: 15px;
+}
+
+.loading-progress {
+	width: 250px;
+	background-color: #f1f1f1;
+	border-radius: 4px;
+	margin: 10px 0;
+}
+
+.loading-progress-bar {
+	height: 10px;
+	border-radius: 4px;
+	background-color: #3498db;
+}
+
+.processing-indicator {
+	position: absolute;
+	bottom: 20px;
+	right: 20px;
+	background-color: rgba(255, 255, 255, 0.8);
+	padding: 10px;
+	border-radius: 4px;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	z-index: 5;
+}
+
+.mini-spinner {
+	border: 3px solid rgba(0, 0, 0, 0.1);
+	border-radius: 50%;
+	border-top: 3px solid #3498db;
+	width: 20px;
+	height: 20px;
+	animation: spin 1s linear infinite;
+}
