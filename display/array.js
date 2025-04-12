@@ -1,14 +1,9 @@
+// ------------------------------------------------------------
 // this file has been modified from original code at:
-// ------------------------------------------------------------
-// https://github.com/scijs/ndarray?
-// under MIT License
-// https://github.com/scijs/ndarray/blob/58f5d8ca9cd37fa708c3996b0e8bbad0937678fc/LICENSE
-// ------------------------------------------------------------
 // https://github.com/aplbrain/npyjs
 // under Apache License
 // https://github.com/aplbrain/npyjs/blob/b0cd99b7f4c2bff791b4977e16dec3478519920b/LICENSE
 // removed float16 support for brevity -- we don't need it
-// natively returns ndarray objects
 // ------------------------------------------------------------
 class npyjs {
 
@@ -137,5 +132,239 @@ class npyjs {
 			return callback(result);
 		}
 		return result;
+	}
+}
+
+
+class NDArray {
+	/**
+	 * Creates a multidimensional array similar to NumPy arrays
+	 * 
+	 * @param {any} data - The array data
+	 * @param {Array<number>} shape - The shape of the array
+	 * @param {string} dtype - The data type of the array
+	 */
+	constructor(data, shape, dtype) {
+		this.data = data;
+		this.shape = shape;
+		this.dtype = dtype;
+		this.ndim = shape.length;
+
+		// Calculate total size from shape
+		this._size = shape.reduce((acc, dim) => acc * dim, 1);
+
+		// Validate data length matches shape
+		if (data.length !== this._size) {
+			throw new Error(`Data length ${data.length} doesn't match shape ${shape} (expected ${this._size})`);
+		}
+	}
+
+	/**
+	 * Converts multidimensional indices to flat index
+	 * 
+	 * @param {Array<number|null>} indices - Array of indices, can contain null for slicing
+	 * @returns {number|Array<number>} - Flat index or array of indices for slicing
+	 * @private
+	 */
+	_getIndices(indices) {
+		// Handle case where all dimensions are requested (no indices)
+		if (indices.length === 0) {
+			return [...Array(this._size).keys()];
+		}
+
+		// Check that we don't have too many indices
+		if (indices.filter(idx => idx !== null).length > this.shape.length) {
+			throw new Error(`Too many indices for array with shape ${this.shape}`);
+		}
+
+		// If we have exact indices (no nulls), calculate flat index
+		if (!indices.includes(null) && indices.length === this.shape.length) {
+			// Validate all indices
+			for (let i = 0; i < indices.length; i++) {
+				if (indices[i] < 0) {
+					indices[i] = this.shape[i] + indices[i]; // Handle negative indices like numpy
+				}
+
+				if (indices[i] < 0 || indices[i] >= this.shape[i]) {
+					throw new Error(`Index ${indices[i]} is out of bounds for axis ${i} with size ${this.shape[i]}`);
+				}
+			}
+
+			// Calculate flat index using strides
+			let flatIndex = 0;
+			let stride = 1;
+
+			for (let i = this.shape.length - 1; i >= 0; i--) {
+				flatIndex += indices[i] * stride;
+				stride *= this.shape[i];
+			}
+
+			return flatIndex;
+		}
+
+		// Handle slicing (when some indices are null)
+		// This returns all flat indices that match the specified dimensions
+		const resultIndices = [];
+		const completeIndices = [...indices];
+
+		// Fill in missing indices with zeros
+		while (completeIndices.length < this.shape.length) {
+			completeIndices.push(0);
+		}
+
+		// Find which dimensions need to be iterated over (those with null)
+		const dimToIterate = [];
+		for (let i = 0; i < this.shape.length; i++) {
+			if (i >= indices.length || indices[i] === null) {
+				dimToIterate.push(i);
+			}
+		}
+
+		// Generate all combinations of indices for the dimensions to iterate over
+		const generateIndices = (currentDim, currentIndices) => {
+			if (currentDim >= dimToIterate.length) {
+				// Calculate flat index for this combination
+				let flatIndex = 0;
+				let stride = 1;
+
+				for (let i = this.shape.length - 1; i >= 0; i--) {
+					flatIndex += currentIndices[i] * stride;
+					stride *= this.shape[i];
+				}
+
+				resultIndices.push(flatIndex);
+				return;
+			}
+
+			const dim = dimToIterate[currentDim];
+			for (let i = 0; i < this.shape[dim]; i++) {
+				currentIndices[dim] = i;
+				generateIndices(currentDim + 1, currentIndices);
+			}
+		};
+
+		generateIndices(0, completeIndices);
+		return resultIndices;
+	}
+
+	/**
+	 * Gets values at specified indices
+	 * 
+	 * @param {...(number|null)} args - Indices for each dimension, null for full dimension
+	 * @returns {any} - Value or subarray at the specified location
+	 */
+	get(...args) {
+		// Handle case where args is array
+		let indices = args;
+		if (args.length === 1 && Array.isArray(args[0])) {
+			indices = args[0];
+		}
+
+		const flatIndices = this._getIndices(indices);
+
+		// If we got a single index, return the single value
+		if (typeof flatIndices === 'number') {
+			return this.data[flatIndices];
+		}
+
+		// Otherwise, create a new array with the values
+		// We need to calculate the shape of the result
+		const resultShape = [];
+		for (let i = 0; i < this.shape.length; i++) {
+			if (i >= indices.length || indices[i] === null) {
+				resultShape.push(this.shape[i]);
+			}
+		}
+
+		// If result is empty, it means we want the entire array
+		if (resultShape.length === 0) {
+			return this;
+		}
+
+		// Create new data array with the values at the flat indices
+		const resultData = new this.data.constructor(flatIndices.length);
+		for (let i = 0; i < flatIndices.length; i++) {
+			resultData[i] = this.data[flatIndices[i]];
+		}
+
+		return new NDArray(resultData, resultShape, this.dtype);
+	}
+
+	/**
+	 * Sets values at specified indices
+	 * 
+	 * @param {...*} args - Indices followed by value to set
+	 */
+	set(...args) {
+		// Handle case where args is array
+		let indices, value;
+		if (args.length === 2 && Array.isArray(args[0])) {
+			indices = args[0];
+			value = args[1];
+		} else {
+			value = args[args.length - 1];
+			indices = args.slice(0, args.length - 1);
+		}
+
+		const flatIndices = this._getIndices(indices);
+
+		// If we got a single index, set the single value
+		if (typeof flatIndices === 'number') {
+			this.data[flatIndices] = value;
+			return;
+		}
+
+		// Otherwise, set all indices to the value
+		// If value is an array, distribute its values
+		if (Array.isArray(value) || (value instanceof NDArray)) {
+			const valueArray = value instanceof NDArray ? value.data : value;
+			if (valueArray.length !== flatIndices.length) {
+				throw new Error(`Cannot broadcast ${valueArray.length} values to ${flatIndices.length} indices`);
+			}
+
+			for (let i = 0; i < flatIndices.length; i++) {
+				this.data[flatIndices[i]] = valueArray[i];
+			}
+		} else {
+			// Set all indices to the same value
+			for (const idx of flatIndices) {
+				this.data[idx] = value;
+			}
+		}
+	}
+
+	/**
+	 * Returns a string representation of the array
+	 * 
+	 * @returns {string} String representation of the array
+	 */
+	toString() {
+		// Simple representation for 1D arrays
+		if (this.shape.length === 1) {
+			return `[${Array.from(this.data).join(', ')}]`;
+		}
+
+		// For higher dimensions, we'll just show shape and type
+		return `NDArray(${this.shape.join('×')}, ${this.dtype})`;
+	}
+
+	static parse(arrayBufferContents) {
+		const npy = new npyjs();
+		const npyData = npy.parse(arrayBufferContents);
+		if (!npyData) {
+			throw new Error('Failed to parse NPY data');
+		}
+		// Convert data to NDArray
+		return new NDArray(npyData.data, npyData.shape, npyData.dtype);
+	}
+
+	static async load(filename, callback, fetchArgs) {
+		const npy = new npyjs();
+		const npyData = await npy.load(filename, null, fetchArgs);
+		if (!npyData) {
+			throw new Error('Failed to load NPY data');
+		}
+		// Convert data to NDArray
+		return new NDArray(npyData.data, npyData.shape, npyData.dtype);
 	}
 }

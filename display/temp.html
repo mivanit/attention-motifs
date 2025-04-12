@@ -4,7 +4,6 @@
   <title>Interactive 3D PCA Plot</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.2/plotly.min.js"></script>
   <script src="array.js"></script>
-  <script src="ndarray.js"></script>
 </head>
 <body>
   <h1>Interactive 3D PCA Plot</h1>
@@ -42,17 +41,31 @@
     // const npyArray = n.load("../data/features/pca_data.npy");
     // console.log(npyArray);
     // Script content to load and log the NPY file
-    document.addEventListener('DOMContentLoaded', function() {
-      // Create npyjs instance
-      let n = new npyjs();
-      
+    async function main() {
       // Load and log the NPY file
-      arr = getDataFromPromise(n.load("../data/features/pca_data.npy"))
-      console.log(arr);
+      arr = await NDArray.load("../data/features/pca_data.npy");
+      // console.log(arr);
+      // console.log(arr.shape);
+      // console.log(arr.data);
+      // console.log(arr.data.length);
+      // console.log(arr.data[0]);
+      // console.log(arr.get(0, 0));
+      // console.log(arr.get(0, 1));
+      // console.log(arr.get(0, null));
+      // console.log(arr.get(null, 0));
+      console.log("arr", arr);
+      console.log("arr.shape", arr.shape);
+      console.log("arr.data", arr.data);
+      console.log("arr.data.length", arr.data.length);
+      console.log("arr.data[0]", arr.data[0]);
+      console.log("arr.get(0, 0)", arr.get(0, 0));
+      console.log("arr.get(0, 1)", arr.get(0, 1));
+      console.log("arr.get(0, null)", arr.get(0, null));
+      console.log("arr.get(null, 0)", arr.get(null, 0));
+    };
 
-      ndarr = ndarray(arr.data, arr.shape);
-
-    });
+    // Call the main function to execute the code
+    main();
   </script>
 </body>
 </html>
