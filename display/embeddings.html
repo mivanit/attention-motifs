@@ -6,215 +6,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
   <!-- Load Plotly.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.2/plotly.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    h1 {
-      color: #333;
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .controls {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 15px;
-      align-items: center;
-    }
-    .control-group {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .status-message {
-      color: #666;
-      font-style: italic;
-    }
-    button {
-      padding: 8px 16px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    button.secondary {
-      background-color: #2196F3;
-    }
-    button.secondary:hover {
-      background-color: #0b7dda;
-    }
-    .plot-container {
-      height: 600px;
-      width: 100%;
-      margin: 20px 0;
-      position: relative;
-    }
-    .selection-display {
-      margin: 10px 0;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      min-height: 30px;
-    }
-    .selected-value {
-      display: inline-block;
-      margin-right: 10px;
-      padding: 5px 10px;
-      border-radius: 3px;
-      font-weight: bold;
-      color: white;
-      position: relative;
-    }
-    .selected-value .remove-btn {
-      visibility: hidden;
-      position: absolute;
-      top: -10px;
-      right: -10px;
-      background-color: #f44336;
-      color: white;
-      border-radius: 50%;
-      width: 22px;
-      height: 22px;
-      font-size: 16px;
-      line-height: 20px;
-      text-align: center;
-      cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    }
-    .selected-value:hover .remove-btn {
-      visibility: visible;
-    }
-    .config-display {
-      margin-top: 20px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .config-header {
-      background-color: #f1f1f1;
-      padding: 10px 15px;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .config-header h3 {
-      margin: 0;
-      font-size: 16px;
-    }
-    .config-content {
-      padding: 15px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-    }
-    .config-section {
-      flex: 1;
-      min-width: 300px;
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-    }
-    .config-section h4 {
-      margin-top: 0;
-      margin-bottom: 15px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #eee;
-    }
-    .control-row {
-      display: flex;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    .control-label {
-      width: 80px;
-      flex-shrink: 0;
-    }
-    .control-input {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    input[type="range"] {
-      flex: 1;
-    }
-    input[type="color"] {
-      width: 40px;
-      height: 25px;
-    }
-    input[type="number"] {
-      width: 60px;
-      text-align: center;
-    }
-    .collapse-icon {
-      transition: transform 0.3s;
-    }
-    .collapse-icon.rotated {
-      transform: rotate(-90deg);
-    }
-    select, input {
-      padding: 8px;
-      border-radius: 4px;
-      border: 1px solid #ddd;
-    }
-    .combo-select {
-      position: relative;
-      display: inline-block;
-    }
-    .combo-select input {
-      width: 150px;
-    }
-    .combo-select .dropdown {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      background: white;
-      border: 1px solid #ddd;
-      border-top: none;
-      z-index: 10;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-    .combo-select .dropdown-item {
-      padding: 8px;
-      cursor: pointer;
-    }
-    .combo-select .dropdown-item:hover {
-      background-color: #f1f1f1;
-    }
-    .url-section {
-      margin-top: 20px;
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-    }
-    .url-section input {
-      width: 100%;
-      margin-bottom: 10px;
-    }
-    .generated-links {
-      margin-top: 10px;
-    }
-    .generated-link {
-      display: block;
-      margin-bottom: 5px;
-      color: #2196F3;
-      text-decoration: none;
-    }
-    .generated-link:hover {
-      text-decoration: underline;
-    }
-  </style>
+  <!-- Load styles -->
+  <link rel="stylesheet" href="style.css">
+  <!-- Load color utilities -->
+  <script src="colorutil.js"></script>
 </head>
 <body>
   <div id="app">
@@ -336,6 +131,88 @@
   </div>
   
   <script>
+    /**
+     * Creates a layout configuration for a Plotly 3D scatter plot
+     * @param {string} title - Title of the plot
+     * @returns {Object} Layout configuration object for Plotly
+     */
+    function createPlotLayout(title) {
+      return {
+        title: title,
+        scene: {
+          xaxis: { title: 'X' },
+          yaxis: { title: 'Y' },
+          zaxis: { title: 'Z' },
+          camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
+        },
+        margin: { l: 0, r: 0, b: 0, t: 50 }
+      };
+    }
+
+    /**
+     * Generates sample 3D scatter plot data with classes and models
+     * @returns {Object} Object containing arrays for x, y, z coordinates and class/model values
+     */
+    function generateSampleData() {
+      // Generate 100 points with 3 dimensions
+      const numPoints = 100;
+      const classes = ["class-A", "class-B", "class-C"];
+      const models = ["model-1", "model-2", "model-3", "model-4"];
+      
+      const x = [];
+      const y = [];
+      const z = [];
+      const classValues = [];
+      const modelValues = [];
+      
+      // Generate points grouped by class for better visualization
+      for (let i = 0; i < numPoints; i++) {
+        // Determine which class group this point belongs to
+        const classIndex = Math.floor(i / (numPoints / classes.length));
+        const className = classes[Math.min(classIndex, classes.length - 1)];
+        
+        // Add some clustering based on class
+        let xBase = 0, yBase = 0, zBase = 0;
+        
+        if (className === "class-A") {
+          xBase = -5;
+          yBase = -5;
+          zBase = -5;
+        } else if (className === "class-B") {
+          xBase = 5;
+          yBase = 5;
+          zBase = -5;
+        } else {
+          xBase = 0;
+          yBase = 0;
+          zBase = 5;
+        }
+        
+        // Add random variation around the class center
+        x.push(xBase + (Math.random() - 0.5) * 5);
+        y.push(yBase + (Math.random() - 0.5) * 5);
+        z.push(zBase + (Math.random() - 0.5) * 5);
+        
+        // Store class and model info
+        classValues.push(className);
+        modelValues.push(models[i % models.length]);
+      }
+      
+      return { x, y, z, classValues, modelValues };
+    }
+
+    /**
+     * Creates a default trace configuration for a Plotly 3D scatter plot
+     * @returns {Object} Base trace configuration
+     */
+    function createDefaultTraceConfig() {
+      return {
+        mode: 'markers',
+        type: 'scatter3d',
+        hovertemplate: 'Class: %{customdata[0]}<br>Model: %{customdata[1]}<br>X: %{x:.2f}<br>Y: %{y:.2f}<br>Z: %{z:.2f}'
+      };
+    }
+
     // Create Vue app
     const app = Vue.createApp({
       data() {
@@ -362,7 +239,9 @@
           selectedSize: 6,
           baseUrl: 'https://miv.name/pattern-lens/demo/?',
           dropdownTimeout: null,
-          configCollapsed: false
+          configCollapsed: false,
+          // Default trace configuration
+          defaultTraceConfig: createDefaultTraceConfig()
         };
       },
       
@@ -380,52 +259,7 @@
         // Generate data for the plot
         generateData() {
           this.statusMessage = 'Generating data...';
-          
-          // Generate 100 points with 3 dimensions
-          const numPoints = 100;
-          const classes = ["class-A", "class-B", "class-C"];
-          const models = ["model-1", "model-2", "model-3", "model-4"];
-          
-          const x = [];
-          const y = [];
-          const z = [];
-          const classValues = [];
-          const modelValues = [];
-          
-          // Generate points grouped by class for better visualization
-          for (let i = 0; i < numPoints; i++) {
-            // Determine which class group this point belongs to
-            const classIndex = Math.floor(i / (numPoints / classes.length));
-            const className = classes[Math.min(classIndex, classes.length - 1)];
-            
-            // Add some clustering based on class
-            let xBase = 0, yBase = 0, zBase = 0;
-            
-            if (className === "class-A") {
-              xBase = -5;
-              yBase = -5;
-              zBase = -5;
-            } else if (className === "class-B") {
-              xBase = 5;
-              yBase = 5;
-              zBase = -5;
-            } else {
-              xBase = 0;
-              yBase = 0;
-              zBase = 5;
-            }
-            
-            // Add random variation around the class center
-            x.push(xBase + (Math.random() - 0.5) * 5);
-            y.push(yBase + (Math.random() - 0.5) * 5);
-            z.push(zBase + (Math.random() - 0.5) * 5);
-            
-            // Store class and model info
-            classValues.push(className);
-            modelValues.push(models[i % models.length]);
-          }
-          
-          return { x, y, z, classValues, modelValues };
+          return generateSampleData();
         },
         
         // Select a column from the dropdown
@@ -450,6 +284,9 @@
           const uniqueModels = [...new Set(this.plotData.modelValues)];
           const traces = [];
           
+          // Colors for model differentiation
+          const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
+          
           // Create a trace for each model
           uniqueModels.forEach((model, index) => {
             const indices = [];
@@ -461,36 +298,21 @@
               }
             }
             
-            // Create points array for this model
-            const x = indices.map(i => this.plotData.x[i]);
-            const y = indices.map(i => this.plotData.y[i]);
-            const z = indices.map(i => this.plotData.z[i]);
-            
-            // Create custom data for hovering and selection
-            const customdata = indices.map(i => [
-              this.plotData.classValues[i],
-              this.plotData.modelValues[i]
-            ]);
-            
-            // Choose color based on index
-            const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
-            const color = colors[index % colors.length];
-            
-            // Create the trace
             traces.push({
-              x: x,
-              y: y,
-              z: z,
-              mode: 'markers',
-              type: 'scatter3d',
+              ...this.defaultTraceConfig,
+              x: indices.map(i => this.plotData.x[i]),
+              y: indices.map(i => this.plotData.y[i]),
+              z: indices.map(i => this.plotData.z[i]),
               name: model,
               marker: {
                 size: this.nonSelectedSize,
-                color: color,
+                color: colors[index % colors.length],
                 opacity: 0.8
               },
-              customdata: customdata,
-              hovertemplate: 'Class: %{customdata[0]}<br>Model: %{customdata[1]}<br>X: %{x:.2f}<br>Y: %{y:.2f}<br>Z: %{z:.2f}'
+              customdata: indices.map(i => [
+                this.plotData.classValues[i],
+                this.plotData.modelValues[i]
+              ])
             });
           });
           
@@ -523,60 +345,43 @@
           
           // Add non-selected points (with configurable color/opacity)
           if (nonSelectedIndices.length > 0) {
-            const x = nonSelectedIndices.map(i => this.plotData.x[i]);
-            const y = nonSelectedIndices.map(i => this.plotData.y[i]);
-            const z = nonSelectedIndices.map(i => this.plotData.z[i]);
-            
-            const customdata = nonSelectedIndices.map(i => [
-              this.plotData.classValues[i],
-              this.plotData.modelValues[i]
-            ]);
-            
             traces.push({
-              x: x,
-              y: y,
-              z: z,
-              mode: 'markers',
-              type: 'scatter3d',
+              ...this.defaultTraceConfig,
+              x: nonSelectedIndices.map(i => this.plotData.x[i]),
+              y: nonSelectedIndices.map(i => this.plotData.y[i]),
+              z: nonSelectedIndices.map(i => this.plotData.z[i]),
               name: 'Other Points',
               marker: {
                 size: this.nonSelectedSize,
                 color: this.nonSelectedColor,
                 opacity: this.nonSelectedOpacity
               },
-              customdata: customdata,
-              hovertemplate: 'Class: %{customdata[0]}<br>Model: %{customdata[1]}<br>X: %{x:.2f}<br>Y: %{y:.2f}<br>Z: %{z:.2f}'
+              customdata: nonSelectedIndices.map(i => [
+                this.plotData.classValues[i],
+                this.plotData.modelValues[i]
+              ])
             });
           }
           
           // Add a trace for each selected value
           Object.keys(selectedIndices).forEach((value, index) => {
             const indices = selectedIndices[value];
-            const color = this.getSelectionColor(index);
-            
-            const x = indices.map(i => this.plotData.x[i]);
-            const y = indices.map(i => this.plotData.y[i]);
-            const z = indices.map(i => this.plotData.z[i]);
-            
-            const customdata = indices.map(i => [
-              this.plotData.classValues[i],
-              this.plotData.modelValues[i]
-            ]);
             
             traces.push({
-              x: x,
-              y: y,
-              z: z,
-              mode: 'markers',
-              type: 'scatter3d',
+              ...this.defaultTraceConfig,
+              x: indices.map(i => this.plotData.x[i]),
+              y: indices.map(i => this.plotData.y[i]),
+              z: indices.map(i => this.plotData.z[i]),
               name: `Selected: ${value}`,
               marker: {
                 size: this.selectedSize,
-                color: color,
+                color: this.getSelectionColor(index),
                 opacity: this.selectedOpacity
               },
-              customdata: customdata,
-              hovertemplate: 'Class: %{customdata[0]}<br>Model: %{customdata[1]}<br>X: %{x:.2f}<br>Y: %{y:.2f}<br>Z: %{z:.2f}'
+              customdata: indices.map(i => [
+                this.plotData.classValues[i],
+                this.plotData.modelValues[i]
+              ])
             });
           });
           
@@ -595,20 +400,12 @@
           // Create initial traces (by model)
           const traces = this.createTracesByModel();
           
-          // Define layout
-          const layout = {
-            title: this.title,
-            scene: {
-              xaxis: { title: 'X' },
-              yaxis: { title: 'Y' },
-              zaxis: { title: 'Z' },
-              camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
-            },
-            margin: { l: 0, r: 0, b: 0, t: 50 }
-          };
-          
           // Create the plot
-          Plotly.newPlot(this.$refs.plotContainer, traces, layout);
+          Plotly.newPlot(
+            this.$refs.plotContainer, 
+            traces, 
+            createPlotLayout(this.title)
+          );
           
           // Add click handler with proper binding
           const boundHandlePointClick = this.handlePointClick.bind(this);
@@ -664,25 +461,17 @@
               ? this.createTracesWithSelection() 
               : this.createTracesByModel();
             
-            // Get current layout and update title
-            const layout = {
-              title: plotTitle,
-              scene: {
-                xaxis: { title: 'X' },
-                yaxis: { title: 'Y' },
-                zaxis: { title: 'Z' },
-                camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
-              },
-              margin: { l: 0, r: 0, b: 0, t: 50 }
-            };
-            
             // First remove old click handlers to prevent duplicates
             if (this.$refs.plotContainer && this.$refs.plotContainer.removeAllListeners) {
               this.$refs.plotContainer.removeAllListeners('plotly_click');
             }
             
             // Use complete redraw with newPlot to avoid potential issues
-            Plotly.newPlot(this.$refs.plotContainer, traces, layout);
+            Plotly.newPlot(
+              this.$refs.plotContainer, 
+              traces, 
+              createPlotLayout(this.title)
+            );
             
             // Add click handler again after plot is redrawn with proper binding
             const boundHandlePointClick = this.handlePointClick.bind(this);
@@ -724,19 +513,9 @@
         
         // Generate new random colors that are visually distinct
         regenerateColors() {
-          const newColors = [];
           const colorCount = 9; // Number of colors to generate
-          
-          for (let i = 0; i < colorCount; i++) {
-            // Generate colors with good saturation and brightness
-            const h = Math.floor(Math.random() * 360); // Hue (0-360)
-            const s = Math.floor(50 + Math.random() * 50); // Saturation (50-100%)
-            const l = Math.floor(40 + Math.random() * 20); // Lightness (40-60%)
-            
-            // Convert HSL to HEX
-            const color = this.hslToHex(h, s, l);
-            newColors.push(color);
-          }
+          // Using the imported generateDistinctColors function from colorutil.js
+          const newColors = generateDistinctColors(colorCount);
           
           this.selectionColors = newColors;
           // Save the new colors as the initial set too
@@ -745,39 +524,6 @@
           
           // Always update the plot
           this.updatePlot();
-        },
-        
-        // Helper function to convert HSL to HEX
-        hslToHex(h, s, l) {
-          s /= 100;
-          l /= 100;
-          
-          const c = (1 - Math.abs(2 * l - 1)) * s;
-          const x = c * (1 - Math.abs((h / 60) % 2 - 1));
-          const m = l - c / 2;
-          
-          let r, g, b;
-          
-          if (0 <= h && h < 60) {
-            [r, g, b] = [c, x, 0];
-          } else if (60 <= h && h < 120) {
-            [r, g, b] = [x, c, 0];
-          } else if (120 <= h && h < 180) {
-            [r, g, b] = [0, c, x];
-          } else if (180 <= h && h < 240) {
-            [r, g, b] = [0, x, c];
-          } else if (240 <= h && h < 300) {
-            [r, g, b] = [x, 0, c];
-          } else {
-            [r, g, b] = [c, 0, x];
-          }
-          
-          const toHex = (value) => {
-            const hex = Math.round((value + m) * 255).toString(16);
-            return hex.length === 1 ? '0' + hex : hex;
-          };
-          
-          return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
         }
       },
       

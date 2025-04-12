@@ -1,0 +1,246 @@
+body {
+	font-family: Arial, sans-serif;
+	margin: 0;
+	padding: 20px;
+	max-width: 1200px;
+	margin: 0 auto;
+}
+
+h1 {
+	color: #333;
+	text-align: center;
+	margin-bottom: 20px;
+}
+
+.controls {
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 15px;
+	align-items: center;
+}
+
+.control-group {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.status-message {
+	color: #666;
+	font-style: italic;
+}
+
+button {
+	padding: 8px 16px;
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+button:hover {
+	background-color: #45a049;
+}
+
+button.secondary {
+	background-color: #2196F3;
+}
+
+button.secondary:hover {
+	background-color: #0b7dda;
+}
+
+.plot-container {
+	height: 600px;
+	width: 100%;
+	margin: 20px 0;
+	position: relative;
+}
+
+.selection-display {
+	margin: 10px 0;
+	padding: 10px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	min-height: 30px;
+}
+
+.selected-value {
+	display: inline-block;
+	margin-right: 10px;
+	padding: 5px 10px;
+	border-radius: 3px;
+	font-weight: bold;
+	color: white;
+	position: relative;
+}
+
+.selected-value .remove-btn {
+	visibility: hidden;
+	position: absolute;
+	top: -10px;
+	right: -10px;
+	background-color: #f44336;
+	color: white;
+	border-radius: 50%;
+	width: 22px;
+	height: 22px;
+	font-size: 16px;
+	line-height: 20px;
+	text-align: center;
+	cursor: pointer;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.selected-value:hover .remove-btn {
+	visibility: visible;
+}
+
+.config-display {
+	margin-top: 20px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.config-header {
+	background-color: #f1f1f1;
+	padding: 10px 15px;
+	cursor: pointer;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.config-header h3 {
+	margin: 0;
+	font-size: 16px;
+}
+
+.config-content {
+	padding: 15px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 20px;
+}
+
+.config-section {
+	flex: 1;
+	min-width: 300px;
+	padding: 15px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+}
+
+.config-section h4 {
+	margin-top: 0;
+	margin-bottom: 15px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid #eee;
+}
+
+.control-row {
+	display: flex;
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+.control-label {
+	width: 80px;
+	flex-shrink: 0;
+}
+
+.control-input {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+input[type="range"] {
+	flex: 1;
+}
+
+input[type="color"] {
+	width: 40px;
+	height: 25px;
+}
+
+input[type="number"] {
+	width: 60px;
+	text-align: center;
+}
+
+.collapse-icon {
+	transition: transform 0.3s;
+}
+
+.collapse-icon.rotated {
+	transform: rotate(-90deg);
+}
+
+select,
+input {
+	padding: 8px;
+	border-radius: 4px;
+	border: 1px solid #ddd;
+}
+
+.combo-select {
+	position: relative;
+	display: inline-block;
+}
+
+.combo-select input {
+	width: 150px;
+}
+
+.combo-select .dropdown {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	background: white;
+	border: 1px solid #ddd;
+	border-top: none;
+	z-index: 10;
+	max-height: 200px;
+	overflow-y: auto;
+}
+
+.combo-select .dropdown-item {
+	padding: 8px;
+	cursor: pointer;
+}
+
+.combo-select .dropdown-item:hover {
+	background-color: #f1f1f1;
+}
+
+.url-section {
+	margin-top: 20px;
+	padding: 15px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+}
+
+.url-section input {
+	width: 100%;
+	margin-bottom: 10px;
+}
+
+.generated-links {
+	margin-top: 10px;
+}
+
+.generated-link {
+	display: block;
+	margin-bottom: 5px;
+	color: #2196F3;
+	text-decoration: none;
+}
+
+.generated-link:hover {
+	text-decoration: underline;
+}
