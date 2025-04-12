@@ -199,6 +199,9 @@ const app = Vue.createApp({
 				this.colorByColumn = this.pendingColorByColumn;
 				this.selectedValues = []; // Clear selection when changing default color column
 				this.updatePlot();
+			} else {
+				// Hide updating indicator if no change
+				this.isUpdatingPlot = false;
 			}
 		},
 
@@ -219,6 +222,9 @@ const app = Vue.createApp({
 				this.selectionColumn = this.pendingSelectionColumn;
 				this.selectedValues = []; // Clear selection when changing selection column
 				this.updatePlot();
+			} else {
+				// Hide updating indicator if no change
+				this.isUpdatingPlot = false;
 			}
 		},
 
@@ -247,7 +253,9 @@ const app = Vue.createApp({
 				{
 					defaultTraceConfig: this.defaultTraceConfig,
 					selectedSize: this.selectedSize,
-					selectedOpacity: this.selectedOpacity
+					selectedOpacity: this.selectedOpacity,
+					// Add the selectionColumn so it's included in customdata
+					selectionColumn: this.selectionColumn
 				}
 			);
 		},
@@ -268,7 +276,9 @@ const app = Vue.createApp({
 					selectedOpacity: this.selectedOpacity,
 					nonSelectedOpacity: this.nonSelectedOpacity,
 					nonSelectedColor: this.nonSelectedColor,
-					getSelectionColor: this.getSelectionColor.bind(this)
+					getSelectionColor: this.getSelectionColor.bind(this),
+					// Add colorByColumn so it's included in customdata
+					colorByColumn: this.colorByColumn
 				}
 			);
 		},
@@ -324,12 +334,16 @@ const app = Vue.createApp({
 				this.lastSelectionTime = now;
 
 				if (point.customdata) {
-					// Extract value from customdata (format: "column: value")
+					// Extract value from customdata
 					const customData = point.customdata;
-					const match = customData.match(new RegExp(`${this.selectionColumn}: (.*)`));
+					console.log("Custom data:", customData);
+					
+					// Try to find the selectionColumn value in the customdata string
+					const match = typeof customData === 'string' ? 
+						customData.match(new RegExp(`${this.selectionColumn}: ([^,]+)`)) : null;
 
 					if (match && match[1]) {
-						const value = match[1];
+						const value = match[1].trim();
 						console.log(`Clicked ${this.selectionColumn}:`, value);
 
 						// Show processing indicator
@@ -360,6 +374,8 @@ const app = Vue.createApp({
 							// Update the visualization with some delay to prevent UI blocking
 							this.debounceUpdatePlot();
 						}, 10);
+					} else {
+						console.warn(`Could not find ${this.selectionColumn} in customdata:`, customData);
 					}
 				}
 			}

@@ -34,7 +34,6 @@ function createDefaultTraceConfig() {
 	return {
 		mode: 'markers',
 		type: 'scatter3d',
-		// hovertemplate: '%{customdata}<br>X: %{x:.2f}<br>Y: %{y:.2f}<br>Z: %{z:.2f}',
 		hovertemplate: '%{customdata}<br>coord: [%{x:.2f}, %{y:.2f}, %{z:.2f}]',
 	};
 }
@@ -68,6 +67,7 @@ function getCurrentCameraPosition(plotContainer) {
  * @param {Object} options.defaultTraceConfig - The default trace configuration
  * @param {number} options.selectedSize - The point size for selected points
  * @param {number} options.selectedOpacity - The opacity for selected points
+ * @param {string} options.selectionColumn - The column used for selection (optional)
  * @returns {Array} - Array of trace objects for Plotly
  */
 function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
@@ -78,7 +78,8 @@ function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
 	const {
 		defaultTraceConfig = createDefaultTraceConfig(),
 		selectedSize = 6,
-		selectedOpacity = 1.0
+		selectedOpacity = 1.0,
+		selectionColumn = selectedColumn // Default to selectedColumn if not provided
 	} = options || {};
 
 	const uniqueValues = [...dataFrame.col_unique(selectedColumn)];
@@ -103,6 +104,18 @@ function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
 
 		console.log(`Found ${indices.length} points for ${value}`);
 
+		// Prepare custom data with both columns if they're different
+		const customdata = indices.map(i => {
+			let data = `${selectedColumn}: ${plotData[selectedColumn][i]}`;
+			
+			// Add selectionColumn data if different from selectedColumn
+			if (selectionColumn && selectionColumn !== selectedColumn) {
+				data += `, ${selectionColumn}: ${plotData[selectionColumn][i]}`;
+			}
+			
+			return data;
+		});
+
 		traces.push({
 			...defaultTraceConfig,
 			x: indices.map(i => plotData.x[i]),
@@ -114,7 +127,7 @@ function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
 				color: colors[index % colors.length],
 				opacity: selectedOpacity // Use the selected opacity for better visibility
 			},
-			customdata: indices.map(i => `${selectedColumn}: ${plotData[selectedColumn][i]}`)
+			customdata: customdata
 		});
 	});
 
@@ -135,6 +148,7 @@ function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
  * @param {number} options.nonSelectedOpacity - The opacity for non-selected points
  * @param {string} options.nonSelectedColor - The color for non-selected points
  * @param {Function} options.getSelectionColor - Function to get color for a selection index
+ * @param {string} options.colorByColumn - The column used for coloring (optional)
  * @returns {Array} - Array of trace objects for Plotly
  */
 function createTracesWithSelection(plotData, selectedColumn, selectedValues, options) {
@@ -149,7 +163,8 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 		selectedOpacity = 1.0,
 		nonSelectedOpacity = 0.4,
 		nonSelectedColor = '#969696',
-		getSelectionColor = (index) => ['#ff7f0e', '#2ca02c', '#d62728'][index % 3]
+		getSelectionColor = (index) => ['#ff7f0e', '#2ca02c', '#d62728'][index % 3],
+		colorByColumn = selectedColumn // Default to selectedColumn if not provided
 	} = options || {};
 
 	// First, separate points into selected and non-selected
@@ -177,6 +192,19 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 	// Add non-selected points (with configurable color/opacity)
 	if (nonSelectedIndices.length > 0) {
 		console.log(`Creating trace for ${nonSelectedIndices.length} non-selected points...`);
+		
+		// Prepare custom data with both columns if they're different
+		const customdata = nonSelectedIndices.map(i => {
+			let data = `${selectedColumn}: ${plotData[selectedColumn][i]}`;
+			
+			// Add colorByColumn data if different from selectedColumn
+			if (colorByColumn && colorByColumn !== selectedColumn) {
+				data += `, ${colorByColumn}: ${plotData[colorByColumn][i]}`;
+			}
+			
+			return data;
+		});
+		
 		traces.push({
 			...defaultTraceConfig,
 			x: nonSelectedIndices.map(i => plotData.x[i]),
@@ -188,7 +216,7 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 				color: nonSelectedColor,
 				opacity: nonSelectedOpacity
 			},
-			customdata: nonSelectedIndices.map(i => `${selectedColumn}: ${plotData[selectedColumn][i]}`)
+			customdata: customdata
 		});
 	}
 
@@ -196,6 +224,18 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 	Object.keys(selectedIndices).forEach((value, index) => {
 		const indices = selectedIndices[value];
 		console.log(`Creating trace for selected value "${value}" with ${indices.length} points...`);
+
+		// Prepare custom data with both columns if they're different
+		const customdata = indices.map(i => {
+			let data = `${selectedColumn}: ${plotData[selectedColumn][i]}`;
+			
+			// Add colorByColumn data if different from selectedColumn
+			if (colorByColumn && colorByColumn !== selectedColumn) {
+				data += `, ${colorByColumn}: ${plotData[colorByColumn][i]}`;
+			}
+			
+			return data;
+		});
 
 		traces.push({
 			...defaultTraceConfig,
@@ -208,7 +248,7 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 				color: getSelectionColor(index),
 				opacity: selectedOpacity
 			},
-			customdata: indices.map(i => `${selectedColumn}: ${plotData[selectedColumn][i]}`)
+			customdata: customdata
 		});
 	});
 
