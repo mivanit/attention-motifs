@@ -1,0 +1,141 @@
+// this file has been modified from original code at:
+// ------------------------------------------------------------
+// https://github.com/scijs/ndarray?
+// under MIT License
+// https://github.com/scijs/ndarray/blob/58f5d8ca9cd37fa708c3996b0e8bbad0937678fc/LICENSE
+// ------------------------------------------------------------
+// https://github.com/aplbrain/npyjs
+// under Apache License
+// https://github.com/aplbrain/npyjs/blob/b0cd99b7f4c2bff791b4977e16dec3478519920b/LICENSE
+// removed float16 support for brevity -- we don't need it
+// natively returns ndarray objects
+// ------------------------------------------------------------
+class npyjs {
+
+	constructor() {
+		this.dtypes = {
+			"<u1": {
+				name: "uint8",
+				size: 8,
+				arrayConstructor: Uint8Array,
+			},
+			"|u1": {
+				name: "uint8",
+				size: 8,
+				arrayConstructor: Uint8Array,
+			},
+			"<u2": {
+				name: "uint16",
+				size: 16,
+				arrayConstructor: Uint16Array,
+			},
+			"|i1": {
+				name: "int8",
+				size: 8,
+				arrayConstructor: Int8Array,
+			},
+			"<i2": {
+				name: "int16",
+				size: 16,
+				arrayConstructor: Int16Array,
+			},
+			"<u4": {
+				name: "uint32",
+				size: 32,
+				arrayConstructor: Uint32Array,
+			},
+			"<i4": {
+				name: "int32",
+				size: 32,
+				arrayConstructor: Int32Array,
+			},
+			"<u8": {
+				name: "uint64",
+				size: 64,
+				arrayConstructor: BigUint64Array,
+			},
+			"<i8": {
+				name: "int64",
+				size: 64,
+				arrayConstructor: BigInt64Array,
+			},
+			"<f4": {
+				name: "float32",
+				size: 32,
+				arrayConstructor: Float32Array
+			},
+			"<f8": {
+				name: "float64",
+				size: 64,
+				arrayConstructor: Float64Array
+			},
+			// "<f2": {
+			//     name: "float16",
+			//     size: 16,
+			//     arrayConstructor: Uint16Array,
+			//     converter: this.convertFloat16 ? this.float16ToFloat32Array : undefined
+			// },
+		};
+	}
+
+	parse(arrayBufferContents) {
+		// const version = arrayBufferContents.slice(6, 8); // Uint8-encoded
+		const headerLength = new DataView(arrayBufferContents.slice(8, 10)).getUint8(0);
+		const offsetBytes = 10 + headerLength;
+
+		const hcontents = new TextDecoder("utf-8").decode(
+			new Uint8Array(arrayBufferContents.slice(10, 10 + headerLength))
+		);
+		const header = JSON.parse(
+			hcontents
+				.toLowerCase() // True -> true
+				.replace(/'/g, '"')
+				.replace("(", "[")
+				.replace(/,*\),*/g, "]")
+		);
+		const shape = header.shape;
+		const dtype = this.dtypes[header.descr];
+
+		if (!dtype) {
+			console.error(`Unsupported dtype: ${header.descr}`);
+			return null;
+		}
+
+		const nums = new dtype.arrayConstructor(
+			arrayBufferContents,
+			offsetBytes
+		);
+
+		// Convert float16 to float32 if converter exists
+		const data = dtype.converter ? dtype.converter.call(this, nums) : nums;
+
+		return {
+			dtype: dtype.name,
+			data: data,
+			shape,
+			fortranOrder: header.fortran_order
+		};
+	}
+
+	async load(filename, callback, fetchArgs) {
+		/*
+		Loads an array from a stream of bytes.
+		*/
+		fetchArgs = fetchArgs || {};
+		let arrayBuf;
+		// If filename is ArrayBuffer
+		if (filename instanceof ArrayBuffer) {
+			arrayBuf = filename;
+		}
+		// If filename is a file path
+		else {
+			const resp = await fetch(filename, { ...fetchArgs });
+			arrayBuf = await resp.arrayBuffer();
+		}
+		const result = this.parse(arrayBuf);
+		if (callback) {
+			return callback(result);
+		}
+		return result;
+	}
+}

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Interactive 3D PCA Plot</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.2/plotly.min.js"></script>
+  <script src="array.js"></script>
+</head>
+<body>
+  <h1>Interactive 3D PCA Plot</h1>
+  
+  <div class="controls">
+    <div id="status-message"></div>
+    <button id="clear-selection">Clear Selection</button>
+  </div>
+  
+  <div id="plot-container"></div>
+  
+  <div>
+    <h3>Selected Values:</h3>
+    <div id="selection-display" class="selection-display">None</div>
+  </div>
+  
+  <div class="config-display">
+    <h3>Loaded Configuration:</h3>
+    <div id="config-display">Loading configuration...</div>
+  </div>
+  
+  <script>
+    // let n = new npyjs();
+    // const npyArray = n.load("../data/features/pca_data.npy");
+    // console.log(npyArray);
+    // Script content to load and log the NPY file
+    document.addEventListener('DOMContentLoaded', function() {
+      // Create npyjs instance
+      let n = new npyjs();
+      
+      // Load and log the NPY file
+      n.load("../data/features/pca_data.npy")
+        .then(npyArray => {
+          console.log("NPY file loaded successfully");
+          console.log(npyArray);
+        })
+        .catch(error => {
+          console.error("Error loading NPY file:", error);
+        });
+    });
+  </script>
+</body>
+</html>
