@@ -1,21 +1,21 @@
 # Stats
 - 8 files
-- 1944 (1.9K) lines
-- 54371 (54K) chars
-- 20818 (21K) `gpt2` tokens
+- 2128 (2.1K) lines
+- 59799 (60K) chars
+- 22737 (23K) `gpt2` tokens
 
 # File Tree
 
 ```
 display              
-├── app.js           [451L 14,947C 5,265T]
+├── app.js           [520L 17,575C 6,058T]
 ├── array.js         [370L  9,746C 3,781T]
 ├── colorutil.js     [ 60L  1,600C   675T]
 ├── dataframe.js     [211L  5,212C 1,982T]
 ├── dataloader.js    [113L  3,906C 1,475T]
-├── embeddings.html  [139L  5,860C 2,575T]
+├── embeddings.html  [162L  7,057C 3,049T]
 ├── plotutil.js      [217L  7,205C 2,437T]
-└── style.css        [343L  4,952C 2,135T]
+└── style.css        [435L  6,555C 2,786T]
 ```
 
 # File Contents
@@ -37,8 +37,14 @@ const app = Vue.createApp({
 			plotData: null,
 			pcaArray: null,
 			dataFrame: null,
-			showDropdown: false,
-			selectedColumn: '', // Will be set after loading data
+			// Column selection dropdowns
+			colorByColumn: '', // Column for default coloring
+			selectionColumn: '', // Column for selection coloring
+			pendingColorByColumn: '', // Temp storage for color selection before applying
+			pendingSelectionColumn: '', // Temp storage for selection column before applying
+			showColorDropdown: false, // Control color dropdown visibility
+			showSelectionDropdown: false, // Control selection dropdown visibility
+			isUpdatingPlot: false, // Flag to show loading during plot updates
 			availableColumns: [],
 			pcaAxes: { x: 0, y: 1, z: 2 },
 			availablePcaAxes: [], // Will be populated with available components
@@ -51,10 +57,10 @@ const app = Vue.createApp({
 				'#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
 			],
 			nonSelectedColor: '#969696', // Gray for non-selected points
-			nonSelectedOpacity: 0.4,
-			nonSelectedSize: 4,
-			selectedOpacity: 1.0,
-			selectedSize: 6,
+			nonSelectedOpacity: 0.05,
+			nonSelectedSize: 1,
+			selectedOpacity: 0.2,
+			selectedSize: 2,
 			baseUrl: 'https://miv.name/pattern-lens/demo/?',
 			dropdownTimeout: null,
 			configCollapsed: false,
@@ -102,11 +108,11 @@ const app = Vue.createApp({
 				this.loadingMessage = 'Loading metadata...';
 				this.loadingDetail = 'Requesting JSONL file';
 				this.statusMessage = 'Loading feature metadata...';
-				
+
 				this.loadingProgressPercent = 50;
 				this.loadingDetail = 'Processing JSONL file (takes a while)...';
 				this.dataFrame = await loadMetadata();
-				
+
 				this.loadingProgressPercent = 70;
 
 				// Process data using the function from dataLoader.js
@@ -126,9 +132,13 @@ const app = Vue.createApp({
 				this.availableColumns = findCategoricalColumns(this.dataFrame);
 				console.log('Available categorical columns:', this.availableColumns);
 
-				// Set default selected column
-				this.selectedColumn = 'activation.model';
-				console.log('Selected column for coloring:', this.selectedColumn);
+				// Set default selected columns
+				this.colorByColumn = 'activation.model';
+				this.pendingColorByColumn = this.colorByColumn;
+				this.selectionColumn = 'activation.model'; // Initialize with the same default
+				this.pendingSelectionColumn = this.selectionColumn;
+				console.log('Initial color column:', this.colorByColumn);
+				console.log('Initial selection column:', this.selectionColumn);
 
 				this.loadingProgressPercent = 95;
 				this.statusMessage = 'Data loaded successfully';
@@ -156,7 +166,7 @@ const app = Vue.createApp({
 			if (!this.pcaArray || !this.dataFrame) {
 				throw new Error("PCA data or metadata not loaded");
 			}
-			
+
 			// Use the processData function from dataLoader.js
 			this.plotData = processData(this.pcaArray, this.dataFrame);
 			// Initialize with current axes selection
@@ -181,31 +191,82 @@ const app = Vue.createApp({
 			return getCurrentCameraPosition(this.$refs.plotContainer);
 		},
 
-		// Select a column from the dropdown
-		selectColumn(column) {
-			console.log(`Selected column changed from ${this.selectedColumn} to ${column}`);
-			this.selectedColumn = column;
-			this.showDropdown = false;
-			this.selectedValues = []; // Clear selection when changing column
-			this.updatePlot();
+		// Select a colorByColumn from the dropdown
+		selectColorByColumn(column) {
+			console.log(`Selected color-by column: ${column}`);
+			this.pendingColorByColumn = column;
+			this.showColorDropdown = false;
 		},
 
-		// Hide dropdown with delay to allow for click
-		hideDropdownDelayed() {
+		// Select a selectionColumn from the dropdown
+		selectSelectionColumn(column) {
+			console.log(`Selected selection column: ${column}`);
+			this.pendingSelectionColumn = column;
+			this.showSelectionDropdown = false;
+		},
+
+		// Apply colorByColumn change
+		applyColorByColumn() {
+			if (!this.pendingColorByColumn) return;
+
+			console.log(`Applying color-by column change from ${this.colorByColumn} to ${this.pendingColorByColumn}`);
+
+			// Store current camera position before update
+			this.currentCameraPosition = this.getCurrentCameraPosition();
+
+			// Show plot updating indicator
+			this.isUpdatingPlot = true;
+
+			// Update the column and clear selection if needed
+			if (this.colorByColumn !== this.pendingColorByColumn) {
+				this.colorByColumn = this.pendingColorByColumn;
+				this.selectedValues = []; // Clear selection when changing default color column
+				this.updatePlot();
+			}
+		},
+
+		// Apply selectionColumn change
+		applySelectionColumn() {
+			if (!this.pendingSelectionColumn) return;
+
+			console.log(`Applying selection column change from ${this.selectionColumn} to ${this.pendingSelectionColumn}`);
+
+			// Store current camera position before update
+			this.currentCameraPosition = this.getCurrentCameraPosition();
+
+			// Show plot updating indicator
+			this.isUpdatingPlot = true;
+
+			// Update the column and clear selection
+			if (this.selectionColumn !== this.pendingSelectionColumn) {
+				this.selectionColumn = this.pendingSelectionColumn;
+				this.selectedValues = []; // Clear selection when changing selection column
+				this.updatePlot();
+			}
+		},
+
+		// Hide dropdowns with delay to allow for click
+		hideColorDropdownDelayed() {
 			this.dropdownTimeout = setTimeout(() => {
-				this.showDropdown = false;
+				this.showColorDropdown = false;
+			}, 200);
+		},
+
+		hideSelectionDropdownDelayed() {
+			this.dropdownTimeout = setTimeout(() => {
+				this.showSelectionDropdown = false;
 			}, 200);
 		},
 
 		// Create traces grouped by categorical value (for initial view) - now using function from plotutil.js
 		createTracesByCategory() {
 			console.log('Creating traces by category...');
-			
-			// Use the createTracesByCategory function from plotutil.js
+
+			// Use the createTracesByCategory function from plotutil.js with colorByColumn
 			return createTracesByCategory(
 				this.plotData,
-				this.selectedColumn,
-				this.dataFrame, 
+				this.colorByColumn,
+				this.dataFrame,
 				{
 					defaultTraceConfig: this.defaultTraceConfig,
 					selectedSize: this.selectedSize,
@@ -217,11 +278,11 @@ const app = Vue.createApp({
 		// Create traces with selection highlighting - now using function from plotutil.js
 		createTracesWithSelection() {
 			console.log('Creating traces with selection highlighting...');
-			
-			// Use the createTracesWithSelection function from plotutil.js
+
+			// Use the createTracesWithSelection function from plotutil.js with selectionColumn
 			return createTracesWithSelection(
 				this.plotData,
-				this.selectedColumn,
+				this.selectionColumn,
 				this.selectedValues,
 				{
 					defaultTraceConfig: this.defaultTraceConfig,
@@ -288,11 +349,11 @@ const app = Vue.createApp({
 				if (point.customdata) {
 					// Extract value from customdata (format: "column: value")
 					const customData = point.customdata;
-					const match = customData.match(new RegExp(`${this.selectedColumn}: (.*)`));
+					const match = customData.match(new RegExp(`${this.selectionColumn}: (.*)`));
 
 					if (match && match[1]) {
 						const value = match[1];
-						console.log(`Clicked ${this.selectedColumn}:`, value);
+						console.log(`Clicked ${this.selectionColumn}:`, value);
 
 						// Show processing indicator
 						this.processingSelection = true;
@@ -344,6 +405,9 @@ const app = Vue.createApp({
 			try {
 				console.log('Updating plot...');
 
+				// Show updating indicator
+				this.isUpdatingPlot = true;
+
 				// Store current camera position before update if not already stored
 				if (!this.currentCameraPosition) {
 					this.currentCameraPosition = this.getCurrentCameraPosition();
@@ -380,12 +444,16 @@ const app = Vue.createApp({
 
 				// Hide processing indicator if it was shown
 				this.processingSelection = false;
+				// Hide updating indicator
+				this.isUpdatingPlot = false;
 				this.statusMessage = 'Plot updated';
 				console.log('Plot update complete');
 			} catch (error) {
 				console.error("Error updating plot:", error);
 				this.statusMessage = `Error updating plot: ${error.message}`;
 				this.processingSelection = false;
+				// Hide updating indicator
+				this.isUpdatingPlot = false;
 			}
 			console.timeEnd('Update Plot');
 		},
@@ -444,8 +512,9 @@ const app = Vue.createApp({
 		logPerformanceInfo() {
 			console.log('Performance Information:');
 			console.log(`Total points: ${this.plotData?.x?.length || 'N/A'}`);
-			console.log(`Total unique ${this.selectedColumn} values: ${this.availableColumns.length > 0 ?
-				this.dataFrame.col_unique(this.selectedColumn).size : 'N/A'}`);
+			console.log(`Color by: ${this.colorByColumn}, Select by: ${this.selectionColumn}`);
+			console.log(`Total unique ${this.colorByColumn} values: ${this.availableColumns.length > 0 ?
+				this.dataFrame.col_unique(this.colorByColumn).size : 'N/A'}`);
 			console.log(`Current selection: ${this.selectedValues.length} values`);
 			console.log(`Available PCA components: ${this.availablePcaAxes.length}`);
 			console.log(`Current axes: PC${this.pcaAxes.x + 1}, PC${this.pcaAxes.y + 1}, PC${this.pcaAxes.z + 1}`);
@@ -1273,14 +1342,31 @@ function findCategoricalColumns(dataFrame) {
       <div class="control-group">
         <button @click="clearSelection">Clear Selection</button>
         <button class="secondary" @click="regenerateColors">Regenerate Colors</button>
-        <div class="combo-select">
-          <input type="text" v-model="selectedColumn" @focus="showDropdown = true" @blur="hideDropdownDelayed" placeholder="Select column" />
-          <div class="dropdown" v-if="showDropdown">
-            <div v-for="column in availableColumns" class="dropdown-item" @mousedown.prevent="selectColumn(column)"> {{ column }} </div>
-          </div>
-        </div>
       </div>
       <div class="status-message">{{ statusMessage }}</div>
+    </div>
+    <!-- Column Selection Controls -->
+    <div class="column-controls">
+      <div class="column-control">
+        <label>Color by:</label>
+        <div class="combo-select">
+          <input type="text" v-model="pendingColorByColumn" @focus="showColorDropdown = true" @blur="hideColorDropdownDelayed" placeholder="Select column" />
+          <div class="dropdown" v-if="showColorDropdown">
+            <div v-for="column in availableColumns" class="dropdown-item" @mousedown.prevent="selectColorByColumn(column)"> {{ column }} </div>
+          </div>
+        </div>
+        <button class="apply-button" @click="applyColorByColumn">Apply</button>
+      </div>
+      <div class="column-control">
+        <label>Select by:</label>
+        <div class="combo-select">
+          <input type="text" v-model="pendingSelectionColumn" @focus="showSelectionDropdown = true" @blur="hideSelectionDropdownDelayed" placeholder="Select column" />
+          <div class="dropdown" v-if="showSelectionDropdown">
+            <div v-for="column in availableColumns" class="dropdown-item" @mousedown.prevent="selectSelectionColumn(column)"> {{ column }} </div>
+          </div>
+        </div>
+        <button class="apply-button" @click="applySelectionColumn">Apply</button>
+      </div>
     </div>
     <!-- PCA Axis Selection -->
     <div class="axis-controls">
@@ -1299,12 +1385,18 @@ function findCategoricalColumns(dataFrame) {
         <p>{{ loadingDetail }}</p>
         <div v-if="loadingProgress" class="loading-progress">
           <div class="loading-progress-bar" :style="{ width: loadingProgressPercent + '%' }"></div>
+          <span class="loading-progress-percentage">{{ loadingProgressPercent }}%</span>
         </div>
       </div>
       <!-- Processing selection indicator -->
       <div v-if="processingSelection" class="processing-indicator">
         <div class="mini-spinner"></div>
         <span>Processing selection...</span>
+      </div>
+      <!-- Plot updating indicator -->
+      <div v-if="isUpdatingPlot && !processingSelection" class="updating-indicator">
+        <div class="mini-spinner"></div>
+        <span>Updating plot...</span>
       </div>
     </div>
     <div>
@@ -1326,15 +1418,15 @@ function findCategoricalColumns(dataFrame) {
           <div class="control-row">
             <div class="control-label">Opacity:</div>
             <div class="control-input">
-              <input type="range" min="0" max="1" step="0.1" v-model.number="nonSelectedOpacity" @change="updatePlot">
-              <input type="number" min="0" max="1" step="0.1" v-model.number="nonSelectedOpacity" @change="updatePlot">
+              <input type="range" min="0" max="1" step="0.01" v-model.number="nonSelectedOpacity" @change="updatePlot">
+              <input type="number" min="0" max="1" step="0.01" v-model.number="nonSelectedOpacity" @change="updatePlot">
             </div>
           </div>
           <div class="control-row">
             <div class="control-label">Size:</div>
             <div class="control-input">
-              <input type="range" min="1" max="10" step="0.5" v-model.number="nonSelectedSize" @change="updatePlot">
-              <input type="number" min="1" max="10" step="0.5" v-model.number="nonSelectedSize" @change="updatePlot">
+              <input type="range" min="0.5" max="10" step="0.5" v-model.number="nonSelectedSize" @change="updatePlot">
+              <input type="number" min="0.5" max="10" step="0.5" v-model.number="nonSelectedSize" @change="updatePlot">
             </div>
           </div>
           <div class="control-row">
@@ -1349,15 +1441,15 @@ function findCategoricalColumns(dataFrame) {
           <div class="control-row">
             <div class="control-label">Opacity:</div>
             <div class="control-input">
-              <input type="range" min="0" max="1" step="0.1" v-model.number="selectedOpacity" @change="updatePlot">
-              <input type="number" min="0" max="1" step="0.1" v-model.number="selectedOpacity" @change="updatePlot">
+              <input type="range" min="0" max="1" step="0.01" v-model.number="selectedOpacity" @change="updatePlot">
+              <input type="number" min="0" max="1" step="0.01" v-model.number="selectedOpacity" @change="updatePlot">
             </div>
           </div>
           <div class="control-row">
             <div class="control-label">Size:</div>
             <div class="control-input">
-              <input type="range" min="1" max="10" step="0.5" v-model.number="selectedSize" @change="updatePlot">
-              <input type="number" min="1" max="10" step="0.5" v-model.number="selectedSize" @change="updatePlot">
+              <input type="range" min="0.5" max="10" step="0.5" v-model.number="selectedSize" @change="updatePlot">
+              <input type="number" min="0.5" max="10" step="0.5" v-model.number="selectedSize" @change="updatePlot">
             </div>
           </div>
         </div>
@@ -1946,5 +2038,97 @@ input {
 	width: 20px;
 	height: 20px;
 	animation: spin 1s linear infinite;
+}
+
+/* Add these styles to style.css */
+
+/* Column selection controls */
+.column-controls {
+	display: flex;
+	gap: 15px;
+	flex-wrap: wrap;
+}
+
+.column-control {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.column-control label {
+	font-weight: bold;
+	white-space: nowrap;
+}
+
+.column-control .combo-select {
+	min-width: 160px;
+}
+
+.apply-button {
+	padding: 6px 12px;
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 14px;
+}
+
+.apply-button:hover {
+	background-color: #45a049;
+}
+
+/* Enhanced loading indicators */
+.loading-progress-percentage {
+	margin-left: 8px;
+	font-size: 14px;
+	color: #3498db;
+}
+
+.updating-indicator {
+	position: absolute;
+	top: 20px;
+	right: 20px;
+	background-color: rgba(255, 255, 255, 0.9);
+	padding: 10px;
+	border-radius: 4px;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	z-index: 5;
+	border-left: 4px solid #3498db;
+}
+
+/* Make the loading overlay more visible */
+.loading-overlay {
+	background-color: rgba(255, 255, 255, 0.9);
+	padding: 20px;
+	border-radius: 8px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+	max-width: 80%;
+}
+
+/* Enhance loading progress bar */
+.loading-progress {
+	width: 300px;
+	background-color: #f1f1f1;
+	border-radius: 4px;
+	margin: 15px 0;
+	display: flex;
+	align-items: center;
+}
+
+.loading-progress-bar {
+	height: 15px;
+	border-radius: 4px;
+	background-color: #3498db;
+	transition: width 0.3s ease;
+}
+
+/* Enhance the processing indicator */
+.processing-indicator {
+	background-color: rgba(255, 255, 255, 0.9);
+	border-left: 4px solid #f39c12;
 }
 ``````{ end_of_file="style.css" }

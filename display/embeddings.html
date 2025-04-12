@@ -29,14 +29,31 @@
       <div class="control-group">
         <button @click="clearSelection">Clear Selection</button>
         <button class="secondary" @click="regenerateColors">Regenerate Colors</button>
-        <div class="combo-select">
-          <input type="text" v-model="selectedColumn" @focus="showDropdown = true" @blur="hideDropdownDelayed" placeholder="Select column" />
-          <div class="dropdown" v-if="showDropdown">
-            <div v-for="column in availableColumns" class="dropdown-item" @mousedown.prevent="selectColumn(column)"> {{ column }} </div>
-          </div>
-        </div>
       </div>
       <div class="status-message">{{ statusMessage }}</div>
+    </div>
+    <!-- Column Selection Controls -->
+    <div class="column-controls">
+      <div class="column-control">
+        <label>Color by:</label>
+        <div class="combo-select">
+          <input type="text" v-model="pendingColorByColumn" @focus="showColorDropdown = true" @blur="hideColorDropdownDelayed" placeholder="Select column" />
+          <div class="dropdown" v-if="showColorDropdown">
+            <div v-for="column in availableColumns" class="dropdown-item" @mousedown.prevent="selectColorByColumn(column)"> {{ column }} </div>
+          </div>
+        </div>
+        <button class="apply-button" @click="applyColorByColumn">Apply</button>
+      </div>
+      <div class="column-control">
+        <label>Select by:</label>
+        <div class="combo-select">
+          <input type="text" v-model="pendingSelectionColumn" @focus="showSelectionDropdown = true" @blur="hideSelectionDropdownDelayed" placeholder="Select column" />
+          <div class="dropdown" v-if="showSelectionDropdown">
+            <div v-for="column in availableColumns" class="dropdown-item" @mousedown.prevent="selectSelectionColumn(column)"> {{ column }} </div>
+          </div>
+        </div>
+        <button class="apply-button" @click="applySelectionColumn">Apply</button>
+      </div>
     </div>
     <!-- PCA Axis Selection -->
     <div class="axis-controls">
@@ -55,12 +72,18 @@
         <p>{{ loadingDetail }}</p>
         <div v-if="loadingProgress" class="loading-progress">
           <div class="loading-progress-bar" :style="{ width: loadingProgressPercent + '%' }"></div>
+          <span class="loading-progress-percentage">{{ loadingProgressPercent }}%</span>
         </div>
       </div>
       <!-- Processing selection indicator -->
       <div v-if="processingSelection" class="processing-indicator">
         <div class="mini-spinner"></div>
         <span>Processing selection...</span>
+      </div>
+      <!-- Plot updating indicator -->
+      <div v-if="isUpdatingPlot && !processingSelection" class="updating-indicator">
+        <div class="mini-spinner"></div>
+        <span>Updating plot...</span>
       </div>
     </div>
     <div>
@@ -82,15 +105,15 @@
           <div class="control-row">
             <div class="control-label">Opacity:</div>
             <div class="control-input">
-              <input type="range" min="0" max="1" step="0.1" v-model.number="nonSelectedOpacity" @change="updatePlot">
-              <input type="number" min="0" max="1" step="0.1" v-model.number="nonSelectedOpacity" @change="updatePlot">
+              <input type="range" min="0" max="1" step="0.01" v-model.number="nonSelectedOpacity" @change="updatePlot">
+              <input type="number" min="0" max="1" step="0.01" v-model.number="nonSelectedOpacity" @change="updatePlot">
             </div>
           </div>
           <div class="control-row">
             <div class="control-label">Size:</div>
             <div class="control-input">
-              <input type="range" min="1" max="10" step="0.5" v-model.number="nonSelectedSize" @change="updatePlot">
-              <input type="number" min="1" max="10" step="0.5" v-model.number="nonSelectedSize" @change="updatePlot">
+              <input type="range" min="0.5" max="10" step="0.5" v-model.number="nonSelectedSize" @change="updatePlot">
+              <input type="number" min="0.5" max="10" step="0.5" v-model.number="nonSelectedSize" @change="updatePlot">
             </div>
           </div>
           <div class="control-row">
@@ -105,15 +128,15 @@
           <div class="control-row">
             <div class="control-label">Opacity:</div>
             <div class="control-input">
-              <input type="range" min="0" max="1" step="0.1" v-model.number="selectedOpacity" @change="updatePlot">
-              <input type="number" min="0" max="1" step="0.1" v-model.number="selectedOpacity" @change="updatePlot">
+              <input type="range" min="0" max="1" step="0.01" v-model.number="selectedOpacity" @change="updatePlot">
+              <input type="number" min="0" max="1" step="0.01" v-model.number="selectedOpacity" @change="updatePlot">
             </div>
           </div>
           <div class="control-row">
             <div class="control-label">Size:</div>
             <div class="control-input">
-              <input type="range" min="1" max="10" step="0.5" v-model.number="selectedSize" @change="updatePlot">
-              <input type="number" min="1" max="10" step="0.5" v-model.number="selectedSize" @change="updatePlot">
+              <input type="range" min="0.5" max="10" step="0.5" v-model.number="selectedSize" @change="updatePlot">
+              <input type="number" min="0.5" max="10" step="0.5" v-model.number="selectedSize" @change="updatePlot">
             </div>
           </div>
         </div>

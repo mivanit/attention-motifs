@@ -14,8 +14,14 @@ const app = Vue.createApp({
 			plotData: null,
 			pcaArray: null,
 			dataFrame: null,
-			showDropdown: false,
-			selectedColumn: '', // Will be set after loading data
+			// Column selection dropdowns
+			colorByColumn: '', // Column for default coloring
+			selectionColumn: '', // Column for selection coloring
+			pendingColorByColumn: '', // Temp storage for color selection before applying
+			pendingSelectionColumn: '', // Temp storage for selection column before applying
+			showColorDropdown: false, // Control color dropdown visibility
+			showSelectionDropdown: false, // Control selection dropdown visibility
+			isUpdatingPlot: false, // Flag to show loading during plot updates
 			availableColumns: [],
 			pcaAxes: { x: 0, y: 1, z: 2 },
 			availablePcaAxes: [], // Will be populated with available components
@@ -28,10 +34,10 @@ const app = Vue.createApp({
 				'#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
 			],
 			nonSelectedColor: '#969696', // Gray for non-selected points
-			nonSelectedOpacity: 0.4,
-			nonSelectedSize: 4,
-			selectedOpacity: 1.0,
-			selectedSize: 6,
+			nonSelectedOpacity: 0.05,
+			nonSelectedSize: 1,
+			selectedOpacity: 0.2,
+			selectedSize: 2,
 			baseUrl: 'https://miv.name/pattern-lens/demo/?',
 			dropdownTimeout: null,
 			configCollapsed: false,
@@ -79,11 +85,11 @@ const app = Vue.createApp({
 				this.loadingMessage = 'Loading metadata...';
 				this.loadingDetail = 'Requesting JSONL file';
 				this.statusMessage = 'Loading feature metadata...';
-				
+
 				this.loadingProgressPercent = 50;
 				this.loadingDetail = 'Processing JSONL file (takes a while)...';
 				this.dataFrame = await loadMetadata();
-				
+
 				this.loadingProgressPercent = 70;
 
 				// Process data using the function from dataLoader.js
@@ -103,9 +109,13 @@ const app = Vue.createApp({
 				this.availableColumns = findCategoricalColumns(this.dataFrame);
 				console.log('Available categorical columns:', this.availableColumns);
 
-				// Set default selected column
-				this.selectedColumn = 'activation.model';
-				console.log('Selected column for coloring:', this.selectedColumn);
+				// Set default selected columns
+				this.colorByColumn = 'activation.model';
+				this.pendingColorByColumn = this.colorByColumn;
+				this.selectionColumn = 'activation.model'; // Initialize with the same default
+				this.pendingSelectionColumn = this.selectionColumn;
+				console.log('Initial color column:', this.colorByColumn);
+				console.log('Initial selection column:', this.selectionColumn);
 
 				this.loadingProgressPercent = 95;
 				this.statusMessage = 'Data loaded successfully';
@@ -133,7 +143,7 @@ const app = Vue.createApp({
 			if (!this.pcaArray || !this.dataFrame) {
 				throw new Error("PCA data or metadata not loaded");
 			}
-			
+
 			// Use the processData function from dataLoader.js
 			this.plotData = processData(this.pcaArray, this.dataFrame);
 			// Initialize with current axes selection
@@ -158,31 +168,82 @@ const app = Vue.createApp({
 			return getCurrentCameraPosition(this.$refs.plotContainer);
 		},
 
-		// Select a column from the dropdown
-		selectColumn(column) {
-			console.log(`Selected column changed from ${this.selectedColumn} to ${column}`);
-			this.selectedColumn = column;
-			this.showDropdown = false;
-			this.selectedValues = []; // Clear selection when changing column
-			this.updatePlot();
+		// Select a colorByColumn from the dropdown
+		selectColorByColumn(column) {
+			console.log(`Selected color-by column: ${column}`);
+			this.pendingColorByColumn = column;
+			this.showColorDropdown = false;
 		},
 
-		// Hide dropdown with delay to allow for click
-		hideDropdownDelayed() {
+		// Select a selectionColumn from the dropdown
+		selectSelectionColumn(column) {
+			console.log(`Selected selection column: ${column}`);
+			this.pendingSelectionColumn = column;
+			this.showSelectionDropdown = false;
+		},
+
+		// Apply colorByColumn change
+		applyColorByColumn() {
+			if (!this.pendingColorByColumn) return;
+
+			console.log(`Applying color-by column change from ${this.colorByColumn} to ${this.pendingColorByColumn}`);
+
+			// Store current camera position before update
+			this.currentCameraPosition = this.getCurrentCameraPosition();
+
+			// Show plot updating indicator
+			this.isUpdatingPlot = true;
+
+			// Update the column and clear selection if needed
+			if (this.colorByColumn !== this.pendingColorByColumn) {
+				this.colorByColumn = this.pendingColorByColumn;
+				this.selectedValues = []; // Clear selection when changing default color column
+				this.updatePlot();
+			}
+		},
+
+		// Apply selectionColumn change
+		applySelectionColumn() {
+			if (!this.pendingSelectionColumn) return;
+
+			console.log(`Applying selection column change from ${this.selectionColumn} to ${this.pendingSelectionColumn}`);
+
+			// Store current camera position before update
+			this.currentCameraPosition = this.getCurrentCameraPosition();
+
+			// Show plot updating indicator
+			this.isUpdatingPlot = true;
+
+			// Update the column and clear selection
+			if (this.selectionColumn !== this.pendingSelectionColumn) {
+				this.selectionColumn = this.pendingSelectionColumn;
+				this.selectedValues = []; // Clear selection when changing selection column
+				this.updatePlot();
+			}
+		},
+
+		// Hide dropdowns with delay to allow for click
+		hideColorDropdownDelayed() {
 			this.dropdownTimeout = setTimeout(() => {
-				this.showDropdown = false;
+				this.showColorDropdown = false;
+			}, 200);
+		},
+
+		hideSelectionDropdownDelayed() {
+			this.dropdownTimeout = setTimeout(() => {
+				this.showSelectionDropdown = false;
 			}, 200);
 		},
 
 		// Create traces grouped by categorical value (for initial view) - now using function from plotutil.js
 		createTracesByCategory() {
 			console.log('Creating traces by category...');
-			
-			// Use the createTracesByCategory function from plotutil.js
+
+			// Use the createTracesByCategory function from plotutil.js with colorByColumn
 			return createTracesByCategory(
 				this.plotData,
-				this.selectedColumn,
-				this.dataFrame, 
+				this.colorByColumn,
+				this.dataFrame,
 				{
 					defaultTraceConfig: this.defaultTraceConfig,
 					selectedSize: this.selectedSize,
@@ -194,11 +255,11 @@ const app = Vue.createApp({
 		// Create traces with selection highlighting - now using function from plotutil.js
 		createTracesWithSelection() {
 			console.log('Creating traces with selection highlighting...');
-			
-			// Use the createTracesWithSelection function from plotutil.js
+
+			// Use the createTracesWithSelection function from plotutil.js with selectionColumn
 			return createTracesWithSelection(
 				this.plotData,
-				this.selectedColumn,
+				this.selectionColumn,
 				this.selectedValues,
 				{
 					defaultTraceConfig: this.defaultTraceConfig,
@@ -265,11 +326,11 @@ const app = Vue.createApp({
 				if (point.customdata) {
 					// Extract value from customdata (format: "column: value")
 					const customData = point.customdata;
-					const match = customData.match(new RegExp(`${this.selectedColumn}: (.*)`));
+					const match = customData.match(new RegExp(`${this.selectionColumn}: (.*)`));
 
 					if (match && match[1]) {
 						const value = match[1];
-						console.log(`Clicked ${this.selectedColumn}:`, value);
+						console.log(`Clicked ${this.selectionColumn}:`, value);
 
 						// Show processing indicator
 						this.processingSelection = true;
@@ -321,6 +382,9 @@ const app = Vue.createApp({
 			try {
 				console.log('Updating plot...');
 
+				// Show updating indicator
+				this.isUpdatingPlot = true;
+
 				// Store current camera position before update if not already stored
 				if (!this.currentCameraPosition) {
 					this.currentCameraPosition = this.getCurrentCameraPosition();
@@ -357,12 +421,16 @@ const app = Vue.createApp({
 
 				// Hide processing indicator if it was shown
 				this.processingSelection = false;
+				// Hide updating indicator
+				this.isUpdatingPlot = false;
 				this.statusMessage = 'Plot updated';
 				console.log('Plot update complete');
 			} catch (error) {
 				console.error("Error updating plot:", error);
 				this.statusMessage = `Error updating plot: ${error.message}`;
 				this.processingSelection = false;
+				// Hide updating indicator
+				this.isUpdatingPlot = false;
 			}
 			console.timeEnd('Update Plot');
 		},
@@ -421,8 +489,9 @@ const app = Vue.createApp({
 		logPerformanceInfo() {
 			console.log('Performance Information:');
 			console.log(`Total points: ${this.plotData?.x?.length || 'N/A'}`);
-			console.log(`Total unique ${this.selectedColumn} values: ${this.availableColumns.length > 0 ?
-				this.dataFrame.col_unique(this.selectedColumn).size : 'N/A'}`);
+			console.log(`Color by: ${this.colorByColumn}, Select by: ${this.selectionColumn}`);
+			console.log(`Total unique ${this.colorByColumn} values: ${this.availableColumns.length > 0 ?
+				this.dataFrame.col_unique(this.colorByColumn).size : 'N/A'}`);
 			console.log(`Current selection: ${this.selectedValues.length} values`);
 			console.log(`Available PCA components: ${this.availablePcaAxes.length}`);
 			console.log(`Current axes: PC${this.pcaAxes.x + 1}, PC${this.pcaAxes.y + 1}, PC${this.pcaAxes.z + 1}`);

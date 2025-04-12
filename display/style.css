@@ -341,3 +341,95 @@ input {
 	height: 20px;
 	animation: spin 1s linear infinite;
 }
+
+/* Add these styles to style.css */
+
+/* Column selection controls */
+.column-controls {
+	display: flex;
+	gap: 15px;
+	flex-wrap: wrap;
+}
+
+.column-control {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.column-control label {
+	font-weight: bold;
+	white-space: nowrap;
+}
+
+.column-control .combo-select {
+	min-width: 160px;
+}
+
+.apply-button {
+	padding: 6px 12px;
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 14px;
+}
+
+.apply-button:hover {
+	background-color: #45a049;
+}
+
+/* Enhanced loading indicators */
+.loading-progress-percentage {
+	margin-left: 8px;
+	font-size: 14px;
+	color: #3498db;
+}
+
+.updating-indicator {
+	position: absolute;
+	top: 20px;
+	right: 20px;
+	background-color: rgba(255, 255, 255, 0.9);
+	padding: 10px;
+	border-radius: 4px;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	z-index: 5;
+	border-left: 4px solid #3498db;
+}
+
+/* Make the loading overlay more visible */
+.loading-overlay {
+	background-color: rgba(255, 255, 255, 0.9);
+	padding: 20px;
+	border-radius: 8px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+	max-width: 80%;
+}
+
+/* Enhance loading progress bar */
+.loading-progress {
+	width: 300px;
+	background-color: #f1f1f1;
+	border-radius: 4px;
+	margin: 15px 0;
+	display: flex;
+	align-items: center;
+}
+
+.loading-progress-bar {
+	height: 15px;
+	border-radius: 4px;
+	background-color: #3498db;
+	transition: width 0.3s ease;
+}
+
+/* Enhance the processing indicator */
+.processing-indicator {
+	background-color: rgba(255, 255, 255, 0.9);
+	border-left: 4px solid #f39c12;
+}
