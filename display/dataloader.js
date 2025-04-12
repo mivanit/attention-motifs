@@ -26,7 +26,7 @@ function loadMetadata() {
     console.time('Load JSONL');
     console.log('Requesting metadata file');
     
-    return fetch("../data/features/features_scaled.jsonl")
+    return fetch("../data/features/features_meta.jsonl")
         .then(response => {
             console.log('Metadata file received, processing text...');
             return response.text();

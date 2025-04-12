@@ -1,26 +1,26 @@
 # Stats
-- 7 files
-- 1813 (1.8K) lines
-- 49927 (50K) chars
-- 19406 (19K) `gpt2` tokens
+- 8 files
+- 1944 (1.9K) lines
+- 54371 (54K) chars
+- 20818 (21K) `gpt2` tokens
 
 # File Tree
 
 ```
 display              
-├── app.js           [615L 20,611C 7,376T]
+├── app.js           [451L 14,947C 5,265T]
 ├── array.js         [370L  9,746C 3,781T]
 ├── colorutil.js     [ 60L  1,600C   675T]
 ├── dataframe.js     [211L  5,212C 1,982T]
-├── embeddings.html  [137L  5,781C 2,552T]
-├── plotutil.js      [ 40L  1,197C   473T]
+├── dataloader.js    [113L  3,906C 1,475T]
+├── embeddings.html  [139L  5,860C 2,575T]
+├── plotutil.js      [217L  7,205C 2,437T]
 └── style.css        [343L  4,952C 2,135T]
 ```
 
 # File Contents
 
 ``````{ path="app.js"  }
-
 // Create Vue app
 const app = Vue.createApp({
 	data() {
@@ -87,91 +87,47 @@ const app = Vue.createApp({
 			console.log('Starting data loading process');
 
 			try {
-				console.time('Load PCA NPY');
-				// Start loading PCA data file
+				// Load PCA data using the function from dataLoader.js
 				this.loadingDetail = 'Downloading NPY file...';
-				console.log('Requesting PCA data file');
-
-				// actually load
-				// ----------------------------------------
-				this.pcaArray = await NDArray.load("../data/features/pca_data.npy");
-				// ----------------------------------------
-
-				console.timeEnd('Load PCA NPY');
-				console.log('PCA data loaded:', this.pcaArray);
-				console.log('PCA data shape:', this.pcaArray.shape);
-				console.log('PCA data type:', this.pcaArray.dtype);
+				this.pcaArray = await loadPcaData();
 
 				this.loadingProgressPercent = 30;
 				this.loadingProgress = true;
 
 				// Setup available PCA axes
-				// ----------------------------------------
 				this.availablePcaAxes = new Array(this.pcaArray.shape[1]).fill(0).map((_, i) => i);
-				// ----------------------------------------
 				console.log('Available PCA components:', this.availablePcaAxes.length);
 
-				// Load metadata
+				// Load metadata using the function from dataLoader.js
 				this.loadingMessage = 'Loading metadata...';
 				this.loadingDetail = 'Requesting JSONL file';
 				this.statusMessage = 'Loading feature metadata...';
-				console.time('Load JSONL');
-
-				console.log('Requesting metadata file');
-				// ----------------------------------------
-				const response = await fetch("../data/features/features_scaled.jsonl");
-				// ----------------------------------------
-
+				
 				this.loadingProgressPercent = 50;
 				this.loadingDetail = 'Processing JSONL file (takes a while)...';
-				console.log('Metadata file received, processing text...');
-				// ----------------------------------------
-				const text = await response.text();
-				// ----------------------------------------
-				console.log('JSONL text length:', text.length);
-
+				this.dataFrame = await loadMetadata();
+				
 				this.loadingProgressPercent = 70;
-				console.log('Parsing JSONL into DataFrame...');
-				// ----------------------------------------
-				this.dataFrame = DataFrame.from_jsonl(text);
-				// ----------------------------------------
-				console.timeEnd('Load JSONL');
-				console.log('DataFrame loaded:', this.dataFrame);
-				console.log('DataFrame columns:', this.dataFrame.columns);
-				console.log('DataFrame rows:', this.dataFrame.length);
 
-				// Process data
+				// Process data using the function from dataLoader.js
 				this.loadingMessage = 'Processing data...';
 				this.loadingDetail = 'Preparing plot data';
 				this.loadingProgressPercent = 80;
 				console.time('Process Data');
-				// ----------------------------------------
-				this.processData();
-				// ----------------------------------------
+				this.plotData = processData(this.pcaArray, this.dataFrame);
+				// Update coordinates based on initial PCA axes selection
+				updatePlotCoordinates(this.plotData, this.pcaAxes);
 				console.timeEnd('Process Data');
 
 				this.loadingProgressPercent = 90;
 
-				// Set available columns for selection
+				// Find categorical columns using the function from dataLoader.js
 				console.log('Finding categorical columns...');
-				// ----------------------------------------
-				this.availableColumns = this.dataFrame.columns.filter(col => {
-					try {
-						const uniqueCount = this.dataFrame.col_unique(col).size;
-						// At least 2 unique values but not too many (fewer than 50)
-						return uniqueCount < 50;
-					} catch (e) {
-						console.error(`Error checking column ${col}:`, e);
-						return false;
-					}
-				});
-				// ----------------------------------------
-
+				this.availableColumns = findCategoricalColumns(this.dataFrame);
 				console.log('Available categorical columns:', this.availableColumns);
 
 				// Set default selected column
 				this.selectedColumn = 'activation.model';
-
 				console.log('Selected column for coloring:', this.selectedColumn);
 
 				this.loadingProgressPercent = 95;
@@ -200,43 +156,17 @@ const app = Vue.createApp({
 			if (!this.pcaArray || !this.dataFrame) {
 				throw new Error("PCA data or metadata not loaded");
 			}
-
-			console.log('Processing data for plotting...');
-			const pcaData = this.pcaArray;
-
-			// Create the plot data object with arrays for all available PCA components
-			this.plotData = {
-				// Initialize empty arrays for all PCA components
-				pcaComponents: []
-			};
-
-			// Initialize arrays for each PCA component
-			for (let i = 0; i < pcaData.shape[1]; i++) {
-				console.log(`Extracting PCA component ${i + 1}...`);
-				// Use the get method with null to get all values for a specific component
-				this.plotData.pcaComponents[i] = Array.from(pcaData.get(null, i).data);
-			}
-
-			// Add metadata columns from the DataFrame to plotData
-			console.log('Adding metadata columns...');
-			for (const column of this.dataFrame.columns) {
-				this.plotData[column] = this.dataFrame.col(column);
-			}
-
+			
+			// Use the processData function from dataLoader.js
+			this.plotData = processData(this.pcaArray, this.dataFrame);
 			// Initialize with current axes selection
 			this.updatePlotCoordinates();
-
-			console.log('Data processing complete');
 		},
 
 		// Update x, y, z arrays based on current PCA axis selection
 		updatePlotCoordinates() {
-			console.log(`Updating coordinates to PC${this.pcaAxes.x}, PC${this.pcaAxes.y}, PC${this.pcaAxes.z}`);
-
-			// Set x, y, z from the selected PCA components
-			this.plotData.x = this.plotData.pcaComponents[this.pcaAxes.x];
-			this.plotData.y = this.plotData.pcaComponents[this.pcaAxes.y];
-			this.plotData.z = this.plotData.pcaComponents[this.pcaAxes.z];
+			// Use the updatePlotCoordinates function from dataLoader.js
+			updatePlotCoordinates(this.plotData, this.pcaAxes);
 		},
 
 		// Handle change of PCA axes
@@ -246,20 +176,9 @@ const app = Vue.createApp({
 			this.updatePlot();
 		},
 
-		// Get current camera position from the plot
+		// Get current camera position from the plot (now using function from plotutil.js)
 		getCurrentCameraPosition() {
-			if (this.$refs.plotContainer && this.$refs.plotContainer._fullLayout) {
-				try {
-					// Deep clone to avoid reference issues
-					return JSON.parse(JSON.stringify(
-						this.$refs.plotContainer._fullLayout.scene.camera
-					));
-				} catch (e) {
-					console.warn("Could not get camera position:", e);
-					return null;
-				}
-			}
-			return null;
+			return getCurrentCameraPosition(this.$refs.plotContainer);
 		},
 
 		// Select a column from the dropdown
@@ -278,124 +197,42 @@ const app = Vue.createApp({
 			}, 200);
 		},
 
-		// Create traces grouped by categorical value (for initial view)
+		// Create traces grouped by categorical value (for initial view) - now using function from plotutil.js
 		createTracesByCategory() {
 			console.log('Creating traces by category...');
-			if (!this.plotData || !this.selectedColumn) return [];
-
-			console.time('Create Category Traces');
-			const uniqueValues = [...this.dataFrame.col_unique(this.selectedColumn)];
-			console.log(`Found ${uniqueValues.length} unique values for ${this.selectedColumn}`);
-
-			const traces = [];
-
-			// Colors for category differentiation
-			const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
-
-			// Create a trace for each unique value
-			uniqueValues.forEach((value, index) => {
-				console.log(`Creating trace for ${value}...`);
-				const indices = [];
-
-				// Find all points with this value
-				for (let i = 0; i < this.plotData[this.selectedColumn].length; i++) {
-					if (this.plotData[this.selectedColumn][i] === value) {
-						indices.push(i);
-					}
+			
+			// Use the createTracesByCategory function from plotutil.js
+			return createTracesByCategory(
+				this.plotData,
+				this.selectedColumn,
+				this.dataFrame, 
+				{
+					defaultTraceConfig: this.defaultTraceConfig,
+					selectedSize: this.selectedSize,
+					selectedOpacity: this.selectedOpacity
 				}
-
-				console.log(`Found ${indices.length} points for ${value}`);
-
-				traces.push({
-					...this.defaultTraceConfig,
-					x: indices.map(i => this.plotData.x[i]),
-					y: indices.map(i => this.plotData.y[i]),
-					z: indices.map(i => this.plotData.z[i]),
-					name: String(value),
-					marker: {
-						size: this.selectedSize,
-						color: colors[index % colors.length],
-						opacity: this.selectedOpacity // Use the selected opacity for better visibility
-					},
-					customdata: indices.map(i => `${this.selectedColumn}: ${this.plotData[this.selectedColumn][i]}`)
-				});
-			});
-
-			console.timeEnd('Create Category Traces');
-			return traces;
+			);
 		},
 
-		// Create traces with selection highlighting
+		// Create traces with selection highlighting - now using function from plotutil.js
 		createTracesWithSelection() {
-			console.time('Create Selection Traces');
 			console.log('Creating traces with selection highlighting...');
-
-			if (!this.plotData) return [];
-
-			// First, separate points into selected and non-selected
-			const selectedIndices = {};
-			const nonSelectedIndices = [];
-
-			console.log(`Processing ${this.plotData[this.selectedColumn].length} points for selection...`);
-
-			// Group points by selection status
-			for (let i = 0; i < this.plotData[this.selectedColumn].length; i++) {
-				const value = this.plotData[this.selectedColumn][i];
-
-				if (this.selectedValues.includes(value)) {
-					if (!selectedIndices[value]) {
-						selectedIndices[value] = [];
-					}
-					selectedIndices[value].push(i);
-				} else {
-					nonSelectedIndices.push(i);
+			
+			// Use the createTracesWithSelection function from plotutil.js
+			return createTracesWithSelection(
+				this.plotData,
+				this.selectedColumn,
+				this.selectedValues,
+				{
+					defaultTraceConfig: this.defaultTraceConfig,
+					selectedSize: this.selectedSize,
+					nonSelectedSize: this.nonSelectedSize,
+					selectedOpacity: this.selectedOpacity,
+					nonSelectedOpacity: this.nonSelectedOpacity,
+					nonSelectedColor: this.nonSelectedColor,
+					getSelectionColor: this.getSelectionColor.bind(this)
 				}
-			}
-
-			console.log(`Selection counts: ${Object.keys(selectedIndices).length} selected values, ${nonSelectedIndices.length} non-selected points`);
-
-			const traces = [];
-
-			// Add non-selected points (with configurable color/opacity)
-			if (nonSelectedIndices.length > 0) {
-				console.log(`Creating trace for ${nonSelectedIndices.length} non-selected points...`);
-				traces.push({
-					...this.defaultTraceConfig,
-					x: nonSelectedIndices.map(i => this.plotData.x[i]),
-					y: nonSelectedIndices.map(i => this.plotData.y[i]),
-					z: nonSelectedIndices.map(i => this.plotData.z[i]),
-					name: 'Other Points',
-					marker: {
-						size: this.nonSelectedSize,
-						color: this.nonSelectedColor,
-						opacity: this.nonSelectedOpacity
-					},
-					customdata: nonSelectedIndices.map(i => `${this.selectedColumn}: ${this.plotData[this.selectedColumn][i]}`)
-				});
-			}
-
-			// Add a trace for each selected value
-			Object.keys(selectedIndices).forEach((value, index) => {
-				const indices = selectedIndices[value];
-				console.log(`Creating trace for selected value "${value}" with ${indices.length} points...`);
-
-				traces.push({
-					...this.defaultTraceConfig,
-					x: indices.map(i => this.plotData.x[i]),
-					y: indices.map(i => this.plotData.y[i]),
-					z: indices.map(i => this.plotData.z[i]),
-					name: `Selected: ${value}`,
-					marker: {
-						size: this.selectedSize,
-						color: this.getSelectionColor(index),
-						opacity: this.selectedOpacity
-					},
-					customdata: indices.map(i => `${this.selectedColumn}: ${this.plotData[this.selectedColumn][i]}`)
-				});
-			});
-
-			console.timeEnd('Create Selection Traces');
-			return traces;
+			);
 		},
 
 		// Initialize the plot
@@ -1288,6 +1125,122 @@ class DataFrame {
 
 ``````{ end_of_file="dataframe.js" }
 
+``````{ path="dataloader.js"  }
+/**
+ * Functions for loading and processing data for the PCA visualization
+ */
+
+/**
+ * Load PCA data from NPY file
+ * @returns {Promise<NDArray>} The loaded PCA array
+ */
+function loadPcaData() {
+    console.time('Load PCA NPY');
+    console.log('Requesting PCA data file');
+    return NDArray.load("../data/features/pca_data.npy").then(pcaArray => {
+        console.timeEnd('Load PCA NPY');
+        console.log('PCA data loaded:', pcaArray);
+        console.log('PCA data shape:', pcaArray.shape);
+        console.log('PCA data type:', pcaArray.dtype);
+        return pcaArray;
+    });
+}
+
+/**
+ * Load metadata from JSONL file
+ * @returns {Promise<DataFrame>} The loaded DataFrame
+ */
+function loadMetadata() {
+    console.time('Load JSONL');
+    console.log('Requesting metadata file');
+    
+    return fetch("../data/features/features_meta.jsonl")
+        .then(response => {
+            console.log('Metadata file received, processing text...');
+            return response.text();
+        })
+        .then(text => {
+            console.log('JSONL text length:', text.length);
+            console.log('Parsing JSONL into DataFrame...');
+            const dataFrame = DataFrame.from_jsonl(text);
+            console.timeEnd('Load JSONL');
+            console.log('DataFrame loaded:', dataFrame);
+            console.log('DataFrame columns:', dataFrame.columns);
+            console.log('DataFrame rows:', dataFrame.length);
+            return dataFrame;
+        });
+}
+
+/**
+ * Process loaded PCA data and metadata into a format suitable for plotting
+ * @param {NDArray} pcaArray - The PCA array
+ * @param {DataFrame} dataFrame - The metadata DataFrame
+ * @returns {Object} The processed plot data
+ */
+function processData(pcaArray, dataFrame) {
+    if (!pcaArray || !dataFrame) {
+        throw new Error("PCA data or metadata not loaded");
+    }
+
+    console.log('Processing data for plotting...');
+    const pcaData = pcaArray;
+
+    // Create the plot data object with arrays for all available PCA components
+    const plotData = {
+        // Initialize empty arrays for all PCA components
+        pcaComponents: []
+    };
+
+    // Initialize arrays for each PCA component
+    for (let i = 0; i < pcaData.shape[1]; i++) {
+        console.log(`Extracting PCA component ${i + 1}...`);
+        // Use the get method with null to get all values for a specific component
+        plotData.pcaComponents[i] = Array.from(pcaData.get(null, i).data);
+    }
+
+    // Add metadata columns from the DataFrame to plotData
+    console.log('Adding metadata columns...');
+    for (const column of dataFrame.columns) {
+        plotData[column] = dataFrame.col(column);
+    }
+
+    console.log('Data processing complete');
+    return plotData;
+}
+
+/**
+ * Update x, y, z arrays in plotData based on PCA axis selection
+ * @param {Object} plotData - The plot data object 
+ * @param {Object} pcaAxes - The selected PCA axes {x, y, z}
+ */
+function updatePlotCoordinates(plotData, pcaAxes) {
+    console.log(`Updating coordinates to PC${pcaAxes.x}, PC${pcaAxes.y}, PC${pcaAxes.z}`);
+
+    // Set x, y, z from the selected PCA components
+    plotData.x = plotData.pcaComponents[pcaAxes.x];
+    plotData.y = plotData.pcaComponents[pcaAxes.y];
+    plotData.z = plotData.pcaComponents[pcaAxes.z];
+}
+
+/**
+ * Find categorical columns in the DataFrame (those with fewer than 50 unique values)
+ * @param {DataFrame} dataFrame - The metadata DataFrame
+ * @returns {Array<string>} Array of column names that have categorical values
+ */
+function findCategoricalColumns(dataFrame) {
+    return dataFrame.columns.filter(col => {
+        try {
+            const uniqueCount = dataFrame.col_unique(col).size;
+            // At least 2 unique values but not too many (fewer than 50)
+            return uniqueCount < 50;
+        } catch (e) {
+            console.error(`Error checking column ${col}:`, e);
+            return false;
+        }
+    });
+}
+``````{ end_of_file="dataloader.js" }
+
 ``````{ path="embeddings.html"  }
 <!DOCTYPE html>
 <html>
@@ -1305,6 +1258,8 @@ class DataFrame {
   <script src="colorutil.js"></script>
   <!-- Load plotting utilities -->
   <script src="plotutil.js"></script>
+  <!-- Load data loading utilities -->
+  <script src="dataloader.js"></script>
   <!-- Load styles -->
   <link rel="stylesheet" href="style.css">
   <!-- load app -->
@@ -1470,6 +1425,182 @@ function createDefaultTraceConfig() {
 	};
 }
 
+/**
+ * Gets the current camera position from a Plotly plot
+ * @param {Object} plotContainer - The Plotly plot container reference
+ * @returns {Object|null} - The current camera position or null if it cannot be retrieved
+ */
+function getCurrentCameraPosition(plotContainer) {
+	if (plotContainer && plotContainer._fullLayout) {
+		try {
+			// Deep clone to avoid reference issues
+			return JSON.parse(JSON.stringify(
+				plotContainer._fullLayout.scene.camera
+			));
+		} catch (e) {
+			console.warn("Could not get camera position:", e);
+			return null;
+		}
+	}
+	return null;
+}
+
+/**
+ * Create traces grouped by categorical value (for initial view)
+ * @param {Object} plotData - The plot data object with coordinates and metadata
+ * @param {string} selectedColumn - The column to group by
+ * @param {Object} dataFrame - The DataFrame containing the data
+ * @param {Object} options - Configuration options
+ * @param {Object} options.defaultTraceConfig - The default trace configuration
+ * @param {number} options.selectedSize - The point size for selected points
+ * @param {number} options.selectedOpacity - The opacity for selected points
+ * @returns {Array} - Array of trace objects for Plotly
+ */
+function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
+	console.time('Create Category Traces');
+	
+	if (!plotData || !selectedColumn) return [];
+	
+	const {
+		defaultTraceConfig = createDefaultTraceConfig(),
+		selectedSize = 6,
+		selectedOpacity = 1.0
+	} = options || {};
+
+	const uniqueValues = [...dataFrame.col_unique(selectedColumn)];
+	console.log(`Found ${uniqueValues.length} unique values for ${selectedColumn}`);
+
+	const traces = [];
+
+	// Colors for category differentiation
+	const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
+
+	// Create a trace for each unique value
+	uniqueValues.forEach((value, index) => {
+		console.log(`Creating trace for ${value}...`);
+		const indices = [];
+
+		// Find all points with this value
+		for (let i = 0; i < plotData[selectedColumn].length; i++) {
+			if (plotData[selectedColumn][i] === value) {
+				indices.push(i);
+			}
+		}
+
+		console.log(`Found ${indices.length} points for ${value}`);
+
+		traces.push({
+			...defaultTraceConfig,
+			x: indices.map(i => plotData.x[i]),
+			y: indices.map(i => plotData.y[i]),
+			z: indices.map(i => plotData.z[i]),
+			name: String(value),
+			marker: {
+				size: selectedSize,
+				color: colors[index % colors.length],
+				opacity: selectedOpacity // Use the selected opacity for better visibility
+			},
+			customdata: indices.map(i => `${selectedColumn}: ${plotData[selectedColumn][i]}`)
+		});
+	});
+
+	console.timeEnd('Create Category Traces');
+	return traces;
+}
+
+/**
+ * Create traces with selection highlighting
+ * @param {Object} plotData - The plot data object with coordinates and metadata
+ * @param {string} selectedColumn - The column to filter by
+ * @param {Array} selectedValues - Array of selected values
+ * @param {Object} options - Configuration options
+ * @param {Object} options.defaultTraceConfig - The default trace configuration
+ * @param {number} options.selectedSize - The point size for selected points
+ * @param {number} options.nonSelectedSize - The point size for non-selected points
+ * @param {number} options.selectedOpacity - The opacity for selected points
+ * @param {number} options.nonSelectedOpacity - The opacity for non-selected points
+ * @param {string} options.nonSelectedColor - The color for non-selected points
+ * @param {Function} options.getSelectionColor - Function to get color for a selection index
+ * @returns {Array} - Array of trace objects for Plotly
+ */
+function createTracesWithSelection(plotData, selectedColumn, selectedValues, options) {
+	console.time('Create Selection Traces');
+	
+	if (!plotData) return [];
+	
+	const {
+		defaultTraceConfig = createDefaultTraceConfig(),
+		selectedSize = 6,
+		nonSelectedSize = 4,
+		selectedOpacity = 1.0,
+		nonSelectedOpacity = 0.4,
+		nonSelectedColor = '#969696',
+		getSelectionColor = (index) => ['#ff7f0e', '#2ca02c', '#d62728'][index % 3]
+	} = options || {};
+
+	// First, separate points into selected and non-selected
+	const selectedIndices = {};
+	const nonSelectedIndices = [];
+
+	// Group points by selection status
+	for (let i = 0; i < plotData[selectedColumn].length; i++) {
+		const value = plotData[selectedColumn][i];
+
+		if (selectedValues.includes(value)) {
+			if (!selectedIndices[value]) {
+				selectedIndices[value] = [];
+			}
+			selectedIndices[value].push(i);
+		} else {
+			nonSelectedIndices.push(i);
+		}
+	}
+
+	console.log(`Selection counts: ${Object.keys(selectedIndices).length} selected values, ${nonSelectedIndices.length} non-selected points`);
+
+	const traces = [];
+
+	// Add non-selected points (with configurable color/opacity)
+	if (nonSelectedIndices.length > 0) {
+		console.log(`Creating trace for ${nonSelectedIndices.length} non-selected points...`);
+		traces.push({
+			...defaultTraceConfig,
+			x: nonSelectedIndices.map(i => plotData.x[i]),
+			y: nonSelectedIndices.map(i => plotData.y[i]),
+			z: nonSelectedIndices.map(i => plotData.z[i]),
+			name: 'Other Points',
+			marker: {
+				size: nonSelectedSize,
+				color: nonSelectedColor,
+				opacity: nonSelectedOpacity
+			},
+			customdata: nonSelectedIndices.map(i => `${selectedColumn}: ${plotData[selectedColumn][i]}`)
+		});
+	}
+
+	// Add a trace for each selected value
+	Object.keys(selectedIndices).forEach((value, index) => {
+		const indices = selectedIndices[value];
+		console.log(`Creating trace for selected value "${value}" with ${indices.length} points...`);
+
+		traces.push({
+			...defaultTraceConfig,
+			x: indices.map(i => plotData.x[i]),
+			y: indices.map(i => plotData.y[i]),
+			z: indices.map(i => plotData.z[i]),
+			name: `Selected: ${value}`,
+			marker: {
+				size: selectedSize,
+				color: getSelectionColor(index),
+				opacity: selectedOpacity
+			},
+			customdata: indices.map(i => `${selectedColumn}: ${plotData[selectedColumn][i]}`)
+		});
+	});
+
+	console.timeEnd('Create Selection Traces');
+	return traces;
+}
 ``````{ end_of_file="plotutil.js" }
 
 ``````{ path="style.css"  }

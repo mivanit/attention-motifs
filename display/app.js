@@ -153,20 +153,9 @@ const app = Vue.createApp({
 			this.updatePlot();
 		},
 
-		// Get current camera position from the plot
+		// Get current camera position from the plot (now using function from plotutil.js)
 		getCurrentCameraPosition() {
-			if (this.$refs.plotContainer && this.$refs.plotContainer._fullLayout) {
-				try {
-					// Deep clone to avoid reference issues
-					return JSON.parse(JSON.stringify(
-						this.$refs.plotContainer._fullLayout.scene.camera
-					));
-				} catch (e) {
-					console.warn("Could not get camera position:", e);
-					return null;
-				}
-			}
-			return null;
+			return getCurrentCameraPosition(this.$refs.plotContainer);
 		},
 
 		// Select a column from the dropdown
@@ -185,124 +174,42 @@ const app = Vue.createApp({
 			}, 200);
 		},
 
-		// Create traces grouped by categorical value (for initial view)
+		// Create traces grouped by categorical value (for initial view) - now using function from plotutil.js
 		createTracesByCategory() {
 			console.log('Creating traces by category...');
-			if (!this.plotData || !this.selectedColumn) return [];
-
-			console.time('Create Category Traces');
-			const uniqueValues = [...this.dataFrame.col_unique(this.selectedColumn)];
-			console.log(`Found ${uniqueValues.length} unique values for ${this.selectedColumn}`);
-
-			const traces = [];
-
-			// Colors for category differentiation
-			const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
-
-			// Create a trace for each unique value
-			uniqueValues.forEach((value, index) => {
-				console.log(`Creating trace for ${value}...`);
-				const indices = [];
-
-				// Find all points with this value
-				for (let i = 0; i < this.plotData[this.selectedColumn].length; i++) {
-					if (this.plotData[this.selectedColumn][i] === value) {
-						indices.push(i);
-					}
+			
+			// Use the createTracesByCategory function from plotutil.js
+			return createTracesByCategory(
+				this.plotData,
+				this.selectedColumn,
+				this.dataFrame, 
+				{
+					defaultTraceConfig: this.defaultTraceConfig,
+					selectedSize: this.selectedSize,
+					selectedOpacity: this.selectedOpacity
 				}
-
-				console.log(`Found ${indices.length} points for ${value}`);
-
-				traces.push({
-					...this.defaultTraceConfig,
-					x: indices.map(i => this.plotData.x[i]),
-					y: indices.map(i => this.plotData.y[i]),
-					z: indices.map(i => this.plotData.z[i]),
-					name: String(value),
-					marker: {
-						size: this.selectedSize,
-						color: colors[index % colors.length],
-						opacity: this.selectedOpacity // Use the selected opacity for better visibility
-					},
-					customdata: indices.map(i => `${this.selectedColumn}: ${this.plotData[this.selectedColumn][i]}`)
-				});
-			});
-
-			console.timeEnd('Create Category Traces');
-			return traces;
+			);
 		},
 
-		// Create traces with selection highlighting
+		// Create traces with selection highlighting - now using function from plotutil.js
 		createTracesWithSelection() {
-			console.time('Create Selection Traces');
 			console.log('Creating traces with selection highlighting...');
-
-			if (!this.plotData) return [];
-
-			// First, separate points into selected and non-selected
-			const selectedIndices = {};
-			const nonSelectedIndices = [];
-
-			console.log(`Processing ${this.plotData[this.selectedColumn].length} points for selection...`);
-
-			// Group points by selection status
-			for (let i = 0; i < this.plotData[this.selectedColumn].length; i++) {
-				const value = this.plotData[this.selectedColumn][i];
-
-				if (this.selectedValues.includes(value)) {
-					if (!selectedIndices[value]) {
-						selectedIndices[value] = [];
-					}
-					selectedIndices[value].push(i);
-				} else {
-					nonSelectedIndices.push(i);
+			
+			// Use the createTracesWithSelection function from plotutil.js
+			return createTracesWithSelection(
+				this.plotData,
+				this.selectedColumn,
+				this.selectedValues,
+				{
+					defaultTraceConfig: this.defaultTraceConfig,
+					selectedSize: this.selectedSize,
+					nonSelectedSize: this.nonSelectedSize,
+					selectedOpacity: this.selectedOpacity,
+					nonSelectedOpacity: this.nonSelectedOpacity,
+					nonSelectedColor: this.nonSelectedColor,
+					getSelectionColor: this.getSelectionColor.bind(this)
 				}
-			}
-
-			console.log(`Selection counts: ${Object.keys(selectedIndices).length} selected values, ${nonSelectedIndices.length} non-selected points`);
-
-			const traces = [];
-
-			// Add non-selected points (with configurable color/opacity)
-			if (nonSelectedIndices.length > 0) {
-				console.log(`Creating trace for ${nonSelectedIndices.length} non-selected points...`);
-				traces.push({
-					...this.defaultTraceConfig,
-					x: nonSelectedIndices.map(i => this.plotData.x[i]),
-					y: nonSelectedIndices.map(i => this.plotData.y[i]),
-					z: nonSelectedIndices.map(i => this.plotData.z[i]),
-					name: 'Other Points',
-					marker: {
-						size: this.nonSelectedSize,
-						color: this.nonSelectedColor,
-						opacity: this.nonSelectedOpacity
-					},
-					customdata: nonSelectedIndices.map(i => `${this.selectedColumn}: ${this.plotData[this.selectedColumn][i]}`)
-				});
-			}
-
-			// Add a trace for each selected value
-			Object.keys(selectedIndices).forEach((value, index) => {
-				const indices = selectedIndices[value];
-				console.log(`Creating trace for selected value "${value}" with ${indices.length} points...`);
-
-				traces.push({
-					...this.defaultTraceConfig,
-					x: indices.map(i => this.plotData.x[i]),
-					y: indices.map(i => this.plotData.y[i]),
-					z: indices.map(i => this.plotData.z[i]),
-					name: `Selected: ${value}`,
-					marker: {
-						size: this.selectedSize,
-						color: this.getSelectionColor(index),
-						opacity: this.selectedOpacity
-					},
-					customdata: indices.map(i => `${this.selectedColumn}: ${this.plotData[this.selectedColumn][i]}`)
-				});
-			});
-
-			console.timeEnd('Create Selection Traces');
-			return traces;
+			);
 		},
 
 		// Initialize the plot
