@@ -134,10 +134,11 @@
     /**
      * Creates a layout configuration for a Plotly 3D scatter plot
      * @param {string} title - Title of the plot
+     * @param {Object|null} cameraPosition - Optional camera position to preserve
      * @returns {Object} Layout configuration object for Plotly
      */
-    function createPlotLayout(title) {
-      return {
+    function createPlotLayout(title, cameraPosition = null) {
+      const layout = {
         title: title,
         scene: {
           xaxis: { title: 'X' },
@@ -147,6 +148,13 @@
         },
         margin: { l: 0, r: 0, b: 0, t: 50 }
       };
+      
+      // Apply saved camera position if provided
+      if (cameraPosition) {
+        layout.scene.camera = cameraPosition;
+      }
+      
+      return layout;
     }
 
     /**
@@ -241,7 +249,9 @@
           dropdownTimeout: null,
           configCollapsed: false,
           // Default trace configuration
-          defaultTraceConfig: createDefaultTraceConfig()
+          defaultTraceConfig: createDefaultTraceConfig(),
+          // Store current camera position
+          currentCameraPosition: null
         };
       },
       
@@ -260,6 +270,22 @@
         generateData() {
           this.statusMessage = 'Generating data...';
           return generateSampleData();
+        },
+        
+        // Get current camera position from the plot
+        getCurrentCameraPosition() {
+          if (this.$refs.plotContainer && this.$refs.plotContainer._fullLayout) {
+            try {
+              // Deep clone to avoid reference issues
+              return JSON.parse(JSON.stringify(
+                this.$refs.plotContainer._fullLayout.scene.camera
+              ));
+            } catch (e) {
+              console.warn("Could not get camera position:", e);
+              return null;
+            }
+          }
+          return null;
         },
         
         // Select a column from the dropdown
@@ -411,6 +437,12 @@
           const boundHandlePointClick = this.handlePointClick.bind(this);
           this.$refs.plotContainer.on('plotly_click', boundHandlePointClick);
           
+          // Add relayout event handler to capture camera position changes
+          this.$refs.plotContainer.on('plotly_relayout', (eventData) => {
+            // Update our stored camera position when user interacts with the plot
+            this.currentCameraPosition = this.getCurrentCameraPosition();
+          });
+          
           this.statusMessage = 'Plot ready - click points to select values';
         },
         
@@ -425,6 +457,9 @@
               const columnIndex = this.selectedColumn === 'classValues' ? 0 : 1;
               const value = point.customdata[columnIndex];
               console.log(`Clicked ${this.selectedColumn}:`, value);
+              
+              // Store current camera position before update
+              this.currentCameraPosition = this.getCurrentCameraPosition();
               
               // Toggle selection
               const index = this.selectedValues.indexOf(value);
@@ -449,6 +484,11 @@
         // Update the plot based on selection
         updatePlot() {
           try {
+            // Store current camera position before update if not already stored
+            if (!this.currentCameraPosition) {
+              this.currentCameraPosition = this.getCurrentCameraPosition();
+            }
+            
             // Update title based on selection
             let plotTitle = '3D Scatter Plot';
             if (this.selectedValues.length > 0) {
@@ -467,15 +507,21 @@
             }
             
             // Use complete redraw with newPlot to avoid potential issues
+            // Apply saved camera position in the layout
             Plotly.newPlot(
               this.$refs.plotContainer, 
               traces, 
-              createPlotLayout(this.title)
+              createPlotLayout(this.title, this.currentCameraPosition)
             );
             
             // Add click handler again after plot is redrawn with proper binding
             const boundHandlePointClick = this.handlePointClick.bind(this);
             this.$refs.plotContainer.on('plotly_click', boundHandlePointClick);
+            
+            // Re-add the relayout event handler
+            this.$refs.plotContainer.on('plotly_relayout', (eventData) => {
+              this.currentCameraPosition = this.getCurrentCameraPosition();
+            });
             
             this.statusMessage = 'Plot updated';
           } catch (error) {
@@ -491,6 +537,9 @@
         
         // Clear selection
         clearSelection() {
+          // Store current camera position before clearing
+          this.currentCameraPosition = this.getCurrentCameraPosition();
+          
           this.selectedValues = [];
           // Reset colors back to initial set
           this.selectionColors = [...this.initialSelectionColors];
@@ -499,6 +548,9 @@
         
         // Remove a specific value from selection
         removeSelectedValue(value) {
+          // Store current camera position before removing value
+          this.currentCameraPosition = this.getCurrentCameraPosition();
+          
           const index = this.selectedValues.indexOf(value);
           if (index >= 0) {
             this.selectedValues.splice(index, 1);
@@ -513,6 +565,9 @@
         
         // Generate new random colors that are visually distinct
         regenerateColors() {
+          // Store current camera position before changing colors
+          this.currentCameraPosition = this.getCurrentCameraPosition();
+          
           const colorCount = 9; // Number of colors to generate
           // Using the imported generateDistinctColors function from colorutil.js
           const newColors = generateDistinctColors(colorCount);
