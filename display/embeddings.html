@@ -6,8 +6,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
   <!-- Load Plotly.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.2/plotly.min.js"></script>
-  <!-- Load scripts -->
   <script src="array.js"></script>
+  <!-- implements `DataFrame` -->
   <script src="dataframe.js"></script>
   <!-- Load color utilities -->
   <script src="colorutil.js"></script>
@@ -46,22 +46,10 @@
     
     <!-- PCA Axis Selection -->
     <div class="axis-controls">
-      <div class="axis-control">
-        <label>X-Axis:</label>
-        <select v-model="pcaAxes.x" @change="updatePlotAxes">
-          <option v-for="(axis, index) in availablePcaAxes" :value="index">PC{{ index + 1 }}</option>
-        </select>
-      </div>
-      <div class="axis-control">
-        <label>Y-Axis:</label>
-        <select v-model="pcaAxes.y" @change="updatePlotAxes">
-          <option v-for="(axis, index) in availablePcaAxes" :value="index">PC{{ index + 1 }}</option>
-        </select>
-      </div>
-      <div class="axis-control">
-        <label>Z-Axis:</label>
-        <select v-model="pcaAxes.z" @change="updatePlotAxes">
-          <option v-for="(axis, index) in availablePcaAxes" :value="index">PC{{ index + 1 }}</option>
+      <div v-for="(axis, axisName) in {x: 'X', y: 'Y', z: 'Z'}" class="axis-control">
+        <label>{{ axisName }}-Axis:</label>
+        <select v-model="pcaAxes[axis.toLowerCase()]" @change="updatePlotAxes">
+          <option v-for="(_, index) in availablePcaAxes" :value="index">PC{{ index }}</option>
         </select>
       </div>
     </div>
@@ -183,9 +171,9 @@
       const layout = {
         title: title,
         scene: {
-          xaxis: { title: `PC${axes.x + 1}` },
-          yaxis: { title: `PC${axes.y + 1}` },
-          zaxis: { title: `PC${axes.z + 1}` },
+          xaxis: { title: `PC${axes.x}` },
+          yaxis: { title: `PC${axes.y}` },
+          zaxis: { title: `PC${axes.z}` },
           camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
         },
         margin: { l: 0, r: 0, b: 0, t: 50 },
@@ -208,7 +196,8 @@
       return {
         mode: 'markers',
         type: 'scatter3d',
-        hovertemplate: '%{customdata}<br>X: %{x:.2f}<br>Y: %{y:.2f}<br>Z: %{z:.2f}'
+        // hovertemplate: '%{customdata}<br>X: %{x:.2f}<br>Y: %{y:.2f}<br>Z: %{z:.2f}',
+        hovertemplate: '%{customdata}<br>coord: [%{x:.2f}, %{y:.2f}, %{z:.2f}]',
       };
     }
 
@@ -231,11 +220,7 @@
           showDropdown: false,
           selectedColumn: '', // Will be set after loading data
           availableColumns: [],
-          pcaAxes: {
-            x: 0, // Default to PC1
-            y: 1, // Default to PC2
-            z: 2  // Default to PC3
-          },
+          pcaAxes: {x: 0, y: 1, z: 2},
           availablePcaAxes: [], // Will be populated with available components
           selectionColors: [
             '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
@@ -267,10 +252,8 @@
       computed: {
         // Compute combined URL with all selected values
         combinedUrl() {
-          if (!this.selectedValues.length) return this.baseUrl || 'https://miv.name/pattern-lens/demo/?';
-
-          const base = this.baseUrl || 'https://miv.name/pattern-lens/demo/?';
-          return base + this.selectedValues.map(val => encodeURIComponent(val)).join('&');
+          if (!this.selectedValues.length) return this.baseUrl;
+          return this.baseUrl + this.selectedValues.map(val => encodeURIComponent(val)).join('&');
         }
       },
 
@@ -288,7 +271,11 @@
             // Start loading PCA data file
             this.loadingDetail = 'Downloading NPY file...';
             console.log('Requesting PCA data file');
+
+            // actually load
+            // ----------------------------------------
             this.pcaArray = await NDArray.load("../data/features/pca_data.npy");
+            // ----------------------------------------
 
             console.timeEnd('Load PCA NPY');
             console.log('PCA data loaded:', this.pcaArray);
@@ -299,7 +286,9 @@
             this.loadingProgress = true;
 
             // Setup available PCA axes
+            // ----------------------------------------
             this.availablePcaAxes = new Array(this.pcaArray.shape[1]).fill(0).map((_, i) => i);
+            // ----------------------------------------
             console.log('Available PCA components:', this.availablePcaAxes.length);
 
             // Load metadata
@@ -309,17 +298,23 @@
             console.time('Load JSONL');
 
             console.log('Requesting metadata file');
+            // ----------------------------------------
             const response = await fetch("../data/features/features_scaled.jsonl");
+            // ----------------------------------------
 
             this.loadingProgressPercent = 50;
             this.loadingDetail = 'Processing JSONL file (takes a while)...';
             console.log('Metadata file received, processing text...');
+            // ----------------------------------------
             const text = await response.text();
+            // ----------------------------------------
             console.log('JSONL text length:', text.length);
 
             this.loadingProgressPercent = 70;
             console.log('Parsing JSONL into DataFrame...');
+            // ----------------------------------------
             this.dataFrame = DataFrame.from_jsonl(text);
+            // ----------------------------------------
             console.timeEnd('Load JSONL');
             console.log('DataFrame loaded:', this.dataFrame);
             console.log('DataFrame columns:', this.dataFrame.columns);
@@ -330,33 +325,32 @@
             this.loadingDetail = 'Preparing plot data';
             this.loadingProgressPercent = 80;
             console.time('Process Data');
+            // ----------------------------------------
             this.processData();
+            // ----------------------------------------
             console.timeEnd('Process Data');
 
             this.loadingProgressPercent = 90;
 
             // Set available columns for selection
             console.log('Finding categorical columns...');
+            // ----------------------------------------
             this.availableColumns = this.dataFrame.columns.filter(col => {
               try {
                 const uniqueCount = this.dataFrame.col_unique(col).size;
-                console.log(`Column ${col}: ${uniqueCount} unique values`);
                 // At least 2 unique values but not too many (fewer than 50)
-                return uniqueCount < 50 && uniqueCount > 1;
+                return uniqueCount < 50;
               } catch (e) {
                 console.error(`Error checking column ${col}:`, e);
                 return false;
               }
             });
+            // ----------------------------------------
 
             console.log('Available categorical columns:', this.availableColumns);
 
             // Set default selected column
-            if (this.availableColumns.includes('activation.model')) {
-              this.selectedColumn = 'activation.model';
-            } else if (this.availableColumns.length > 0) {
-              this.selectedColumn = this.availableColumns[0];
-            }
+            this.selectedColumn = 'activation.model';
 
             console.log('Selected column for coloring:', this.selectedColumn);
 
@@ -417,7 +411,7 @@
 
         // Update x, y, z arrays based on current PCA axis selection
         updatePlotCoordinates() {
-          console.log(`Updating coordinates to PC${this.pcaAxes.x + 1}, PC${this.pcaAxes.y + 1}, PC${this.pcaAxes.z + 1}`);
+          console.log(`Updating coordinates to PC${this.pcaAxes.x}, PC${this.pcaAxes.y}, PC${this.pcaAxes.z}`);
 
           // Set x, y, z from the selected PCA components
           this.plotData.x = this.plotData.pcaComponents[this.pcaAxes.x];
@@ -499,7 +493,7 @@
               z: indices.map(i => this.plotData.z[i]),
               name: String(value),
               marker: {
-                size: this.nonSelectedSize,
+                size: this.selectedSize,
                 color: colors[index % colors.length],
                 opacity: this.selectedOpacity // Use the selected opacity for better visibility
               },
@@ -697,13 +691,6 @@
             if (!this.currentCameraPosition) {
               this.currentCameraPosition = this.getCurrentCameraPosition();
             }
-
-            // Update title based on selection
-            let plotTitle = 'Interactive 3D PCA Plot';
-            if (this.selectedValues.length > 0) {
-              plotTitle += ` - Selected ${this.selectedColumn}: ${this.selectedValues.join(', ')}`;
-            }
-            this.title = plotTitle;
 
             // Create new traces based on selection state
             console.log('Creating new traces...');
