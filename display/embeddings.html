@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Vue-Based 3D Plot with Advanced Selection</title>
+  <title>Vue-Based 3D PCA Plot</title>
   <!-- Load Vue -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
   <!-- Load Plotly.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.2/plotly.min.js"></script>
-  <!-- Load styles -->
-  <link rel="stylesheet" href="style.css">
+  <!-- Load scripts -->
+  <script src="array.js"></script>
+  <script src="dataframe.js"></script>
   <!-- Load color utilities -->
   <script src="colorutil.js"></script>
+  <!-- Load styles -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="app">
@@ -41,7 +44,12 @@
       <div class="status-message">{{ statusMessage }}</div>
     </div>
     
-    <div id="plot-container" class="plot-container" ref="plotContainer"></div>
+    <div id="plot-container" class="plot-container" ref="plotContainer">
+      <div v-if="isLoading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+        <div style="border: 4px solid rgba(0, 0, 0, 0.1); border-radius: 50%; border-top: 4px solid #3498db; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+        <p style="text-align: center;">Loading data...</p>
+      </div>
+    </div>
     
     <div>
       <h3>Selected Values:</h3>
@@ -131,6 +139,16 @@
   </div>
   
   <script>
+    // Add a style for the spinner animation
+    const styleSheet = document.createElement('style');
+    styleSheet.innerText = `
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(styleSheet);
+
     /**
      * Creates a layout configuration for a Plotly 3D scatter plot
      * @param {string} title - Title of the plot
@@ -141,9 +159,9 @@
       const layout = {
         title: title,
         scene: {
-          xaxis: { title: 'X' },
-          yaxis: { title: 'Y' },
-          zaxis: { title: 'Z' },
+          xaxis: { title: 'PC1' },
+          yaxis: { title: 'PC2' },
+          zaxis: { title: 'PC3' },
           camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
         },
         margin: { l: 0, r: 0, b: 0, t: 50 }
@@ -158,58 +176,6 @@
     }
 
     /**
-     * Generates sample 3D scatter plot data with classes and models
-     * @returns {Object} Object containing arrays for x, y, z coordinates and class/model values
-     */
-    function generateSampleData() {
-      // Generate 100 points with 3 dimensions
-      const numPoints = 100;
-      const classes = ["class-A", "class-B", "class-C"];
-      const models = ["model-1", "model-2", "model-3", "model-4"];
-      
-      const x = [];
-      const y = [];
-      const z = [];
-      const classValues = [];
-      const modelValues = [];
-      
-      // Generate points grouped by class for better visualization
-      for (let i = 0; i < numPoints; i++) {
-        // Determine which class group this point belongs to
-        const classIndex = Math.floor(i / (numPoints / classes.length));
-        const className = classes[Math.min(classIndex, classes.length - 1)];
-        
-        // Add some clustering based on class
-        let xBase = 0, yBase = 0, zBase = 0;
-        
-        if (className === "class-A") {
-          xBase = -5;
-          yBase = -5;
-          zBase = -5;
-        } else if (className === "class-B") {
-          xBase = 5;
-          yBase = 5;
-          zBase = -5;
-        } else {
-          xBase = 0;
-          yBase = 0;
-          zBase = 5;
-        }
-        
-        // Add random variation around the class center
-        x.push(xBase + (Math.random() - 0.5) * 5);
-        y.push(yBase + (Math.random() - 0.5) * 5);
-        z.push(zBase + (Math.random() - 0.5) * 5);
-        
-        // Store class and model info
-        classValues.push(className);
-        modelValues.push(models[i % models.length]);
-      }
-      
-      return { x, y, z, classValues, modelValues };
-    }
-
-    /**
      * Creates a default trace configuration for a Plotly 3D scatter plot
      * @returns {Object} Base trace configuration
      */
@@ -217,7 +183,7 @@
       return {
         mode: 'markers',
         type: 'scatter3d',
-        hovertemplate: 'Class: %{customdata[0]}<br>Model: %{customdata[1]}<br>X: %{x:.2f}<br>Y: %{y:.2f}<br>Z: %{z:.2f}'
+        hovertemplate: '%{customdata}<br>X: %{x:.2f}<br>Y: %{y:.2f}<br>Z: %{z:.2f}'
       };
     }
 
@@ -225,13 +191,16 @@
     const app = Vue.createApp({
       data() {
         return {
-          title: '3D Scatter Plot by Model',
-          statusMessage: 'Initializing...',
+          title: 'Interactive 3D PCA Plot',
+          statusMessage: 'Loading data...',
+          isLoading: true,
           selectedValues: [],
           plotData: null,
+          pcaArray: null,
+          dataFrame: null,
           showDropdown: false,
-          selectedColumn: 'classValues', // Default column to select by
-          availableColumns: ['classValues', 'modelValues'],
+          selectedColumn: '', // Will be set after loading data
+          availableColumns: [],
           selectionColors: [
             '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
             '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
@@ -266,10 +235,77 @@
       },
       
       methods: {
-        // Generate data for the plot
-        generateData() {
-          this.statusMessage = 'Generating data...';
-          return generateSampleData();
+        // Load PCA data and metadata
+        async loadData() {
+          this.isLoading = true;
+          this.statusMessage = 'Loading PCA data...';
+          
+          try {
+            // Load PCA data from NPY file
+            this.pcaArray = await NDArray.load("../data/features/pca_data.npy");
+            this.statusMessage = 'Loading feature metadata...';
+            
+            // Load metadata from JSONL file
+            const response = await fetch("../data/features/features_scaled.jsonl");
+            const text = await response.text();
+            this.dataFrame = DataFrame.from_jsonl(text);
+            
+            // Prepare the data for plotting
+            this.processData();
+            
+            // Set available columns for selection
+            this.availableColumns = this.dataFrame.columns.filter(col => 
+              // Exclude numerical columns, keep only categorical ones
+              // Assuming categorical columns have a reasonable number of unique values
+              this.dataFrame.col_unique(col).size < 50
+            );
+            
+            // Set default selected column
+            if (this.availableColumns.includes('activation.model')) {
+              this.selectedColumn = 'activation.model';
+            } else if (this.availableColumns.length > 0) {
+              this.selectedColumn = this.availableColumns[0];
+            }
+            
+            this.statusMessage = 'Data loaded successfully';
+            this.isLoading = false;
+            
+            // Initialize the plot after data is loaded
+            this.initPlot();
+          } catch (error) {
+            console.error("Error loading data:", error);
+            this.statusMessage = `Error loading data: ${error.message}`;
+            this.isLoading = false;
+          }
+        },
+        
+        // Process loaded data into a format suitable for plotting
+        processData() {
+          if (!this.pcaArray || !this.dataFrame) {
+            throw new Error("PCA data or metadata not loaded");
+          }
+          
+          // Extract the first 3 principal components for the 3D plot
+          const pcaData = this.pcaArray;
+          
+          // Create the plot data object
+          this.plotData = {
+            x: [], 
+            y: [], 
+            z: [],
+          };
+          
+          // Add metadata columns from the DataFrame to plotData
+          for (const column of this.dataFrame.columns) {
+            this.plotData[column] = this.dataFrame.col(column);
+          }
+          
+          // Extract X, Y, Z coordinates from PCA data
+          for (let i = 0; i < pcaData.shape[0]; i++) {
+            this.plotData.x.push(pcaData.get(i, 0));
+            this.plotData.y.push(pcaData.get(i, 1));
+            this.plotData.z.push(pcaData.get(i, 2));
+          }
         },
         
         // Get current camera position from the plot
@@ -303,23 +339,23 @@
           }, 200);
         },
         
-        // Create traces grouped by model (for initial view)
-        createTracesByModel() {
-          if (!this.plotData) return [];
+        // Create traces grouped by categorical value (for initial view)
+        createTracesByCategory() {
+          if (!this.plotData || !this.selectedColumn) return [];
           
-          const uniqueModels = [...new Set(this.plotData.modelValues)];
+          const uniqueValues = [...this.dataFrame.col_unique(this.selectedColumn)];
           const traces = [];
           
-          // Colors for model differentiation
+          // Colors for category differentiation
           const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
           
-          // Create a trace for each model
-          uniqueModels.forEach((model, index) => {
+          // Create a trace for each unique value
+          uniqueValues.forEach((value, index) => {
             const indices = [];
             
-            // Find all points for this model
-            for (let i = 0; i < this.plotData.modelValues.length; i++) {
-              if (this.plotData.modelValues[i] === model) {
+            // Find all points with this value
+            for (let i = 0; i < this.plotData[this.selectedColumn].length; i++) {
+              if (this.plotData[this.selectedColumn][i] === value) {
                 indices.push(i);
               }
             }
@@ -329,16 +365,13 @@
               x: indices.map(i => this.plotData.x[i]),
               y: indices.map(i => this.plotData.y[i]),
               z: indices.map(i => this.plotData.z[i]),
-              name: model,
+              name: String(value),
               marker: {
                 size: this.nonSelectedSize,
                 color: colors[index % colors.length],
                 opacity: 0.8
               },
-              customdata: indices.map(i => [
-                this.plotData.classValues[i],
-                this.plotData.modelValues[i]
-              ])
+              customdata: indices.map(i => `${this.selectedColumn}: ${this.plotData[this.selectedColumn][i]}`)
             });
           });
           
@@ -382,10 +415,7 @@
                 color: this.nonSelectedColor,
                 opacity: this.nonSelectedOpacity
               },
-              customdata: nonSelectedIndices.map(i => [
-                this.plotData.classValues[i],
-                this.plotData.modelValues[i]
-              ])
+              customdata: nonSelectedIndices.map(i => `${this.selectedColumn}: ${this.plotData[this.selectedColumn][i]}`)
             });
           }
           
@@ -404,10 +434,7 @@
                 color: this.getSelectionColor(index),
                 opacity: this.selectedOpacity
               },
-              customdata: indices.map(i => [
-                this.plotData.classValues[i],
-                this.plotData.modelValues[i]
-              ])
+              customdata: indices.map(i => `${this.selectedColumn}: ${this.plotData[this.selectedColumn][i]}`)
             });
           });
           
@@ -418,13 +445,14 @@
         initPlot() {
           this.statusMessage = 'Creating plot...';
           
-          // Generate data if not already done
           if (!this.plotData) {
-            this.plotData = this.generateData();
+            console.error("Plot data not available");
+            this.statusMessage = 'Error: Plot data not available';
+            return;
           }
           
-          // Create initial traces (by model)
-          const traces = this.createTracesByModel();
+          // Create initial traces by the selected categorical column
+          const traces = this.createTracesByCategory();
           
           // Create the plot
           Plotly.newPlot(
@@ -452,31 +480,35 @@
             const point = data.points[0];
             console.log("Clicked point:", point);
             
-            if (point.customdata && point.customdata.length > 0) {
-              // Get the value from customdata based on selectedColumn
-              const columnIndex = this.selectedColumn === 'classValues' ? 0 : 1;
-              const value = point.customdata[columnIndex];
-              console.log(`Clicked ${this.selectedColumn}:`, value);
+            if (point.customdata) {
+              // Extract value from customdata (format: "column: value")
+              const customData = point.customdata;
+              const match = customData.match(new RegExp(`${this.selectedColumn}: (.*)`));
               
-              // Store current camera position before update
-              this.currentCameraPosition = this.getCurrentCameraPosition();
-              
-              // Toggle selection
-              const index = this.selectedValues.indexOf(value);
-              
-              if (index >= 0) {
-                // Remove if already selected
-                this.selectedValues.splice(index, 1);
-                console.log("Removed value:", value);
-              } else {
-                // Add if not already selected
-                this.selectedValues.push(value);
-                console.log("Added value:", value);
+              if (match && match[1]) {
+                const value = match[1];
+                console.log(`Clicked ${this.selectedColumn}:`, value);
+                
+                // Store current camera position before update
+                this.currentCameraPosition = this.getCurrentCameraPosition();
+                
+                // Toggle selection
+                const index = this.selectedValues.indexOf(value);
+                
+                if (index >= 0) {
+                  // Remove if already selected
+                  this.selectedValues.splice(index, 1);
+                  console.log("Removed value:", value);
+                } else {
+                  // Add if not already selected
+                  this.selectedValues.push(value);
+                  console.log("Added value:", value);
+                }
+                
+                // Update the visualization after a short delay to avoid recursion
+                const boundUpdatePlot = this.updatePlot.bind(this);
+                setTimeout(boundUpdatePlot, 10);
               }
-              
-              // Update the visualization after a short delay to avoid recursion
-              const boundUpdatePlot = this.updatePlot.bind(this);
-              setTimeout(boundUpdatePlot, 10);
             }
           }
         },
@@ -490,7 +522,7 @@
             }
             
             // Update title based on selection
-            let plotTitle = '3D Scatter Plot';
+            let plotTitle = 'Interactive 3D PCA Plot';
             if (this.selectedValues.length > 0) {
               plotTitle += ` - Selected ${this.selectedColumn}: ${this.selectedValues.join(', ')}`;
             }
@@ -499,7 +531,7 @@
             // Create new traces based on selection state
             const traces = this.selectedValues.length > 0 
               ? this.createTracesWithSelection() 
-              : this.createTracesByModel();
+              : this.createTracesByCategory();
             
             // First remove old click handlers to prevent duplicates
             if (this.$refs.plotContainer && this.$refs.plotContainer.removeAllListeners) {
@@ -583,7 +615,8 @@
       },
       
       mounted() {
-        this.initPlot();
+        // Load data when component is mounted
+        this.loadData();
       }
     });
     
