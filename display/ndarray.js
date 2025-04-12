@@ -1,5 +1,11 @@
-var iota = require("iota-array")
-var isBuffer = require("is-buffer")
+function iota(n) {
+	// Creates an array of integers from 0 to n-1
+	const result = new Array(n);
+	for (let i = 0; i < n; i++) {
+	  result[i] = i;
+	}
+	return result;
+}
 
 var hasTypedArrays  = ((typeof Float64Array) !== "undefined")
 
@@ -253,9 +259,6 @@ b"+i+"*=d\
 }
 
 function arrayDType(data) {
-  if(isBuffer(data)) {
-    return "buffer"
-  }
   if(hasTypedArrays) {
     switch(Object.prototype.toString.call(data)) {
       case "[object Float64Array]":
@@ -346,4 +349,5 @@ function wrappedNDArrayCtor(data, shape, stride, offset) {
   return ctor(data, shape, stride, offset)
 }
 
-module.exports = wrappedNDArrayCtor
+// module.exports = wrappedNDArrayCtor
+let ndarray = wrappedNDArrayCtor

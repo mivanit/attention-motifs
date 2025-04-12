@@ -4,6 +4,7 @@
   <title>Interactive 3D PCA Plot</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.2/plotly.min.js"></script>
   <script src="array.js"></script>
+  <script src="ndarray.js"></script>
 </head>
 <body>
   <h1>Interactive 3D PCA Plot</h1>
@@ -26,6 +27,17 @@
   </div>
   
   <script>
+    // Inside an async function
+    async function getDataFromPromise(p) {
+      try {
+        const result = await p; // "Dereferences" the promise
+        console.log(result); // This is the resolved value
+        return result; // You can return it or use it directly
+      } catch (error) {
+        // Handle any errors
+        console.error("Promise rejected:", error);
+      }
+    }
     // let n = new npyjs();
     // const npyArray = n.load("../data/features/pca_data.npy");
     // console.log(npyArray);
@@ -35,14 +47,11 @@
       let n = new npyjs();
       
       // Load and log the NPY file
-      n.load("../data/features/pca_data.npy")
-        .then(npyArray => {
-          console.log("NPY file loaded successfully");
-          console.log(npyArray);
-        })
-        .catch(error => {
-          console.error("Error loading NPY file:", error);
-        });
+      arr = getDataFromPromise(n.load("../data/features/pca_data.npy"))
+      console.log(arr);
+
+      ndarr = ndarray(arr.data, arr.shape);
+
     });
   </script>
 </body>
