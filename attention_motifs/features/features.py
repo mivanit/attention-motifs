@@ -8,7 +8,7 @@ import multiprocessing as mp
 
 import torch
 from jaxtyping import Float
-import pandas as pd
+import polars as pl
 import tqdm
 
 # custom utils
@@ -76,7 +76,7 @@ def scalar_feature_table(
 	],
 	save_path: Path = Path("../docs/temp"),
 	models: list[str] | None = None,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
 	if models is None:
 		models = [
 			json.loads(cfg)["model_name"]
@@ -122,4 +122,4 @@ def scalar_feature_table(
 			)
 			output.extend(itertools.chain.from_iterable(model_out))
 
-	return pd.DataFrame(output)
+	return pl.DataFrame(output)
