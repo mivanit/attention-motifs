@@ -55,6 +55,7 @@ def process_prompt(
 							head=head_idx,
 							cls=f"{model_name}:L{layer_idx}:H{head_idx}",
 							prompt=prompt["hash"],
+							n_ctx=A.shape[0],
 						),
 						prefix="activation",
 					),
