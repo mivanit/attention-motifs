@@ -62,7 +62,52 @@ const app = Vue.createApp({
 		// Compute combined URL with all selected values
 		combinedUrl() {
 			if (!this.selectedValues.length) return this.baseUrl;
-			return this.baseUrl + this.selectedValues.map(val => encodeURIComponent(val)).join('&');
+
+			// Parse the base URL to handle existing parameters
+			const baseUrlObj = new URL(this.baseUrl, window.location.href);
+			const params = baseUrlObj.searchParams;
+
+			if (this.selectionColumn === 'activation.model' || this.selectionColumn === 'activation.cls') {
+				// Handle model:layer:head selections
+				// Group by model
+				const modelHeadMap = {};
+
+				this.selectedValues.forEach(val => {
+					// Parse the value which is in format "model:L#:H#"
+					const parts = val.split(':');
+					if (parts.length === 3) {
+						const model = parts[0];
+						const layer = parseInt(parts[1].replace('L', ''));
+						const head = parseInt(parts[2].replace('H', ''));
+
+						if (!modelHeadMap[model]) {
+							modelHeadMap[model] = [];
+						}
+
+						modelHeadMap[model].push(`L${layer}H${head}`);
+					}
+				});
+
+				// Add the selected models
+				const selectedModels = Object.keys(modelHeadMap);
+				if (selectedModels.length > 0) {
+					params.set('models', selectedModels.join('~'));
+
+					// Add head selections for each model
+					selectedModels.forEach(model => {
+						params.set(`heads-${model}`, modelHeadMap[model].join('~'));
+					});
+				}
+			} else if (this.selectionColumn === 'activation.prompt') {
+				// Handle prompt selections - no encoding needed as pattern-lens expects raw values
+				params.set('prompts', this.selectedValues.join('~'));
+			} else {
+				// Default behavior for other columns - use the column name without the prefix
+				const paramName = this.selectionColumn.split('.').pop();
+				params.set(paramName, this.selectedValues.join('~'));
+			}
+
+			return baseUrlObj.toString();
 		}
 	},
 

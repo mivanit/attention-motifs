@@ -1,19 +1,19 @@
 # Stats
 - 9 files
-- 2529 (2.5K) lines
-- 70746 (71K) chars
-- 26496 (26K) `gpt2` tokens
+- 2575 (2.6K) lines
+- 72336 (72K) chars
+- 27098 (27K) `gpt2` tokens
 
 # File Tree
 
 ```
 display              
-├── app.js           [695L 23,577C 8,340T]
+├── app.js           [740L 25,099C 8,918T]
 ├── array.js         [370L  9,746C 3,781T]
 ├── colorutil.js     [ 60L  1,600C   675T]
 ├── dataframe.js     [211L  5,212C 1,982T]
-├── dataloader.js    [ 97L  3,119C 1,166T]
-├── embeddings.html  [164L  7,138C 3,073T]
+├── dataloader.js    [ 98L  3,179C 1,187T]
+├── embeddings.html  [164L  7,146C 3,074T]
 ├── logger.js        [102L  1,798C   633T]
 ├── plotutil.js      [351L 10,951C 3,510T]
 └── style.css        [435L  6,555C 2,786T]
@@ -86,7 +86,52 @@ const app = Vue.createApp({
 		// Compute combined URL with all selected values
 		combinedUrl() {
 			if (!this.selectedValues.length) return this.baseUrl;
-			return this.baseUrl + this.selectedValues.map(val => encodeURIComponent(val)).join('&');
+
+			// Parse the base URL to handle existing parameters
+			const baseUrlObj = new URL(this.baseUrl, window.location.href);
+			const params = baseUrlObj.searchParams;
+
+			if (this.selectionColumn === 'activation.model' || this.selectionColumn === 'activation.cls') {
+				// Handle model:layer:head selections
+				// Group by model
+				const modelHeadMap = {};
+
+				this.selectedValues.forEach(val => {
+					// Parse the value which is in format "model:L#:H#"
+					const parts = val.split(':');
+					if (parts.length === 3) {
+						const model = parts[0];
+						const layer = parseInt(parts[1].replace('L', ''));
+						const head = parseInt(parts[2].replace('H', ''));
+
+						if (!modelHeadMap[model]) {
+							modelHeadMap[model] = [];
+						}
+
+						modelHeadMap[model].push(`L${layer}H${head}`);
+					}
+				});
+
+				// Add the selected models
+				const selectedModels = Object.keys(modelHeadMap);
+				if (selectedModels.length > 0) {
+					params.set('models', selectedModels.join('~'));
+
+					// Add head selections for each model
+					selectedModels.forEach(model => {
+						params.set(`heads-${model}`, modelHeadMap[model].join('~'));
+					});
+				}
+			} else if (this.selectionColumn === 'activation.prompt') {
+				// Handle prompt selections - no encoding needed as pattern-lens expects raw values
+				params.set('prompts', this.selectedValues.join('~'));
+			} else {
+				// Default behavior for other columns - use the column name without the prefix
+				const paramName = this.selectionColumn.split('.').pop();
+				params.set(paramName, this.selectedValues.join('~'));
+			}
+
+			return baseUrlObj.toString();
 		}
 	},
 
@@ -1457,16 +1502,17 @@ function updatePlotCoordinates(plotData, pcaAxes) {
  * @returns {Array<string>} Array of column names that have categorical values
  */
 function findCategoricalColumns(dataFrame) {
-    return dataFrame.columns.filter(col => {
-        try {
-            const uniqueCount = dataFrame.col_unique(col).size;
-            // At least 2 unique values but not too many (fewer than 50)
-            return uniqueCount < 50;
-        } catch (e) {
-            logger.error(`Error checking column ${col}:`, e);
-            return false;
-        }
-    });
+    return dataFrame.columns;
+    // return dataFrame.columns.filter(col => {
+    //     try {
+    //         const uniqueCount = dataFrame.col_unique(col).size;
+    //         // At least 2 unique values but not too many (fewer than 50)
+    //         return uniqueCount < 50;
+    //     } catch (e) {
+    //         logger.error(`Error checking column ${col}:`, e);
+    //         return false;
+    //     }
+    // });
 }
 ``````{ end_of_file="dataloader.js" }
 
@@ -1510,7 +1556,7 @@ function findCategoricalColumns(dataFrame) {
     <!-- Column Selection Controls -->
     <div class="column-controls">
       <div class="column-control">
-        <label>Color by:</label>
+        <label>Default color by:</label>
         <div class="combo-select">
           <input type="text" v-model="pendingColorByColumn" @focus="showColorDropdown = true" @blur="hideColorDropdownDelayed" placeholder="Select column" />
           <div class="dropdown" v-if="showColorDropdown">

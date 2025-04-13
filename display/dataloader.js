@@ -84,14 +84,15 @@ function updatePlotCoordinates(plotData, pcaAxes) {
  * @returns {Array<string>} Array of column names that have categorical values
  */
 function findCategoricalColumns(dataFrame) {
-    return dataFrame.columns.filter(col => {
-        try {
-            const uniqueCount = dataFrame.col_unique(col).size;
-            // At least 2 unique values but not too many (fewer than 50)
-            return uniqueCount < 50;
-        } catch (e) {
-            logger.error(`Error checking column ${col}:`, e);
-            return false;
-        }
-    });
+    return dataFrame.columns;
+    // return dataFrame.columns.filter(col => {
+    //     try {
+    //         const uniqueCount = dataFrame.col_unique(col).size;
+    //         // At least 2 unique values but not too many (fewer than 50)
+    //         return uniqueCount < 50;
+    //     } catch (e) {
+    //         logger.error(`Error checking column ${col}:`, e);
+    //         return false;
+    //     }
+    // });
 }
