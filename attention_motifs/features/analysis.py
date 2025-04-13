@@ -5,7 +5,6 @@ import polars as pl
 # scipy
 
 # muutils
-from muutils.dbg import dbg
 from muutils.tensor_info import array_summary
 
 
@@ -15,7 +14,7 @@ def null_stats(df: pl.DataFrame) -> pl.DataFrame:
 	# Parameters:
 	 - `df : pl.DataFrame`
 	   Input dataframe.
-	
+
 	# Returns:
 	 - `pl.DataFrame`
 	   DataFrame with columns `feature`, `missing_count`, and `missing_frac`.
@@ -30,11 +29,13 @@ def null_stats(df: pl.DataFrame) -> pl.DataFrame:
 			missing_expr: pl.Expr = pl.col(col).is_null()
 		count: int = df.select(missing_expr.sum()).item()
 		nan_counts[col] = count
-	return pl.DataFrame({
-		"feature": list(nan_counts.keys()),
-		"missing_count": list(nan_counts.values()),
-		"missing_frac": [count / df.shape[0] for count in nan_counts.values()],
-	}).sort("missing_count", descending=True)
+	return pl.DataFrame(
+		{
+			"feature": list(nan_counts.keys()),
+			"missing_count": list(nan_counts.values()),
+			"missing_frac": [count / df.shape[0] for count in nan_counts.values()],
+		}
+	).sort("missing_count", descending=True)
 
 
 def filter_data(
@@ -66,7 +67,9 @@ def filter_data(
 	df_models_dropped: pl.DataFrame
 	if remove_models is not None:
 		print(f"Removing {len(remove_models)} models: {remove_models}")
-		df_models_dropped = df.filter(~pl.col("activation.model").is_in(set(remove_models)))
+		df_models_dropped = df.filter(
+			~pl.col("activation.model").is_in(set(remove_models))
+		)
 		print(f"Removed {len(df) - len(df_models_dropped)}/{len(df)} rows")
 	else:
 		print("Not removing any models")
@@ -76,11 +79,14 @@ def filter_data(
 	stats: pl.DataFrame = null_stats(df_models_dropped)
 	# Build a dictionary mapping column name to a tuple (missing_count, missing_frac)
 	stats_dict: dict[str, tuple[int, float]] = {
-		row["feature"]: (row["missing_count"], row["missing_frac"]) for row in stats.to_dicts()
+		row["feature"]: (row["missing_count"], row["missing_frac"])
+		for row in stats.to_dicts()
 	}
 
 	# Determine which feature columns to remove.
-	feat_cols: list[str] = [col for col in df_models_dropped.columns if col.startswith("feat.")]
+	feat_cols: list[str] = [
+		col for col in df_models_dropped.columns if col.startswith("feat.")
+	]
 	remove_cols: list[str] = []
 
 	for col in feat_cols:
@@ -89,11 +95,17 @@ def filter_data(
 		# Retrieve missing statistics for the column (defaulting to 0 if not found).
 		missing_count, missing_frac = stats_dict.get(col, (0, 0.0))
 		# Check if missing values exceed the configured threshold.
-		remove_due_to_missing: bool = (missing_frac > missing_threshold) if threshold_is_percent else (missing_count > missing_threshold)
+		remove_due_to_missing: bool = (
+			(missing_frac > missing_threshold)
+			if threshold_is_percent
+			else (missing_count > missing_threshold)
+		)
 		if var == 0 or remove_due_to_missing:
 			remove_cols.append(col)
 
-	print(f"Removing {len(remove_cols)}/{len(feat_cols)} feat.* columns due to zero variance or excessive missing values")
+	print(
+		f"Removing {len(remove_cols)}/{len(feat_cols)} feat.* columns due to zero variance or excessive missing values"
+	)
 	for col in remove_cols:
 		# Assuming array_summary is defined elsewhere.
 		print(f"{col:<60} {array_summary(df_models_dropped[col].to_numpy())}")

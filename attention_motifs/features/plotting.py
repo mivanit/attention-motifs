@@ -268,7 +268,7 @@ def plot_embedding_kde(embedding: np.ndarray, labels: pl.Series, title: str) -> 
 
 	# Sample a subset of points for scatter plot (optional)
 	sample_size = min(5000, embedding.shape[0])
-	sample_indices = np.random.choice(embedding.shape[0], sample_size, replace=False)		
+	sample_indices = np.random.choice(embedding.shape[0], sample_size, replace=False)
 
 	# Plot KDE contours for each label group
 	for i, label in enumerate(unique_labels):
@@ -281,8 +281,8 @@ def plot_embedding_kde(embedding: np.ndarray, labels: pl.Series, title: str) -> 
 				# Create grid for KDE evaluation
 				x_min, x_max = points[:, 0].min(), points[:, 0].max()
 				y_min, y_max = points[:, 1].min(), points[:, 1].max()
-	
-				# Add some padding	
+
+				# Add some padding
 				x_range = x_max - x_min
 				y_range = y_max - y_min
 				x_min -= 0.1 * x_range
