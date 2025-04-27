@@ -15,6 +15,7 @@ notebooks/.hf-token
 notebooks/profiles/**
 notebooks/miv/**
 notebooks/wandb/**
+display/data/**
 *.pickle
 miv/**
 wandb/**

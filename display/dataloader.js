@@ -8,7 +8,7 @@
  */
 function loadPcaData() {
     logger.time('Load PCA NPY');
-    return NDArray.load("../data/features/pca.npy").then(pcaArray => {
+    return NDArray.load("data/features/pca.npy").then(pcaArray => {
         logger.timeEnd('Load PCA NPY');
         logger.log('PCA data shape:', pcaArray.shape);
         return pcaArray;
@@ -22,7 +22,7 @@ function loadPcaData() {
 function loadMetadata() {
     logger.time('Load JSONL');
     
-    return fetch("../data/features/meta.jsonl")
+    return fetch("data/features/meta.jsonl")
         .then(response => response.text())
         .then(text => {
             logger.log('JSONL text length:', text.length);
