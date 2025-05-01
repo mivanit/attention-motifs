@@ -25,7 +25,7 @@ def hist_beta_fit(
 		# loc=loc,
 		# scale=scale,
 		**prefix_dict(
-			vec_features(x_hist),
+			vec_features_fast(x_hist),
 			prefix=["hist", "raw"],
 		),
 		# **prefix_dict(

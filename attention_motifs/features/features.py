@@ -32,7 +32,7 @@ from attention_motifs.bins import Bins
 from attention_motifs.features.hist_beta_fit import hist_beta_fit
 from attention_motifs.util import prefix_dict
 from attention_motifs.features.transition_tensor import tt_features
-from attention_motifs.features.vec_features import vec_features
+from attention_motifs.features.vec_features import vec_features, vec_features_fast
 from attention_motifs.math.cos_sim import cosine_similarity_matrix
 from attention_motifs.math.math import skew_lt
 
@@ -174,9 +174,9 @@ def compute_scalar_features(
 
 	return dict(
 		# diagonal: standard features, fit diff to beta dist
-		**prefix_dict(vec_features(A.diagonal()), prefix="diag"),
+		**prefix_dict(vec_features_fast(A.diagonal()), prefix="diag"),
 		# off-diagonal: standard features, fit diff to beta dist
-		**prefix_dict(vec_features(A[:, 0]), prefix="first_tok"),
+		**prefix_dict(vec_features_fast(A[:, 0]), prefix="first_tok"),
 		# transition tensor: standard features, standard features on diff, linear envelope on transition time
 		# 	TODO: standard features on decay rate
 		**prefix_dict(

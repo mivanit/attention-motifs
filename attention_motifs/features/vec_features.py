@@ -94,7 +94,7 @@ VEC_FEATURES_NAMES: Final[list[str]] = [
     # time-series statistics
     "zero_crossing_rate",
     "autocorr_lag1",
-    "psd_total_power",
+    # "psd_total_power",
     "linreg.slope",
     "linreg.intercept",
     "linreg.r2",
@@ -195,8 +195,8 @@ def vec_features_arr(
         autocorr = 0.0
 
     # PSD power via FFT (simplified Welch: single segment)
-    fft_vals = np.fft.rfft(x64)
-    psd_total = (np.abs(fft_vals) ** 2).sum() / n
+    # fft_vals = np.fft.rfft(x64)
+    # psd_total = (np.abs(fft_vals) ** 2).sum() / n
 
     # linear regression on t = 0..n-1
     t = np.arange(n, dtype=np.float64)
@@ -227,7 +227,7 @@ def vec_features_arr(
             energy,
             zcr,
             autocorr,
-            psd_total,
+            # psd_total,
             slope,
             intercept,
             r2,
