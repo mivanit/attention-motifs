@@ -1,21 +1,22 @@
 import numpy as np
 from jaxtyping import Float
-from numba import njit
+# from numba import jit
 
-@njit(cache=True)
+# @jit(cache=True)
 def cosine_similarity_matrix(
-    X: Float[np.ndarray, "n n"],
-    col: bool = False,
-    eps: float = 1e-10,
-) -> Float[np.ndarray, "n n"]:
+	X: Float[np.ndarray, "n n"], col: bool = False, eps: float = 1e-10
+) -> np.ndarray:
+	# If col==True, treat columns as vectors (i.e., work on the transposed matrix)
+	X_: Float[np.ndarray, "n n"] = X.T if col else X
 
-    if col:
-        # treat columns as vectors: use X.T @ X  (both operands contiguous)
-        dot = X.T @ X
-        norms = np.sqrt((X * X).sum(0))          # column norms
-    else:
-        dot = X @ X.T
-        norms = np.sqrt((X * X).sum(1))          # row norms
+	# Compute the dot product matrix for the chosen vectors (rows of X_)
+	dot_product: Float[np.ndarray, "n n"] = X_ @ X_.T
 
-    denom = norms.reshape(-1, 1) * norms.reshape(1, -1) + eps
-    return dot / denom
+	# Compute the norm of each vector (row) in X_
+	norms: Float[np.ndarray, " n"] = np.linalg.norm(X_, axis=1)
+
+	# Compute the cosine similarity matrix, adding eps to avoid division by zero
+	similarity_matrix: np.ndarray = dot_product / (
+		(norms[:, None] * norms[None, :]) + eps
+	)
+	return similarity_matrix

@@ -1466,7 +1466,7 @@ FEAT_KWARGS ?=
 
 .PHONY: demo-features
 demo-features:
-	$(PYTHON) -m attention_motifs.features.generate --act-path $(DEMO_DATA) --processes $(N_PROC) $(FEAT_KWARGS)
+	NUMBA_CACHE_DIR=.numba-cache $(PYTHON) -m attention_motifs.features.generate --act-path $(DEMO_DATA) --processes $(N_PROC) $(FEAT_KWARGS)
 
 .PHONY: demo-server
 demo-server:

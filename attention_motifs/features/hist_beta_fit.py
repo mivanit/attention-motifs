@@ -5,7 +5,7 @@ from jaxtyping import Float
 
 # attention-motifs
 from attention_motifs.bins import Bins
-from attention_motifs.features.vec_features import vec_features
+from attention_motifs.features.vec_features import vec_features, vec_features_fast
 from attention_motifs.util import prefix_dict
 
 

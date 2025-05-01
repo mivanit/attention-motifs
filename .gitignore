@@ -20,6 +20,7 @@ display/data/**
 miv/**
 wandb/**
 .meta/local/**
+.numba-cache/
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Byte-compiled / optimized / DLL files
