@@ -7,6 +7,7 @@ import multiprocessing as mp
 
 
 import torch
+import numpy as np
 from jaxtyping import Float
 import polars as pl
 import tqdm
@@ -22,6 +23,18 @@ from pattern_lens.load_activations import load_activations
 from pattern_lens.figures import HTConfigMock
 
 from attention_motifs.util import prefix_dict
+from attention_motifs.features.analysis import null_stats, filter_data, normalize_data
+from attention_motifs.features.plotting import (
+	plot_embedding,
+	apply_pca,
+)
+from attention_motifs.bins import Bins
+from attention_motifs.features.hist_beta_fit import hist_beta_fit
+from attention_motifs.util import prefix_dict
+from attention_motifs.features.transition_tensor import tt_features
+from attention_motifs.features.vec_features import vec_features
+from attention_motifs.math.cos_sim import cosine_similarity_matrix
+from attention_motifs.math.math import skew_lt
 
 
 def process_prompt(
@@ -74,25 +87,26 @@ def scalar_feature_table(
 		[Float[torch.Tensor, "n_ctx n_ctx"]],
 		dict[str, float],
 	],
-	save_path: Path = Path("../docs/temp"),
+	act_path: Path = Path("../docs/temp"),
 	models: list[str] | None = None,
+	out_path: Path = Path("data/features/"),
+	processes: int|None = None,
+	chunksize: int|None = None,
 ) -> pl.DataFrame:
 	if models is None:
 		models = [
 			json.loads(cfg)["model_name"]
-			for cfg in (save_path / "models.jsonl").read_text().splitlines()
+			for cfg in (act_path / "models.jsonl").read_text().splitlines()
 		]
 
 	print(f"models: {models}")
 
-	# output has cols:
-	# model, prompt, layer_idx, head_idx, feature_name, feature_value
 	output: list[dict[str, int | float | str]] = list()
 
 	for idx, model in enumerate(models):
 		print(f"model: '{model}'")
 		with SpinnerContext(message="setting up paths", **SPINNER_KWARGS):
-			model_path: Path = save_path / model
+			model_path: Path = act_path / model
 			with open(model_path / "model_cfg.json", "r") as f:
 				model_cfg = HTConfigMock.load(json.load(f))
 
@@ -106,20 +120,93 @@ def scalar_feature_table(
 		print(f"{len(prompts)} prompts loaded")
 
 		# for prompt in tqdm.tqdm(prompts, desc="prompts", total=len(prompts)):
-
-		with mp.Pool(processes=mp.cpu_count()) as pool:
+		processes = processes or mp.cpu_count()
+		print(f"using {processes} processes")
+		# chunksize = 1
+		with mp.Pool(processes=processes) as pool:
 			# process each prompt in parallel
 			prompt_func: Callable[[dict], list[dict[str, int | float | str]]] = (
 				functools.partial(
 					process_prompt,
 					model_name=model,
-					save_path=save_path,
+					save_path=act_path,
 					features_func=features_func,
 				)
 			)
 			model_out: list[dict] = tqdm.tqdm(
-				pool.imap(prompt_func, prompts), total=len(prompts)
+				pool.imap(prompt_func, prompts),
+				total=len(prompts),
 			)
 			output.extend(itertools.chain.from_iterable(model_out))
 
-	return pl.DataFrame(output)
+	df: pl.DataFrame = pl.DataFrame(output)
+	# n models, n prompts, n features
+	out_fname: str = f"raw-m{len(models)}-p{len(prompts)}-c{len(df.columns)}.jsonl"
+	print(f"output shape: {df.shape}")
+	print(f"saving to {out_path / out_fname}")
+	df.write_ndjson(out_path / out_fname)
+
+	return df
+
+
+def gram_features(A: Float[np.ndarray, "n_ctx n_ctx"]) -> dict[str, float]:
+	# dbg_tensor(A)
+	return prefix_dict(
+		hist_beta_fit(
+			A.flatten(),
+			bins=Bins(n_bins=32, start=0.0, stop=1.0),
+		),
+		prefix="beta_hist",
+	)
+	# TODO: mass as a function of distance from diagonal
+
+
+def compute_scalar_features(
+	A: Float[np.ndarray, "n_ctx n_ctx"],
+) -> dict[str, float]:
+	# dbg_tensor(A)
+	A_log: Float[np.ndarray, "n_ctx n_ctx"] = np.nan_to_num(np.log(A + 1e-9), nan=-10)
+	# dbg_tensor(A_log)
+
+	A_skew: Float[np.ndarray, "n_ctx n_ctx"] = skew_lt(A)
+	# dbg_tensor(A_skew)
+	A_log_skew: Float[np.ndarray, "n_ctx n_ctx"] = skew_lt(A_log)
+
+	return dict(
+		# diagonal: standard features, fit diff to beta dist
+		**prefix_dict(vec_features(A.diagonal()), prefix="diag"),
+		# off-diagonal: standard features, fit diff to beta dist
+		**prefix_dict(vec_features(A[:, 0]), prefix="first_tok"),
+		# transition tensor: standard features, standard features on diff, linear envelope on transition time
+		# 	TODO: standard features on decay rate
+		**prefix_dict(
+			tt_features(A),
+			prefix="markov_transition",
+		),
+		# # {log, raw} gram matrix of {rows, cols, rows of skewed}: beta fit hist
+		# # 	TODO: fit fft in `gram_features`, but this is expensive
+		**prefix_dict(
+			gram_features(A @ A.T),
+			prefix=["gram", "row"],
+		),
+		**prefix_dict(
+			gram_features(A.T @ A),
+			prefix=["gram", "col"],
+		),
+		**prefix_dict(
+			gram_features(A_skew.T @ A_skew),
+			prefix=["gram", "skew"],
+		),
+		**prefix_dict(
+			gram_features(cosine_similarity_matrix(A_log)),
+			prefix=["log", "gram", "row"],
+		),
+		**prefix_dict(
+			gram_features(cosine_similarity_matrix(A_log, col=True)),
+			prefix=["log", "gram", "col"],
+		),
+		**prefix_dict(
+			gram_features(cosine_similarity_matrix(A_log_skew)),
+			prefix=["log", "gram", "skew"],
+		),
+	)

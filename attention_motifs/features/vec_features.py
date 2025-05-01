@@ -1,9 +1,9 @@
 import numpy as np
 import scipy.stats as stats
 import scipy.signal as signal
+from numba import jit
 
 from muutils.dbg import dbg_tensor
-
 
 def vec_features(
 	arr: np.ndarray,
@@ -68,4 +68,9 @@ def vec_features(
 			**{f"linreg.{k}": v for k, v in line_fit.items()},
 		)
 
-	return {**dist_features, **timeseries_features}
+	# return {**dist_features, **timeseries_features}
+	# merge dicts in a way that keeps numba happy
+	features: dict[str, float] = dict()
+	features.update(dist_features)
+	features.update(timeseries_features)
+	return features
