@@ -192,6 +192,8 @@ lib-detect-testenv==2.0.8
     # via
     #   cli-exit-tools
     #   igittigitt
+llvmlite==0.44.0
+    # via numba
 lmcat==0.2.0
 markdown==3.7
     # via tensorboard
@@ -240,6 +242,8 @@ nest-asyncio==1.6.0
     #   ipykernel
 networkx==3.4.2
     # via torch
+numba==0.61.2
+    # via attention-motifs
 numpy==1.26.4
     # via
     #   accelerate
@@ -247,6 +251,7 @@ numpy==1.26.4
     #   contourpy
     #   datasets
     #   matplotlib
+    #   numba
     #   pandas
     #   pattern-lens
     #   pysr

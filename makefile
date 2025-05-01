@@ -1447,6 +1447,7 @@ DEMO_N_SAMPLES ?= 128
 # DEMO_N_SAMPLES ?= 32
 DEMO_ARGS ?= --min-chars 128 --max-chars 512
 DEMO_DATA ?= docs/temp
+N_PROC ?= 12
 
 .PHONY: demo-clean
 demo-clean:
@@ -1458,7 +1459,14 @@ demo-activations:
 
 .PHONY: demo-figures
 demo-figures:
-	$(PYTHON) -m attention_motifs.figure_funcs --model $(DEMO_MODEL) --save-path $(DEMO_DATA) -p 12 --n-samples $(DEMO_N_SAMPLES)
+	$(PYTHON) -m attention_motifs.figure_funcs --model $(DEMO_MODEL) --save-path $(DEMO_DATA) -p $(N_PROC) --n-samples $(DEMO_N_SAMPLES)
+
+
+FEAT_KWARGS ?=
+
+.PHONY: demo-features
+demo-features:
+	$(PYTHON) -m attention_motifs.features.generate --act-path $(DEMO_DATA) --processes $(N_PROC) $(FEAT_KWARGS)
 
 .PHONY: demo-server
 demo-server:

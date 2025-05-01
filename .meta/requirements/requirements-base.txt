@@ -170,6 +170,8 @@ jupyterlab-widgets==3.0.13
     # via ipywidgets
 kiwisolver==1.4.8
     # via matplotlib
+llvmlite==0.44.0
+    # via numba
 markdown==3.7
     # via tensorboard
 markdown-it-py==3.0.0
@@ -212,6 +214,8 @@ nest-asyncio==1.6.0
     #   ipykernel
 networkx==3.4.2
     # via torch
+numba==0.61.2
+    # via attention-motifs
 numpy==1.26.4
     # via
     #   accelerate
@@ -219,6 +223,7 @@ numpy==1.26.4
     #   contourpy
     #   datasets
     #   matplotlib
+    #   numba
     #   pandas
     #   pattern-lens
     #   pysr
