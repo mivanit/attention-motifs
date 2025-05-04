@@ -452,10 +452,7 @@ def build_distance_tensor(
 	feat_cols: list[str] = [c for c in df.columns if c.startswith(feature_prefix)]
 
 	cls_values: list[str] = (
-		df.select(cls_col)
-		.get_column(cls_col)
-		.unique(maintain_order=True)
-		.to_list()
+		df.select(cls_col).get_column(cls_col).unique(maintain_order=True).to_list()
 	)
 	prompt_values: list[str] = (
 		df.select(prompt_col)
@@ -501,4 +498,3 @@ def build_distance_tensor(
 		prompt_values=prompt_values,
 		distances=D,
 	)
-
