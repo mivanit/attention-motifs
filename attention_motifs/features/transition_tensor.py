@@ -3,7 +3,7 @@ from jaxtyping import Float
 import torch
 
 # attention-motifs
-from attention_motifs.features.vec_features import vec_features, vec_features_fast
+from attention_motifs.features.vec_features import vec_features_fast
 from attention_motifs.math.math import compute_envelope_params
 from attention_motifs.transition_tensor import (
 	transition_tensor_torch,

@@ -2,6 +2,7 @@ import numpy as np
 from jaxtyping import Float
 # from numba import jit
 
+
 # @jit(cache=True)
 def cosine_similarity_matrix(
 	X: Float[np.ndarray, "n n"], col: bool = False, eps: float = 1e-10

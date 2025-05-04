@@ -17,6 +17,7 @@ def prefix_dict(
 	prefix_str: str = prefix if isinstance(prefix, str) else sep.join(prefix)
 	return {f"{prefix_str}{sep}{k}": v for k, v in d.items()}
 
+
 def load_activations(
 	model_name: str,
 	base_path: Path = Path("../docs/demo"),

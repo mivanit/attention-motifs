@@ -13,7 +13,9 @@ from muutils.dbg import dbg_tensor
 
 
 def plot_correlation_matrix(
-	df: pl.DataFrame, feature_cols: list[str], sort_by: Literal["sum", "var", "none"] = "sum"
+	df: pl.DataFrame,
+	feature_cols: list[str],
+	sort_by: Literal["sum", "var", "none"] = "sum",
 ) -> None:
 	"""Plot a correlation matrix of features and identify features with NaN correlations.
 

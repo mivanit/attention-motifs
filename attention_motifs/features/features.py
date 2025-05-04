@@ -23,16 +23,10 @@ from pattern_lens.load_activations import load_activations
 from pattern_lens.figures import HTConfigMock
 
 from attention_motifs.util import prefix_dict
-from attention_motifs.features.analysis import null_stats, filter_data, normalize_data
-from attention_motifs.features.plotting import (
-	plot_embedding,
-	apply_pca,
-)
 from attention_motifs.bins import Bins
 from attention_motifs.features.hist_beta_fit import hist_beta_fit
-from attention_motifs.util import prefix_dict
 from attention_motifs.features.transition_tensor import tt_features
-from attention_motifs.features.vec_features import vec_features, vec_features_fast
+from attention_motifs.features.vec_features import vec_features_fast
 from attention_motifs.math.cos_sim import cosine_similarity_matrix
 from attention_motifs.math.math import skew_lt
 
@@ -90,8 +84,8 @@ def scalar_feature_table(
 	act_path: Path = Path("../docs/temp"),
 	models: list[str] | None = None,
 	out_path: Path = Path("data/features/"),
-	processes: int|None = None,
-	chunksize: int|None = None,
+	processes: int | None = None,
+	chunksize: int | None = None,
 ) -> pl.DataFrame:
 	if models is None:
 		models = [

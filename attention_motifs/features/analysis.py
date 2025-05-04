@@ -116,61 +116,63 @@ def filter_data(
 
 
 def normalize_data(
-    df: pl.DataFrame,
-    feature_cols: Iterable[str] | None = None,
-    stats: pl.DataFrame | None = None,
+	df: pl.DataFrame,
+	feature_cols: Iterable[str] | None = None,
+	stats: pl.DataFrame | None = None,
 ) -> tuple[pl.DataFrame, pl.DataFrame]:
-    """Return `(normalized_df, stats_df)` where every chosen column has zero
-    mean and unit variance.
+	"""Return `(normalized_df, stats_df)` where every chosen column has zero
+	mean and unit variance.
 
-    If `stats` is provided, those numbers are *used* (reproducible
-    preprocessing). Otherwise they are *computed* from `df`.
+	If `stats` is provided, those numbers are *used* (reproducible
+	preprocessing). Otherwise they are *computed* from `df`.
 
-    # Parameters
-     - `df : pl.DataFrame`
-     - `feature_cols : Iterable[str] | None`
-       Columns to normalize (defaults to all that start with `"feat."`).
-     - `stats : pl.DataFrame | None`
-       Optional three-column frame with schema  
-       `{"feature": pl.Utf8, "mean": pl.Float64, "std": pl.Float64}`.
+	# Parameters
+	 - `df : pl.DataFrame`
+	 - `feature_cols : Iterable[str] | None`
+	   Columns to normalize (defaults to all that start with `"feat."`).
+	 - `stats : pl.DataFrame | None`
+	   Optional three-column frame with schema
+	   `{"feature": pl.Utf8, "mean": pl.Float64, "std": pl.Float64}`.
 
-    # Returns
-     - `pl.DataFrame` normalized data  
-     - `pl.DataFrame` the statistics that were actually used to normalize it
-    """
-    if feature_cols is None:
-        feature_cols = [c for c in df.columns if c.startswith("feat.")]
-    feature_cols = list(feature_cols)
-    if not feature_cols:
-        raise ValueError("No feature columns supplied / detected.")
+	# Returns
+	 - `pl.DataFrame` normalized data
+	 - `pl.DataFrame` the statistics that were actually used to normalize it
+	"""
+	if feature_cols is None:
+		feature_cols = [c for c in df.columns if c.startswith("feat.")]
+	feature_cols = list(feature_cols)
+	if not feature_cols:
+		raise ValueError("No feature columns supplied / detected.")
 
-    # ------------------------------------------------------------------ stats
-    if stats is None:
-        stats_df = pl.DataFrame(
-            {
-                "feature": feature_cols,
-                "mean": [df[col].mean() for col in feature_cols],
-                "std":  [df[col].std()  for col in feature_cols],
-            }
-        )
-    else:
-        required = {"feature", "mean", "std"}
-        if set(stats.columns) != required:
-            raise ValueError(f"`stats` must have columns {required}, got {stats.columns}")
-        missing = set(feature_cols) - set(stats["feature"])
-        if missing:
-            raise ValueError(f"`stats` lacks entries for {sorted(missing)}")
-        stats_df = stats
+	# ------------------------------------------------------------------ stats
+	if stats is None:
+		stats_df = pl.DataFrame(
+			{
+				"feature": feature_cols,
+				"mean": [df[col].mean() for col in feature_cols],
+				"std": [df[col].std() for col in feature_cols],
+			}
+		)
+	else:
+		required = {"feature", "mean", "std"}
+		if set(stats.columns) != required:
+			raise ValueError(
+				f"`stats` must have columns {required}, got {stats.columns}"
+			)
+		missing = set(feature_cols) - set(stats["feature"])
+		if missing:
+			raise ValueError(f"`stats` lacks entries for {sorted(missing)}")
+		stats_df = stats
 
-    mean_map = dict(zip(stats_df["feature"], stats_df["mean"]))
-    std_map  = dict(zip(stats_df["feature"], stats_df["std"]))
+	mean_map = dict(zip(stats_df["feature"], stats_df["mean"]))
+	std_map = dict(zip(stats_df["feature"], stats_df["std"]))
 
-    # ----------------------------------------------------------- normalise df
-    norm_df = df.with_columns(
-        [
-            ((pl.col(col) - mean_map[col]) / std_map[col]).alias(col)
-            for col in feature_cols
-        ]
-    )
+	# ----------------------------------------------------------- normalise df
+	norm_df = df.with_columns(
+		[
+			((pl.col(col) - mean_map[col]) / std_map[col]).alias(col)
+			for col in feature_cols
+		]
+	)
 
-    return norm_df, stats_df
+	return norm_df, stats_df
