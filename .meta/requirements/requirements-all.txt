@@ -168,7 +168,9 @@ jinja2==3.1.6
     #   pdoc
     #   torch
 joblib==1.4.2
-    # via scikit-learn
+    # via
+    #   pynndescent
+    #   scikit-learn
 jsonschema==4.23.0
     # via nbformat
 jsonschema-specifications==2024.10.1
@@ -193,7 +195,9 @@ lib-detect-testenv==2.0.8
     #   cli-exit-tools
     #   igittigitt
 llvmlite==0.44.0
-    # via numba
+    # via
+    #   numba
+    #   pynndescent
 lmcat==0.2.0
 markdown==3.7
     # via tensorboard
@@ -243,7 +247,10 @@ nest-asyncio==1.6.0
 networkx==3.4.2
     # via torch
 numba==0.61.2
-    # via attention-motifs
+    # via
+    #   attention-motifs
+    #   pynndescent
+    #   umap-learn
 numpy==1.26.4
     # via
     #   accelerate
@@ -261,6 +268,7 @@ numpy==1.26.4
     #   transformer-lens
     #   transformers
     #   trnbl
+    #   umap-learn
     #   zanj
 nvidia-cublas-cu12==12.4.5.8 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via
@@ -374,6 +382,8 @@ pygments==2.19.1
     #   ipython-pygments-lexers
     #   pdoc
     #   rich
+pynndescent==0.5.13
+    # via umap-learn
 pyparsing==3.2.3
     # via matplotlib
 pysr==1.5.3
@@ -429,12 +439,17 @@ safetensors==0.5.3
     #   accelerate
     #   transformers
 scikit-learn==1.6.1
-    # via pysr
+    # via
+    #   pynndescent
+    #   pysr
+    #   umap-learn
 scipy==1.15.2
     # via
     #   attention-motifs
     #   pattern-lens
+    #   pynndescent
     #   scikit-learn
+    #   umap-learn
 semver==3.0.4
     # via juliapkg
 sentencepiece==0.2.0
@@ -494,6 +509,7 @@ tqdm==4.67.1
     #   transformer-lens
     #   transformers
     #   trnbl
+    #   umap-learn
 traitlets==5.14.3
     # via
     #   comm
@@ -539,6 +555,8 @@ typing-extensions==4.12.2
     #   wandb
 tzdata==2025.2
     # via pandas
+umap-learn==0.5.7
+    # via attention-motifs
 urllib3==2.3.0
     # via
     #   requests
