@@ -1,9 +1,20 @@
 from typing import Iterable
+import math
+from pathlib import Path
+from collections import defaultdict
+from statistics import median
+from typing import Literal
+from typing import NamedTuple
+
+import numpy as np
 import polars as pl
-
-# plotting
-
-# scipy
+from jaxtyping import Float
+import numpy as np
+import polars as pl
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from sklearn.decomposition import PCA
+import matplotlib.gridspec as gridspec
 
 # muutils
 from muutils.tensor_info import array_summary
@@ -176,3 +187,315 @@ def normalize_data(
 	)
 
 	return norm_df, stats_df
+
+
+def pca_importance_table(
+	pca_obj: PCA,
+	feature_names: list[str],
+) -> pl.DataFrame:
+	"""Return PCA loadings plus simple importance stats.
+
+	# Parameters:
+	 - `pca_obj : PCA`
+	    Fitted PCA.
+	 - `feature_names : list[str]`
+	    Columns used to fit the PCA.
+
+	# Returns:
+	 - `pl.DataFrame`
+	    One row per feature; columns =
+	    `PC0 … PCk`, `abs_sum`, `abs_mean`, `abs_max`, `abs_var`, `var_weighted`.
+	"""
+	# raw loadings → (n_features × n_components)
+	loadings = pca_obj.components_.T
+	comp_cols = [f"PC{i}" for i in range(pca_obj.n_components_)]
+	df = (
+		pl.DataFrame(loadings, schema=comp_cols)
+		.with_columns(pl.Series("feature", feature_names))
+		.select(["feature", *comp_cols])
+	)
+
+	abs_exprs = [pl.col(c).abs() for c in comp_cols]
+	vw_exprs = [
+		pl.col(f"PC{i}").abs() * w
+		for i, w in enumerate(pca_obj.explained_variance_ratio_)
+	]
+
+	return df.with_columns(
+		abs_mean=pl.sum_horizontal(abs_exprs) / len(comp_cols),
+		abs_max=pl.max_horizontal(abs_exprs),
+		abs_var=pl.concat_list(abs_exprs).list.var(ddof=0),  # replacement
+		var_weighted=pl.sum_horizontal(vw_exprs),
+	).sort("abs_mean", descending=True)
+
+
+def aggregate_feature_stats(
+	df: pl.DataFrame,
+	*,
+	side: int | set[int] = -1,
+	abs_col: str = "abs_mean",
+	feature_col: str = "feature",
+) -> pl.DataFrame:
+	"""Group by the first *or* last token of a dot-separated *feature* column
+	and compute summary statistics for `abs_mean`.
+
+	A minimal loop + `defaultdict` keeps things readable; only the final
+	conversion to a `polars.DataFrame` uses Polars internals.
+
+	# Parameters
+	 - `df : pl.DataFrame`
+	   Input data with at least `feature_col` & `abs_col`.
+	 - `side : Literal["first", "last"]`
+	   Which token to group on. (defaults to `"last"`)
+	 - `abs_col : str`
+	   Numeric column to aggregate. (defaults to `"abs_mean"`)
+	 - `feature_col : str`
+	   Dot-delimited feature names. (defaults to `"feature"`)
+
+	# Returns
+	 - `pl.DataFrame`
+	   One row per token, with the requested statistics.
+
+	# Usage
+	```python
+	out = aggregate_feature_stats(df, side="first", stats=("mean", "median"))
+	```
+
+	# Raises
+	 - `ValueError` : invalid `side` or `stats` entry
+	"""
+	# --- simple loop, no Polars “wizardry” ---------------------------------
+	groups: defaultdict[str, list[float]] = defaultdict(list)
+
+	feat_series = df[feature_col]  # pl.Series
+	val_series = df[abs_col]  # pl.Series
+
+	for feat, val in zip(feat_series, val_series, strict=False):
+		if val is None or (isinstance(val, float) and math.isnan(val)):
+			continue  # skip nulls/NaNs
+		token: str
+		if isinstance(side, int):
+			token = feat.split(".")[side]
+		else:
+			token = ".".join([s for i, s in enumerate(feat.split(".")) if i in side])
+		groups[token].append(float(val))
+
+	# --- compute requested statistics --------------------------------------
+	rows: list[dict[str, float | str]] = []
+	for token, values in groups.items():
+		vals_np: np.ndarray = np.asarray(values, dtype=float)
+		row: dict[str, float | str] = {"token": token}
+		row["mean"] = float(vals_np.mean())
+		row["min"] = float(vals_np.min())
+		row["max"] = float(vals_np.max())
+		row["median"] = float(median(values))  # statistics.median faster than np
+		rows.append(row)
+
+	# convert back to Polars for downstream work
+	return pl.DataFrame(rows)
+
+# ------------------------------------------------------------------------
+MONO_FONT: str = "DejaVu Sans Mono"  # any monospace installed on your system
+PAD_CHARS: int = 2  # add this many spaces **beyond** max length
+# ------------------------------------------------------------------------
+
+
+def plot_importance_covariance(
+	data: pl.DataFrame,
+	importance_df: pl.DataFrame,
+	metric: str = "abs_sum",
+	descending: bool = True,
+	feature_order: list[str] | None = None,  # << NEW
+	bins: int | None = None,
+	cmap: str = "coolwarm",
+	feat_strip_prefix: str = "feat.",
+	figsize: tuple[int, int] = (25, 22),
+	trim_frac: float = 0.03,
+	tick_pad: int = 10,  # << NEW (points; moves x-labels down)
+) -> None:
+	# ---------- pick feature sequence ------------------------------------
+	if feature_order is not None:
+		# Use the given list exactly as provided
+		features = feature_order
+		# Grab importance scores in that order (fill with NaNs if missing)
+		scores_df = pl.DataFrame({"feature": features}).join(
+			importance_df.select("feature", metric), on="feature", how="left"
+		)
+	else:
+		# Fall back to importance-sorted order
+		scores_df = importance_df.sort(metric, descending=descending).select(
+			"feature", metric
+		)
+		features = scores_df["feature"].to_list()
+
+	scores = scores_df[metric].to_numpy()
+	labels = [f.removeprefix(feat_strip_prefix) for f in features]
+
+	# ---------- monospace + right-padding for labels ----------------------
+	max_len = max(len(lbl) for lbl in labels) + PAD_CHARS
+	pad_lbls = [lbl.ljust(max_len) for lbl in labels]
+
+	# ---------- covariance ------------------------------------------------
+	cov = np.cov(data[features].to_numpy().T, bias=False)
+	vmax = np.nanmax(np.abs(cov)) or 1.0
+
+	# ---------- figure / grid --------------------------------------------
+	ncols = 2 if bins else 1
+	gs = gridspec.GridSpec(
+		2,
+		ncols,
+		height_ratios=[1, 8],
+		width_ratios=[20, 5] if bins else [20],
+		hspace=0.04,
+		wspace=0.3,
+	)
+	fig = plt.figure(figsize=figsize)
+
+	# ---------- covariance heat-map --------------------------------------
+	ax_cov = fig.add_subplot(gs[1, 0])
+	im = ax_cov.imshow(cov, cmap=cmap, vmin=-vmax, vmax=vmax, aspect="auto")
+
+	ax_cov.set_xticks(range(len(features)))
+	ax_cov.set_yticks(range(len(features)))
+	ax_cov.set_xticklabels(
+		pad_lbls,
+		rotation=90,
+		rotation_mode="anchor",
+		fontfamily=MONO_FONT,
+		fontsize=8,
+	)
+	ax_cov.set_yticklabels(
+		pad_lbls,
+		fontfamily=MONO_FONT,
+		fontsize=8,
+	)
+	ax_cov.tick_params(axis="x", pad=tick_pad)  # << shift labels downward
+
+	ax_cov.set_xlabel("Features")
+	ax_cov.set_ylabel("Features")
+	ax_cov.set_title("Covariance matrix")
+
+	divider = make_axes_locatable(ax_cov)
+	cax = divider.append_axes("right", size="2.5%", pad=0.05)
+	fig.colorbar(im, cax=cax).set_label("Covariance")
+
+	# ---------- importance dot-plot (shares x) ---------------------------
+	ax_imp = fig.add_subplot(gs[0, 0], sharex=ax_cov)
+	ax_imp.plot(np.arange(len(scores)), scores, "o", markersize=5, color="black")
+	ax_imp.set_ylabel(metric)
+	ax_imp.set_title(f"Feature importance ({metric})")
+	ax_imp.tick_params(axis="x", labelbottom=False)
+	for spine in ("top", "right"):
+		ax_imp.spines[spine].set_visible(False)
+	ax_imp.margins(x=0)
+
+	if 0 < trim_frac < 0.5:
+		pos = ax_imp.get_position()
+		ax_imp.set_position([pos.x0, pos.y0, pos.width * (1 - trim_frac), pos.height])
+
+	# ---------- optional histogram ---------------------------------------
+	if bins:
+		ax_hist = fig.add_subplot(gs[:, 1])
+		ax_hist.hist(scores, bins=bins, orientation="horizontal", color="gray")
+		ax_hist.set_xlabel("count")
+		ax_hist.set_ylabel(metric)
+		ax_hist.set_title("Importance distribution")
+		ax_hist.invert_yaxis()
+
+	plt.tight_layout()
+	plt.show()
+
+class DistanceTensorResult(NamedTuple):
+    """Return object for `build_distance_tensor`."""
+    cls_values: list[str]
+    prompt_values: list[str]
+    distances: Float[np.ndarray, 'h h p']
+
+
+def build_distance_tensor(
+    df: pl.DataFrame,
+    *,
+    cls_col: str = "activation.cls",
+    prompt_col: str = "activation.prompt",
+    feature_prefix: str = "feat.",
+    metric: str = "l2",
+) -> DistanceTensorResult:
+    """
+    Compute a (h, h, p) distance tensor grouped by
+    (`activation.cls`, `activation.prompt`).
+
+    Parameters
+    ----------
+    df
+        Polars DataFrame containing feature columns and two categorical columns.
+    cls_col, prompt_col
+        Column names holding the categorical identifiers.
+    feature_prefix
+        Prefix that marks feature columns.
+    metric
+        ``"l2" | "euclidean"`` Euclidean distance  
+        ``"l1" | "manhattan"`` Manhattan distance
+
+    Returns
+    -------
+    DistanceTensorResult
+        * ``cls_values``   (list[str]) - first-occurrence order of cls values  
+        * ``prompt_values`` (list[str]) - first-occurrence order of prompts  
+        * ``distances``     (Float[Array, 'h h p']) - distance tensor
+          (`NaN` where a (cls, prompt) row is missing).
+    """
+    # 1. gather feature columns and unique keys (order-preserving)
+    feat_cols: list[str] = [c for c in df.columns if c.startswith(feature_prefix)]
+
+    cls_values = (
+        df.select(cls_col)
+        .get_column(cls_col)
+        .unique(maintain_order=True)  # keep “first appearance” order
+        .to_list()
+    )
+    prompt_values = (
+        df.select(prompt_col)
+        .get_column(prompt_col)
+        .unique(maintain_order=True)
+        .to_list()
+    )
+
+    h, p = len(cls_values), len(prompt_values)
+    cls_to_i = {c: i for i, c in enumerate(cls_values)}
+    prompt_to_k = {p_: k for k, p_ in enumerate(prompt_values)}
+
+    # 2. cache vectors keyed by (cls, prompt)
+    vectors: dict[tuple[str, str], np.ndarray] = {}
+    for row in df.select(feat_cols + [cls_col, prompt_col]).iter_rows(named=True):
+        key = (row[cls_col], row[prompt_col])
+        vectors[key] = np.array([row[c] for c in feat_cols], dtype=float)
+
+    # 3. distance selector
+    metric = metric.lower()
+    if metric in {"l2", "euclidean"}:
+        ord_ = 2
+    elif metric in {"l1", "manhattan"}:
+        ord_ = 1
+    else:  # defensive — fail fast
+        raise ValueError(
+            "metric must be 'l2'/'euclidean' or 'l1'/'manhattan', "
+            f"got {metric!r}",
+        )
+
+    # 4. build tensor prompt-by-prompt
+    D = np.full((h, h, p), np.nan, dtype=float)
+
+    for prompt, k in prompt_to_k.items():
+        existing_cls = [cls for cls in cls_values if (cls, prompt) in vectors]
+        idxs = [cls_to_i[cls] for cls in existing_cls]
+        if not idxs:  # no rows for this prompt → leave slice NaN
+            continue
+
+        X = np.vstack([vectors[(cls, prompt)] for cls in existing_cls])  # m × d
+        diff = X[:, None, :] - X[None, :, :]  # m × m × d
+        dist = np.linalg.norm(diff, ord=ord_, axis=-1)  # m × m
+
+        for a, i in enumerate(idxs):
+            D[i, idxs, k] = dist[a]
+
+    return DistanceTensorResult(cls_values=cls_values, prompt_values=prompt_values, distances=D)
