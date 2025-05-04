@@ -1,3 +1,4 @@
+from typing import Literal
 import numpy as np
 import polars as pl
 
@@ -12,7 +13,7 @@ from muutils.dbg import dbg_tensor
 
 
 def plot_correlation_matrix(
-	df: pl.DataFrame, feature_cols: list[str], sort_by: str = "sum"
+	df: pl.DataFrame, feature_cols: list[str], sort_by: Literal["sum", "var", "none"] = "sum"
 ) -> None:
 	"""Plot a correlation matrix of features and identify features with NaN correlations.
 
@@ -169,6 +170,7 @@ def plot_embedding(
 	title: str = "2D PCA Embedding",
 	alpha: float = 0.9,
 	marker_size: int = 1,
+	ax: plt.Axes | None = None,
 ) -> None:
 	"""Scatter plot of 2D embedding with points colored by label.
 
@@ -182,8 +184,8 @@ def plot_embedding(
 	 - `title : str`
 	    Plot title (defaults to "2D PCA Embedding")
 	"""
-	fig: plt.Figure = plt.figure(figsize=(10, 8))
-	ax: plt.Axes = fig.add_subplot(111)
+	if ax is None:
+		_, ax = plt.subplots(figsize=(10, 10))
 
 	# Convert labels to numpy array
 	label_values = labels.to_numpy()
@@ -236,9 +238,6 @@ def plot_embedding(
 		bbox_to_anchor=(1, 1),
 		title="Labels",
 	)
-
-	plt.tight_layout()
-	plt.show()
 
 
 def plot_embedding_kde(embedding: np.ndarray, labels: pl.Series, title: str) -> None:
