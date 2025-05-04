@@ -193,14 +193,14 @@ def pca_importance_table(
 
 	# Parameters:
 	 - `pca_obj : PCA`
-	    Fitted PCA.
+		Fitted PCA.
 	 - `feature_names : list[str]`
-	    Columns used to fit the PCA.
+		Columns used to fit the PCA.
 
 	# Returns:
 	 - `pl.DataFrame`
-	    One row per feature; columns =
-	    `PC0 … PCk`, `abs_sum`, `abs_mean`, `abs_max`, `abs_var`, `var_weighted`.
+		One row per feature; columns =
+		`PC0 … PCk`, `abs_sum`, `abs_mean`, `abs_max`, `abs_var`, `var_weighted`.
 	"""
 	# raw loadings → (n_features × n_components)
 	loadings = pca_obj.components_.T
@@ -417,7 +417,8 @@ def build_distance_tensor(
 	cls_col: str = "activation.cls",
 	prompt_col: str = "activation.prompt",
 	feature_prefix: str = "feat.",
-	metric: str = "l2",
+	order: int = 2,
+	include_missing_prompts: bool = False,
 ) -> DistanceTensorResult:
 	"""
 	Compute a (h, h, p) distance tensor grouped by
@@ -426,76 +427,78 @@ def build_distance_tensor(
 	Parameters
 	----------
 	df
-	    Polars DataFrame containing feature columns and two categorical columns.
+		Polars DataFrame containing feature columns and two categorical columns.
 	cls_col, prompt_col
-	    Column names holding the categorical identifiers.
+		Column names holding the categorical identifiers.
 	feature_prefix
-	    Prefix that marks feature columns.
-	metric
-	    ``"l2" | "euclidean"`` Euclidean distance
-	    ``"l1" | "manhattan"`` Manhattan distance
+		Prefix that marks feature columns.
+	order
+		Order of the L‑p norm (1 → L₁/Manhattan, 2 → L₂/Euclidean).
+	include_missing_prompts
+		If ``False`` (default), *drop* any prompt that lacks a row for at
+		least one class; the output tensor then contains **no** NaNs.
+		If ``True``, keep all prompts and leave distances with missing rows
+		as ``NaN``.
 
 	Returns
 	-------
 	DistanceTensorResult
-	    * ``cls_values``   (list[str]) - first-occurrence order of cls values
-	    * ``prompt_values`` (list[str]) - first-occurrence order of prompts
-	    * ``distances``     (Float[Array, 'h h p']) - distance tensor
-	      (`NaN` where a (cls, prompt) row is missing).
+		* ``cls_values``	(list[str]) – first‑occurrence order of cls values
+		* ``prompt_values`` (list[str]) – first‑occurrence order of prompts
+		* ``distances``	 (Float[Array, 'h h p']) – distance tensor
+		  (may include ``NaN`` depending on *include_missing_prompts*).
 	"""
-	# 1. gather feature columns and unique keys (order-preserving)
+	# gather feature columns and unique keys (order‑preserving)
 	feat_cols: list[str] = [c for c in df.columns if c.startswith(feature_prefix)]
 
-	cls_values = (
+	cls_values: list[str] = (
 		df.select(cls_col)
 		.get_column(cls_col)
-		.unique(maintain_order=True)  # keep “first appearance” order
+		.unique(maintain_order=True)
 		.to_list()
 	)
-	prompt_values = (
+	prompt_values: list[str] = (
 		df.select(prompt_col)
 		.get_column(prompt_col)
 		.unique(maintain_order=True)
 		.to_list()
 	)
 
-	h, p = len(cls_values), len(prompt_values)
-	cls_to_i = {c: i for i, c in enumerate(cls_values)}
-	prompt_to_k = {p_: k for k, p_ in enumerate(prompt_values)}
-
-	# 2. cache vectors keyed by (cls, prompt)
+	# cache vectors keyed by (cls, prompt)
 	vectors: dict[tuple[str, str], np.ndarray] = {}
 	for row in df.select(feat_cols + [cls_col, prompt_col]).iter_rows(named=True):
-		key = (row[cls_col], row[prompt_col])
+		key: tuple[str, str] = (row[cls_col], row[prompt_col])
 		vectors[key] = np.array([row[c] for c in feat_cols], dtype=float)
 
-	# 3. distance selector
-	metric = metric.lower()
-	if metric in {"l2", "euclidean"}:
-		ord_ = 2
-	elif metric in {"l1", "manhattan"}:
-		ord_ = 1
-	else:  # defensive — fail fast
-		raise ValueError(
-			f"metric must be 'l2'/'euclidean' or 'l1'/'manhattan', got {metric!r}",
-		)
+	# optionally drop prompts with missing class rows
+	if not include_missing_prompts:
+		prompt_values = [
+			p for p in prompt_values if all((cls, p) in vectors for cls in cls_values)
+		]
 
-	# 4. build tensor prompt-by-prompt
-	D = np.full((h, h, p), np.nan, dtype=float)
+	h: int = len(cls_values)
+	p: int = len(prompt_values)
+	cls_to_i: dict[str, int] = {c: i for i, c in enumerate(cls_values)}
 
-	for prompt, k in prompt_to_k.items():
+	# build tensor prompt‑by‑prompt
+	D: Float[np.ndarray, "h h p"] = np.full((h, h, p), np.nan, dtype=float)
+
+	for k, prompt in enumerate(prompt_values):
 		existing_cls = [cls for cls in cls_values if (cls, prompt) in vectors]
 		idxs = [cls_to_i[cls] for cls in existing_cls]
-		if not idxs:  # no rows for this prompt → leave slice NaN
+		if len(idxs) < 2:  # 0 or 1 row → nothing to compare
 			continue
 
 		X = np.vstack([vectors[(cls, prompt)] for cls in existing_cls])  # m × d
 		diff = X[:, None, :] - X[None, :, :]  # m × m × d
-		dist = np.linalg.norm(diff, ord=ord_, axis=-1)  # m × m
+		dist = np.linalg.norm(diff, ord=order, axis=-1)  # m × m
 
 		for a, i in enumerate(idxs):
 			D[i, idxs, k] = dist[a]
 
 	return DistanceTensorResult(
-		cls_values=cls_values, prompt_values=prompt_values, distances=D
+		cls_values=cls_values,
+		prompt_values=prompt_values,
+		distances=D,
 	)
+
