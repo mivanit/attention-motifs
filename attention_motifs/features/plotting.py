@@ -170,8 +170,8 @@ def plot_embedding(
 	labels: pl.Series,
 	dims: tuple[int, int] = (0, 1),
 	title: str = "2D PCA Embedding",
-	alpha: float = 0.9,
-	marker_size: int = 1,
+	alpha: float|dict[str, float] = 0.9,
+	marker_size: int|dict[str, int] = 1,
 	ax: plt.Axes | None = None,
 ) -> None:
 	"""Scatter plot of 2D embedding with points colored by label.
@@ -205,14 +205,22 @@ def plot_embedding(
 	for i, label in enumerate(unique_labels):
 		mask = label_values == label
 		color = cmap(i)
+		if isinstance(alpha, dict):
+			alpha_value = alpha.get(label, alpha.get(None, 0.9))
+		else:
+			alpha_value = alpha
+		if isinstance(marker_size, dict):
+			marker_size_value = marker_size.get(label, marker_size.get(None, 1))
+		else:
+			marker_size_value = marker_size
 
 		# Main scatter plot (small points)
 		ax.scatter(
 			embedding[mask, dims[0]],
 			embedding[mask, dims[1]],
 			c=[color],
-			alpha=alpha,
-			s=marker_size,
+			alpha=alpha_value,
+			s=marker_size_value,
 			edgecolors="none",
 		)
 

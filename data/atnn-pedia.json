@@ -1,146 +1,97 @@
-{
-	"model": "gpt2-small",
-	"paper": "https://arxiv.org/pdf/2211.00593",
-	"notes": "IOI: indirect object identification",
-	"classes": [
-		{
-			"type": "Previous Token",
-			"heads": [
-				{
-					"L": 2,
-					"H": 2
-				},
-				{
-					"L": 4,
-					"H": 11
-				}
-			]
-		},
-		{
-			"type": "Duplicate Token",
-			"heads": [
-				{
-					"L": 0,
-					"H": 1
-				},
-				{
-					"L": 3,
-					"H": 0
-				},
-				{
-					"L": 0,
-					"H": 10
-				}
-			]
-		},
-		{
-			"type": "Induction",
-			"heads": [
-				{
-					"L": 5,
-					"H": 5
-				},
-				{
-					"L": 6,
-					"H": 9
-				},
-				{
-					"L": 5,
-					"H": 8
-				},
-				{
-					"L": 5,
-					"H": 9
-				}
-			]
-		},
-		{
-			"type": "S-Inhibition",
-			"heads": [
-				{
-					"L": 7,
-					"H": 3
-				},
-				{
-					"L": 7,
-					"H": 9
-				},
-				{
-					"L": 8,
-					"H": 6
-				},
-				{
-					"L": 8,
-					"H": 10
-				}
-			]
-		},
-		{
-			"type": "Negative Name Mover",
-			"heads": [
-				{
-					"L": 10,
-					"H": 7
-				},
-				{
-					"L": 11,
-					"H": 10
-				}
-			]
-		},
-		{
-			"type": "Name Mover",
-			"heads": [
-				{
-					"L": 9,
-					"H": 9
-				},
-				{
-					"L": 9,
-					"H": 6
-				},
-				{
-					"L": 10,
-					"H": 0
-				}
-			]
-		},
-		{
-			"type": "Backup Name Mover",
-			"heads": [
-				{
-					"L": 9,
-					"H": 0
-				},
-				{
-					"L": 9,
-					"H": 7
-				},
-				{
-					"L": 10,
-					"H": 1
-				},
-				{
-					"L": 10,
-					"H": 2
-				},
-				{
-					"L": 10,
-					"H": 6
-				},
-				{
-					"L": 10,
-					"H": 10
-				},
-				{
-					"L": 11,
-					"H": 2
-				},
-				{
-					"L": 11,
-					"H": 9
-				}
-			]
-		}
-	]
-}
+[
+	{
+		"paper": "https://arxiv.org/abs/2305.00586",
+		"notes": "Greater-than operation in year-span prediction task",
+		"model": "gpt2-small",
+		"classes": [
+			{
+				"type": "Attention Heads at Year Position",
+				"heads": [
+					"L0:H1",
+					"L0:H3",
+					"L0:H5",
+					"L5:H1",
+					"L5:H5",
+					"L6:H9",
+					"L7:H10",
+					"L8:H8",
+					"L8:H11"
+				]
+			},
+			{
+				"type": "Attention Heads at End Position",
+				"heads": [
+					"L9:H1"
+				]
+			}
+		]
+	},
+	{
+		"paper": "https://arxiv.org/pdf/2211.00593",
+		"notes": "IOI: indirect object identification",
+		"model": "gpt2-small",
+		"classes": [
+			{
+				"type": "Previous Token",
+				"heads": [
+					"L2:H2",
+					"L4:H11"
+				]
+			},
+			{
+				"type": "Duplicate Token",
+				"heads": [
+					"L0:H1",
+					"L3:H0",
+					"L0:H10"
+				]
+			},
+			{
+				"type": "Induction",
+				"heads": [
+					"L5:H5",
+					"L6:H9",
+					"L5:H8",
+					"L5:H9"
+				]
+			},
+			{
+				"type": "S-Inhibition",
+				"heads": [
+					"L7:H3",
+					"L7:H9",
+					"L8:H6",
+					"L8:H10"
+				]
+			},
+			{
+				"type": "Negative Name Mover",
+				"heads": [
+					"L10:H7",
+					"L11:H10"
+				]
+			},
+			{
+				"type": "Name Mover",
+				"heads": [
+					"L9:H9",
+					"L9:H6",
+					"L10:H0"
+				]
+			},
+			{
+				"type": "Backup Name Mover",
+				"heads": [
+					"L9:H0",
+					"L9:H7",
+					"L10:H1",
+					"L10:H2",
+					"L10:H6",
+					"L10:H10",
+					"L11:H2",
+					"L11:H9"
+				]
+			}
+		]
+	}
+]
