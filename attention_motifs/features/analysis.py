@@ -410,6 +410,22 @@ class DistanceTensorResult(NamedTuple):
 	prompt_values: list[str]
 	distances: Float[np.ndarray, "h h p"]
 
+	def mean_dists(self) -> Float[np.ndarray, "h h"]:
+		return self.distances.mean(axis=-1)
+
+	def get_closest_heads(self, head: str, n_closest: int = 5) -> list[tuple[str, float]]:
+		head_idx: int = self.prompt_values.index(head)
+		dists: Float[np.ndarray, "h h"] = self.mean_dists()[head_idx]
+
+		# sort by distance
+		sorted_indices: np.ndarray = np.argsort(dists)
+		closest_indices: np.ndarray = sorted_indices[:n_closest]
+		closest_dists: Float[np.ndarray, "h"] = dists[closest_indices]
+
+		return [
+			(self.cls_values[i], float(d)) for i, d in zip(closest_indices, closest_dists)
+		]
+
 
 def build_distance_tensor(
 	df: pl.DataFrame,

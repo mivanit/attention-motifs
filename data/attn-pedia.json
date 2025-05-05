@@ -1,32 +1,6 @@
 [
 	{
-		"paper": "https://arxiv.org/abs/2305.00586",
-		"notes": "Greater-than operation in year-span prediction task",
-		"model": "gpt2-small",
-		"classes": [
-			{
-				"type": "YY Identifier",
-				"heads": [
-					"L5:H1",
-					"L5:H5",
-					"L8:H8",
-					"L6:H9",
-					"L7:H10",
-					"L8:H11",
-					"L9:H1"
-				]
-			},
-			{
-				"type": "Static-Year Retriever",
-				"heads": [
-					"L0:H1",
-					"L0:H3",
-					"L0:H5"
-				]
-			}
-		]
-	},
-	{
+		"prefix": "IOI",
 		"paper": "https://arxiv.org/pdf/2211.00593",
 		"notes": "IOI: indirect object identification",
 		"model": "gpt2-small",
@@ -90,6 +64,83 @@
 					"L10:H10",
 					"L11:H2",
 					"L11:H9"
+				]
+			}
+		]
+	},
+	{
+		"prefix": "SAE-survey",
+		"paper": "https://www.alignmentforum.org/posts/xmegeW5mqiBsvoaim",
+		"notes": "Survey of all 144 attention heads in GPT-2 small using Sparse Autoencoders (SAEs); identifies head-level roles via top-10 feature analysis and introduces new classes like 'long prefix induction'.",
+		"model": "gpt2-small",
+		"classes": [
+			{
+				"type": "Induction",
+				"heads": [
+					"L5:H1",
+					"L5:H5",
+					"L6:H9",
+					"L7:H2",
+					"L7:H10"
+				]
+			},
+			{
+				"type": "Previous Token",
+				"heads": [
+					"L4:H11"
+				]
+			},
+			{
+				"type": "Copy Suppression",
+				"heads": [
+					"L10:H7"
+				]
+			},
+			{
+				"type": "Duplicate Token",
+				"heads": [
+					"L3:H0",
+					"L0:H5"
+				]
+			},
+			{
+				"type": "Successor",
+				"heads": [
+					"L9:H1"
+				]
+			},
+			{
+				"type": "Long Range Context Tracking",
+				"heads": [
+					"L9:H1"
+				]
+			}
+		]
+	},
+	{
+		"prefix": "greater-than",
+		"paper": "https://arxiv.org/abs/2305.00586",
+		"notes": "Greater-than operation in year-span prediction task",
+		"model": "gpt2-small",
+		"classes": [
+			{
+				"type": "YY Identifier",
+				"heads": [
+					"L5:H1",
+					"L5:H5",
+					"L8:H8",
+					"L6:H9",
+					"L7:H10",
+					"L8:H11",
+					"L9:H1"
+				]
+			},
+			{
+				"type": "Static-Year Retriever",
+				"heads": [
+					"L0:H1",
+					"L0:H3",
+					"L0:H5"
 				]
 			}
 		]
