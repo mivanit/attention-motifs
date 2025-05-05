@@ -170,8 +170,8 @@ def plot_embedding(
 	labels: pl.Series,
 	dims: tuple[int, int] = (0, 1),
 	title: str = "2D PCA Embedding",
-	alpha: float|dict[str, float] = 0.9,
-	marker_size: int|dict[str, int] = 1,
+	alpha: float | dict[str, float] = 0.9,
+	marker_size: int | dict[str, int] = 1,
 	ax: plt.Axes | None = None,
 ) -> None:
 	"""Scatter plot of 2D embedding with points colored by label.
