@@ -5,23 +5,23 @@
 		"model": "gpt2-small",
 		"classes": [
 			{
-				"type": "Attention Heads at Year Position",
+				"type": "YY Identifier",
 				"heads": [
-					"L0:H1",
-					"L0:H3",
-					"L0:H5",
 					"L5:H1",
 					"L5:H5",
+					"L8:H8",
 					"L6:H9",
 					"L7:H10",
-					"L8:H8",
-					"L8:H11"
+					"L8:H11",
+					"L9:H1"
 				]
 			},
 			{
-				"type": "Attention Heads at End Position",
+				"type": "Static-Year Retriever",
 				"heads": [
-					"L9:H1"
+					"L0:H1",
+					"L0:H3",
+					"L0:H5"
 				]
 			}
 		]
