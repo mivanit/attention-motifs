@@ -1,3 +1,7 @@
+from dataclasses import dataclass
+from functools import cached_property
+import json
+from pathlib import Path
 from typing import Iterable
 import math
 from collections import defaultdict
@@ -14,6 +18,7 @@ import matplotlib.gridspec as gridspec
 
 # muutils
 from muutils.tensor_info import array_summary
+from muutils.json_serialize import json_serialize
 
 
 def null_stats(df: pl.DataFrame) -> pl.DataFrame:
@@ -402,14 +407,22 @@ def plot_importance_covariance(
 	plt.tight_layout()
 	plt.show()
 
-
-class DistanceTensorResult(NamedTuple):
+@dataclass
+class DistanceTensorResult:
 	"""Return object for `build_distance_tensor`."""
 
 	cls_values: list[str]
 	prompt_values: list[str]
 	distances: Float[np.ndarray, "h h p"]
 
+	@property
+	def n_heads(self) -> int:		
+		n: int = len(self.cls_values)
+		assert self.distances.shape[0] == n
+		assert self.distances.shape[1] == n
+		return n
+
+	@cached_property
 	def mean_dists(self) -> Float[np.ndarray, "h h"]:
 		return self.distances.mean(axis=-1)
 
@@ -417,7 +430,7 @@ class DistanceTensorResult(NamedTuple):
 		self, head: str, n_closest: int = 5
 	) -> list[tuple[str, float]]:
 		head_idx: int = self.prompt_values.index(head)
-		dists: Float[np.ndarray, "h h"] = self.mean_dists()[head_idx]
+		dists: Float[np.ndarray, "h h"] = self.mean_dists[head_idx]
 
 		# sort by distance
 		sorted_indices: np.ndarray = np.argsort(dists)
@@ -429,91 +442,143 @@ class DistanceTensorResult(NamedTuple):
 			for i, d in zip(closest_indices, closest_dists)
 		]
 
+	@classmethod
+	def build_distance_tensor(
+		cls,
+		df: pl.DataFrame,
+		*,
+		cls_col: str = "activation.cls",
+		prompt_col: str = "activation.prompt",
+		feature_prefix: str = "feat.",
+		order: int = 2,
+		include_missing_prompts: bool = False,
+	) -> "DistanceTensorResult":
+		"""
+		Compute a (h, h, p) distance tensor grouped by
+		(`activation.cls`, `activation.prompt`).
 
-def build_distance_tensor(
-	df: pl.DataFrame,
-	*,
-	cls_col: str = "activation.cls",
-	prompt_col: str = "activation.prompt",
-	feature_prefix: str = "feat.",
-	order: int = 2,
-	include_missing_prompts: bool = False,
-) -> DistanceTensorResult:
-	"""
-	Compute a (h, h, p) distance tensor grouped by
-	(`activation.cls`, `activation.prompt`).
+		Parameters
+		----------
+		df
+			Polars DataFrame containing feature columns and two categorical columns.
+		cls_col, prompt_col
+			Column names holding the categorical identifiers.
+		feature_prefix
+			Prefix that marks feature columns.
+		order
+			Order of the L‑p norm (1 → L₁/Manhattan, 2 → L₂/Euclidean).
+		include_missing_prompts
+			If ``False`` (default), *drop* any prompt that lacks a row for at
+			least one class; the output tensor then contains **no** NaNs.
+			If ``True``, keep all prompts and leave distances with missing rows
+			as ``NaN``.
 
-	Parameters
-	----------
-	df
-		Polars DataFrame containing feature columns and two categorical columns.
-	cls_col, prompt_col
-		Column names holding the categorical identifiers.
-	feature_prefix
-		Prefix that marks feature columns.
-	order
-		Order of the L‑p norm (1 → L₁/Manhattan, 2 → L₂/Euclidean).
-	include_missing_prompts
-		If ``False`` (default), *drop* any prompt that lacks a row for at
-		least one class; the output tensor then contains **no** NaNs.
-		If ``True``, keep all prompts and leave distances with missing rows
-		as ``NaN``.
+		Returns
+		-------
+		DistanceTensorResult
+			* ``cls_values``	(list[str]) – first‑occurrence order of cls values
+			* ``prompt_values`` (list[str]) – first‑occurrence order of prompts
+			* ``distances``	 (Float[Array, 'h h p']) – distance tensor
+			(may include ``NaN`` depending on *include_missing_prompts*).
+		"""
+		# gather feature columns and unique keys (order‑preserving)
+		feat_cols: list[str] = [c for c in df.columns if c.startswith(feature_prefix)]
 
-	Returns
-	-------
-	DistanceTensorResult
-		* ``cls_values``	(list[str]) – first‑occurrence order of cls values
-		* ``prompt_values`` (list[str]) – first‑occurrence order of prompts
-		* ``distances``	 (Float[Array, 'h h p']) – distance tensor
-		  (may include ``NaN`` depending on *include_missing_prompts*).
-	"""
-	# gather feature columns and unique keys (order‑preserving)
-	feat_cols: list[str] = [c for c in df.columns if c.startswith(feature_prefix)]
+		cls_values: list[str] = (
+			df.select(cls_col).get_column(cls_col).unique(maintain_order=True).to_list()
+		)
+		prompt_values: list[str] = (
+			df.select(prompt_col)
+			.get_column(prompt_col)
+			.unique(maintain_order=True)
+			.to_list()
+		)
 
-	cls_values: list[str] = (
-		df.select(cls_col).get_column(cls_col).unique(maintain_order=True).to_list()
-	)
-	prompt_values: list[str] = (
-		df.select(prompt_col)
-		.get_column(prompt_col)
-		.unique(maintain_order=True)
-		.to_list()
-	)
+		# cache vectors keyed by (cls, prompt)
+		vectors: dict[tuple[str, str], np.ndarray] = {}
+		for row in df.select(feat_cols + [cls_col, prompt_col]).iter_rows(named=True):
+			key: tuple[str, str] = (row[cls_col], row[prompt_col])
+			vectors[key] = np.array([row[c] for c in feat_cols], dtype=float)
 
-	# cache vectors keyed by (cls, prompt)
-	vectors: dict[tuple[str, str], np.ndarray] = {}
-	for row in df.select(feat_cols + [cls_col, prompt_col]).iter_rows(named=True):
-		key: tuple[str, str] = (row[cls_col], row[prompt_col])
-		vectors[key] = np.array([row[c] for c in feat_cols], dtype=float)
+		# optionally drop prompts with missing class rows
+		if not include_missing_prompts:
+			prompt_values = [
+				p for p in prompt_values if all((cls, p) in vectors for cls in cls_values)
+			]
 
-	# optionally drop prompts with missing class rows
-	if not include_missing_prompts:
-		prompt_values = [
-			p for p in prompt_values if all((cls, p) in vectors for cls in cls_values)
-		]
+		h: int = len(cls_values)
+		p: int = len(prompt_values)
+		cls_to_i: dict[str, int] = {c: i for i, c in enumerate(cls_values)}
 
-	h: int = len(cls_values)
-	p: int = len(prompt_values)
-	cls_to_i: dict[str, int] = {c: i for i, c in enumerate(cls_values)}
+		# build tensor prompt‑by‑prompt
+		D: Float[np.ndarray, "h h p"] = np.full((h, h, p), np.nan, dtype=float)
 
-	# build tensor prompt‑by‑prompt
-	D: Float[np.ndarray, "h h p"] = np.full((h, h, p), np.nan, dtype=float)
+		for k, prompt in enumerate(prompt_values):
+			existing_cls = [cls for cls in cls_values if (cls, prompt) in vectors]
+			idxs = [cls_to_i[cls] for cls in existing_cls]
+			if len(idxs) < 2:  # 0 or 1 row → nothing to compare
+				continue
 
-	for k, prompt in enumerate(prompt_values):
-		existing_cls = [cls for cls in cls_values if (cls, prompt) in vectors]
-		idxs = [cls_to_i[cls] for cls in existing_cls]
-		if len(idxs) < 2:  # 0 or 1 row → nothing to compare
-			continue
+			X = np.vstack([vectors[(cls, prompt)] for cls in existing_cls])  # m × d
+			diff = X[:, None, :] - X[None, :, :]  # m × m × d
+			dist = np.linalg.norm(diff, ord=order, axis=-1)  # m × m
 
-		X = np.vstack([vectors[(cls, prompt)] for cls in existing_cls])  # m × d
-		diff = X[:, None, :] - X[None, :, :]  # m × m × d
-		dist = np.linalg.norm(diff, ord=order, axis=-1)  # m × m
+			for a, i in enumerate(idxs):
+				D[i, idxs, k] = dist[a]
 
-		for a, i in enumerate(idxs):
-			D[i, idxs, k] = dist[a]
+		return DistanceTensorResult(
+			cls_values=cls_values,
+			prompt_values=prompt_values,
+			distances=D,
+		)
+	
+	def save_means(self, path: Path) -> None:
+		with open(path, "w") as f:
+			json.dump(
+				json_serialize(
+					dict(
+						labels=self.cls_values,
+						prompts=self.prompt_values,
+						mean_dists=self.mean_dists,
+					)
+				),
+				f,
+			)
 
-	return DistanceTensorResult(
-		cls_values=cls_values,
-		prompt_values=prompt_values,
-		distances=D,
-	)
+	def plot_hists(
+			self,
+			bins: int = 50,
+			alpha: float = 0.01,
+			n_samples: int|None = 128,
+		) -> plt.Axes:
+		max_dist: float = np.max(self.distances)
+		bins = np.linspace(0, max_dist, bins)
+		n_heads: int = self.n_heads
+		print(f"{n_heads=}, {max_dist=}")
+		if n_samples is not None:
+			n_heads = n_samples
+
+		fig, ax = plt.subplots(figsize=(10, 6))
+
+		for i in range(n_heads):
+			for j in range(i + 1, n_heads):
+				hist, _ = np.histogram(
+					self.distances[i, j],
+					bins=bins,
+					density=True,
+				)
+				ax.plot(
+					bins[:-1] - self.mean_dists[i, j],
+					hist,
+					color="black",
+					alpha=alpha,
+				)
+		
+		ax.set_xlabel("Normalized Distances")
+		ax.set_ylabel("Density")
+
+		return ax
+
+
+		
+
