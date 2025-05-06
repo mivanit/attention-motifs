@@ -429,7 +429,7 @@ class DistanceTensorResult:
 	def get_closest_heads(
 		self, head: str, n_closest: int = 5
 	) -> list[tuple[str, float]]:
-		head_idx: int = self.prompt_values.index(head)
+		head_idx: int = self.cls_values.index(head)
 		dists: Float[np.ndarray, "h h"] = self.mean_dists[head_idx]
 
 		# sort by distance
