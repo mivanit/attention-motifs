@@ -6,7 +6,6 @@ from typing import Iterable
 import math
 from collections import defaultdict
 from statistics import median
-from typing import NamedTuple
 
 import numpy as np
 import polars as pl
@@ -407,6 +406,7 @@ def plot_importance_covariance(
 	plt.tight_layout()
 	plt.show()
 
+
 @dataclass
 class DistanceTensorResult:
 	"""Return object for `build_distance_tensor`."""
@@ -416,7 +416,7 @@ class DistanceTensorResult:
 	distances: Float[np.ndarray, "h h p"]
 
 	@property
-	def n_heads(self) -> int:		
+	def n_heads(self) -> int:
 		n: int = len(self.cls_values)
 		assert self.distances.shape[0] == n
 		assert self.distances.shape[1] == n
@@ -503,7 +503,9 @@ class DistanceTensorResult:
 		# optionally drop prompts with missing class rows
 		if not include_missing_prompts:
 			prompt_values = [
-				p for p in prompt_values if all((cls, p) in vectors for cls in cls_values)
+				p
+				for p in prompt_values
+				if all((cls, p) in vectors for cls in cls_values)
 			]
 
 		h: int = len(cls_values)
@@ -531,7 +533,7 @@ class DistanceTensorResult:
 			prompt_values=prompt_values,
 			distances=D,
 		)
-	
+
 	def save_means(self, path: Path) -> None:
 		with open(path, "w") as f:
 			json.dump(
@@ -546,11 +548,11 @@ class DistanceTensorResult:
 			)
 
 	def plot_hists(
-			self,
-			bins: int = 50,
-			alpha: float = 0.01,
-			n_samples: int|None = 128,
-		) -> plt.Axes:
+		self,
+		bins: int = 50,
+		alpha: float = 0.01,
+		n_samples: int | None = 128,
+	) -> plt.Axes:
 		max_dist: float = np.max(self.distances)
 		bins = np.linspace(0, max_dist, bins)
 		n_heads: int = self.n_heads
@@ -573,12 +575,8 @@ class DistanceTensorResult:
 					color="black",
 					alpha=alpha,
 				)
-		
+
 		ax.set_xlabel("Normalized Distances")
 		ax.set_ylabel("Density")
 
 		return ax
-
-
-		
-
