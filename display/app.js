@@ -1,5 +1,8 @@
 // Create Vue app
 const app = Vue.createApp({
+	// ==================================================
+	// CHUNK: App Data
+	// ==================================================
 	data() {
 		return {
 			title: 'Interactive 3D PCA Plot',
@@ -66,6 +69,9 @@ const app = Vue.createApp({
 	},
 
 	methods: {
+		// ==================================================
+		// CHUNK: data loading
+		// ==================================================
 		// Load PCA data and metadata
 		async loadData() {
 			loading.showLoading(this, 'Loading PCA data...', 'Requesting NPY file', true);
@@ -149,19 +155,17 @@ const app = Vue.createApp({
 			// Use the processData function from dataLoader.js
 			this.plotData = processData(this.pcaArray, this.dataFrame);
 			// Initialize with current axes selection
-			this.updatePlotCoordinates();
-		},
-
-		// Update x, y, z arrays based on current PCA axis selection
-		updatePlotCoordinates() {
-			// Use the updatePlotCoordinates function from dataLoader.js
 			updatePlotCoordinates(this.plotData, this.pcaAxes);
 		},
+
+		// ==================================================
+		// CHUNK: selection
+		// ==================================================
 
 		// Handle change of PCA axes
 		updatePlotAxes() {
 			logger.log('PCA axes changed', this.pcaAxes);
-			this.updatePlotCoordinates();
+			updatePlotCoordinates(this.plotData, this.pcaAxes);
 			this.updatePlot();
 		},
 
@@ -239,7 +243,10 @@ const app = Vue.createApp({
 				this.showSelectionDropdown = false;
 			}, 200);
 		},
-
+		
+		// ==================================================
+		// CHUNK: traces
+		// ==================================================
 		// Create traces grouped by categorical value (for initial view) - now using function from plotutil.js
 		createTracesByCategory() {
 			logger.log('Creating traces by category');
@@ -294,6 +301,11 @@ const app = Vue.createApp({
 			);
 		},
 
+
+		// ==================================================
+		// CHUNK: listeners
+		// ==================================================
+
 		// Setup event handlers for the plot
 		setupPlotEventHandlers() {
 			// Add click handler with proper binding
@@ -338,6 +350,10 @@ const app = Vue.createApp({
 			});
 		},
 
+		// ==================================================
+		// CHUNK: initPlot
+		// ==================================================
+
 		// Initialize the plot
 		initPlot() {
 			this.statusMessage = 'Creating plot...';
@@ -366,6 +382,10 @@ const app = Vue.createApp({
 
 			this.statusMessage = 'Plot ready - click points to select values, right-click to copy hover text';
 		},
+
+		// ==================================================
+		// CHUNK: handlePointClick
+		// ==================================================
 
 		// Handle point clicks
 		handlePointClick(data) {
@@ -439,6 +459,10 @@ const app = Vue.createApp({
 				}
 			}
 		},
+
+		// ==================================================
+		// CHUNK: update plot
+		// ==================================================
 
 		// Debounce the updatePlot call to prevent too frequent updates
 		debounceUpdatePlot() {
@@ -547,7 +571,11 @@ const app = Vue.createApp({
 			// Always update the plot
 			this.updatePlot();
 		},
+		
 
+		// ==================================================
+		// CHUNK: performance
+		// ==================================================
 		// Show performance information in console for debugging
 		logPerformanceInfo() {
 			logger.log('Performance Information:');
@@ -592,6 +620,9 @@ const app = Vue.createApp({
 		}
 	},
 
+	// ==================================================
+	// CHUNK: mounted
+	// ==================================================
 	mounted() {
 		// Load data when component is mounted
 		this.loadData();
