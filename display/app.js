@@ -61,53 +61,7 @@ const app = Vue.createApp({
 	computed: {
 		// Compute combined URL with all selected values
 		combinedUrl() {
-			if (!this.selectedValues.length) return this.baseUrl;
-
-			// Parse the base URL to handle existing parameters
-			const baseUrlObj = new URL(this.baseUrl, window.location.href);
-			const params = baseUrlObj.searchParams;
-
-			if (this.selectionColumn === 'activation.model' || this.selectionColumn === 'activation.cls') {
-				// Handle model:layer:head selections
-				// Group by model
-				const modelHeadMap = {};
-
-				this.selectedValues.forEach(val => {
-					// Parse the value which is in format "model:L#:H#"
-					const parts = val.split(':');
-					if (parts.length === 3) {
-						const model = parts[0];
-						const layer = parseInt(parts[1].replace('L', ''));
-						const head = parseInt(parts[2].replace('H', ''));
-
-						if (!modelHeadMap[model]) {
-							modelHeadMap[model] = [];
-						}
-
-						modelHeadMap[model].push(`L${layer}H${head}`);
-					}
-				});
-
-				// Add the selected models
-				const selectedModels = Object.keys(modelHeadMap);
-				if (selectedModels.length > 0) {
-					params.set('models', selectedModels.join('~'));
-
-					// Add head selections for each model
-					selectedModels.forEach(model => {
-						params.set(`heads-${model}`, modelHeadMap[model].join('~'));
-					});
-				}
-			} else if (this.selectionColumn === 'activation.prompt') {
-				// Handle prompt selections - no encoding needed as pattern-lens expects raw values
-				params.set('prompts', this.selectedValues.join('~'));
-			} else {
-				// Default behavior for other columns - use the column name without the prefix
-				const paramName = this.selectionColumn.split('.').pop();
-				params.set(paramName, this.selectedValues.join('~'));
-			}
-
-			return baseUrlObj.toString();
+			return computeCombinedUrl(this.baseUrl, this.selectedValues, this.selectionColumn);
 		}
 	},
 
@@ -228,11 +182,15 @@ const app = Vue.createApp({
 			this.showSelectionDropdown = false;
 		},
 
-		// Apply colorByColumn change
-		applyColorByColumn() {
-			if (!this.pendingColorByColumn) return;
+		// Unified function to apply column changes
+		applyColumnChange(columnType) {
+			const isPendingColor = columnType === 'color';
+			const currentColumn = isPendingColor ? this.colorByColumn : this.selectionColumn;
+			const pendingColumn = isPendingColor ? this.pendingColorByColumn : this.pendingSelectionColumn;
 
-			logger.log(`Changing color-by column: ${this.colorByColumn} → ${this.pendingColorByColumn}`);
+			if (!pendingColumn) return;
+
+			logger.log(`Changing ${columnType}-by column: ${currentColumn} → ${pendingColumn}`);
 
 			// Store current camera position before update
 			this.currentCameraPosition = this.getCurrentCameraPosition();
@@ -241,12 +199,17 @@ const app = Vue.createApp({
 			loading.showUpdating(this);
 
 			// Update the column and clear selection if needed
-			if (this.colorByColumn !== this.pendingColorByColumn) {
+			if (currentColumn !== pendingColumn) {
 				// Clear customdata cache when column changes
 				clearCustomdataCache();
 
-				this.colorByColumn = this.pendingColorByColumn;
-				this.selectedValues = []; // Clear selection when changing default color column
+				if (isPendingColor) {
+					this.colorByColumn = pendingColumn;
+				} else {
+					this.selectionColumn = pendingColumn;
+				}
+
+				this.selectedValues = []; // Clear selection when changing columns
 				this.updatePlot();
 			} else {
 				// Hide updating indicator if no change
@@ -254,30 +217,14 @@ const app = Vue.createApp({
 			}
 		},
 
+		// Apply colorByColumn change
+		applyColorByColumn() {
+			this.applyColumnChange('color');
+		},
+
 		// Apply selectionColumn change
 		applySelectionColumn() {
-			if (!this.pendingSelectionColumn) return;
-
-			logger.log(`Changing selection column: ${this.selectionColumn} → ${this.pendingSelectionColumn}`);
-
-			// Store current camera position before update
-			this.currentCameraPosition = this.getCurrentCameraPosition();
-
-			// Show plot updating indicator
-			loading.showUpdating(this);
-
-			// Update the column and clear selection
-			if (this.selectionColumn !== this.pendingSelectionColumn) {
-				// Clear customdata cache when column changes
-				clearCustomdataCache();
-
-				this.selectionColumn = this.pendingSelectionColumn;
-				this.selectedValues = []; // Clear selection when changing selection column
-				this.updatePlot();
-			} else {
-				// Hide updating indicator if no change
-				loading.hideUpdating(this);
-			}
+			this.applyColumnChange('selection');
 		},
 
 		// Hide dropdowns with delay to allow for click
@@ -337,83 +284,18 @@ const app = Vue.createApp({
 			);
 		},
 
-		// Copy hover data to clipboard
+		// Copy hover data to clipboard using the function from clipboard.js
 		copyHoverDataToClipboard() {
-			if (!this.lastHoverData) {
-				return; // Silent fail when no hover data instead of showing error message
-			}
-
-			try {
-				const textToCopy = this.formatHoverDataForClipboard(this.lastHoverData);
-				navigator.clipboard.writeText(textToCopy)
-					.then(() => {
-						this.statusMessage = 'Hover data copied to clipboard';
-					})
-					.catch(err => {
-						logger.error('Error copying to clipboard:', err);
-						this.statusMessage = 'Failed to copy hover data';
-					});
-			} catch (error) {
-				logger.error('Error formatting clipboard data:', error);
-				this.statusMessage = 'Error preparing hover data for clipboard';
-			}
-		},
-
-		// Format hover data for clipboard
-		formatHoverDataForClipboard(data) {
-			// Extract the hover text from data
-			if (!data || !data.points || data.points.length === 0) {
-				return 'No point data available';
-			}
-
-			const point = data.points[0];
-			const customData = point.customdata || [];
-
-			// Format the text in a clean way
-			let clipboardText = 'Point Info:\n';
-
-			// Add head (cls) and prompt if available
-			if (customData.length > 0) {
-				clipboardText += `head: ${customData[0]}\n`;
-			}
-			if (customData.length > 1) {
-				clipboardText += `prompt: ${customData[1]}\n`;
-			}
-
-			// Add coordinates
-			clipboardText += `coord: [${point.x.toFixed(2)}, ${point.y.toFixed(2)}, ${point.z.toFixed(2)}]\n`;
-
-			// Add any additional custom data if available
-			if (customData.length > 2) {
-				clipboardText += `${this.selectionColumn}: ${customData[2]}\n`;
-			}
-
-			return clipboardText;
-		},
-
-		// Initialize the plot
-		initPlot() {
-			this.statusMessage = 'Creating plot...';
-			logger.log('Initializing plot');
-
-			if (!this.plotData) {
-				logger.error("Plot data not available");
-				this.statusMessage = 'Error: Plot data not available';
-				return;
-			}
-
-			// Create initial traces by the selected categorical column
-			const traces = this.createTracesByCategory();
-
-			// Create the plot
-			logger.time('Initial plot render');
-			Plotly.newPlot(
-				this.$refs.plotContainer,
-				traces,
-				createPlotLayout(this.title, null, this.pcaAxes)
+			if (!this.lastHoverData) return;
+			copyHoverDataToClipboard(
+				this.lastHoverData,
+				this.selectionColumn,
+				(statusMsg) => { this.statusMessage = statusMsg; }
 			);
-			logger.timeEnd('Initial plot render');
+		},
 
+		// Setup event handlers for the plot
+		setupPlotEventHandlers() {
 			// Add click handler with proper binding
 			const boundHandlePointClick = this.handlePointClick.bind(this);
 			this.$refs.plotContainer.on('plotly_click', boundHandlePointClick);
@@ -454,6 +336,33 @@ const app = Vue.createApp({
 				// Update our stored camera position when user interacts with the plot
 				this.currentCameraPosition = this.getCurrentCameraPosition();
 			});
+		},
+
+		// Initialize the plot
+		initPlot() {
+			this.statusMessage = 'Creating plot...';
+			logger.log('Initializing plot');
+
+			if (!this.plotData) {
+				logger.error("Plot data not available");
+				this.statusMessage = 'Error: Plot data not available';
+				return;
+			}
+
+			// Create initial traces by the selected categorical column
+			const traces = this.createTracesByCategory();
+
+			// Create the plot
+			logger.time('Initial plot render');
+			Plotly.newPlot(
+				this.$refs.plotContainer,
+				traces,
+				createPlotLayout(this.title, null, this.pcaAxes)
+			);
+			logger.timeEnd('Initial plot render');
+
+			// Setup event handlers
+			this.setupPlotEventHandlers();
 
 			this.statusMessage = 'Plot ready - click points to select values, right-click to copy hover text';
 		},
@@ -576,45 +485,8 @@ const app = Vue.createApp({
 				);
 				logger.timeEnd('Plot Render');
 
-				// Add click handler again after plot is redrawn with proper binding
-				const boundHandlePointClick = this.handlePointClick.bind(this);
-				this.$refs.plotContainer.on('plotly_click', boundHandlePointClick);
-
-				// Re-add the hover event handler
-				this.$refs.plotContainer.on('plotly_hover', (hoverData) => {
-					this.lastHoverData = hoverData;
-				});
-
-				// Re-add mousedown event listener to detect right clicks
-				this.$refs.plotContainer.addEventListener('mousedown', (e) => {
-					if (e.button === 2) { // Right mouse button
-						this.isRightMouseDown = true;
-						// Only prevent default and copy if we have hover data (meaning we're over a point)
-						if (this.lastHoverData && this.lastHoverData.points && this.lastHoverData.points.length > 0) {
-							e.preventDefault();
-							this.copyHoverDataToClipboard();
-						}
-					}
-				});
-
-				// Re-add mouseup event listener to reset right click flag
-				this.$refs.plotContainer.addEventListener('mouseup', (e) => {
-					if (e.button === 2) { // Right mouse button
-						this.isRightMouseDown = false;
-					}
-				});
-
-				// Re-add contextmenu event listener to prevent default context menu only when over points
-				this.$refs.plotContainer.addEventListener('contextmenu', (e) => {
-					if (this.lastHoverData && this.lastHoverData.points && this.lastHoverData.points.length > 0) {
-						e.preventDefault(); // Only prevent context menu if over a point
-					}
-				});
-
-				// Re-add the relayout event handler
-				this.$refs.plotContainer.on('plotly_relayout', (eventData) => {
-					this.currentCameraPosition = this.getCurrentCameraPosition();
-				});
+				// Setup event handlers again
+				this.setupPlotEventHandlers();
 
 				// Hide updating indicators
 				loading.hideUpdating(this);

@@ -1,20 +1,22 @@
 # Stats
-- 9 files
-- 2575 (2.6K) lines
-- 72316 (72K) chars
-- 27092 (27K) `gpt2` tokens
+- 11 files
+- 2511 (2.5K) lines
+- 69803 (70K) chars
+- 26176 (26K) `gpt2` tokens
 
 # File Tree
 
 ```
 display              
-├── app.js           [740L 25,099C 8,918T]
+├── app.js           [612L 20,418C 7,176T]
 ├── array.js         [370L  9,746C 3,781T]
+├── clipboard.js     [ 32L  1,095C   391T]
 ├── colorutil.js     [ 60L  1,600C   675T]
 ├── dataframe.js     [211L  5,212C 1,982T]
 ├── dataloader.js    [ 98L  3,159C 1,181T]
-├── embeddings.html  [164L  7,146C 3,074T]
+├── embeddings.html  [162L  7,073C 3,066T]
 ├── logger.js        [102L  1,798C   633T]
+├── pl-interface.js  [ 26L    914C   330T]
 ├── plotutil.js      [351L 10,951C 3,510T]
 └── style.css        [435L  6,555C 2,786T]
 ```
@@ -85,53 +87,7 @@ const app = Vue.createApp({
 	computed: {
 		// Compute combined URL with all selected values
 		combinedUrl() {
-			if (!this.selectedValues.length) return this.baseUrl;
-
-			// Parse the base URL to handle existing parameters
-			const baseUrlObj = new URL(this.baseUrl, window.location.href);
-			const params = baseUrlObj.searchParams;
-
-			if (this.selectionColumn === 'activation.model' || this.selectionColumn === 'activation.cls') {
-				// Handle model:layer:head selections
-				// Group by model
-				const modelHeadMap = {};
-
-				this.selectedValues.forEach(val => {
-					// Parse the value which is in format "model:L#:H#"
-					const parts = val.split(':');
-					if (parts.length === 3) {
-						const model = parts[0];
-						const layer = parseInt(parts[1].replace('L', ''));
-						const head = parseInt(parts[2].replace('H', ''));
-
-						if (!modelHeadMap[model]) {
-							modelHeadMap[model] = [];
-						}
-
-						modelHeadMap[model].push(`L${layer}H${head}`);
-					}
-				});
-
-				// Add the selected models
-				const selectedModels = Object.keys(modelHeadMap);
-				if (selectedModels.length > 0) {
-					params.set('models', selectedModels.join('~'));
-
-					// Add head selections for each model
-					selectedModels.forEach(model => {
-						params.set(`heads-${model}`, modelHeadMap[model].join('~'));
-					});
-				}
-			} else if (this.selectionColumn === 'activation.prompt') {
-				// Handle prompt selections - no encoding needed as pattern-lens expects raw values
-				params.set('prompts', this.selectedValues.join('~'));
-			} else {
-				// Default behavior for other columns - use the column name without the prefix
-				const paramName = this.selectionColumn.split('.').pop();
-				params.set(paramName, this.selectedValues.join('~'));
-			}
-
-			return baseUrlObj.toString();
+			return computeCombinedUrl(this.baseUrl, this.selectedValues, this.selectionColumn);
 		}
 	},
 
@@ -252,11 +208,15 @@ const app = Vue.createApp({
 			this.showSelectionDropdown = false;
 		},
 
-		// Apply colorByColumn change
-		applyColorByColumn() {
-			if (!this.pendingColorByColumn) return;
+		// Unified function to apply column changes
+		applyColumnChange(columnType) {
+			const isPendingColor = columnType === 'color';
+			const currentColumn = isPendingColor ? this.colorByColumn : this.selectionColumn;
+			const pendingColumn = isPendingColor ? this.pendingColorByColumn : this.pendingSelectionColumn;
 
-			logger.log(`Changing color-by column: ${this.colorByColumn} → ${this.pendingColorByColumn}`);
+			if (!pendingColumn) return;
+
+			logger.log(`Changing ${columnType}-by column: ${currentColumn} → ${pendingColumn}`);
 
 			// Store current camera position before update
 			this.currentCameraPosition = this.getCurrentCameraPosition();
@@ -265,12 +225,17 @@ const app = Vue.createApp({
 			loading.showUpdating(this);
 
 			// Update the column and clear selection if needed
-			if (this.colorByColumn !== this.pendingColorByColumn) {
+			if (currentColumn !== pendingColumn) {
 				// Clear customdata cache when column changes
 				clearCustomdataCache();
 
-				this.colorByColumn = this.pendingColorByColumn;
-				this.selectedValues = []; // Clear selection when changing default color column
+				if (isPendingColor) {
+					this.colorByColumn = pendingColumn;
+				} else {
+					this.selectionColumn = pendingColumn;
+				}
+
+				this.selectedValues = []; // Clear selection when changing columns
 				this.updatePlot();
 			} else {
 				// Hide updating indicator if no change
@@ -278,30 +243,14 @@ const app = Vue.createApp({
 			}
 		},
 
+		// Apply colorByColumn change
+		applyColorByColumn() {
+			this.applyColumnChange('color');
+		},
+
 		// Apply selectionColumn change
 		applySelectionColumn() {
-			if (!this.pendingSelectionColumn) return;
-
-			logger.log(`Changing selection column: ${this.selectionColumn} → ${this.pendingSelectionColumn}`);
-
-			// Store current camera position before update
-			this.currentCameraPosition = this.getCurrentCameraPosition();
-
-			// Show plot updating indicator
-			loading.showUpdating(this);
-
-			// Update the column and clear selection
-			if (this.selectionColumn !== this.pendingSelectionColumn) {
-				// Clear customdata cache when column changes
-				clearCustomdataCache();
-
-				this.selectionColumn = this.pendingSelectionColumn;
-				this.selectedValues = []; // Clear selection when changing selection column
-				this.updatePlot();
-			} else {
-				// Hide updating indicator if no change
-				loading.hideUpdating(this);
-			}
+			this.applyColumnChange('selection');
 		},
 
 		// Hide dropdowns with delay to allow for click
@@ -361,83 +310,18 @@ const app = Vue.createApp({
 			);
 		},
 
-		// Copy hover data to clipboard
+		// Copy hover data to clipboard using the function from clipboard.js
 		copyHoverDataToClipboard() {
-			if (!this.lastHoverData) {
-				return; // Silent fail when no hover data instead of showing error message
-			}
-
-			try {
-				const textToCopy = this.formatHoverDataForClipboard(this.lastHoverData);
-				navigator.clipboard.writeText(textToCopy)
-					.then(() => {
-						this.statusMessage = 'Hover data copied to clipboard';
-					})
-					.catch(err => {
-						logger.error('Error copying to clipboard:', err);
-						this.statusMessage = 'Failed to copy hover data';
-					});
-			} catch (error) {
-				logger.error('Error formatting clipboard data:', error);
-				this.statusMessage = 'Error preparing hover data for clipboard';
-			}
-		},
-
-		// Format hover data for clipboard
-		formatHoverDataForClipboard(data) {
-			// Extract the hover text from data
-			if (!data || !data.points || data.points.length === 0) {
-				return 'No point data available';
-			}
-
-			const point = data.points[0];
-			const customData = point.customdata || [];
-
-			// Format the text in a clean way
-			let clipboardText = 'Point Info:\n';
-
-			// Add head (cls) and prompt if available
-			if (customData.length > 0) {
-				clipboardText += `head: ${customData[0]}\n`;
-			}
-			if (customData.length > 1) {
-				clipboardText += `prompt: ${customData[1]}\n`;
-			}
-
-			// Add coordinates
-			clipboardText += `coord: [${point.x.toFixed(2)}, ${point.y.toFixed(2)}, ${point.z.toFixed(2)}]\n`;
-
-			// Add any additional custom data if available
-			if (customData.length > 2) {
-				clipboardText += `${this.selectionColumn}: ${customData[2]}\n`;
-			}
-
-			return clipboardText;
-		},
-
-		// Initialize the plot
-		initPlot() {
-			this.statusMessage = 'Creating plot...';
-			logger.log('Initializing plot');
-
-			if (!this.plotData) {
-				logger.error("Plot data not available");
-				this.statusMessage = 'Error: Plot data not available';
-				return;
-			}
-
-			// Create initial traces by the selected categorical column
-			const traces = this.createTracesByCategory();
-
-			// Create the plot
-			logger.time('Initial plot render');
-			Plotly.newPlot(
-				this.$refs.plotContainer,
-				traces,
-				createPlotLayout(this.title, null, this.pcaAxes)
+			if (!this.lastHoverData) return;
+			copyHoverDataToClipboard(
+				this.lastHoverData,
+				this.selectionColumn,
+				(statusMsg) => { this.statusMessage = statusMsg; }
 			);
-			logger.timeEnd('Initial plot render');
+		},
 
+		// Setup event handlers for the plot
+		setupPlotEventHandlers() {
 			// Add click handler with proper binding
 			const boundHandlePointClick = this.handlePointClick.bind(this);
 			this.$refs.plotContainer.on('plotly_click', boundHandlePointClick);
@@ -478,6 +362,33 @@ const app = Vue.createApp({
 				// Update our stored camera position when user interacts with the plot
 				this.currentCameraPosition = this.getCurrentCameraPosition();
 			});
+		},
+
+		// Initialize the plot
+		initPlot() {
+			this.statusMessage = 'Creating plot...';
+			logger.log('Initializing plot');
+
+			if (!this.plotData) {
+				logger.error("Plot data not available");
+				this.statusMessage = 'Error: Plot data not available';
+				return;
+			}
+
+			// Create initial traces by the selected categorical column
+			const traces = this.createTracesByCategory();
+
+			// Create the plot
+			logger.time('Initial plot render');
+			Plotly.newPlot(
+				this.$refs.plotContainer,
+				traces,
+				createPlotLayout(this.title, null, this.pcaAxes)
+			);
+			logger.timeEnd('Initial plot render');
+
+			// Setup event handlers
+			this.setupPlotEventHandlers();
 
 			this.statusMessage = 'Plot ready - click points to select values, right-click to copy hover text';
 		},
@@ -600,45 +511,8 @@ const app = Vue.createApp({
 				);
 				logger.timeEnd('Plot Render');
 
-				// Add click handler again after plot is redrawn with proper binding
-				const boundHandlePointClick = this.handlePointClick.bind(this);
-				this.$refs.plotContainer.on('plotly_click', boundHandlePointClick);
-
-				// Re-add the hover event handler
-				this.$refs.plotContainer.on('plotly_hover', (hoverData) => {
-					this.lastHoverData = hoverData;
-				});
-
-				// Re-add mousedown event listener to detect right clicks
-				this.$refs.plotContainer.addEventListener('mousedown', (e) => {
-					if (e.button === 2) { // Right mouse button
-						this.isRightMouseDown = true;
-						// Only prevent default and copy if we have hover data (meaning we're over a point)
-						if (this.lastHoverData && this.lastHoverData.points && this.lastHoverData.points.length > 0) {
-							e.preventDefault();
-							this.copyHoverDataToClipboard();
-						}
-					}
-				});
-
-				// Re-add mouseup event listener to reset right click flag
-				this.$refs.plotContainer.addEventListener('mouseup', (e) => {
-					if (e.button === 2) { // Right mouse button
-						this.isRightMouseDown = false;
-					}
-				});
-
-				// Re-add contextmenu event listener to prevent default context menu only when over points
-				this.$refs.plotContainer.addEventListener('contextmenu', (e) => {
-					if (this.lastHoverData && this.lastHoverData.points && this.lastHoverData.points.length > 0) {
-						e.preventDefault(); // Only prevent context menu if over a point
-					}
-				});
-
-				// Re-add the relayout event handler
-				this.$refs.plotContainer.on('plotly_relayout', (eventData) => {
-					this.currentCameraPosition = this.getCurrentCameraPosition();
-				});
+				// Setup event handlers again
+				this.setupPlotEventHandlers();
 
 				// Hide updating indicators
 				loading.hideUpdating(this);
@@ -1137,6 +1011,41 @@ class NDArray {
 }
 ``````{ end_of_file="array.js" }
 
+``````{ path="clipboard.js"  }
+function formatHoverDataForClipboard(hoverData, selectionColumn) {
+	// Extract the hover text from data
+	if (!hoverData?.points?.length) return 'No point data available';
+	const point = hoverData.points[0];
+	const customData = point.customdata ?? [];
+	// Format the text in a clean way
+	let text = 'Point Info:\n';
+	if (customData.length > 0) text += `head: ${customData[0]}\n`;
+	if (customData.length > 1) text += `prompt: ${customData[1]}\n`;
+	// Add coordinates
+	text += `coord: [${point.x.toFixed(2)}, ${point.y.toFixed(2)}, ${point.z.toFixed(2)}]\n`;
+	if (customData.length > 2) text += `${selectionColumn}: ${customData[2]}\n`;
+	return text;
+}
+
+function copyHoverDataToClipboard(
+	hoverData,
+	selectionColumn,
+	cb = () => { },
+) {
+	if (!hoverData) return;
+	try {
+		const txt = formatHoverDataForClipboard(hoverData, selectionColumn);
+		navigator.clipboard.writeText(txt).then(
+			() => cb('Hover data copied to clipboard'),
+			err => { console.error(err); cb('Failed to copy hover data'); }
+		);
+	} catch (err) {
+		console.error(err);
+		cb('Error preparing hover data for clipboard');
+	}
+}
+``````{ end_of_file="clipboard.js" }
+
 ``````{ path="colorutil.js"  }
 /**
  * Converts HSL color values to hexadecimal color representation
@@ -1526,21 +1435,19 @@ function findCategoricalColumns(dataFrame) {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
   <!-- Load Plotly.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.2/plotly.min.js"></script>
+  <!-- Load utilities -->
   <script src="array.js"></script>
-  <!-- implements `DataFrame` -->
   <script src="dataframe.js"></script>
-  <!-- Load color utilities -->
   <script src="colorutil.js"></script>
-  <!-- Load logger and loading bar utils -->
   <script src="logger.js"></script>
-  <!-- Load plotting utilities -->
   <script src="plotutil.js"></script>
-  <!-- Load data loading utilities -->
   <script src="dataloader.js"></script>
+  <script src="clipboard.js"></script>
+  <script src="pl-interface.js"></script>
+  <!-- load main app -->
+  <script src="app.js"></script>
   <!-- Load styles -->
   <link rel="stylesheet" href="style.css">
-  <!-- load app -->
-  <script src="app.js"></script>
 </head>
 
 <body>
@@ -1787,6 +1694,35 @@ const loading = {
 	}
 };
 ``````{ end_of_file="logger.js" }
+
+``````{ path="pl-interface.js"  }
+function computeCombinedUrl(baseUrl, selectedValues, selectionColumn) {
+	if (!selectedValues?.length) return baseUrl;
+
+	const baseUrlObj = new URL(baseUrl, window.location.href);
+	const params = baseUrlObj.searchParams;
+
+	if (selectionColumn === 'activation.model' || selectionColumn === 'activation.cls') {
+		const modelHeadMap = {};
+		selectedValues.forEach(v => {
+			const [model, l, h] = v.split(':');
+			if (!model || !l || !h) return;
+			(modelHeadMap[model] ??= []).push(`${l}${h}`);
+		});
+		const models = Object.keys(modelHeadMap);
+		if (models.length) {
+			params.set('models', models.join('~'));
+			models.forEach(m => params.set(`heads-${m}`, modelHeadMap[m].join('~')));
+		}
+	} else if (selectionColumn === 'activation.prompt') {
+		params.set('prompts', selectedValues.join('~'));
+	} else {
+		params.set(selectionColumn.split('.').pop(), selectedValues.join('~'));
+	}
+
+	return baseUrlObj.toString();
+}
+``````{ end_of_file="pl-interface.js" }
 
 ``````{ path="plotutil.js"  }
 /**
