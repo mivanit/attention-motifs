@@ -1,4 +1,7 @@
-body {
+/* ==================================================
+   CHUNK: Base Styles
+   ================================================== */
+   body {
 	font-family: Arial, sans-serif;
 	margin: 0;
 	padding: 20px;
@@ -12,24 +15,7 @@ h1 {
 	margin-bottom: 20px;
 }
 
-.controls {
-	display: flex;
-	justify-content: space-between;
-	margin-bottom: 15px;
-	align-items: center;
-}
-
-.control-group {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-}
-
-.status-message {
-	color: #666;
-	font-style: italic;
-}
-
+/* Base button styles */
 button {
 	padding: 8px 16px;
 	background-color: #4CAF50;
@@ -51,6 +37,63 @@ button.secondary:hover {
 	background-color: #0b7dda;
 }
 
+.apply-button {
+	padding: 6px 12px;
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 14px;
+}
+
+.apply-button:hover {
+	background-color: #45a049;
+}
+
+/* Form controls */
+select,
+input {
+	padding: 8px;
+	border-radius: 4px;
+	border: 1px solid #ddd;
+}
+
+input[type="range"] {
+	flex: 1;
+}
+
+input[type="color"] {
+	width: 40px;
+	height: 25px;
+}
+
+input[type="number"] {
+	width: 60px;
+	text-align: center;
+}
+
+/* ==================================================
+   CHUNK: Layout Components
+   ================================================== */
+.controls {
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 15px;
+	align-items: center;
+}
+
+.control-group {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.status-message {
+	color: #666;
+	font-style: italic;
+}
+
 .plot-container {
 	height: 600px;
 	width: 100%;
@@ -58,6 +101,111 @@ button.secondary:hover {
 	position: relative;
 }
 
+.control-row {
+	display: flex;
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+.control-label {
+	width: 80px;
+	flex-shrink: 0;
+}
+
+.control-input {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+/* ==================================================
+   CHUNK: Dropdown and Selection Controls
+   ================================================== */
+.combo-select {
+	position: relative;
+	display: inline-block;
+}
+
+.combo-select input {
+	width: 150px;
+}
+
+.combo-select .dropdown {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	background: white;
+	border: 1px solid #ddd;
+	border-top: none;
+	z-index: 10;
+	max-height: 200px;
+	overflow-y: auto;
+}
+
+.combo-select .dropdown-item {
+	padding: 8px;
+	cursor: pointer;
+}
+
+.combo-select .dropdown-item:hover {
+	background-color: #f1f1f1;
+}
+
+/* Column selection controls */
+.column-controls {
+	display: flex;
+	gap: 15px;
+	flex-wrap: wrap;
+}
+
+.column-control {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.column-control label {
+	font-weight: bold;
+	white-space: nowrap;
+}
+
+.column-control .combo-select {
+	min-width: 160px;
+}
+
+/* Axis controls */
+.axis-controls {
+	display: flex;
+	justify-content: center;
+	gap: 20px;
+	margin-bottom: 15px;
+	background-color: #f5f5f5;
+	padding: 10px;
+	border-radius: 4px;
+}
+
+.axis-control {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.axis-control label {
+	font-weight: bold;
+}
+
+.axis-control select {
+	min-width: 80px;
+	padding: 5px;
+	border-radius: 4px;
+	border: 1px solid #ddd;
+}
+
+/* ==================================================
+   CHUNK: Selected Values Display
+   ================================================== */
 .selection-display {
 	margin: 10px 0;
 	padding: 10px;
@@ -97,7 +245,12 @@ button.secondary:hover {
 	visibility: visible;
 }
 
-.config-display {
+/* ==================================================
+   CHUNK: Configuration Panels
+   ================================================== */
+/* Common configuration panel styles */
+.config-display,
+.config-panel {
 	margin-top: 20px;
 	border: 1px solid #ddd;
 	border-radius: 4px;
@@ -140,38 +293,6 @@ button.secondary:hover {
 	border-bottom: 1px solid #eee;
 }
 
-.control-row {
-	display: flex;
-	align-items: center;
-	margin-bottom: 12px;
-}
-
-.control-label {
-	width: 80px;
-	flex-shrink: 0;
-}
-
-.control-input {
-	flex: 1;
-	display: flex;
-	align-items: center;
-	gap: 10px;
-}
-
-input[type="range"] {
-	flex: 1;
-}
-
-input[type="color"] {
-	width: 40px;
-	height: 25px;
-}
-
-input[type="number"] {
-	width: 60px;
-	text-align: center;
-}
-
 .collapse-icon {
 	transition: transform 0.3s;
 }
@@ -180,44 +301,26 @@ input[type="number"] {
 	transform: rotate(-90deg);
 }
 
-select,
-input {
-	padding: 8px;
-	border-radius: 4px;
-	border: 1px solid #ddd;
+/* Data Configuration Panel specific styles */
+.config-panel {
+	margin-bottom: 20px;
 }
 
-.combo-select {
-	position: relative;
-	display: inline-block;
+.config-panel .control-label {
+	width: 120px;
 }
 
-.combo-select input {
-	width: 150px;
+.config-panel .control-input input[type="text"] {
+	width: 100%;
 }
 
-.combo-select .dropdown {
-	position: absolute;
-	top: 100%;
-	left: 0;
-	right: 0;
-	background: white;
-	border: 1px solid #ddd;
-	border-top: none;
-	z-index: 10;
-	max-height: 200px;
-	overflow-y: auto;
+.config-panel .apply-button {
+	margin-top: 10px;
 }
 
-.combo-select .dropdown-item {
-	padding: 8px;
-	cursor: pointer;
-}
-
-.combo-select .dropdown-item:hover {
-	background-color: #f1f1f1;
-}
-
+/* ==================================================
+   CHUNK: URL Section
+   ================================================== */
 .url-section {
 	margin-top: 20px;
 	padding: 15px;
@@ -245,6 +348,9 @@ input {
 	text-decoration: underline;
 }
 
+/* ==================================================
+   CHUNK: Loading and Progress Indicators
+   ================================================== */
 @keyframes spin {
 	0% {
 		transform: rotate(0deg);
@@ -255,45 +361,23 @@ input {
 	}
 }
 
-.axis-controls {
-	display: flex;
-	justify-content: center;
-	gap: 20px;
-	margin-bottom: 15px;
-	background-color: #f5f5f5;
-	padding: 10px;
-	border-radius: 4px;
-}
-
-.axis-control {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
-.axis-control label {
-	font-weight: bold;
-}
-
-.axis-control select {
-	min-width: 80px;
-	padding: 5px;
-	border-radius: 4px;
-	border: 1px solid #ddd;
-}
-
+/* Main loading overlay */
 .loading-overlay {
 	position: absolute;
 	top: 0;
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background-color: rgba(255, 255, 255, 0.8);
+	background-color: rgba(255, 255, 255, 0.9);
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
 	align-items: center;
 	z-index: 10;
+	padding: 20px;
+	border-radius: 8px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+	max-width: 80%;
 }
 
 .loading-spinner {
@@ -306,112 +390,7 @@ input {
 	margin-bottom: 15px;
 }
 
-.loading-progress {
-	width: 250px;
-	background-color: #f1f1f1;
-	border-radius: 4px;
-	margin: 10px 0;
-}
-
-.loading-progress-bar {
-	height: 10px;
-	border-radius: 4px;
-	background-color: #3498db;
-}
-
-.processing-indicator {
-	position: absolute;
-	bottom: 20px;
-	right: 20px;
-	background-color: rgba(255, 255, 255, 0.8);
-	padding: 10px;
-	border-radius: 4px;
-	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	z-index: 5;
-}
-
-.mini-spinner {
-	border: 3px solid rgba(0, 0, 0, 0.1);
-	border-radius: 50%;
-	border-top: 3px solid #3498db;
-	width: 20px;
-	height: 20px;
-	animation: spin 1s linear infinite;
-}
-
-/* Add these styles to style.css */
-
-/* Column selection controls */
-.column-controls {
-	display: flex;
-	gap: 15px;
-	flex-wrap: wrap;
-}
-
-.column-control {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
-.column-control label {
-	font-weight: bold;
-	white-space: nowrap;
-}
-
-.column-control .combo-select {
-	min-width: 160px;
-}
-
-.apply-button {
-	padding: 6px 12px;
-	background-color: #4CAF50;
-	color: white;
-	border: none;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 14px;
-}
-
-.apply-button:hover {
-	background-color: #45a049;
-}
-
-/* Enhanced loading indicators */
-.loading-progress-percentage {
-	margin-left: 8px;
-	font-size: 14px;
-	color: #3498db;
-}
-
-.updating-indicator {
-	position: absolute;
-	top: 20px;
-	right: 20px;
-	background-color: rgba(255, 255, 255, 0.9);
-	padding: 10px;
-	border-radius: 4px;
-	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	z-index: 5;
-	border-left: 4px solid #3498db;
-}
-
-/* Make the loading overlay more visible */
-.loading-overlay {
-	background-color: rgba(255, 255, 255, 0.9);
-	padding: 20px;
-	border-radius: 8px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-	max-width: 80%;
-}
-
-/* Enhance loading progress bar */
+/* Progress bar */
 .loading-progress {
 	width: 300px;
 	background-color: #f1f1f1;
@@ -428,81 +407,50 @@ input {
 	transition: width 0.3s ease;
 }
 
-/* Enhance the processing indicator */
+.loading-progress-percentage {
+	margin-left: 8px;
+	font-size: 14px;
+	color: #3498db;
+}
+
+/* Processing indicator */
 .processing-indicator {
+	position: absolute;
+	bottom: 20px;
+	right: 20px;
 	background-color: rgba(255, 255, 255, 0.9);
+	padding: 10px;
+	border-radius: 4px;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	z-index: 5;
 	border-left: 4px solid #f39c12;
 }
 
-/* Data Configuration Panel */
-.config-panel {
-	margin-top: 20px;
-	margin-bottom: 20px;
-	border: 1px solid #ddd;
+/* Updating indicator */
+.updating-indicator {
+	position: absolute;
+	top: 20px;
+	right: 20px;
+	background-color: rgba(255, 255, 255, 0.9);
+	padding: 10px;
 	border-radius: 4px;
-	overflow: hidden;
-}
-
-.config-panel .config-header {
-	background-color: #f1f1f1;
-	padding: 10px 15px;
-	cursor: pointer;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-}
-
-.config-panel .config-header h3 {
-	margin: 0;
-	font-size: 16px;
-}
-
-.config-panel .config-content {
-	padding: 15px;
-}
-
-.config-panel .config-section {
-	border: 1px solid #ddd;
-	border-radius: 4px;
-	padding: 15px;
-}
-
-.config-panel .config-section h4 {
-	margin-top: 0;
-	margin-bottom: 15px;
-	padding-bottom: 8px;
-	border-bottom: 1px solid #eee;
-}
-
-.config-panel .control-row {
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 	display: flex;
 	align-items: center;
-	margin-bottom: 12px;
+	gap: 10px;
+	z-index: 5;
+	border-left: 4px solid #3498db;
 }
 
-.config-panel .control-label {
-	width: 120px;
-	flex-shrink: 0;
+/* Mini spinner for indicators */
+.mini-spinner {
+	border: 3px solid rgba(0, 0, 0, 0.1);
+	border-radius: 50%;
+	border-top: 3px solid #3498db;
+	width: 20px;
+	height: 20px;
+	animation: spin 1s linear infinite;
 }
-
-.config-panel .control-input {
-	flex: 1;
-}
-
-.config-panel .control-input input[type="text"] {
-	width: 100%;
-}
-
-.config-panel .apply-button {
-	padding: 8px 16px;
-	background-color: #4CAF50;
-	color: white;
-	border: none;
-	border-radius: 4px;
-	cursor: pointer;
-	margin-top: 10px;
-}
-
-.config-panel .apply-button:hover {
-	background-color: #45a049;
-}	
