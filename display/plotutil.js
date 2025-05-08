@@ -3,15 +3,16 @@
  * @param {string} title - Title of the plot
  * @param {Object|null} cameraPosition - Optional camera position to preserve
  * @param {Object} axes - Object with x, y, z indices of PCA components to use
+ * @param {Object|null} axisLabels - Optional object with labels for each axis
  * @returns {Object} Layout configuration object for Plotly
  */
-function createPlotLayout(title, cameraPosition = null, axes = { x: 0, y: 1, z: 2 }) {
+function createPlotLayout(title, cameraPosition = null, axes = { x: 0, y: 1, z: 2 }, axisLabels = null) {
 	const layout = {
 		title: title,
 		scene: {
-			xaxis: { title: `PC${axes.x}` },
-			yaxis: { title: `PC${axes.y}` },
-			zaxis: { title: `PC${axes.z}` },
+			xaxis: { title: axisLabels ? axisLabels.x : `PC${axes.x}` },
+			yaxis: { title: axisLabels ? axisLabels.y : `PC${axes.y}` },
+			zaxis: { title: axisLabels ? axisLabels.z : `PC${axes.z}` },
 			camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
 		},
 		margin: { l: 0, r: 0, b: 0, t: 50 },
@@ -274,7 +275,7 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 		selectedOpacity = 1.0,
 		nonSelectedOpacity = 0.4,
 		nonSelectedColor = '#969696',
-		getSelectionColor = (index) => ['#ff7f0e', '#2ca02c', '#d62728'][index % 3],
+		getSelectionColor = (index) => ['#ff7f0e', '#2ca02c', '#d62728'][index % 3], // Default if not provided
 		colorByColumn = selectedColumn, // Default to selectedColumn if not provided
 		useCache = true
 	} = options || {};
@@ -324,12 +325,17 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 	}
 
 	// Add a trace for each selected value
-	Object.keys(selectedIndices).forEach((value, index) => {
+	const selectedValuesArray = Object.keys(selectedIndices);
+	selectedValuesArray.forEach((value, index) => {
 		const indices = selectedIndices[value];
 		console.log(`Creating trace for selected value "${value}" with ${indices.length} points...`);
 
 		// Get customdata with caching for better performance
 		const customdata = getCustomdata(plotData, indices, selectedColumn, useCache);
+
+		// Use the getSelectionColor function passed as an option
+		const colorIndex = selectedValues.indexOf(value);
+		const color = getSelectionColor(colorIndex);
 
 		traces.push({
 			...defaultTraceConfig,
@@ -339,7 +345,7 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 			name: `Selected: ${value}`,
 			marker: {
 				size: selectedSize,
-				color: getSelectionColor(index),
+				color: color,
 				opacity: selectedOpacity
 			},
 			customdata: customdata

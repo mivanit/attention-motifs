@@ -70,12 +70,20 @@ function processData(pcaArray, dataFrame) {
  * Update x, y, z arrays in plotData based on PCA axis selection
  * @param {Object} plotData - The plot data object 
  * @param {Object} pcaAxes - The selected PCA axes {x, y, z}
+ * @param {Array<string>} pcaColumnNames - Array of PCA column names
  */
-function updatePlotCoordinates(plotData, pcaAxes) {
-    // Set x, y, z from the selected PCA components
-    plotData.x = plotData.pcaComponents[pcaAxes.x];
-    plotData.y = plotData.pcaComponents[pcaAxes.y];
-    plotData.z = plotData.pcaComponents[pcaAxes.z];
+function updatePlotCoordinates(plotData, pcaAxes, pcaColumnNames = null) {
+    if (pcaColumnNames && pcaColumnNames.length > 0) {
+        // Set x, y, z from the actual columns in the data
+        plotData.x = plotData[pcaColumnNames[pcaAxes.x]];
+        plotData.y = plotData[pcaColumnNames[pcaAxes.y]];
+        plotData.z = plotData[pcaColumnNames[pcaAxes.z]];
+    } else {
+        // Fall back to using pcaComponents
+        plotData.x = plotData.pcaComponents[pcaAxes.x];
+        plotData.y = plotData.pcaComponents[pcaAxes.y];
+        plotData.z = plotData.pcaComponents[pcaAxes.z];
+    }
 }
 
 /**
@@ -96,10 +104,6 @@ function findCategoricalColumns(dataFrame) {
     //     }
     // });
 }
-
-/**
- * Functions for loading and processing data for the PCA visualization
- */
 
 /**
  * Load data from a JSONL file and process it
@@ -127,7 +131,9 @@ async function loadJsonlData(config, updateProgressCallback = () => { }) {
 
     // Extract numerical columns (PCA components) based on prefix
     logger.time('Extract PCA Components');
-    const pcaArray = extractPcaComponents(dataFrame, numericalPrefix);
+    const pcaColumnNames = dataFrame.columns.filter(col => col.startsWith(numericalPrefix)).sort();
+    logger.log('Found PCA columns:', pcaColumnNames);
+    const pcaArray = extractPcaComponents(dataFrame, numericalPrefix, pcaColumnNames);
     logger.timeEnd('Extract PCA Components');
 
     // Update progress to 70%
@@ -135,7 +141,7 @@ async function loadJsonlData(config, updateProgressCallback = () => { }) {
 
     // Process data
     logger.time('Process Data');
-    const plotData = processDataFromDataFrame(dataFrame, pcaArray);
+    const plotData = processDataFromDataFrame(dataFrame, pcaArray, { x: 0, y: 1, z: 2 }, pcaColumnNames);
     logger.timeEnd('Process Data');
 
     // Update progress to 90%
@@ -149,7 +155,8 @@ async function loadJsonlData(config, updateProgressCallback = () => { }) {
         dataFrame,
         pcaArray,
         plotData,
-        availableColumns
+        availableColumns,
+        pcaColumnNames
     };
 }
 
@@ -157,14 +164,15 @@ async function loadJsonlData(config, updateProgressCallback = () => { }) {
  * Extract PCA components from the DataFrame based on the numerical prefix
  * @param {DataFrame} dataFrame - The DataFrame containing the data
  * @param {string} numericalPrefix - Prefix for numerical columns
+ * @param {Array<string>} pcaColumnNames - Optional array of PCA column names
  * @returns {Object} PCA array-like object
  */
-function extractPcaComponents(dataFrame, numericalPrefix) {
-    const numericalColumns = dataFrame.columns.filter(col =>
-        col.startsWith(numericalPrefix)
-    ).sort();
+function extractPcaComponents(dataFrame, numericalPrefix, pcaColumnNames = null) {
+    // Use provided column names or find them
+    const numericalColumns = pcaColumnNames ||
+        dataFrame.columns.filter(col => col.startsWith(numericalPrefix)).sort();
 
-    logger.log('Found numerical columns:', numericalColumns);
+    logger.log('Using numerical columns:', numericalColumns);
 
     if (numericalColumns.length === 0) {
         throw new Error(`No numerical columns found with prefix "${numericalPrefix}"`);
@@ -230,9 +238,10 @@ function findAvailableColumns(dataFrame, numericalPrefix) {
  * @param {DataFrame} dataFrame - The DataFrame containing the data
  * @param {Object} pcaArray - The PCA array-like object
  * @param {Object} pcaAxes - Optional axes selection {x, y, z}
+ * @param {Array<string>} pcaColumnNames - Optional array of PCA column names
  * @returns {Object} The processed plot data
  */
-function processDataFromDataFrame(dataFrame, pcaArray, pcaAxes = { x: 0, y: 1, z: 2 }) {
+function processDataFromDataFrame(dataFrame, pcaArray, pcaAxes = { x: 0, y: 1, z: 2 }, pcaColumnNames = null) {
     if (!pcaArray || !dataFrame) {
         throw new Error("PCA data or metadata not available");
     }
@@ -255,7 +264,15 @@ function processDataFromDataFrame(dataFrame, pcaArray, pcaAxes = { x: 0, y: 1, z
     }
 
     // Initialize x, y, z with the selected components
-    updatePlotCoordinates(plotData, pcaAxes);
+    if (pcaColumnNames && pcaColumnNames.length > 0) {
+        // Use column names directly if available
+        plotData.x = plotData[pcaColumnNames[pcaAxes.x]];
+        plotData.y = plotData[pcaColumnNames[pcaAxes.y]];
+        plotData.z = plotData[pcaColumnNames[pcaAxes.z]];
+    } else {
+        // Fall back to using pcaComponents
+        updatePlotCoordinates(plotData, pcaAxes);
+    }
 
     return plotData;
 }
@@ -274,7 +291,20 @@ function parseUrlParams(dataConfig, urlParams) {
     for (const [configKey, paramName] of Object.entries(urlParams)) {
         const paramValue = urlSearchParams.get(paramName);
         if (paramValue) {
-            updatedConfig[configKey] = paramValue;
+            // Handle array parameters (comma or tilde separated)
+            if (paramName === 'selected') {
+                updatedConfig.selectedValues = paramValue.includes('~')
+                    ? paramValue.split('~')
+                    : paramValue.split(',');
+            }
+            // Handle numeric parameters
+            else if (['xAxis', 'yAxis', 'zAxis', 'selOpacity', 'nonSelOpacity', 'selSize', 'nonSelSize'].includes(paramName)) {
+                updatedConfig[configKey] = Number(paramValue);
+            }
+            // Handle regular string parameters
+            else {
+                updatedConfig[configKey] = paramValue;
+            }
             logger.log(`Using URL parameter ${paramName}=${paramValue} for ${configKey}`);
         }
     }
@@ -286,15 +316,41 @@ function parseUrlParams(dataConfig, urlParams) {
  * Update URL with current configuration
  * @param {Object} dataConfig - Current data configuration
  * @param {Object} urlParams - Mapping of config keys to URL parameter names
+ * @param {Object} appState - Optional additional app state to include in URL
  * @returns {string} Updated base URL
  */
-function updateUrlWithConfig(dataConfig, urlParams) {
+function updateUrlWithConfig(dataConfig, urlParams, appState = {}) {
     const url = new URL(window.location.href);
     const params = url.searchParams;
 
     // Set parameters from current configuration
     for (const [configKey, paramName] of Object.entries(urlParams)) {
-        params.set(paramName, dataConfig[configKey]);
+        if (configKey in dataConfig) {
+            params.set(paramName, dataConfig[configKey]);
+        }
+    }
+
+    // Add additional state parameters if provided
+    if (Object.keys(appState).length > 0) {
+        // Handle selected values
+        if (appState.selectedValues && appState.selectedValues.length > 0) {
+            params.set(urlParams.selectedValues, appState.selectedValues.join('~'));
+        } else {
+            params.delete(urlParams.selectedValues);
+        }
+
+        // Handle axis settings
+        if (appState.pcaAxes) {
+            params.set(urlParams.xAxis, appState.pcaAxes.x);
+            params.set(urlParams.yAxis, appState.pcaAxes.y);
+            params.set(urlParams.zAxis, appState.pcaAxes.z);
+        }
+
+        // Handle appearance settings
+        if (appState.selectedOpacity !== undefined) params.set(urlParams.selectedOpacity, appState.selectedOpacity);
+        if (appState.nonSelectedOpacity !== undefined) params.set(urlParams.nonSelectedOpacity, appState.nonSelectedOpacity);
+        if (appState.selectedSize !== undefined) params.set(urlParams.selectedSize, appState.selectedSize);
+        if (appState.nonSelectedSize !== undefined) params.set(urlParams.nonSelectedSize, appState.nonSelectedSize);
     }
 
     // Update browser URL without reloading the page

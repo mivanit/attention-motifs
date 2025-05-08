@@ -27,6 +27,7 @@ const app = Vue.createApp({
 			isUpdatingPlot: false, // Flag to show loading during plot updates
 			availableColumns: [],
 			pcaAxes: { x: 0, y: 1, z: 2 },
+			pcaColumnNames: [], // Store PCA column names
 			availablePcaAxes: [], // Will be populated with available components
 			selectionColors: [
 				'#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
@@ -71,7 +72,16 @@ const app = Vue.createApp({
 				filePath: 'dataPath',
 				numericalPrefix: 'numPrefix',
 				defaultColorColumn: 'colorBy',
-				defaultSelectionColumn: 'selectBy'
+				defaultSelectionColumn: 'selectBy',
+				// New params for state preservation
+				xAxis: 'xAxis',
+				yAxis: 'yAxis',
+				zAxis: 'zAxis',
+				selectedValues: 'selected',
+				selectedOpacity: 'selOpacity',
+				nonSelectedOpacity: 'nonSelOpacity',
+				selectedSize: 'selSize',
+				nonSelectedSize: 'nonSelSize'
 			}
 		};
 	},
@@ -131,11 +141,39 @@ const app = Vue.createApp({
 				this.availableColumns = result.availableColumns;
 				this.availablePcaAxes = new Array(this.pcaArray.shape[1]).fill(0).map((_, i) => i);
 
+				// Get the list of PCA column names from the data
+				this.pcaColumnNames = result.pcaColumnNames ||
+					this.dataFrame.columns.filter(col => col.startsWith(this.dataConfig.numericalPrefix));
+
 				// Set default selected columns from configuration
 				this.colorByColumn = this.dataConfig.defaultColorColumn;
 				this.pendingColorByColumn = this.colorByColumn;
 				this.selectionColumn = this.dataConfig.defaultSelectionColumn;
 				this.pendingSelectionColumn = this.selectionColumn;
+
+				// Restore axis settings from URL if available
+				const urlParams = new URLSearchParams(window.location.search);
+				if (urlParams.has(this.urlParams.xAxis)) this.pcaAxes.x = Number(urlParams.get(this.urlParams.xAxis));
+				if (urlParams.has(this.urlParams.yAxis)) this.pcaAxes.y = Number(urlParams.get(this.urlParams.yAxis));
+				if (urlParams.has(this.urlParams.zAxis)) this.pcaAxes.z = Number(urlParams.get(this.urlParams.zAxis));
+
+				// Restore appearance settings from URL if available
+				if (urlParams.has(this.urlParams.selectedOpacity))
+					this.selectedOpacity = Number(urlParams.get(this.urlParams.selectedOpacity));
+				if (urlParams.has(this.urlParams.nonSelectedOpacity))
+					this.nonSelectedOpacity = Number(urlParams.get(this.urlParams.nonSelectedOpacity));
+				if (urlParams.has(this.urlParams.selectedSize))
+					this.selectedSize = Number(urlParams.get(this.urlParams.selectedSize));
+				if (urlParams.has(this.urlParams.nonSelectedSize))
+					this.nonSelectedSize = Number(urlParams.get(this.urlParams.nonSelectedSize));
+
+				// Restore selected values from URL if available
+				if (urlParams.has(this.urlParams.selectedValues)) {
+					const selectedParam = urlParams.get(this.urlParams.selectedValues);
+					this.selectedValues = selectedParam.includes('~')
+						? selectedParam.split('~')
+						: selectedParam.split(',');
+				}
 
 				loading.updateProgress(this, 95, 'Rendering plot...');
 				this.statusMessage = 'Data loaded successfully';
@@ -158,7 +196,7 @@ const app = Vue.createApp({
 
 		// Process loaded data into a format suitable for plotting
 		processData() {
-			return processDataFromDataFrame(this.dataFrame, this.pcaArray, this.pcaAxes);
+			return processDataFromDataFrame(this.dataFrame, this.pcaArray, this.pcaAxes, this.pcaColumnNames);
 		},
 
 		// ==================================================
@@ -168,8 +206,8 @@ const app = Vue.createApp({
 		// Handle change of PCA axes
 		updatePlotAxes() {
 			logger.log('PCA axes changed', this.pcaAxes);
-			updatePlotCoordinates(this.plotData, this.pcaAxes);
-			this.updatePlot();
+			updatePlotCoordinates(this.plotData, this.pcaAxes, this.pcaColumnNames);
+			this.updatePlot(); // This will call updateUrlState
 		},
 
 		// Get current camera position from the plot (now using function from plotutil.js)
@@ -230,7 +268,7 @@ const app = Vue.createApp({
 			// Update the configuration and URL
 			if (this.colorByColumn) {
 				this.dataConfig.defaultColorColumn = this.colorByColumn;
-				updateUrlWithConfig(this.dataConfig, this.urlParams);
+				this.updateUrlState();
 				logger.log(`Updated default color column in URL: ${this.colorByColumn}`);
 			}
 		},
@@ -241,7 +279,7 @@ const app = Vue.createApp({
 			// Update the configuration and URL
 			if (this.selectionColumn) {
 				this.dataConfig.defaultSelectionColumn = this.selectionColumn;
-				updateUrlWithConfig(this.dataConfig, this.urlParams);
+				this.updateUrlState();
 				logger.log(`Updated default selection column in URL: ${this.selectionColumn}`);
 			}
 		},
@@ -259,6 +297,21 @@ const app = Vue.createApp({
 			}, 200);
 		},
 
+		// New method to update URL state with current app state
+		updateUrlState() {
+			// Collect current state
+			const appState = {
+				selectedValues: this.selectedValues,
+				pcaAxes: this.pcaAxes,
+				selectedOpacity: this.selectedOpacity,
+				nonSelectedOpacity: this.nonSelectedOpacity,
+				selectedSize: this.selectedSize,
+				nonSelectedSize: this.nonSelectedSize
+			};
+
+			// Update URL with current state
+			updateUrlWithConfig(this.dataConfig, this.urlParams, appState);
+		},
 		// ==================================================
 		// CHUNK: traces
 		// ==================================================
@@ -298,7 +351,7 @@ const app = Vue.createApp({
 					selectedOpacity: this.selectedOpacity,
 					nonSelectedOpacity: this.nonSelectedOpacity,
 					nonSelectedColor: this.nonSelectedColor,
-					getSelectionColor: this.getSelectionColor.bind(this),
+					getSelectionColor: this.getSelectionColor.bind(this), // Use the component's getSelectionColor method
 					// Add colorByColumn so it's included in customdata
 					colorByColumn: this.colorByColumn,
 					useCache: this.useCustomdataCache
@@ -315,7 +368,6 @@ const app = Vue.createApp({
 				(statusMsg) => { this.statusMessage = statusMsg; }
 			);
 		},
-
 
 		// ==================================================
 		// CHUNK: listeners
@@ -383,12 +435,19 @@ const app = Vue.createApp({
 			// Create initial traces by the selected categorical column
 			const traces = this.createTracesByCategory();
 
+			// Create axis labels based on column names
+			const axisLabels = this.pcaColumnNames.length > 0 ? {
+				x: this.pcaColumnNames[this.pcaAxes.x],
+				y: this.pcaColumnNames[this.pcaAxes.y],
+				z: this.pcaColumnNames[this.pcaAxes.z]
+			} : null;
+
 			// Create the plot
 			logger.time('Initial plot render');
 			Plotly.newPlot(
 				this.$refs.plotContainer,
 				traces,
-				createPlotLayout(this.title, null, this.pcaAxes)
+				createPlotLayout(this.title, null, this.pcaAxes, axisLabels)
 			);
 			logger.timeEnd('Initial plot render');
 
@@ -464,6 +523,9 @@ const app = Vue.createApp({
 
 								// Update the visualization with some delay to prevent UI blocking
 								this.debounceUpdatePlot();
+
+								// Update URL with current selection
+								this.updateUrlState();
 							}, 10);
 						} else {
 							logger.error(`Could not find ${this.selectionColumn} value in customdata at index ${index}`);
@@ -507,6 +569,13 @@ const app = Vue.createApp({
 					? this.createTracesWithSelection()
 					: this.createTracesByCategory();
 
+				// Create axis labels based on column names
+				const axisLabels = this.pcaColumnNames.length > 0 ? {
+					x: this.pcaColumnNames[this.pcaAxes.x],
+					y: this.pcaColumnNames[this.pcaAxes.y],
+					z: this.pcaColumnNames[this.pcaAxes.z]
+				} : null;
+
 				// First remove old event handlers to prevent duplicates
 				if (this.$refs.plotContainer && this.$refs.plotContainer.removeAllListeners) {
 					this.$refs.plotContainer.removeAllListeners('plotly_click');
@@ -520,12 +589,15 @@ const app = Vue.createApp({
 				Plotly.newPlot(
 					this.$refs.plotContainer,
 					traces,
-					createPlotLayout(this.title, this.currentCameraPosition, this.pcaAxes)
+					createPlotLayout(this.title, this.currentCameraPosition, this.pcaAxes, axisLabels)
 				);
 				logger.timeEnd('Plot Render');
 
 				// Setup event handlers again
 				this.setupPlotEventHandlers();
+
+				// Update URL with current state
+				this.updateUrlState();
 
 				// Hide updating indicators
 				loading.hideUpdating(this);
@@ -552,7 +624,7 @@ const app = Vue.createApp({
 			this.selectedValues = [];
 			// Reset colors back to initial set
 			this.selectionColors = [...this.initialSelectionColors];
-			this.updatePlot();
+			this.updatePlot(); // This will update the URL state
 		},
 
 		// Remove a specific value from selection
@@ -564,7 +636,7 @@ const app = Vue.createApp({
 			const index = this.selectedValues.indexOf(value);
 			if (index >= 0) {
 				this.selectedValues.splice(index, 1);
-				this.updatePlot();
+				this.updatePlot(); // This will update the URL state
 			}
 		},
 
@@ -586,7 +658,6 @@ const app = Vue.createApp({
 			// Always update the plot
 			this.updatePlot();
 		},
-
 
 		// ==================================================
 		// CHUNK: performance

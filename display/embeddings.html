@@ -60,7 +60,7 @@
       <div v-for="(axis, axisName) in {x: 'X', y: 'Y', z: 'Z'}" class="axis-control">
         <label>{{ axisName }}-Axis:</label>
         <select v-model="pcaAxes[axis.toLowerCase()]" @change="updatePlotAxes">
-          <option v-for="(_, index) in availablePcaAxes" :value="index">PC{{ index }}</option>
+          <option v-for="(_, index) in availablePcaAxes" :value="index"> {{ pcaColumnNames && pcaColumnNames.length > index ? pcaColumnNames[index] : 'PC' + index }} </option>
         </select>
       </div>
     </div>
