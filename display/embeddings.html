@@ -86,6 +86,45 @@
         <span>Updating plot...</span>
       </div>
     </div>
+    <!-- Configuration Panel -->
+    <div class="config-panel">
+      <div class="config-header" @click="toggleConfigPanel">
+        <h3>Data Configuration</h3>
+        <span class="collapse-icon" :class="{ rotated: !showConfigPanel }">▼</span>
+      </div>
+      <div class="config-content" v-show="showConfigPanel">
+        <div class="config-section">
+          <h4>Data Source</h4>
+          <div class="control-row">
+            <div class="control-label">File Path:</div>
+            <div class="control-input">
+              <input type="text" v-model="dataConfig.filePath" placeholder="Path to JSONL file">
+            </div>
+          </div>
+          <div class="control-row">
+            <div class="control-label">Numerical Prefix:</div>
+            <div class="control-input">
+              <input type="text" v-model="dataConfig.numericalPrefix" placeholder="Prefix for numerical columns (e.g., pc.)">
+            </div>
+          </div>
+          <div class="control-row">
+            <div class="control-label">Default Color:</div>
+            <div class="control-input">
+              <input type="text" v-model="dataConfig.defaultColorColumn" placeholder="Default column for coloring">
+            </div>
+          </div>
+          <div class="control-row">
+            <div class="control-label">Default Selection:</div>
+            <div class="control-input">
+              <input type="text" v-model="dataConfig.defaultSelectionColumn" placeholder="Default column for selection">
+            </div>
+          </div>
+          <div class="control-row">
+            <button @click="applyConfigChanges" class="apply-button">Apply Configuration</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <div>
       <h3>Selected Values:</h3>
       <div class="selection-display">

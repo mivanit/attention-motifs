@@ -44,6 +44,7 @@ const app = Vue.createApp({
 			baseUrl: 'https://miv.name/pattern-lens/demo/?',
 			dropdownTimeout: null,
 			configCollapsed: false,
+			showConfigPanel: false,
 			// Default trace configuration
 			defaultTraceConfig: createDefaultTraceConfig(),
 			// Store current camera position
@@ -57,9 +58,24 @@ const app = Vue.createApp({
 			// Last hover data for clipboard copy
 			lastHoverData: null,
 			// Flag to track if right mouse button is pressed
-			isRightMouseDown: false
+			isRightMouseDown: false,
+			// Configuration for data loading
+			dataConfig: {
+				filePath: 'data/features/pca.jsonl', // Default path to the data file
+				numericalPrefix: 'pc.', // Prefix for numerical columns (PCA components)
+				defaultColorColumn: 'activation.model', // Default column for coloring
+				defaultSelectionColumn: 'activation.model', // Default column for selection
+			},
+			// URL params configuration
+			urlParams: {
+				filePath: 'dataPath',
+				numericalPrefix: 'numPrefix',
+				defaultColorColumn: 'colorBy',
+				defaultSelectionColumn: 'selectBy'
+			}
 		};
 	},
+	// ==================================================
 
 	computed: {
 		// Compute combined URL with all selected values
@@ -70,61 +86,55 @@ const app = Vue.createApp({
 
 	methods: {
 		// ==================================================
+		// CHUNK: config
+		// ==================================================
+		// Toggle configuration panel
+		toggleConfigPanel() {
+			this.showConfigPanel = !this.showConfigPanel;
+		},
+
+		// Apply configuration changes and reload data
+		applyConfigChanges() {
+			// Show loading indicator
+			loading.showLoading(this, 'Applying configuration...', 'Reloading data', true);
+
+			// Update URL with new configuration
+			this.baseUrl = updateUrlWithConfig(this.dataConfig, this.urlParams);
+
+			// Reload data with new configuration
+			this.loadData();
+		},
+		// ==================================================
 		// CHUNK: data loading
 		// ==================================================
-		// Load PCA data and metadata
+		// Load data from a single JSONL file
 		async loadData() {
-			loading.showLoading(this, 'Loading PCA data...', 'Requesting NPY file', true);
+			loading.showLoading(this, 'Loading data...', 'Initializing', true);
 			logger.log('Starting data loading process');
 
 			try {
 				// Clear any existing customdata cache
 				clearCustomdataCache();
 
-				// Load PCA data using the function from dataLoader.js
-				loading.updateProgress(this, 10, 'Downloading NPY file...');
+				// Parse URL parameters to override default configuration
+				this.dataConfig = parseUrlParams(this.dataConfig, this.urlParams);
 
-				logger.time('Load PCA Data');
-				this.pcaArray = await loadPcaData();
-				logger.timeEnd('Load PCA Data');
+				// Load and process data using the function from dataloader.js
+				const result = await loadJsonlData(this.dataConfig, (percent, detail) => {
+					loading.updateProgress(this, percent, detail);
+				});
 
-				loading.updateProgress(this, 30);
-
-				// Setup available PCA axes
+				// Update app data with results
+				this.dataFrame = result.dataFrame;
+				this.pcaArray = result.pcaArray;
+				this.plotData = result.plotData;
+				this.availableColumns = result.availableColumns;
 				this.availablePcaAxes = new Array(this.pcaArray.shape[1]).fill(0).map((_, i) => i);
-				logger.log('Available PCA components:', this.availablePcaAxes.length);
 
-				// Load metadata using the function from dataLoader.js
-				loading.updateProgress(this, 40, 'Loading metadata...');
-				this.statusMessage = 'Loading feature metadata...';
-
-				loading.updateProgress(this, 50, 'Processing JSONL file (takes a while)...');
-
-				logger.time('Load Metadata');
-				this.dataFrame = await loadMetadata();
-				logger.timeEnd('Load Metadata');
-
-				loading.updateProgress(this, 70, 'Processing data...');
-
-				// Process data using the function from dataLoader.js
-				loading.updateProgress(this, 80, 'Preparing plot data');
-
-				logger.time('Process Data');
-				this.plotData = processData(this.pcaArray, this.dataFrame);
-				// Update coordinates based on initial PCA axes selection
-				updatePlotCoordinates(this.plotData, this.pcaAxes);
-				logger.timeEnd('Process Data');
-
-				loading.updateProgress(this, 90, 'Finding categorical columns...');
-
-				// Find categorical columns using the function from dataLoader.js
-				this.availableColumns = findCategoricalColumns(this.dataFrame);
-				logger.log('Available categorical columns:', this.availableColumns);
-
-				// Set default selected columns
-				this.colorByColumn = 'activation.model';
+				// Set default selected columns from configuration
+				this.colorByColumn = this.dataConfig.defaultColorColumn;
 				this.pendingColorByColumn = this.colorByColumn;
-				this.selectionColumn = 'activation.model'; // Initialize with the same default
+				this.selectionColumn = this.dataConfig.defaultSelectionColumn;
 				this.pendingSelectionColumn = this.selectionColumn;
 
 				loading.updateProgress(this, 95, 'Rendering plot...');
@@ -148,14 +158,7 @@ const app = Vue.createApp({
 
 		// Process loaded data into a format suitable for plotting
 		processData() {
-			if (!this.pcaArray || !this.dataFrame) {
-				throw new Error("PCA data or metadata not loaded");
-			}
-
-			// Use the processData function from dataLoader.js
-			this.plotData = processData(this.pcaArray, this.dataFrame);
-			// Initialize with current axes selection
-			updatePlotCoordinates(this.plotData, this.pcaAxes);
+			return processDataFromDataFrame(this.dataFrame, this.pcaArray, this.pcaAxes);
 		},
 
 		// ==================================================
@@ -243,7 +246,7 @@ const app = Vue.createApp({
 				this.showSelectionDropdown = false;
 			}, 200);
 		},
-		
+
 		// ==================================================
 		// CHUNK: traces
 		// ==================================================
@@ -571,7 +574,7 @@ const app = Vue.createApp({
 			// Always update the plot
 			this.updatePlot();
 		},
-		
+
 
 		// ==================================================
 		// CHUNK: performance
