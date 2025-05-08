@@ -1468,9 +1468,13 @@ FEAT_KWARGS ?=
 demo-features:
 	NUMBA_CACHE_DIR=.numba-cache $(PYTHON) -m attention_motifs.features.generate --act-path $(DEMO_DATA) --processes $(N_PROC) $(FEAT_KWARGS)
 
-.PHONY: demo-server
-demo-server:
+.PHONY: demo-server-patternlens
+demo-server-patternlens:
 	$(PYTHON) -m pattern_lens.server --rewrite-index --path $(DEMO_DATA)
+
+.PHONY: demo-server-embed
+demo-server-embed:
+	$(PYTHON) -m http.server --directory display/
 
 .PHONY: demo
 demo: demo-clean demo-activations demo-figures demo-server
