@@ -82,7 +82,8 @@ const app = Vue.createApp({
 				nonSelectedOpacity: 'nonSelOpacity',
 				selectedSize: 'selSize',
 				nonSelectedSize: 'nonSelSize'
-			}
+			},
+			showHelpMenu: false, // Control help menu visibility
 		};
 	},
 	// ==================================================
@@ -95,6 +96,17 @@ const app = Vue.createApp({
 	},
 
 	methods: {
+		// Toggle help menu visibility
+		toggleHelpMenu() {
+			this.showHelpMenu = !this.showHelpMenu;
+
+			// If opening the help, add a class to the body to prevent scrolling
+			if (this.showHelpMenu) {
+				document.body.style.overflow = 'hidden';
+			} else {
+				document.body.style.overflow = '';
+			}
+		},
 		// ==================================================
 		// CHUNK: config
 		// ==================================================

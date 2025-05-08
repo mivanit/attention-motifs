@@ -25,6 +25,50 @@
 <body>
   <div id="app">
     <h1>{{ title }}</h1>
+    <!-- Add this after the <h1>{{ title }}</h1> line (approximately line 25) -->
+    <div class="help-container">
+      <button id="help-button" class="help-button" @click="toggleHelpMenu">?</button>
+      <!-- Help Modal -->
+      <div class="help-modal" v-show="showHelpMenu">
+        <div class="help-modal-content">
+          <div class="help-modal-header">
+            <h2>Help - How to Use This Tool</h2>
+            <span class="help-close-button" @click="toggleHelpMenu">&times;</span>
+          </div>
+          <div class="help-modal-body">
+            <div class="help-section">
+              <h3>Basic Navigation</h3>
+              <ul>
+                <li><strong>Rotate the plot:</strong> Click and drag (if not over a point)</li>
+                <li><strong>Zoom:</strong> Scroll wheel or pinch gesture</li>
+                <li><strong>Pan:</strong> Right-click and drag (if not over a point)</li>
+                <li><strong>View details:</strong> Hover over points</li>
+              </ul>
+            </div>
+            <div class="help-section">
+              <h3>Data Selection and Visualization</h3>
+              <ul>
+                <li><strong>Select points:</strong> Click on points to select by category</li>
+                <li><strong>Copy point data:</strong> Right-click on a point</li>
+                <li><strong>Change color grouping:</strong> Use "Default color by" dropdown</li>
+                <li><strong>Change selection grouping:</strong> Use "Select by" dropdown</li>
+                <li><strong>Clear selection:</strong> Click "Clear Selection" button</li>
+                <li><strong>Change colors:</strong> Click "Regenerate Colors" button</li>
+              </ul>
+            </div>
+            <div class="help-section">
+              <h3>Visualization Controls</h3>
+              <ul>
+                <li><strong>Change 3D axes:</strong> Use X-Axis, Y-Axis, Z-Axis dropdowns to select different dimensions</li>
+                <li><strong>Adjust appearance:</strong> Use "Plot Configuration" panel to change point sizes and opacity</li>
+                <li><strong>Link to current view:</strong> Copy your current url</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- main controls -->
     <div class="controls">
       <div class="control-group">
         <button @click="clearSelection">Clear Selection</button>

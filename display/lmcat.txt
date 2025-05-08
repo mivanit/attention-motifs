@@ -1,24 +1,24 @@
 # Stats
 - 11 files
-- 2971 (3.0K) lines
-- 88037 (88K) chars
-- 32494 (32K) `gpt2` tokens
+- 3146 (3.1K) lines
+- 92526 (93K) chars
+- 34482 (34K) `gpt2` tokens
 
 # File Tree
 
 ```
 display              
-├── app.js           [729L 25,399C 8,759T]
+├── app.js           [741L 25,760C 8,888T]
 ├── array.js         [370L  9,746C 3,781T]
 ├── clipboard.js     [ 32L  1,095C   391T]
 ├── colorutil.js     [ 60L  1,600C   675T]
 ├── dataframe.js     [211L  5,212C 1,982T]
 ├── dataloader.js    [361L 13,427C 5,040T]
-├── embeddings.html  [186L  8,184C 3,533T]
+├── embeddings.html  [230L 10,476C 4,609T]
 ├── logger.js        [102L  1,798C   633T]
 ├── pl-interface.js  [ 26L    914C   330T]
 ├── plotutil.js      [357L 11,351C 3,621T]
-└── style.css        [485L  8,029C 3,085T]
+└── style.css        [604L  9,865C 3,867T]
 ```
 
 # File Contents
@@ -108,7 +108,8 @@ const app = Vue.createApp({
 				nonSelectedOpacity: 'nonSelOpacity',
 				selectedSize: 'selSize',
 				nonSelectedSize: 'nonSelSize'
-			}
+			},
+			showHelpMenu: false, // Control help menu visibility
 		};
 	},
 	// ==================================================
@@ -121,6 +122,17 @@ const app = Vue.createApp({
 	},
 
 	methods: {
+		// Toggle help menu visibility
+		toggleHelpMenu() {
+			this.showHelpMenu = !this.showHelpMenu;
+
+			// If opening the help, add a class to the body to prevent scrolling
+			if (this.showHelpMenu) {
+				document.body.style.overflow = 'hidden';
+			} else {
+				document.body.style.overflow = '';
+			}
+		},
 		// ==================================================
 		// CHUNK: config
 		// ==================================================
@@ -1833,6 +1845,50 @@ function updateUrlWithConfig(dataConfig, urlParams, appState = {}) {
 <body>
   <div id="app">
     <h1>{{ title }}</h1>
+    <!-- Add this after the <h1>{{ title }}</h1> line (approximately line 25) -->
+    <div class="help-container">
+      <button id="help-button" class="help-button" @click="toggleHelpMenu">?</button>
+      <!-- Help Modal -->
+      <div class="help-modal" v-show="showHelpMenu">
+        <div class="help-modal-content">
+          <div class="help-modal-header">
+            <h2>Help - How to Use This Tool</h2>
+            <span class="help-close-button" @click="toggleHelpMenu">&times;</span>
+          </div>
+          <div class="help-modal-body">
+            <div class="help-section">
+              <h3>Basic Navigation</h3>
+              <ul>
+                <li><strong>Rotate the plot:</strong> Click and drag (if not over a point)</li>
+                <li><strong>Zoom:</strong> Scroll wheel or pinch gesture</li>
+                <li><strong>Pan:</strong> Right-click and drag (if not over a point)</li>
+                <li><strong>View details:</strong> Hover over points</li>
+              </ul>
+            </div>
+            <div class="help-section">
+              <h3>Data Selection and Visualization</h3>
+              <ul>
+                <li><strong>Select points:</strong> Click on points to select by category</li>
+                <li><strong>Copy point data:</strong> Right-click on a point</li>
+                <li><strong>Change color grouping:</strong> Use "Default color by" dropdown</li>
+                <li><strong>Change selection grouping:</strong> Use "Select by" dropdown</li>
+                <li><strong>Clear selection:</strong> Click "Clear Selection" button</li>
+                <li><strong>Change colors:</strong> Click "Regenerate Colors" button</li>
+              </ul>
+            </div>
+            <div class="help-section">
+              <h3>Visualization Controls</h3>
+              <ul>
+                <li><strong>Change 3D axes:</strong> Use X-Axis, Y-Axis, Z-Axis dropdowns to select different dimensions</li>
+                <li><strong>Adjust appearance:</strong> Use "Plot Configuration" panel to change point sizes and opacity</li>
+                <li><strong>Link to current view:</strong> Copy your current url</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- main controls -->
     <div class="controls">
       <div class="control-group">
         <button @click="clearSelection">Clear Selection</button>
@@ -2972,6 +3028,125 @@ input[type="number"] {
 		display: flex;
 		gap: 5px;
 		margin-top: 5px;
+	}
+}
+
+/* ==================================================
+   CHUNK: Help Button and Modal
+   ================================================== */
+.help-container {
+	position: absolute;
+	top: 20px;
+	right: 20px;
+	z-index: 100;
+}
+
+.help-button {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background-color: #2196F3;
+	color: white;
+	font-size: 18px;
+	font-weight: bold;
+	border: none;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.help-button:hover {
+	background-color: #0b7dda;
+}
+
+.help-modal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+}
+
+.help-modal-content {
+	background-color: white;
+	border-radius: 8px;
+	width: 80%;
+	max-width: 800px;
+	max-height: 90vh;
+	display: flex;
+	flex-direction: column;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.help-modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 15px 20px;
+	border-bottom: 1px solid #eee;
+}
+
+.help-modal-header h2 {
+	margin: 0;
+	color: #333;
+}
+
+.help-close-button {
+	font-size: 28px;
+	font-weight: bold;
+	cursor: pointer;
+	color: #aaa;
+}
+
+.help-close-button:hover {
+	color: #333;
+}
+
+.help-modal-body {
+	padding: 20px;
+	overflow-y: auto;
+	max-height: calc(90vh - 70px);
+}
+
+.help-section {
+	margin-bottom: 25px;
+}
+
+.help-section h3 {
+	margin-top: 0;
+	margin-bottom: 10px;
+	color: #2196F3;
+	border-bottom: 1px solid #eee;
+	padding-bottom: 5px;
+}
+
+.help-section ul {
+	margin: 0;
+	padding-left: 20px;
+}
+
+.help-section li {
+	margin-bottom: 8px;
+}
+
+.help-section ul ul {
+	margin-top: 5px;
+}
+
+@media (max-width: 600px) {
+	.help-modal-content {
+		width: 95%;
+	}
+
+	.help-section li {
+		margin-bottom: 12px;
 	}
 }
 ``````{ end_of_file="style.css" }
