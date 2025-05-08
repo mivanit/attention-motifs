@@ -1,0 +1,7 @@
+output = "lmcat.txt"
+ignore_patterns = [
+	"data/",
+	"lmcat.toml",
+	"makefile",
+	"lmcat.txt",
+]
