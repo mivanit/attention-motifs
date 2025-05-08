@@ -1,24 +1,24 @@
 # Stats
 - 11 files
-- 2812 (2.8K) lines
-- 81072 (81K) chars
-- 29932 (30K) `gpt2` tokens
+- 2838 (2.8K) lines
+- 81416 (81K) chars
+- 29957 (30K) `gpt2` tokens
 
 # File Tree
 
 ```
 display              
-├── app.js           [646L 21,677C 7,344T]
+├── app.js           [658L 22,231C 7,534T]
 ├── array.js         [370L  9,746C 3,781T]
 ├── clipboard.js     [ 32L  1,095C   391T]
 ├── colorutil.js     [ 60L  1,600C   675T]
 ├── dataframe.js     [211L  5,212C 1,982T]
 ├── dataloader.js    [305L 10,456C 3,859T]
-├── embeddings.html  [201L  8,800C 3,850T]
+├── embeddings.html  [186L  8,102C 3,512T]
 ├── logger.js        [102L  1,798C   633T]
 ├── pl-interface.js  [ 26L    914C   330T]
 ├── plotutil.js      [351L 10,951C 3,510T]
-└── style.css        [456L  7,541C 2,912T]
+└── style.css        [485L  8,029C 3,085T]
 ```
 
 # File Contents
@@ -253,11 +253,23 @@ const app = Vue.createApp({
 		// Apply colorByColumn change
 		applyColorByColumn() {
 			this.applyColumnChange('color');
+			// Update the configuration and URL
+			if (this.colorByColumn) {
+				this.dataConfig.defaultColorColumn = this.colorByColumn;
+				updateUrlWithConfig(this.dataConfig, this.urlParams);
+				logger.log(`Updated default color column in URL: ${this.colorByColumn}`);
+			}
 		},
 
 		// Apply selectionColumn change
 		applySelectionColumn() {
 			this.applyColumnChange('selection');
+			// Update the configuration and URL
+			if (this.selectionColumn) {
+				this.dataConfig.defaultSelectionColumn = this.selectionColumn;
+				updateUrlWithConfig(this.dataConfig, this.urlParams);
+				logger.log(`Updated default selection column in URL: ${this.selectionColumn}`);
+			}
 		},
 
 		// Hide dropdowns with delay to allow for click
@@ -1762,35 +1774,20 @@ function updateUrlWithConfig(dataConfig, urlParams) {
         <span class="collapse-icon" :class="{ rotated: !showConfigPanel }">▼</span>
       </div>
       <div class="config-content" v-show="showConfigPanel">
-        <div class="config-section">
-          <h4>Data Source</h4>
-          <div class="control-row">
-            <div class="control-label">File Path:</div>
-            <div class="control-input">
-              <input type="text" v-model="dataConfig.filePath" placeholder="Path to JSONL file">
-            </div>
+        <div class="control-row">
+          <div class="control-label">File Path:</div>
+          <div class="control-input">
+            <input type="text" v-model="dataConfig.filePath" placeholder="Path to JSONL file">
           </div>
-          <div class="control-row">
-            <div class="control-label">Numerical Prefix:</div>
-            <div class="control-input">
-              <input type="text" v-model="dataConfig.numericalPrefix" placeholder="Prefix for numerical columns (e.g., pc.)">
-            </div>
+        </div>
+        <div class="control-row">
+          <div class="control-label">Numerical Prefix:</div>
+          <div class="control-input">
+            <input type="text" v-model="dataConfig.numericalPrefix" placeholder="Prefix for numerical columns (e.g., pc.)">
           </div>
-          <div class="control-row">
-            <div class="control-label">Default Color:</div>
-            <div class="control-input">
-              <input type="text" v-model="dataConfig.defaultColorColumn" placeholder="Default column for coloring">
-            </div>
-          </div>
-          <div class="control-row">
-            <div class="control-label">Default Selection:</div>
-            <div class="control-input">
-              <input type="text" v-model="dataConfig.defaultSelectionColumn" placeholder="Default column for selection">
-            </div>
-          </div>
-          <div class="control-row">
-            <button @click="applyConfigChanges" class="apply-button">Apply Configuration</button>
-          </div>
+        </div>
+        <div class="control-row">
+          <button @click="applyConfigChanges" class="apply-button">Apply Configuration</button>
         </div>
       </div>
     </div>
@@ -2362,7 +2359,7 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 /* ==================================================
    CHUNK: Base Styles
    ================================================== */
-   body {
+body {
 	font-family: Arial, sans-serif;
 	margin: 0;
 	padding: 20px;
@@ -2814,5 +2811,34 @@ input[type="number"] {
 	width: 20px;
 	height: 20px;
 	animation: spin 1s linear infinite;
+}
+
+/* ===================================================
+   CHUNK: config buttons
+   ================================================== */
+
+.column-control {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 10px;
+	flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+	.column-control {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.column-control .combo-select {
+		width: 100%;
+	}
+
+	.column-control .button-group {
+		display: flex;
+		gap: 5px;
+		margin-top: 5px;
+	}
 }
 ``````{ end_of_file="style.css" }

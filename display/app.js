@@ -227,11 +227,23 @@ const app = Vue.createApp({
 		// Apply colorByColumn change
 		applyColorByColumn() {
 			this.applyColumnChange('color');
+			// Update the configuration and URL
+			if (this.colorByColumn) {
+				this.dataConfig.defaultColorColumn = this.colorByColumn;
+				updateUrlWithConfig(this.dataConfig, this.urlParams);
+				logger.log(`Updated default color column in URL: ${this.colorByColumn}`);
+			}
 		},
 
 		// Apply selectionColumn change
 		applySelectionColumn() {
 			this.applyColumnChange('selection');
+			// Update the configuration and URL
+			if (this.selectionColumn) {
+				this.dataConfig.defaultSelectionColumn = this.selectionColumn;
+				updateUrlWithConfig(this.dataConfig, this.urlParams);
+				logger.log(`Updated default selection column in URL: ${this.selectionColumn}`);
+			}
 		},
 
 		// Hide dropdowns with delay to allow for click
