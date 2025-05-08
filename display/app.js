@@ -5,7 +5,7 @@ const app = Vue.createApp({
 	// ==================================================
 	data() {
 		return {
-			title: 'Interactive 3D PCA Plot',
+			title: 'Interactive 3D Embedding Visualization',
 			statusMessage: 'Loading data...',
 			isLoading: true,
 			loadingMessage: 'Loading data...',

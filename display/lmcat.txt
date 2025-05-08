@@ -1,20 +1,20 @@
 # Stats
 - 11 files
 - 2971 (3.0K) lines
-- 88021 (88K) chars
-- 32496 (32K) `gpt2` tokens
+- 88037 (88K) chars
+- 32494 (32K) `gpt2` tokens
 
 # File Tree
 
 ```
 display              
-├── app.js           [729L 25,384C 8,757T]
+├── app.js           [729L 25,399C 8,759T]
 ├── array.js         [370L  9,746C 3,781T]
 ├── clipboard.js     [ 32L  1,095C   391T]
 ├── colorutil.js     [ 60L  1,600C   675T]
 ├── dataframe.js     [211L  5,212C 1,982T]
 ├── dataloader.js    [361L 13,427C 5,040T]
-├── embeddings.html  [186L  8,183C 3,537T]
+├── embeddings.html  [186L  8,184C 3,533T]
 ├── logger.js        [102L  1,798C   633T]
 ├── pl-interface.js  [ 26L    914C   330T]
 ├── plotutil.js      [357L 11,351C 3,621T]
@@ -31,7 +31,7 @@ const app = Vue.createApp({
 	// ==================================================
 	data() {
 		return {
-			title: 'Interactive 3D PCA Plot',
+			title: 'Interactive 3D Embedding Visualization',
 			statusMessage: 'Loading data...',
 			isLoading: true,
 			loadingMessage: 'Loading data...',
@@ -1810,7 +1810,7 @@ function updateUrlWithConfig(dataConfig, urlParams, appState = {}) {
 <html>
 
 <head>
-  <title>Vue-Based 3D PCA Plot</title>
+  <title>3D Embedding Visualization</title>
   <!-- Load Vue -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
   <!-- Load Plotly.js -->
@@ -1863,7 +1863,7 @@ function updateUrlWithConfig(dataConfig, urlParams, appState = {}) {
         <button class="apply-button" @click="applySelectionColumn">Apply</button>
       </div>
     </div>
-    <!-- PCA Axis Selection -->
+    <!-- Axis Selection -->
     <div class="axis-controls">
       <div v-for="(axis, axisName) in {x: 'X', y: 'Y', z: 'Z'}" class="axis-control">
         <label>{{ axisName }}-Axis:</label>

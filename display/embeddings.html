@@ -2,7 +2,7 @@
 <html>
 
 <head>
-  <title>Vue-Based 3D PCA Plot</title>
+  <title>3D Embedding Visualization</title>
   <!-- Load Vue -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
   <!-- Load Plotly.js -->
@@ -55,7 +55,7 @@
         <button class="apply-button" @click="applySelectionColumn">Apply</button>
       </div>
     </div>
-    <!-- PCA Axis Selection -->
+    <!-- Axis Selection -->
     <div class="axis-controls">
       <div v-for="(axis, axisName) in {x: 'X', y: 'Y', z: 'Z'}" class="axis-control">
         <label>{{ axisName }}-Axis:</label>
