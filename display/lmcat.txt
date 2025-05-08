@@ -1,23 +1,23 @@
 # Stats
 - 11 files
-- 2838 (2.8K) lines
-- 81416 (81K) chars
-- 29957 (30K) `gpt2` tokens
+- 2971 (3.0K) lines
+- 88021 (88K) chars
+- 32496 (32K) `gpt2` tokens
 
 # File Tree
 
 ```
 display              
-├── app.js           [658L 22,231C 7,534T]
+├── app.js           [729L 25,384C 8,757T]
 ├── array.js         [370L  9,746C 3,781T]
 ├── clipboard.js     [ 32L  1,095C   391T]
 ├── colorutil.js     [ 60L  1,600C   675T]
 ├── dataframe.js     [211L  5,212C 1,982T]
-├── dataloader.js    [305L 10,456C 3,859T]
-├── embeddings.html  [186L  8,102C 3,512T]
+├── dataloader.js    [361L 13,427C 5,040T]
+├── embeddings.html  [186L  8,183C 3,537T]
 ├── logger.js        [102L  1,798C   633T]
 ├── pl-interface.js  [ 26L    914C   330T]
-├── plotutil.js      [351L 10,951C 3,510T]
+├── plotutil.js      [357L 11,351C 3,621T]
 └── style.css        [485L  8,029C 3,085T]
 ```
 
@@ -53,6 +53,7 @@ const app = Vue.createApp({
 			isUpdatingPlot: false, // Flag to show loading during plot updates
 			availableColumns: [],
 			pcaAxes: { x: 0, y: 1, z: 2 },
+			pcaColumnNames: [], // Store PCA column names
 			availablePcaAxes: [], // Will be populated with available components
 			selectionColors: [
 				'#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
@@ -87,7 +88,7 @@ const app = Vue.createApp({
 			isRightMouseDown: false,
 			// Configuration for data loading
 			dataConfig: {
-				filePath: 'data/features/pca.jsonl', // Default path to the data file
+				filePath: 'data/pca.jsonl', // Default path to the data file
 				numericalPrefix: 'pc.', // Prefix for numerical columns (PCA components)
 				defaultColorColumn: 'activation.model', // Default column for coloring
 				defaultSelectionColumn: 'activation.model', // Default column for selection
@@ -97,7 +98,16 @@ const app = Vue.createApp({
 				filePath: 'dataPath',
 				numericalPrefix: 'numPrefix',
 				defaultColorColumn: 'colorBy',
-				defaultSelectionColumn: 'selectBy'
+				defaultSelectionColumn: 'selectBy',
+				// New params for state preservation
+				xAxis: 'xAxis',
+				yAxis: 'yAxis',
+				zAxis: 'zAxis',
+				selectedValues: 'selected',
+				selectedOpacity: 'selOpacity',
+				nonSelectedOpacity: 'nonSelOpacity',
+				selectedSize: 'selSize',
+				nonSelectedSize: 'nonSelSize'
 			}
 		};
 	},
@@ -157,11 +167,39 @@ const app = Vue.createApp({
 				this.availableColumns = result.availableColumns;
 				this.availablePcaAxes = new Array(this.pcaArray.shape[1]).fill(0).map((_, i) => i);
 
+				// Get the list of PCA column names from the data
+				this.pcaColumnNames = result.pcaColumnNames ||
+					this.dataFrame.columns.filter(col => col.startsWith(this.dataConfig.numericalPrefix));
+
 				// Set default selected columns from configuration
 				this.colorByColumn = this.dataConfig.defaultColorColumn;
 				this.pendingColorByColumn = this.colorByColumn;
 				this.selectionColumn = this.dataConfig.defaultSelectionColumn;
 				this.pendingSelectionColumn = this.selectionColumn;
+
+				// Restore axis settings from URL if available
+				const urlParams = new URLSearchParams(window.location.search);
+				if (urlParams.has(this.urlParams.xAxis)) this.pcaAxes.x = Number(urlParams.get(this.urlParams.xAxis));
+				if (urlParams.has(this.urlParams.yAxis)) this.pcaAxes.y = Number(urlParams.get(this.urlParams.yAxis));
+				if (urlParams.has(this.urlParams.zAxis)) this.pcaAxes.z = Number(urlParams.get(this.urlParams.zAxis));
+
+				// Restore appearance settings from URL if available
+				if (urlParams.has(this.urlParams.selectedOpacity))
+					this.selectedOpacity = Number(urlParams.get(this.urlParams.selectedOpacity));
+				if (urlParams.has(this.urlParams.nonSelectedOpacity))
+					this.nonSelectedOpacity = Number(urlParams.get(this.urlParams.nonSelectedOpacity));
+				if (urlParams.has(this.urlParams.selectedSize))
+					this.selectedSize = Number(urlParams.get(this.urlParams.selectedSize));
+				if (urlParams.has(this.urlParams.nonSelectedSize))
+					this.nonSelectedSize = Number(urlParams.get(this.urlParams.nonSelectedSize));
+
+				// Restore selected values from URL if available
+				if (urlParams.has(this.urlParams.selectedValues)) {
+					const selectedParam = urlParams.get(this.urlParams.selectedValues);
+					this.selectedValues = selectedParam.includes('~')
+						? selectedParam.split('~')
+						: selectedParam.split(',');
+				}
 
 				loading.updateProgress(this, 95, 'Rendering plot...');
 				this.statusMessage = 'Data loaded successfully';
@@ -184,7 +222,7 @@ const app = Vue.createApp({
 
 		// Process loaded data into a format suitable for plotting
 		processData() {
-			return processDataFromDataFrame(this.dataFrame, this.pcaArray, this.pcaAxes);
+			return processDataFromDataFrame(this.dataFrame, this.pcaArray, this.pcaAxes, this.pcaColumnNames);
 		},
 
 		// ==================================================
@@ -194,8 +232,8 @@ const app = Vue.createApp({
 		// Handle change of PCA axes
 		updatePlotAxes() {
 			logger.log('PCA axes changed', this.pcaAxes);
-			updatePlotCoordinates(this.plotData, this.pcaAxes);
-			this.updatePlot();
+			updatePlotCoordinates(this.plotData, this.pcaAxes, this.pcaColumnNames);
+			this.updatePlot(); // This will call updateUrlState
 		},
 
 		// Get current camera position from the plot (now using function from plotutil.js)
@@ -256,7 +294,7 @@ const app = Vue.createApp({
 			// Update the configuration and URL
 			if (this.colorByColumn) {
 				this.dataConfig.defaultColorColumn = this.colorByColumn;
-				updateUrlWithConfig(this.dataConfig, this.urlParams);
+				this.updateUrlState();
 				logger.log(`Updated default color column in URL: ${this.colorByColumn}`);
 			}
 		},
@@ -267,7 +305,7 @@ const app = Vue.createApp({
 			// Update the configuration and URL
 			if (this.selectionColumn) {
 				this.dataConfig.defaultSelectionColumn = this.selectionColumn;
-				updateUrlWithConfig(this.dataConfig, this.urlParams);
+				this.updateUrlState();
 				logger.log(`Updated default selection column in URL: ${this.selectionColumn}`);
 			}
 		},
@@ -285,6 +323,21 @@ const app = Vue.createApp({
 			}, 200);
 		},
 
+		// New method to update URL state with current app state
+		updateUrlState() {
+			// Collect current state
+			const appState = {
+				selectedValues: this.selectedValues,
+				pcaAxes: this.pcaAxes,
+				selectedOpacity: this.selectedOpacity,
+				nonSelectedOpacity: this.nonSelectedOpacity,
+				selectedSize: this.selectedSize,
+				nonSelectedSize: this.nonSelectedSize
+			};
+
+			// Update URL with current state
+			updateUrlWithConfig(this.dataConfig, this.urlParams, appState);
+		},
 		// ==================================================
 		// CHUNK: traces
 		// ==================================================
@@ -324,7 +377,7 @@ const app = Vue.createApp({
 					selectedOpacity: this.selectedOpacity,
 					nonSelectedOpacity: this.nonSelectedOpacity,
 					nonSelectedColor: this.nonSelectedColor,
-					getSelectionColor: this.getSelectionColor.bind(this),
+					getSelectionColor: this.getSelectionColor.bind(this), // Use the component's getSelectionColor method
 					// Add colorByColumn so it's included in customdata
 					colorByColumn: this.colorByColumn,
 					useCache: this.useCustomdataCache
@@ -341,7 +394,6 @@ const app = Vue.createApp({
 				(statusMsg) => { this.statusMessage = statusMsg; }
 			);
 		},
-
 
 		// ==================================================
 		// CHUNK: listeners
@@ -409,12 +461,19 @@ const app = Vue.createApp({
 			// Create initial traces by the selected categorical column
 			const traces = this.createTracesByCategory();
 
+			// Create axis labels based on column names
+			const axisLabels = this.pcaColumnNames.length > 0 ? {
+				x: this.pcaColumnNames[this.pcaAxes.x],
+				y: this.pcaColumnNames[this.pcaAxes.y],
+				z: this.pcaColumnNames[this.pcaAxes.z]
+			} : null;
+
 			// Create the plot
 			logger.time('Initial plot render');
 			Plotly.newPlot(
 				this.$refs.plotContainer,
 				traces,
-				createPlotLayout(this.title, null, this.pcaAxes)
+				createPlotLayout(this.title, null, this.pcaAxes, axisLabels)
 			);
 			logger.timeEnd('Initial plot render');
 
@@ -490,6 +549,9 @@ const app = Vue.createApp({
 
 								// Update the visualization with some delay to prevent UI blocking
 								this.debounceUpdatePlot();
+
+								// Update URL with current selection
+								this.updateUrlState();
 							}, 10);
 						} else {
 							logger.error(`Could not find ${this.selectionColumn} value in customdata at index ${index}`);
@@ -533,6 +595,13 @@ const app = Vue.createApp({
 					? this.createTracesWithSelection()
 					: this.createTracesByCategory();
 
+				// Create axis labels based on column names
+				const axisLabels = this.pcaColumnNames.length > 0 ? {
+					x: this.pcaColumnNames[this.pcaAxes.x],
+					y: this.pcaColumnNames[this.pcaAxes.y],
+					z: this.pcaColumnNames[this.pcaAxes.z]
+				} : null;
+
 				// First remove old event handlers to prevent duplicates
 				if (this.$refs.plotContainer && this.$refs.plotContainer.removeAllListeners) {
 					this.$refs.plotContainer.removeAllListeners('plotly_click');
@@ -546,12 +615,15 @@ const app = Vue.createApp({
 				Plotly.newPlot(
 					this.$refs.plotContainer,
 					traces,
-					createPlotLayout(this.title, this.currentCameraPosition, this.pcaAxes)
+					createPlotLayout(this.title, this.currentCameraPosition, this.pcaAxes, axisLabels)
 				);
 				logger.timeEnd('Plot Render');
 
 				// Setup event handlers again
 				this.setupPlotEventHandlers();
+
+				// Update URL with current state
+				this.updateUrlState();
 
 				// Hide updating indicators
 				loading.hideUpdating(this);
@@ -578,7 +650,7 @@ const app = Vue.createApp({
 			this.selectedValues = [];
 			// Reset colors back to initial set
 			this.selectionColors = [...this.initialSelectionColors];
-			this.updatePlot();
+			this.updatePlot(); // This will update the URL state
 		},
 
 		// Remove a specific value from selection
@@ -590,7 +662,7 @@ const app = Vue.createApp({
 			const index = this.selectedValues.indexOf(value);
 			if (index >= 0) {
 				this.selectedValues.splice(index, 1);
-				this.updatePlot();
+				this.updatePlot(); // This will update the URL state
 			}
 		},
 
@@ -612,7 +684,6 @@ const app = Vue.createApp({
 			// Always update the plot
 			this.updatePlot();
 		},
-
 
 		// ==================================================
 		// CHUNK: performance
@@ -1394,7 +1465,7 @@ function loadPcaData() {
  */
 function loadMetadata() {
     logger.time('Load JSONL');
-    
+
     return fetch("data/features/meta.jsonl")
         .then(response => response.text())
         .then(text => {
@@ -1443,12 +1514,20 @@ function processData(pcaArray, dataFrame) {
  * Update x, y, z arrays in plotData based on PCA axis selection
  * @param {Object} plotData - The plot data object 
  * @param {Object} pcaAxes - The selected PCA axes {x, y, z}
+ * @param {Array<string>} pcaColumnNames - Array of PCA column names
  */
-function updatePlotCoordinates(plotData, pcaAxes) {
-    // Set x, y, z from the selected PCA components
-    plotData.x = plotData.pcaComponents[pcaAxes.x];
-    plotData.y = plotData.pcaComponents[pcaAxes.y];
-    plotData.z = plotData.pcaComponents[pcaAxes.z];
+function updatePlotCoordinates(plotData, pcaAxes, pcaColumnNames = null) {
+    if (pcaColumnNames && pcaColumnNames.length > 0) {
+        // Set x, y, z from the actual columns in the data
+        plotData.x = plotData[pcaColumnNames[pcaAxes.x]];
+        plotData.y = plotData[pcaColumnNames[pcaAxes.y]];
+        plotData.z = plotData[pcaColumnNames[pcaAxes.z]];
+    } else {
+        // Fall back to using pcaComponents
+        plotData.x = plotData.pcaComponents[pcaAxes.x];
+        plotData.y = plotData.pcaComponents[pcaAxes.y];
+        plotData.z = plotData.pcaComponents[pcaAxes.z];
+    }
 }
 
 /**
@@ -1471,58 +1550,57 @@ function findCategoricalColumns(dataFrame) {
 }
 
 /**
- * Functions for loading and processing data for the PCA visualization
- */
-
-/**
  * Load data from a JSONL file and process it
  * @param {Object} config - Configuration object with data loading parameters
  * @param {Function} updateProgressCallback - Callback function for updating loading progress
  * @returns {Promise<Object>} Object containing the data frame, pca array, and plot data
  */
-async function loadJsonlData(config, updateProgressCallback = () => {}) {
+async function loadJsonlData(config, updateProgressCallback = () => { }) {
     const { filePath, numericalPrefix } = config;
-    
+
     logger.time('Load Data');
-    
+
     // Update progress to 10%
     updateProgressCallback(10, 'Downloading data file...');
-    
+
     // Load data from the configured file path
     const response = await fetch(filePath);
     const text = await response.text();
     logger.log('JSONL text length:', text.length);
     const dataFrame = DataFrame.from_jsonl(text);
     logger.timeEnd('Load Data');
-    
+
     // Update progress to 40%
     updateProgressCallback(40, 'Processing data...');
-    
+
     // Extract numerical columns (PCA components) based on prefix
     logger.time('Extract PCA Components');
-    const pcaArray = extractPcaComponents(dataFrame, numericalPrefix);
+    const pcaColumnNames = dataFrame.columns.filter(col => col.startsWith(numericalPrefix)).sort();
+    logger.log('Found PCA columns:', pcaColumnNames);
+    const pcaArray = extractPcaComponents(dataFrame, numericalPrefix, pcaColumnNames);
     logger.timeEnd('Extract PCA Components');
-    
+
     // Update progress to 70%
     updateProgressCallback(70, 'Preparing plot data');
-    
+
     // Process data
     logger.time('Process Data');
-    const plotData = processDataFromDataFrame(dataFrame, pcaArray);
+    const plotData = processDataFromDataFrame(dataFrame, pcaArray, { x: 0, y: 1, z: 2 }, pcaColumnNames);
     logger.timeEnd('Process Data');
-    
+
     // Update progress to 90%
     updateProgressCallback(90, 'Finding available columns...');
-    
+
     // Find available columns for selection
     const availableColumns = findAvailableColumns(dataFrame, numericalPrefix);
     logger.log('Available categorical columns:', availableColumns);
-    
+
     return {
         dataFrame,
         pcaArray,
         plotData,
-        availableColumns
+        availableColumns,
+        pcaColumnNames
     };
 }
 
@@ -1530,26 +1608,27 @@ async function loadJsonlData(config, updateProgressCallback = () => {}) {
  * Extract PCA components from the DataFrame based on the numerical prefix
  * @param {DataFrame} dataFrame - The DataFrame containing the data
  * @param {string} numericalPrefix - Prefix for numerical columns
+ * @param {Array<string>} pcaColumnNames - Optional array of PCA column names
  * @returns {Object} PCA array-like object
  */
-function extractPcaComponents(dataFrame, numericalPrefix) {
-    const numericalColumns = dataFrame.columns.filter(col => 
-        col.startsWith(numericalPrefix)
-    ).sort();
-    
-    logger.log('Found numerical columns:', numericalColumns);
-    
+function extractPcaComponents(dataFrame, numericalPrefix, pcaColumnNames = null) {
+    // Use provided column names or find them
+    const numericalColumns = pcaColumnNames ||
+        dataFrame.columns.filter(col => col.startsWith(numericalPrefix)).sort();
+
+    logger.log('Using numerical columns:', numericalColumns);
+
     if (numericalColumns.length === 0) {
         throw new Error(`No numerical columns found with prefix "${numericalPrefix}"`);
     }
-    
+
     // Extract the numerical data into a virtual PCA array
     const numRows = dataFrame.length;
     const numCols = numericalColumns.length;
-    
+
     // Create a Float32Array to store the PCA data
     const pcaData = new Float32Array(numRows * numCols);
-    
+
     // Fill the array with data from the DataFrame
     for (let i = 0; i < numRows; i++) {
         const row = dataFrame.row(i);
@@ -1558,12 +1637,12 @@ function extractPcaComponents(dataFrame, numericalPrefix) {
             pcaData[i * numCols + j] = row[colName] || 0;
         }
     }
-    
+
     // Create an NDArray-like object from the data
     return {
         data: pcaData,
         shape: [numRows, numCols],
-        get: function(rowIdx, colIdx) {
+        get: function (rowIdx, colIdx) {
             if (rowIdx === null) {
                 // Extract entire column
                 const colData = new Float32Array(numRows);
@@ -1593,7 +1672,7 @@ function extractPcaComponents(dataFrame, numericalPrefix) {
  * @returns {Array<string>} Array of available column names
  */
 function findAvailableColumns(dataFrame, numericalPrefix) {
-    return dataFrame.columns.filter(col => 
+    return dataFrame.columns.filter(col =>
         !col.startsWith(numericalPrefix)
     );
 }
@@ -1603,13 +1682,14 @@ function findAvailableColumns(dataFrame, numericalPrefix) {
  * @param {DataFrame} dataFrame - The DataFrame containing the data
  * @param {Object} pcaArray - The PCA array-like object
  * @param {Object} pcaAxes - Optional axes selection {x, y, z}
+ * @param {Array<string>} pcaColumnNames - Optional array of PCA column names
  * @returns {Object} The processed plot data
  */
-function processDataFromDataFrame(dataFrame, pcaArray, pcaAxes = { x: 0, y: 1, z: 2 }) {
+function processDataFromDataFrame(dataFrame, pcaArray, pcaAxes = { x: 0, y: 1, z: 2 }, pcaColumnNames = null) {
     if (!pcaArray || !dataFrame) {
         throw new Error("PCA data or metadata not available");
     }
-    
+
     // Create the plot data object with arrays for all available PCA components
     const plotData = {
         // Initialize empty arrays for all PCA components
@@ -1626,9 +1706,17 @@ function processDataFromDataFrame(dataFrame, pcaArray, pcaAxes = { x: 0, y: 1, z
     for (const column of dataFrame.columns) {
         plotData[column] = dataFrame.col(column);
     }
-    
+
     // Initialize x, y, z with the selected components
-    updatePlotCoordinates(plotData, pcaAxes);
+    if (pcaColumnNames && pcaColumnNames.length > 0) {
+        // Use column names directly if available
+        plotData.x = plotData[pcaColumnNames[pcaAxes.x]];
+        plotData.y = plotData[pcaColumnNames[pcaAxes.y]];
+        plotData.z = plotData[pcaColumnNames[pcaAxes.z]];
+    } else {
+        // Fall back to using pcaComponents
+        updatePlotCoordinates(plotData, pcaAxes);
+    }
 
     return plotData;
 }
@@ -1642,16 +1730,29 @@ function processDataFromDataFrame(dataFrame, pcaArray, pcaAxes = { x: 0, y: 1, z
 function parseUrlParams(dataConfig, urlParams) {
     const urlSearchParams = new URLSearchParams(window.location.search);
     const updatedConfig = { ...dataConfig };
-    
+
     // Update config from URL parameters if they exist
     for (const [configKey, paramName] of Object.entries(urlParams)) {
         const paramValue = urlSearchParams.get(paramName);
         if (paramValue) {
-            updatedConfig[configKey] = paramValue;
+            // Handle array parameters (comma or tilde separated)
+            if (paramName === 'selected') {
+                updatedConfig.selectedValues = paramValue.includes('~')
+                    ? paramValue.split('~')
+                    : paramValue.split(',');
+            }
+            // Handle numeric parameters
+            else if (['xAxis', 'yAxis', 'zAxis', 'selOpacity', 'nonSelOpacity', 'selSize', 'nonSelSize'].includes(paramName)) {
+                updatedConfig[configKey] = Number(paramValue);
+            }
+            // Handle regular string parameters
+            else {
+                updatedConfig[configKey] = paramValue;
+            }
             logger.log(`Using URL parameter ${paramName}=${paramValue} for ${configKey}`);
         }
     }
-    
+
     return updatedConfig;
 }
 
@@ -1659,20 +1760,46 @@ function parseUrlParams(dataConfig, urlParams) {
  * Update URL with current configuration
  * @param {Object} dataConfig - Current data configuration
  * @param {Object} urlParams - Mapping of config keys to URL parameter names
+ * @param {Object} appState - Optional additional app state to include in URL
  * @returns {string} Updated base URL
  */
-function updateUrlWithConfig(dataConfig, urlParams) {
+function updateUrlWithConfig(dataConfig, urlParams, appState = {}) {
     const url = new URL(window.location.href);
     const params = url.searchParams;
-    
+
     // Set parameters from current configuration
     for (const [configKey, paramName] of Object.entries(urlParams)) {
-        params.set(paramName, dataConfig[configKey]);
+        if (configKey in dataConfig) {
+            params.set(paramName, dataConfig[configKey]);
+        }
     }
-    
+
+    // Add additional state parameters if provided
+    if (Object.keys(appState).length > 0) {
+        // Handle selected values
+        if (appState.selectedValues && appState.selectedValues.length > 0) {
+            params.set(urlParams.selectedValues, appState.selectedValues.join('~'));
+        } else {
+            params.delete(urlParams.selectedValues);
+        }
+
+        // Handle axis settings
+        if (appState.pcaAxes) {
+            params.set(urlParams.xAxis, appState.pcaAxes.x);
+            params.set(urlParams.yAxis, appState.pcaAxes.y);
+            params.set(urlParams.zAxis, appState.pcaAxes.z);
+        }
+
+        // Handle appearance settings
+        if (appState.selectedOpacity !== undefined) params.set(urlParams.selectedOpacity, appState.selectedOpacity);
+        if (appState.nonSelectedOpacity !== undefined) params.set(urlParams.nonSelectedOpacity, appState.nonSelectedOpacity);
+        if (appState.selectedSize !== undefined) params.set(urlParams.selectedSize, appState.selectedSize);
+        if (appState.nonSelectedSize !== undefined) params.set(urlParams.nonSelectedSize, appState.nonSelectedSize);
+    }
+
     // Update browser URL without reloading the page
     window.history.replaceState({}, '', url.toString());
-    
+
     // Return the updated base URL
     return url.toString().split('?')[0] + '?';
 }
@@ -1741,7 +1868,7 @@ function updateUrlWithConfig(dataConfig, urlParams) {
       <div v-for="(axis, axisName) in {x: 'X', y: 'Y', z: 'Z'}" class="axis-control">
         <label>{{ axisName }}-Axis:</label>
         <select v-model="pcaAxes[axis.toLowerCase()]" @change="updatePlotAxes">
-          <option v-for="(_, index) in availablePcaAxes" :value="index">PC{{ index }}</option>
+          <option v-for="(_, index) in availablePcaAxes" :value="index"> {{ pcaColumnNames && pcaColumnNames.length > index ? pcaColumnNames[index] : 'PC' + index }} </option>
         </select>
       </div>
     </div>
@@ -2007,15 +2134,16 @@ function computeCombinedUrl(baseUrl, selectedValues, selectionColumn) {
  * @param {string} title - Title of the plot
  * @param {Object|null} cameraPosition - Optional camera position to preserve
  * @param {Object} axes - Object with x, y, z indices of PCA components to use
+ * @param {Object|null} axisLabels - Optional object with labels for each axis
  * @returns {Object} Layout configuration object for Plotly
  */
-function createPlotLayout(title, cameraPosition = null, axes = { x: 0, y: 1, z: 2 }) {
+function createPlotLayout(title, cameraPosition = null, axes = { x: 0, y: 1, z: 2 }, axisLabels = null) {
 	const layout = {
 		title: title,
 		scene: {
-			xaxis: { title: `PC${axes.x}` },
-			yaxis: { title: `PC${axes.y}` },
-			zaxis: { title: `PC${axes.z}` },
+			xaxis: { title: axisLabels ? axisLabels.x : `PC${axes.x}` },
+			yaxis: { title: axisLabels ? axisLabels.y : `PC${axes.y}` },
+			zaxis: { title: axisLabels ? axisLabels.z : `PC${axes.z}` },
 			camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
 		},
 		margin: { l: 0, r: 0, b: 0, t: 50 },
@@ -2278,7 +2406,7 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 		selectedOpacity = 1.0,
 		nonSelectedOpacity = 0.4,
 		nonSelectedColor = '#969696',
-		getSelectionColor = (index) => ['#ff7f0e', '#2ca02c', '#d62728'][index % 3],
+		getSelectionColor = (index) => ['#ff7f0e', '#2ca02c', '#d62728'][index % 3], // Default if not provided
 		colorByColumn = selectedColumn, // Default to selectedColumn if not provided
 		useCache = true
 	} = options || {};
@@ -2328,12 +2456,17 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 	}
 
 	// Add a trace for each selected value
-	Object.keys(selectedIndices).forEach((value, index) => {
+	const selectedValuesArray = Object.keys(selectedIndices);
+	selectedValuesArray.forEach((value, index) => {
 		const indices = selectedIndices[value];
 		console.log(`Creating trace for selected value "${value}" with ${indices.length} points...`);
 
 		// Get customdata with caching for better performance
 		const customdata = getCustomdata(plotData, indices, selectedColumn, useCache);
+
+		// Use the getSelectionColor function passed as an option
+		const colorIndex = selectedValues.indexOf(value);
+		const color = getSelectionColor(colorIndex);
 
 		traces.push({
 			...defaultTraceConfig,
@@ -2343,7 +2476,7 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 			name: `Selected: ${value}`,
 			marker: {
 				size: selectedSize,
-				color: getSelectionColor(index),
+				color: color,
 				opacity: selectedOpacity
 			},
 			customdata: customdata
