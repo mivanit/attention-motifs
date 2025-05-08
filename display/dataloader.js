@@ -21,7 +21,7 @@ function loadPcaData() {
  */
 function loadMetadata() {
     logger.time('Load JSONL');
-    
+
     return fetch("data/features/meta.jsonl")
         .then(response => response.text())
         .then(text => {
@@ -107,44 +107,44 @@ function findCategoricalColumns(dataFrame) {
  * @param {Function} updateProgressCallback - Callback function for updating loading progress
  * @returns {Promise<Object>} Object containing the data frame, pca array, and plot data
  */
-async function loadJsonlData(config, updateProgressCallback = () => {}) {
+async function loadJsonlData(config, updateProgressCallback = () => { }) {
     const { filePath, numericalPrefix } = config;
-    
+
     logger.time('Load Data');
-    
+
     // Update progress to 10%
     updateProgressCallback(10, 'Downloading data file...');
-    
+
     // Load data from the configured file path
     const response = await fetch(filePath);
     const text = await response.text();
     logger.log('JSONL text length:', text.length);
     const dataFrame = DataFrame.from_jsonl(text);
     logger.timeEnd('Load Data');
-    
+
     // Update progress to 40%
     updateProgressCallback(40, 'Processing data...');
-    
+
     // Extract numerical columns (PCA components) based on prefix
     logger.time('Extract PCA Components');
     const pcaArray = extractPcaComponents(dataFrame, numericalPrefix);
     logger.timeEnd('Extract PCA Components');
-    
+
     // Update progress to 70%
     updateProgressCallback(70, 'Preparing plot data');
-    
+
     // Process data
     logger.time('Process Data');
     const plotData = processDataFromDataFrame(dataFrame, pcaArray);
     logger.timeEnd('Process Data');
-    
+
     // Update progress to 90%
     updateProgressCallback(90, 'Finding available columns...');
-    
+
     // Find available columns for selection
     const availableColumns = findAvailableColumns(dataFrame, numericalPrefix);
     logger.log('Available categorical columns:', availableColumns);
-    
+
     return {
         dataFrame,
         pcaArray,
@@ -160,23 +160,23 @@ async function loadJsonlData(config, updateProgressCallback = () => {}) {
  * @returns {Object} PCA array-like object
  */
 function extractPcaComponents(dataFrame, numericalPrefix) {
-    const numericalColumns = dataFrame.columns.filter(col => 
+    const numericalColumns = dataFrame.columns.filter(col =>
         col.startsWith(numericalPrefix)
     ).sort();
-    
+
     logger.log('Found numerical columns:', numericalColumns);
-    
+
     if (numericalColumns.length === 0) {
         throw new Error(`No numerical columns found with prefix "${numericalPrefix}"`);
     }
-    
+
     // Extract the numerical data into a virtual PCA array
     const numRows = dataFrame.length;
     const numCols = numericalColumns.length;
-    
+
     // Create a Float32Array to store the PCA data
     const pcaData = new Float32Array(numRows * numCols);
-    
+
     // Fill the array with data from the DataFrame
     for (let i = 0; i < numRows; i++) {
         const row = dataFrame.row(i);
@@ -185,12 +185,12 @@ function extractPcaComponents(dataFrame, numericalPrefix) {
             pcaData[i * numCols + j] = row[colName] || 0;
         }
     }
-    
+
     // Create an NDArray-like object from the data
     return {
         data: pcaData,
         shape: [numRows, numCols],
-        get: function(rowIdx, colIdx) {
+        get: function (rowIdx, colIdx) {
             if (rowIdx === null) {
                 // Extract entire column
                 const colData = new Float32Array(numRows);
@@ -220,7 +220,7 @@ function extractPcaComponents(dataFrame, numericalPrefix) {
  * @returns {Array<string>} Array of available column names
  */
 function findAvailableColumns(dataFrame, numericalPrefix) {
-    return dataFrame.columns.filter(col => 
+    return dataFrame.columns.filter(col =>
         !col.startsWith(numericalPrefix)
     );
 }
@@ -236,7 +236,7 @@ function processDataFromDataFrame(dataFrame, pcaArray, pcaAxes = { x: 0, y: 1, z
     if (!pcaArray || !dataFrame) {
         throw new Error("PCA data or metadata not available");
     }
-    
+
     // Create the plot data object with arrays for all available PCA components
     const plotData = {
         // Initialize empty arrays for all PCA components
@@ -253,7 +253,7 @@ function processDataFromDataFrame(dataFrame, pcaArray, pcaAxes = { x: 0, y: 1, z
     for (const column of dataFrame.columns) {
         plotData[column] = dataFrame.col(column);
     }
-    
+
     // Initialize x, y, z with the selected components
     updatePlotCoordinates(plotData, pcaAxes);
 
@@ -269,7 +269,7 @@ function processDataFromDataFrame(dataFrame, pcaArray, pcaAxes = { x: 0, y: 1, z
 function parseUrlParams(dataConfig, urlParams) {
     const urlSearchParams = new URLSearchParams(window.location.search);
     const updatedConfig = { ...dataConfig };
-    
+
     // Update config from URL parameters if they exist
     for (const [configKey, paramName] of Object.entries(urlParams)) {
         const paramValue = urlSearchParams.get(paramName);
@@ -278,7 +278,7 @@ function parseUrlParams(dataConfig, urlParams) {
             logger.log(`Using URL parameter ${paramName}=${paramValue} for ${configKey}`);
         }
     }
-    
+
     return updatedConfig;
 }
 
@@ -291,15 +291,15 @@ function parseUrlParams(dataConfig, urlParams) {
 function updateUrlWithConfig(dataConfig, urlParams) {
     const url = new URL(window.location.href);
     const params = url.searchParams;
-    
+
     // Set parameters from current configuration
     for (const [configKey, paramName] of Object.entries(urlParams)) {
         params.set(paramName, dataConfig[configKey]);
     }
-    
+
     // Update browser URL without reloading the page
     window.history.replaceState({}, '', url.toString());
-    
+
     // Return the updated base URL
     return url.toString().split('?')[0] + '?';
 }

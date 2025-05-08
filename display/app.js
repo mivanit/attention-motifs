@@ -61,7 +61,7 @@ const app = Vue.createApp({
 			isRightMouseDown: false,
 			// Configuration for data loading
 			dataConfig: {
-				filePath: 'data/features/pca.jsonl', // Default path to the data file
+				filePath: 'data/pca.jsonl', // Default path to the data file
 				numericalPrefix: 'pc.', // Prefix for numerical columns (PCA components)
 				defaultColorColumn: 'activation.model', // Default column for coloring
 				defaultSelectionColumn: 'activation.model', // Default column for selection
