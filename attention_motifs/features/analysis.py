@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from functools import cached_property
 import json
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Sequence
 import math
 from collections import defaultdict
 from statistics import median
@@ -304,7 +304,7 @@ PAD_CHARS: int = 2  # add this many spaces **beyond** max length
 def plot_importance_covariance(
 	data: pl.DataFrame,
 	importance_df: pl.DataFrame,
-	metric: str = "abs_sum",
+	metrics: Sequence[str] = ["abs_sum", "abs_max"],
 	descending: bool = True,
 	feature_order: list[str] | None = None,  # << NEW
 	bins: int | None = None,
@@ -321,16 +321,15 @@ def plot_importance_covariance(
 		features = feature_order
 		# Grab importance scores in that order (fill with NaNs if missing)
 		scores_df = pl.DataFrame({"feature": features}).join(
-			importance_df.select("feature", metric), on="feature", how="left"
+			importance_df.select("feature", metrics[0]), on="feature", how="left"
 		)
 	else:
 		# Fall back to importance-sorted order
-		scores_df = importance_df.sort(metric, descending=descending).select(
-			"feature", metric
+		scores_df = importance_df.sort(metrics[0], descending=descending).select(
+			"feature", *metrics,
 		)
 		features = scores_df["feature"].to_list()
 
-	scores = scores_df[metric].to_numpy()
 	labels = [f.removeprefix(feat_strip_prefix) for f in features]
 
 	# ---------- monospace + right-padding for labels ----------------------
@@ -383,26 +382,30 @@ def plot_importance_covariance(
 
 	# ---------- importance dot-plot (shares x) ---------------------------
 	ax_imp = fig.add_subplot(gs[0, 0], sharex=ax_cov)
-	ax_imp.plot(np.arange(len(scores)), scores, "o", markersize=5, color="black")
-	ax_imp.set_ylabel(metric)
-	ax_imp.set_title(f"Feature importance ({metric})")
+	ax_imp.set_ylabel("Importance")
+	for m in metrics:
+		s = scores_df[m].to_numpy()
+		ax_imp.plot(np.arange(len(s)), s, "o", markersize=5, label=m)
+	ax_imp.legend()
 	ax_imp.tick_params(axis="x", labelbottom=False)
 	for spine in ("top", "right"):
 		ax_imp.spines[spine].set_visible(False)
 	ax_imp.margins(x=0)
+	ax_imp.set_yscale("log")
+	ax_imp.grid()
 
 	if 0 < trim_frac < 0.5:
 		pos = ax_imp.get_position()
 		ax_imp.set_position([pos.x0, pos.y0, pos.width * (1 - trim_frac), pos.height])
 
 	# ---------- optional histogram ---------------------------------------
-	if bins:
-		ax_hist = fig.add_subplot(gs[:, 1])
-		ax_hist.hist(scores, bins=bins, orientation="horizontal", color="gray")
-		ax_hist.set_xlabel("count")
-		ax_hist.set_ylabel(metric)
-		ax_hist.set_title("Importance distribution")
-		ax_hist.invert_yaxis()
+	# if bins:
+	# 	ax_hist = fig.add_subplot(gs[:, 1])
+	# 	ax_hist.hist(scores, bins=bins, orientation="horizontal", color="gray")
+	# 	ax_hist.set_xlabel("count")
+	# 	ax_hist.set_ylabel(metric)
+	# 	ax_hist.set_title("Importance distribution")
+	# 	ax_hist.invert_yaxis()
 
 	plt.tight_layout()
 	plt.show()
