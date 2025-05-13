@@ -168,15 +168,16 @@ def compute_scalar_features(
 
 	return dict(
 		# diagonal: standard features, fit diff to beta dist
-		**prefix_dict(vec_features(A.diagonal()), prefix="diag"),
+		**prefix_dict(vec_features(A.diagonal(), reduced=False), prefix="diag"),
 		# off-diagonal: standard features, fit diff to beta dist
-		**prefix_dict(vec_features(A[:, 0]), prefix="first_tok"),
+		**prefix_dict(vec_features(A[:, 0], reduced=False), prefix="first_tok"),
 		# transition tensor: standard features, standard features on diff, linear envelope on transition time
 		# 	TODO: standard features on decay rate
-		**prefix_dict(
-			tt_features(A),
-			prefix="markov_transition",
-		),
+		# markov transition not that important?
+		# **prefix_dict(
+		# 	tt_features(A),
+		# 	prefix="markov_transition",
+		# ),
 		# # {log, raw} gram matrix of {rows, cols, rows of skewed}: beta fit hist
 		# # 	TODO: fit fft in `gram_features`, but this is expensive
 		**prefix_dict(

@@ -67,7 +67,7 @@ def tt_features(
 
 	indices_adjusted_diff = np.diff(indices_adjusted)
 	output.update(dict(
-		skew=stats.skew(indices_adjusted_diff),
+		skewness=stats.skew(indices_adjusted_diff),
 		kurtosis=stats.kurtosis(indices_adjusted_diff),
 	)
 
