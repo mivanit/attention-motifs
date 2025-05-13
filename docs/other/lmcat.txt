@@ -1,8 +1,8 @@
 # Stats
 - 68 files
-- 15712 (16K) lines
-- 453023 (453K) chars
-- 178888 (179K) `gpt2` tokens
+- 15765 (16K) lines
+- 454301 (454K) chars
+- 179439 (179K) `gpt2` tokens
 
 # File Tree
 
@@ -27,12 +27,12 @@ attention-motifs
 │   ├── features                   
 │   │   ├── __init__.py            [    0L         0C         0T]
 │   │   ├── analysis.py            [  584L    18,208C     6,989T]
-│   │   ├── features.py            [  206L     5,650C     2,381T]
+│   │   ├── features.py            [  206L     5,662C     2,385T]
 │   │   ├── generate.py            [   54L     1,290C       475T]
 │   │   ├── hist_beta_fit.py       [   39L       826C       353T]
 │   │   ├── plotting.py            [  348L     9,822C     4,004T]
-│   │   ├── transition_tensor.py   [   72L     1,791C       788T]
-│   │   └── vec_features.py        [  244L     6,413C     2,777T]
+│   │   ├── transition_tensor.py   [   78L     1,943C       877T]
+│   │   └── vec_features.py        [  248L     6,551C     2,808T]
 │   ├── math                       
 │   │   ├── __init__.py            [    0L         0C         0T]
 │   │   ├── cos_sim.py             [   23L       767C       286T]
@@ -65,7 +65,7 @@ attention-motifs
 │   ├── util                       
 │   │   ├── testing.ipynb          [  166L   193,668C   143,646T]
 │   │   └── view_profiling.ipynb   [  150L     9,976C     4,894T]
-│   ├── analyze_features.ipynb     [  746L 1,830,206C 1,375,435T]
+│   ├── analyze_features.ipynb     [  828L 2,085,454C 1,573,434T]
 │   ├── analyze_heads.ipynb        [  598L   806,226C   607,430T]
 │   ├── generate_features.ipynb    [  908L 1,531,100C 1,154,437T]
 │   ├── gram_mats.ipynb            [  504L 2,313,515C 1,708,167T]
@@ -3681,7 +3681,6 @@ from pattern_lens.figures import HTConfigMock
 from attention_motifs.util import prefix_dict
 from attention_motifs.bins import Bins
 from attention_motifs.features.hist_beta_fit import hist_beta_fit
-from attention_motifs.features.transition_tensor import tt_features
 from attention_motifs.features.vec_features import vec_features
 from attention_motifs.math.cos_sim import cosine_similarity_matrix
 from attention_motifs.math.math import skew_lt
@@ -3824,15 +3823,16 @@ def compute_scalar_features(
 
 	return dict(
 		# diagonal: standard features, fit diff to beta dist
-		**prefix_dict(vec_features(A.diagonal()), prefix="diag"),
+		**prefix_dict(vec_features(A.diagonal(), reduced=False), prefix="diag"),
 		# off-diagonal: standard features, fit diff to beta dist
-		**prefix_dict(vec_features(A[:, 0]), prefix="first_tok"),
+		**prefix_dict(vec_features(A[:, 0], reduced=False), prefix="first_tok"),
 		# transition tensor: standard features, standard features on diff, linear envelope on transition time
 		# 	TODO: standard features on decay rate
-		**prefix_dict(
-			tt_features(A),
-			prefix="markov_transition",
-		),
+		# markov transition not that important?
+		# **prefix_dict(
+		# 	tt_features(A),
+		# 	prefix="markov_transition",
+		# ),
 		# # {log, raw} gram matrix of {rows, cols, rows of skewed}: beta fit hist
 		# # 	TODO: fit fft in `gram_features`, but this is expensive
 		**prefix_dict(
@@ -4320,14 +4320,12 @@ def plot_embedding_kde(embedding: np.ndarray, labels: pl.Series, title: str) -> 
 import numpy as np
 from jaxtyping import Float
 import torch
+import scipy.stats as stats
 
 # attention-motifs
-from attention_motifs.features.vec_features import vec_features
-from attention_motifs.math.math import compute_envelope_params
 from attention_motifs.transition_tensor import (
 	transition_tensor_torch,
 )
-from attention_motifs.util import prefix_dict
 
 
 def tt_features(
@@ -4354,38 +4352,46 @@ def tt_features(
 	indices_adjusted = np.array(idxs_with_inf[indices_raw], dtype=float)
 	# if last element, set to inf
 	# indices_adjusted[indices_raw == len(idxs)] = 1e10
-	indices_adjusted_l10 = np.log10(indices_adjusted[1:])
+	# indices_adjusted_l10 = np.log10(indices_adjusted[1:])
 	# ax_tt_time.plot(indices_adjusted_l10, "ro")
-	output.update(
-		prefix_dict(
-			vec_features(indices_adjusted_l10),
-			prefix="time",
-		)
-	)
-	idxs_x = np.arange(len(indices_adjusted_l10))
-	for envtype in ("lower", "upper"):
-		m, b, r2 = compute_envelope_params(
-			x=idxs_x,
-			y=indices_adjusted_l10,
-			envelope_type=envtype,
-		)
-		output.update(
-			prefix_dict(
-				dict(
-					slope=m,
-					intercept=b,
-					r2=r2,
-				),
-				prefix=["env", envtype],
-			)
-		)
+	# removing because 0 variance
+	# output.update(
+	# 	prefix_dict(
+	# 		vec_features(indices_adjusted_l10),
+	# 		prefix="time",
+	# 	)
+	# )
+
+	# removing because 0 variance
+	# idxs_x = np.arange(len(indices_adjusted_l10))
+	# for envtype in ("lower", "upper"):
+	# 	m, b, r2 = compute_envelope_params(
+	# 		x=idxs_x,
+	# 		y=indices_adjusted_l10,
+	# 		envelope_type=envtype,
+	# 	)
+	# 	output.update(
+	# 		prefix_dict(
+	# 			dict(
+	# 				slope=m,
+	# 				intercept=b,
+	# 				r2=r2,
+	# 			),
+	# 			prefix=["env", envtype],
+	# 		)
+	# 	)
 
 	indices_adjusted_diff = np.diff(indices_adjusted)
 	output.update(
-		prefix_dict(
-			vec_features(indices_adjusted_diff),
-			prefix="diff",
+		dict(
+			skewness=stats.skew(indices_adjusted_diff),
+			kurtosis=stats.kurtosis(indices_adjusted_diff),
 		)
+		# all except skew and cov are highly correlated with other things
+		# prefix_dict(
+		# 	vec_features(indices_adjusted_diff),
+		# 	prefix="diff",
+		# )
 	)
 
 	return output
@@ -4405,8 +4411,9 @@ from muutils.dbg import dbg_tensor
 
 def vec_features(
 	arr: np.ndarray,
-	compute_distribution: bool = True,
-	compute_timeseries: bool = True,
+	# compute_distribution: bool = True,
+	# compute_timeseries: bool = True,
+	reduced: bool = True,
 ) -> dict[str, float]:
 	if len(arr.shape) != 1:
 		dbg_tensor(arr)
@@ -4417,54 +4424,57 @@ def vec_features(
 	dist_features: dict[str, float] = dict()
 	timeseries_features: dict[str, float] = dict()
 
-	if compute_distribution:
-		# dbg_tensor(arr)
-		bins: int = 10 if n >= 10 else n
-		hist, _ = np.histogram(arr, bins=bins)
-		probs: np.ndarray = (
-			hist.astype(float) / hist.sum() if hist.sum() > 0 else hist.astype(float)
-		)
-		dist_features = dict(
-			mean=np.mean(arr),
-			median=np.median(arr),
-			variance=np.var(arr, ddof=1),
-			# std=np.std(arr, ddof=1),
-			skewness=stats.skew(arr),
-			# kurtosis=stats.kurtosis(arr),
-			entropy=stats.entropy(probs, base=2),
-			# L1_norm=np.sum(np.abs(arr)) / n,
-			L2_norm=np.linalg.norm(arr, ord=2) / n,
-			rms=np.sqrt(np.mean(arr**2)),
-			energy=np.sum(arr**2),
-		)
+	# if compute_distribution:
+	# dbg_tensor(arr)
+	bins: int = 10 if n >= 10 else n
+	hist, _ = np.histogram(arr, bins=bins)
+	probs: np.ndarray = (
+		hist.astype(float) / hist.sum() if hist.sum() > 0 else hist.astype(float)
+	)
+	dist_features = dict(
+		mean=np.mean(arr),
+		median=np.median(arr),
+		variance=np.var(arr, ddof=1),
+		# std=np.std(arr, ddof=1),
+		skewness=stats.skew(arr),
+		# kurtosis=stats.kurtosis(arr),
+		entropy=stats.entropy(probs, base=2),
+		# L1_norm=np.sum(np.abs(arr)) / n,
+		# L2_norm=np.linalg.norm(arr, ord=2) / n,
+		rms=np.sqrt(np.mean(arr**2)),
+	)
+	if not reduced:
+		dist_features["energy"] = np.sum(arr**2)
+		dist_features["kurtosis"] = stats.kurtosis(arr)
+		dist_features["L2_norm"] = np.linalg.norm(arr, ord=2) / n
 
-	if compute_timeseries:
-		# Lag-1 Autocorrelation (Pearson correlation between arr[:-1] and arr[1:])
-		autocorr_lag1: float = (
-			np.corrcoef(arr[:-1], arr[1:])[0, 1]
-			if np.std(arr[:-1]) > 0 and np.std(arr[1:]) > 0
-			else 0.0
-		)
+	# if compute_timeseries:
+	# Lag-1 Autocorrelation (Pearson correlation between arr[:-1] and arr[1:])
+	autocorr_lag1: float = (
+		np.corrcoef(arr[:-1], arr[1:])[0, 1]
+		if np.std(arr[:-1]) > 0 and np.std(arr[1:]) > 0
+		else 0.0
+	)
 
-		# PSD using Welch's method (total power)
-		freqs, psd_vals = signal.welch(arr, nperseg=n)
-		psd_total_power: float = np.sum(psd_vals)
+	# PSD using Welch's method (total power)
+	freqs, psd_vals = signal.welch(arr, nperseg=n)
+	psd_total_power: float = np.sum(psd_vals)
 
-		# Linear regression using scipy.stats.linregress
-		t: np.ndarray = np.arange(n)
-		linreg_result = stats.linregress(t, arr)
-		line_fit: dict[str, float] = dict(
-			slope=linreg_result.slope,
-			intercept=linreg_result.intercept,
-			r2=linreg_result.rvalue**2,
-		)
+	# Linear regression using scipy.stats.linregress
+	t: np.ndarray = np.arange(n)
+	linreg_result = stats.linregress(t, arr)
+	line_fit: dict[str, float] = dict(
+		slope=linreg_result.slope,
+		intercept=linreg_result.intercept,
+		r2=linreg_result.rvalue**2,
+	)
 
-		timeseries_features: dict[str, float] = dict(
-			zero_crossing_rate=np.sum(np.diff(np.signbit(arr))) / (n - 1),
-			autocorr_lag1=autocorr_lag1,
-			psd_total_power=psd_total_power,
-			**{f"linreg.{k}": v for k, v in line_fit.items()},
-		)
+	timeseries_features: dict[str, float] = dict(
+		# zero_crossing_rate=np.sum(np.diff(np.signbit(arr))) / (n - 1),
+		autocorr_lag1=autocorr_lag1,
+		psd_total_power=psd_total_power,
+		**{f"linreg.{k}": v for k, v in line_fit.items()},
+	)
 
 	# return {**dist_features, **timeseries_features}
 	# merge dicts in a way that keeps numba happy
@@ -12586,6 +12596,45 @@ DATA_SCALED.write_ndjson(PATH_BASE / "scaled.jsonl")
 # )
 ```
 
+```python
+# TEMP: drop specific columns
+
+# DATA_SCALED_DROPPED: pl.DataFrame = DATA_SCALED.drop(
+# 	x
+# 	for x in
+# 	DATA_SCALED.columns
+# 	if x.startswith("feat.") and (
+# 		x.endswith("rms") or
+# 		x.endswith("L1_norm") or (
+# 			x.startswith("feat.markov_transition.diff")
+# 			and not (
+# 				x.endswith("kurtosis")
+# 				or x.endswith("skewness")
+# 			)
+# 		)
+# 		# remove energy except for first_tok and diag
+# 		or (
+# 			(
+# 				x.endswith(".energy")
+# 				or x.endswith(".kurtosis")
+# 				or x.endswith(".L2_norm")
+# 			)
+# 			and not (
+# 				x.startswith("feat.first_tok")
+# 				or x.startswith("feat.diag")
+# 				or x.startswith("feat.markov_transition.diff")
+# 			)
+# 		)
+# 	)
+# )
+# print(f"{DATA_SCALED.shape = }")
+# print(f"{DATA_SCALED_DROPPED.shape = }")
+# DATA_SCALED = DATA_SCALED_DROPPED
+# FEATURE_COLS: list[str] = [
+# 	col for col in DATA_SCALED.columns if col.startswith("feat.")
+# ]
+```
+
 # PCA
 
 ```python
@@ -12640,69 +12689,73 @@ cov_feats, cov_mat = plot_importance_covariance(
 
 ```python
 def groups_by_covariance(
-    features: list[str],
-    cov: Float[np.ndarray, "n n"],
-    threshold: float,
-    use_abs: bool = True,
+	features: list[str],
+	cov: Float[np.ndarray, "n n"],
+	threshold: float,
+	use_abs: bool = True,
 ) -> list[list[str]]:
-    n: int = len(features)
-    assert n == cov.shape[0] == cov.shape[1], "Covariance matrix must be square and match the number of features."
+	n: int = len(features)
+	assert n == cov.shape[0] == cov.shape[1], (
+		"Covariance matrix must be square and match the number of features."
+	)
 
-    # |cov| if desired, then a boolean matrix marking edges above threshold
-    comparison_matrix: Float[np.ndarray, "n n"] = np.abs(cov) if use_abs else cov
-    adjacency_matrix: Float[np.ndarray, "n n"] = comparison_matrix > threshold
+	# |cov| if desired, then a boolean matrix marking edges above threshold
+	comparison_matrix: Float[np.ndarray, "n n"] = np.abs(cov) if use_abs else cov
+	adjacency_matrix: Float[np.ndarray, "n n"] = comparison_matrix > threshold
 
-    visited_indices: set[int] = set()
-    groups: list[list[str]] = []
+	visited_indices: set[int] = set()
+	groups: list[list[str]] = []
 
-    # Depth-first search over the implicit graph
-    for start_idx in range(n):
-        if start_idx in visited_indices:
-            continue
-        stack: list[int] = [start_idx]
-        component_indices: list[int] = []
+	# Depth-first search over the implicit graph
+	for start_idx in range(n):
+		if start_idx in visited_indices:
+			continue
+		stack: list[int] = [start_idx]
+		component_indices: list[int] = []
 
-        while stack:
-            idx: int = stack.pop()
-            if idx in visited_indices:
-                continue
-            visited_indices.add(idx)
-            component_indices.append(idx)
+		while stack:
+			idx: int = stack.pop()
+			if idx in visited_indices:
+				continue
+			visited_indices.add(idx)
+			component_indices.append(idx)
 
-            # All indices j where adjacency_matrix[idx, j] is True
-            neighbors: np.ndarray = np.where(adjacency_matrix[idx])[0]
-            stack.extend([j for j in neighbors if j not in visited_indices])
+			# All indices j where adjacency_matrix[idx, j] is True
+			neighbors: np.ndarray = np.where(adjacency_matrix[idx])[0]
+			stack.extend([j for j in neighbors if j not in visited_indices])
 
-        groups.append([features[j] for j in component_indices])
+		groups.append([features[j] for j in component_indices])
 
-    return groups
+	return groups
 
-groups: list[list[str]] = groups_by_covariance(cov_feats, cov_mat, threshold=0.99999)
+
+groups: list[list[str]] = groups_by_covariance(cov_feats, cov_mat, threshold=0.95)
 singletons: list[list[str]] = [g for g in groups if len(g) == 1]
-print(f"{singletons = }")
-for g in groups:
-    if len(g) == 1:
-        continue
-    print(g)
+# print(f"{singletons = }")
+# print singleton features with their importance
+# get the row from df_importance that matches the feature name
+singleton_info = [
+	(g[0], df_importance.filter(pl.col("feature").is_in(g)).to_dicts()[0]["abs_max"])
+	for g in singletons
+]
+for feat, imp in sorted(singleton_info, key=lambda x: x[1], reverse=True):
+	print(f"{feat:60} {imp:.3f}")
 
+for g in groups:
+	if len(g) == 1:
+		continue
+	print(g)
 ```
 
 ```python
-# DATA_REDUCED: pl.DataFrame = DATA_SCALED.select(
-# 	[
-# 		f for f in DATA_SCALED.columns
-# 		if "markov_transition" not in f
-# 	]
-# )
-
 n_dims: int = 5
 embed_fig, embed_ax = plt.subplots(
-	n_dims,
-	n_dims,
+	n_dims - 1,
+	n_dims - 1,
 	figsize=(20, 20),
 )
-for i in range(0, n_dims):
-	for j in range(i, n_dims):
+for i in range(0, n_dims - 1):
+	for j in range(i + 1, n_dims):
 		plot_embedding(
 			PCA_DATA,
 			DATA_SCALED["activation.model"],
@@ -12710,7 +12763,7 @@ for i in range(0, n_dims):
 			alpha=0.05,
 			marker_size=5,
 			title=f"({i}, {j})",
-			ax=embed_ax[i, j],
+			ax=embed_ax[i, j - 1],
 		)
 	for k in range(0, i):
 		embed_ax[i, k].axis("off")
