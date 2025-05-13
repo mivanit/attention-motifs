@@ -311,9 +311,10 @@ def plot_importance_covariance(
 	cmap: str = "coolwarm",
 	feat_strip_prefix: str = "feat.",
 	figsize: tuple[int, int] = (25, 22),
-	trim_frac: float = 0.03,
-	tick_pad: int = 10,
+	trim_frac: float = 0.028,
+	tick_pad: int = 30,
 	importance_threshold: float | None = None,
+	fontsize: int = 8,
 ) -> tuple[list[str], np.ndarray]:
 	# ---------- pick feature sequence ------------------------------------
 	if feature_order is not None:
@@ -328,6 +329,11 @@ def plot_importance_covariance(
 		scores_df = importance_df.sort(metrics[0], descending=descending).select(
 			"feature", *metrics,
 		)
+		features = scores_df["feature"].to_list()
+	
+	if importance_threshold is not None:
+		# Filter features based on the importance threshold
+		scores_df = scores_df.filter(pl.col(metrics[0]) > importance_threshold)
 		features = scores_df["feature"].to_list()
 
 	labels = [f.removeprefix(feat_strip_prefix) for f in features]
@@ -363,18 +369,17 @@ def plot_importance_covariance(
 		rotation=90,
 		rotation_mode="anchor",
 		fontfamily=MONO_FONT,
-		fontsize=8,
+		fontsize=fontsize,
 	)
 	ax_cov.set_yticklabels(
 		pad_lbls,
 		fontfamily=MONO_FONT,
-		fontsize=8,
+		fontsize=fontsize,
 	)
 	ax_cov.tick_params(axis="x", pad=tick_pad)  # << shift labels downward
 
 	ax_cov.set_xlabel("Features")
 	ax_cov.set_ylabel("Features")
-	ax_cov.set_title("Covariance matrix")
 
 	divider = make_axes_locatable(ax_cov)
 	cax = divider.append_axes("right", size="2.5%", pad=0.05)
@@ -386,13 +391,16 @@ def plot_importance_covariance(
 	for m in metrics:
 		s = scores_df[m].to_numpy()
 		ax_imp.plot(np.arange(len(s)), s, "o", markersize=5, label=m)
-	ax_imp.legend()
+	ax_imp.legend(
+		loc="center left", 
+		bbox_to_anchor=(-0.3, 0.5),  # x,y in axes fraction units
+		borderaxespad=0,
+	)
 	ax_imp.tick_params(axis="x", labelbottom=False)
-	for spine in ("top", "right"):
-		ax_imp.spines[spine].set_visible(False)
-	ax_imp.margins(x=0)
 	ax_imp.set_yscale("log")
-	ax_imp.grid()
+	ax_imp.grid(which="major", axis="y")
+	ax_imp.grid(which="minor", axis="y", linestyle="--", linewidth=1, alpha=0.4)
+	ax_imp.grid(which="major", axis="x", linestyle="--", linewidth=1, alpha=0.4)
 
 	if 0 < trim_frac < 0.5:
 		pos = ax_imp.get_position()
