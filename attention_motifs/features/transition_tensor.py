@@ -1,6 +1,7 @@
 import numpy as np
 from jaxtyping import Float
 import torch
+import scipy.stats as stats
 
 # attention-motifs
 from attention_motifs.features.vec_features import vec_features
@@ -35,38 +36,46 @@ def tt_features(
 	indices_adjusted = np.array(idxs_with_inf[indices_raw], dtype=float)
 	# if last element, set to inf
 	# indices_adjusted[indices_raw == len(idxs)] = 1e10
-	indices_adjusted_l10 = np.log10(indices_adjusted[1:])
+	# indices_adjusted_l10 = np.log10(indices_adjusted[1:])
 	# ax_tt_time.plot(indices_adjusted_l10, "ro")
-	output.update(
-		prefix_dict(
-			vec_features(indices_adjusted_l10),
-			prefix="time",
-		)
-	)
-	idxs_x = np.arange(len(indices_adjusted_l10))
-	for envtype in ("lower", "upper"):
-		m, b, r2 = compute_envelope_params(
-			x=idxs_x,
-			y=indices_adjusted_l10,
-			envelope_type=envtype,
-		)
-		output.update(
-			prefix_dict(
-				dict(
-					slope=m,
-					intercept=b,
-					r2=r2,
-				),
-				prefix=["env", envtype],
-			)
-		)
+	# removing because 0 variance
+	# output.update(
+	# 	prefix_dict(
+	# 		vec_features(indices_adjusted_l10),
+	# 		prefix="time",
+	# 	)
+	# )
+	
+	# removing because 0 variance
+	# idxs_x = np.arange(len(indices_adjusted_l10))
+	# for envtype in ("lower", "upper"):
+	# 	m, b, r2 = compute_envelope_params(
+	# 		x=idxs_x,
+	# 		y=indices_adjusted_l10,
+	# 		envelope_type=envtype,
+	# 	)
+	# 	output.update(
+	# 		prefix_dict(
+	# 			dict(
+	# 				slope=m,
+	# 				intercept=b,
+	# 				r2=r2,
+	# 			),
+	# 			prefix=["env", envtype],
+	# 		)
+	# 	)
 
 	indices_adjusted_diff = np.diff(indices_adjusted)
-	output.update(
-		prefix_dict(
-			vec_features(indices_adjusted_diff),
-			prefix="diff",
-		)
+	output.update(dict(
+		skew=stats.skew(indices_adjusted_diff),
+		kurtosis=stats.kurtosis(indices_adjusted_diff),
+	)
+
+		# all except skew and cov are highly correlated with other things
+		# prefix_dict(
+		# 	vec_features(indices_adjusted_diff),
+		# 	prefix="diff",
+		# )
 	)
 
 	return output
