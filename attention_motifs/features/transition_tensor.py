@@ -4,12 +4,9 @@ import torch
 import scipy.stats as stats
 
 # attention-motifs
-from attention_motifs.features.vec_features import vec_features
-from attention_motifs.math.math import compute_envelope_params
 from attention_motifs.transition_tensor import (
 	transition_tensor_torch,
 )
-from attention_motifs.util import prefix_dict
 
 
 def tt_features(
@@ -45,7 +42,7 @@ def tt_features(
 	# 		prefix="time",
 	# 	)
 	# )
-	
+
 	# removing because 0 variance
 	# idxs_x = np.arange(len(indices_adjusted_l10))
 	# for envtype in ("lower", "upper"):
@@ -66,11 +63,11 @@ def tt_features(
 	# 	)
 
 	indices_adjusted_diff = np.diff(indices_adjusted)
-	output.update(dict(
-		skewness=stats.skew(indices_adjusted_diff),
-		kurtosis=stats.kurtosis(indices_adjusted_diff),
-	)
-
+	output.update(
+		dict(
+			skewness=stats.skew(indices_adjusted_diff),
+			kurtosis=stats.kurtosis(indices_adjusted_diff),
+		)
 		# all except skew and cov are highly correlated with other things
 		# prefix_dict(
 		# 	vec_features(indices_adjusted_diff),
