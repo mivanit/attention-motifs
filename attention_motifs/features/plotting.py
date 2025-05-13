@@ -141,8 +141,7 @@ def apply_pca(
 
 		# Plot cumulative explained variance
 		ax2.plot(range(len(cumulative_variance)), cumulative_variance, "o-")
-		ax2.axhline(y=0.8, color="r", linestyle="--", label="80% Threshold")
-		ax2.axhline(y=0.9, color="g", linestyle="--", label="90% Threshold")
+		ax2.grid()
 		ax2.set_xlabel("Number of Components")
 		ax2.set_ylabel("Cumulative Explained Variance")
 		ax2.set_title("Cumulative Explained Variance")

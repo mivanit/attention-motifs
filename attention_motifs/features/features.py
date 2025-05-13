@@ -144,12 +144,11 @@ def scalar_feature_table(
 
 def gram_features(A: Float[np.ndarray, "n_ctx n_ctx"]) -> dict[str, float]:
 	# dbg_tensor(A)
+	bins: Bins = Bins(n_bins=32, start=0.0, stop=1.0)
+	x_hist, _ = np.histogram(A.flatten(), bins.edges, density=True)
 	return prefix_dict(
-		hist_beta_fit(
-			A.flatten(),
-			bins=Bins(n_bins=32, start=0.0, stop=1.0),
-		),
-		prefix="beta_hist",
+		vec_features(x_hist),
+		prefix="hist",
 	)
 	# TODO: mass as a function of distance from diagonal
 

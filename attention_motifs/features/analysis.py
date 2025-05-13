@@ -312,7 +312,8 @@ def plot_importance_covariance(
 	feat_strip_prefix: str = "feat.",
 	figsize: tuple[int, int] = (25, 22),
 	trim_frac: float = 0.03,
-	tick_pad: int = 10,  # << NEW (points; moves x-labels down)
+	tick_pad: int = 10,
+	importance_threshold: float|None = None,
 ) -> tuple[list[str], np.ndarray]:
 	# ---------- pick feature sequence ------------------------------------
 	if feature_order is not None:
@@ -582,3 +583,68 @@ class DistanceTensorResult:
 		ax.set_ylabel("Density")
 
 		return ax
+
+
+def groups_by_covariance(
+	features: list[str],
+	cov: Float[np.ndarray, "n n"],
+	threshold: float,
+	use_abs: bool = True,
+) -> list[list[str]]:
+	n: int = len(features)
+	assert n == cov.shape[0] == cov.shape[1], (
+		"Covariance matrix must be square and match the number of features."
+	)
+
+	# |cov| if desired, then a boolean matrix marking edges above threshold
+	comparison_matrix: Float[np.ndarray, "n n"] = np.abs(cov) if use_abs else cov
+	adjacency_matrix: Float[np.ndarray, "n n"] = comparison_matrix > threshold
+
+	visited_indices: set[int] = set()
+	groups: list[list[str]] = []
+
+	# Depth-first search over the implicit graph
+	for start_idx in range(n):
+		if start_idx in visited_indices:
+			continue
+		stack: list[int] = [start_idx]
+		component_indices: list[int] = []
+
+		while stack:
+			idx: int = stack.pop()
+			if idx in visited_indices:
+				continue
+			visited_indices.add(idx)
+			component_indices.append(idx)
+
+			# All indices j where adjacency_matrix[idx, j] is True
+			neighbors: np.ndarray = np.where(adjacency_matrix[idx])[0]
+			stack.extend([j for j in neighbors if j not in visited_indices])
+
+		groups.append([features[j] for j in component_indices])
+
+	return groups
+
+
+def print_covariance_groups(
+	cov_feats: list[str],
+	cov_mat: Float[np.ndarray, "n n"],
+	df_importance: pl.DataFrame,
+	threshold: float = 0.95,
+) -> None:
+	groups: list[list[str]] = groups_by_covariance(cov_feats, cov_mat, threshold=threshold)
+	singletons: list[list[str]] = [g for g in groups if len(g) == 1]
+	# print(f"{singletons = }")
+	# print singleton features with their importance
+	# get the row from df_importance that matches the feature name
+	singleton_info = [
+		(g[0], df_importance.filter(pl.col("feature").is_in(g)).to_dicts()[0]["abs_max"])
+		for g in singletons
+	]
+	for feat, imp in sorted(singleton_info, key=lambda x: x[1], reverse=True):
+		print(f"{feat:60} {imp:.3f}")
+
+	for g in groups:
+		if len(g) == 1:
+			continue
+		print(g)
