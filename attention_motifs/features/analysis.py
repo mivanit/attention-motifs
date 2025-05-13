@@ -313,7 +313,7 @@ def plot_importance_covariance(
 	figsize: tuple[int, int] = (25, 22),
 	trim_frac: float = 0.03,
 	tick_pad: int = 10,
-	importance_threshold: float|None = None,
+	importance_threshold: float | None = None,
 ) -> tuple[list[str], np.ndarray]:
 	# ---------- pick feature sequence ------------------------------------
 	if feature_order is not None:
@@ -632,13 +632,18 @@ def print_covariance_groups(
 	df_importance: pl.DataFrame,
 	threshold: float = 0.95,
 ) -> None:
-	groups: list[list[str]] = groups_by_covariance(cov_feats, cov_mat, threshold=threshold)
+	groups: list[list[str]] = groups_by_covariance(
+		cov_feats, cov_mat, threshold=threshold
+	)
 	singletons: list[list[str]] = [g for g in groups if len(g) == 1]
 	# print(f"{singletons = }")
 	# print singleton features with their importance
 	# get the row from df_importance that matches the feature name
 	singleton_info = [
-		(g[0], df_importance.filter(pl.col("feature").is_in(g)).to_dicts()[0]["abs_max"])
+		(
+			g[0],
+			df_importance.filter(pl.col("feature").is_in(g)).to_dicts()[0]["abs_max"],
+		)
 		for g in singletons
 	]
 	for feat, imp in sorted(singleton_info, key=lambda x: x[1], reverse=True):

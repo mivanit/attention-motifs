@@ -24,7 +24,6 @@ from pattern_lens.figures import HTConfigMock
 
 from attention_motifs.util import prefix_dict
 from attention_motifs.bins import Bins
-from attention_motifs.features.hist_beta_fit import hist_beta_fit
 from attention_motifs.features.vec_features import vec_features
 from attention_motifs.math.cos_sim import cosine_similarity_matrix
 from attention_motifs.math.math import skew_lt
