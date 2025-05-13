@@ -1442,11 +1442,13 @@ help: help-targets info
 HF_TOKEN ?= $(shell cat .meta/local/.hf_token)
 DEMO_PROMPTS ?= data/pile_demo.jsonl
 # DEMO_MODEL ?= gpt2-small
-DEMO_MODEL ?= pythia-14m,pythia-1b,tiny-stories-1M,gpt2-small,gpt2-medium,meta-llama/Llama-3.2-1B,gemma-2b
+# DEMO_MODEL ?= pythia-14m,pythia-1b,tiny-stories-1M,gpt2-small,gpt2-medium,meta-llama/Llama-3.2-1B,gemma-2b
+DEMO_MODEL ?= pythia-14m,pythia-1b,tiny-stories-1M,gpt2-small,gpt2-medium,meta-llama/Llama-3.2-1B,gemma-2b,gemma-2-2b
 DEMO_N_SAMPLES ?= 128				
 # DEMO_N_SAMPLES ?= 32
 DEMO_ARGS ?= --min-chars 128 --max-chars 512
-DEMO_DATA ?= docs/temp
+# DEMO_DATA ?= docs/temp
+DEMO_DATA ?= /home/miv/projects/attn/website/patterns/docs
 N_PROC ?= 12
 
 .PHONY: demo-clean

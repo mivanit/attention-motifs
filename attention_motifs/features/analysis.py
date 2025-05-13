@@ -313,7 +313,7 @@ def plot_importance_covariance(
 	figsize: tuple[int, int] = (25, 22),
 	trim_frac: float = 0.03,
 	tick_pad: int = 10,  # << NEW (points; moves x-labels down)
-) -> None:
+) -> tuple[list[str], np.ndarray]:
 	# ---------- pick feature sequence ------------------------------------
 	if feature_order is not None:
 		# Use the given list exactly as provided
@@ -405,6 +405,8 @@ def plot_importance_covariance(
 
 	plt.tight_layout()
 	plt.show()
+
+	return features, cov
 
 
 @dataclass

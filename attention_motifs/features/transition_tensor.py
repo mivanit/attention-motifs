@@ -3,7 +3,7 @@ from jaxtyping import Float
 import torch
 
 # attention-motifs
-from attention_motifs.features.vec_features import vec_features_fast
+from attention_motifs.features.vec_features import vec_features
 from attention_motifs.math.math import compute_envelope_params
 from attention_motifs.transition_tensor import (
 	transition_tensor_torch,
@@ -39,7 +39,7 @@ def tt_features(
 	# ax_tt_time.plot(indices_adjusted_l10, "ro")
 	output.update(
 		prefix_dict(
-			vec_features_fast(indices_adjusted_l10),
+			vec_features(indices_adjusted_l10),
 			prefix="time",
 		)
 	)
@@ -64,7 +64,7 @@ def tt_features(
 	indices_adjusted_diff = np.diff(indices_adjusted)
 	output.update(
 		prefix_dict(
-			vec_features_fast(indices_adjusted_diff),
+			vec_features(indices_adjusted_diff),
 			prefix="diff",
 		)
 	)

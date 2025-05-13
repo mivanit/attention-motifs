@@ -5,7 +5,7 @@ from jaxtyping import Float
 
 # attention-motifs
 from attention_motifs.bins import Bins
-from attention_motifs.features.vec_features import vec_features_fast
+from attention_motifs.features.vec_features import vec_features
 from attention_motifs.util import prefix_dict
 
 
@@ -25,7 +25,7 @@ def hist_beta_fit(
 		# loc=loc,
 		# scale=scale,
 		**prefix_dict(
-			vec_features_fast(x_hist),
+			vec_features(x_hist),
 			prefix=["hist", "raw"],
 		),
 		# **prefix_dict(

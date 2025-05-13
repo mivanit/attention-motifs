@@ -37,7 +37,7 @@ def vec_features(
 			skewness=stats.skew(arr),
 			# kurtosis=stats.kurtosis(arr),
 			entropy=stats.entropy(probs, base=2),
-			L1_norm=np.sum(np.abs(arr)) / n,
+			# L1_norm=np.sum(np.abs(arr)) / n,
 			L2_norm=np.linalg.norm(arr, ord=2) / n,
 			rms=np.sqrt(np.mean(arr**2)),
 			energy=np.sum(arr**2),
