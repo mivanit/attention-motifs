@@ -1,3125 +1,3283 @@
 <!DOCTYPE html>
 <html>
-
-<head>
-  <title>3D Embedding Visualization</title>
+ <head>
+  <title>
+   3D Embedding Visualization
+  </title>
   <!-- Load Vue -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js">
+  </script>
   <!-- Load Plotly.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.2/plotly.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.2/plotly.min.js">
+  </script>
   <!-- Load utilities -->
   <!-- begin 'array.js' -->
-<script>
-// ------------------------------------------------------------
-// this file has been modified from original code at:
-// https://github.com/aplbrain/npyjs
-// under Apache License
-// https://github.com/aplbrain/npyjs/blob/b0cd99b7f4c2bff791b4977e16dec3478519920b/LICENSE
-// removed float16 support for brevity -- we don't need it
-// ------------------------------------------------------------
-class npyjs {
-
-	constructor() {
-		this.dtypes = {
-			"<u1": {
-				name: "uint8",
-				size: 8,
-				arrayConstructor: Uint8Array,
-			},
-			"|u1": {
-				name: "uint8",
-				size: 8,
-				arrayConstructor: Uint8Array,
-			},
-			"<u2": {
-				name: "uint16",
-				size: 16,
-				arrayConstructor: Uint16Array,
-			},
-			"|i1": {
-				name: "int8",
-				size: 8,
-				arrayConstructor: Int8Array,
-			},
-			"<i2": {
-				name: "int16",
-				size: 16,
-				arrayConstructor: Int16Array,
-			},
-			"<u4": {
-				name: "uint32",
-				size: 32,
-				arrayConstructor: Uint32Array,
-			},
-			"<i4": {
-				name: "int32",
-				size: 32,
-				arrayConstructor: Int32Array,
-			},
-			"<u8": {
-				name: "uint64",
-				size: 64,
-				arrayConstructor: BigUint64Array,
-			},
-			"<i8": {
-				name: "int64",
-				size: 64,
-				arrayConstructor: BigInt64Array,
-			},
-			"<f4": {
-				name: "float32",
-				size: 32,
-				arrayConstructor: Float32Array
-			},
-			"<f8": {
-				name: "float64",
-				size: 64,
-				arrayConstructor: Float64Array
-			},
-			// "<f2": {
-			//     name: "float16",
-			//     size: 16,
-			//     arrayConstructor: Uint16Array,
-			//     converter: this.convertFloat16 ? this.float16ToFloat32Array : undefined
-			// },
-		};
-	}
-
-	parse(arrayBufferContents) {
-		// const version = arrayBufferContents.slice(6, 8); // Uint8-encoded
-		const headerLength = new DataView(arrayBufferContents.slice(8, 10)).getUint8(0);
-		const offsetBytes = 10 + headerLength;
-
-		const hcontents = new TextDecoder("utf-8").decode(
-			new Uint8Array(arrayBufferContents.slice(10, 10 + headerLength))
-		);
-		const header = JSON.parse(
-			hcontents
-				.toLowerCase() // True -> true
-				.replace(/'/g, '"')
-				.replace("(", "[")
-				.replace(/,*\),*/g, "]")
-		);
-		const shape = header.shape;
-		const dtype = this.dtypes[header.descr];
-
-		if (!dtype) {
-			console.error(`Unsupported dtype: ${header.descr}`);
-			return null;
-		}
-
-		const nums = new dtype.arrayConstructor(
-			arrayBufferContents,
-			offsetBytes
-		);
-
-		// Convert float16 to float32 if converter exists
-		const data = dtype.converter ? dtype.converter.call(this, nums) : nums;
-
-		return {
-			dtype: dtype.name,
-			data: data,
-			shape,
-			fortranOrder: header.fortran_order
-		};
-	}
-
-	async load(filename, callback, fetchArgs) {
-		/*
-		Loads an array from a stream of bytes.
-		*/
-		fetchArgs = fetchArgs || {};
-		let arrayBuf;
-		// If filename is ArrayBuffer
-		if (filename instanceof ArrayBuffer) {
-			arrayBuf = filename;
-		}
-		// If filename is a file path
-		else {
-			const resp = await fetch(filename, { ...fetchArgs });
-			arrayBuf = await resp.arrayBuffer();
-		}
-		const result = this.parse(arrayBuf);
-		if (callback) {
-			return callback(result);
-		}
-		return result;
-	}
-}
-
-
-class NDArray {
-	/**
-	 * Creates a multidimensional array similar to NumPy arrays
-	 * 
-	 * @param {any} data - The array data
-	 * @param {Array<number>} shape - The shape of the array
-	 * @param {string} dtype - The data type of the array
-	 */
-	constructor(data, shape, dtype) {
-		this.data = data;
-		this.shape = shape;
-		this.dtype = dtype;
-		this.ndim = shape.length;
-
-		// Calculate total size from shape
-		this._size = shape.reduce((acc, dim) => acc * dim, 1);
-
-		// Validate data length matches shape
-		if (data.length !== this._size) {
-			throw new Error(`Data length ${data.length} doesn't match shape ${shape} (expected ${this._size})`);
-		}
-	}
-
-	/**
-	 * Converts multidimensional indices to flat index
-	 * 
-	 * @param {Array<number|null>} indices - Array of indices, can contain null for slicing
-	 * @returns {number|Array<number>} - Flat index or array of indices for slicing
-	 * @private
-	 */
-	_getIndices(indices) {
-		// Handle case where all dimensions are requested (no indices)
-		if (indices.length === 0) {
-			return [...Array(this._size).keys()];
-		}
-
-		// Check that we don't have too many indices
-		if (indices.filter(idx => idx !== null).length > this.shape.length) {
-			throw new Error(`Too many indices for array with shape ${this.shape}`);
-		}
-
-		// If we have exact indices (no nulls), calculate flat index
-		if (!indices.includes(null) && indices.length === this.shape.length) {
-			// Validate all indices
-			for (let i = 0; i < indices.length; i++) {
-				if (indices[i] < 0) {
-					indices[i] = this.shape[i] + indices[i]; // Handle negative indices like numpy
-				}
-
-				if (indices[i] < 0 || indices[i] >= this.shape[i]) {
-					throw new Error(`Index ${indices[i]} is out of bounds for axis ${i} with size ${this.shape[i]}`);
-				}
-			}
-
-			// Calculate flat index using strides
-			let flatIndex = 0;
-			let stride = 1;
-
-			for (let i = this.shape.length - 1; i >= 0; i--) {
-				flatIndex += indices[i] * stride;
-				stride *= this.shape[i];
-			}
-
-			return flatIndex;
-		}
-
-		// Handle slicing (when some indices are null)
-		// This returns all flat indices that match the specified dimensions
-		const resultIndices = [];
-		const completeIndices = [...indices];
-
-		// Fill in missing indices with zeros
-		while (completeIndices.length < this.shape.length) {
-			completeIndices.push(0);
-		}
-
-		// Find which dimensions need to be iterated over (those with null)
-		const dimToIterate = [];
-		for (let i = 0; i < this.shape.length; i++) {
-			if (i >= indices.length || indices[i] === null) {
-				dimToIterate.push(i);
-			}
-		}
-
-		// Generate all combinations of indices for the dimensions to iterate over
-		const generateIndices = (currentDim, currentIndices) => {
-			if (currentDim >= dimToIterate.length) {
-				// Calculate flat index for this combination
-				let flatIndex = 0;
-				let stride = 1;
-
-				for (let i = this.shape.length - 1; i >= 0; i--) {
-					flatIndex += currentIndices[i] * stride;
-					stride *= this.shape[i];
-				}
-
-				resultIndices.push(flatIndex);
-				return;
-			}
-
-			const dim = dimToIterate[currentDim];
-			for (let i = 0; i < this.shape[dim]; i++) {
-				currentIndices[dim] = i;
-				generateIndices(currentDim + 1, currentIndices);
-			}
-		};
-
-		generateIndices(0, completeIndices);
-		return resultIndices;
-	}
-
-	/**
-	 * Gets values at specified indices
-	 * 
-	 * @param {...(number|null)} args - Indices for each dimension, null for full dimension
-	 * @returns {any} - Value or subarray at the specified location
-	 */
-	get(...args) {
-		// Handle case where args is array
-		let indices = args;
-		if (args.length === 1 && Array.isArray(args[0])) {
-			indices = args[0];
-		}
-
-		const flatIndices = this._getIndices(indices);
-
-		// If we got a single index, return the single value
-		if (typeof flatIndices === 'number') {
-			return this.data[flatIndices];
-		}
-
-		// Otherwise, create a new array with the values
-		// We need to calculate the shape of the result
-		const resultShape = [];
-		for (let i = 0; i < this.shape.length; i++) {
-			if (i >= indices.length || indices[i] === null) {
-				resultShape.push(this.shape[i]);
-			}
-		}
-
-		// If result is empty, it means we want the entire array
-		if (resultShape.length === 0) {
-			return this;
-		}
-
-		// Create new data array with the values at the flat indices
-		const resultData = new this.data.constructor(flatIndices.length);
-		for (let i = 0; i < flatIndices.length; i++) {
-			resultData[i] = this.data[flatIndices[i]];
-		}
-
-		return new NDArray(resultData, resultShape, this.dtype);
-	}
-
-	/**
-	 * Sets values at specified indices
-	 * 
-	 * @param {...*} args - Indices followed by value to set
-	 */
-	set(...args) {
-		// Handle case where args is array
-		let indices, value;
-		if (args.length === 2 && Array.isArray(args[0])) {
-			indices = args[0];
-			value = args[1];
-		} else {
-			value = args[args.length - 1];
-			indices = args.slice(0, args.length - 1);
-		}
-
-		const flatIndices = this._getIndices(indices);
-
-		// If we got a single index, set the single value
-		if (typeof flatIndices === 'number') {
-			this.data[flatIndices] = value;
-			return;
-		}
-
-		// Otherwise, set all indices to the value
-		// If value is an array, distribute its values
-		if (Array.isArray(value) || (value instanceof NDArray)) {
-			const valueArray = value instanceof NDArray ? value.data : value;
-			if (valueArray.length !== flatIndices.length) {
-				throw new Error(`Cannot broadcast ${valueArray.length} values to ${flatIndices.length} indices`);
-			}
-
-			for (let i = 0; i < flatIndices.length; i++) {
-				this.data[flatIndices[i]] = valueArray[i];
-			}
-		} else {
-			// Set all indices to the same value
-			for (const idx of flatIndices) {
-				this.data[idx] = value;
-			}
-		}
-	}
-
-	/**
-	 * Returns a string representation of the array
-	 * 
-	 * @returns {string} String representation of the array
-	 */
-	toString() {
-		// Simple representation for 1D arrays
-		if (this.shape.length === 1) {
-			return `[${Array.from(this.data).join(', ')}]`;
-		}
-
-		// For higher dimensions, we'll just show shape and type
-		return `NDArray(${this.shape.join('×')}, ${this.dtype})`;
-	}
-
-	static parse(arrayBufferContents) {
-		const npy = new npyjs();
-		const npyData = npy.parse(arrayBufferContents);
-		if (!npyData) {
-			throw new Error('Failed to parse NPY data');
-		}
-		// Convert data to NDArray
-		return new NDArray(npyData.data, npyData.shape, npyData.dtype);
-	}
-
-	static async load(filename, callback, fetchArgs) {
-		const npy = new npyjs();
-		const npyData = await npy.load(filename, null, fetchArgs);
-		if (!npyData) {
-			throw new Error('Failed to load NPY data');
-		}
-		// Convert data to NDArray
-		return new NDArray(npyData.data, npyData.shape, npyData.dtype);
-	}
-}
-</script>
-<!-- end 'array.js' -->
+  <script>
+   // ------------------------------------------------------------
+  	// this file has been modified from original code at:
+  	// https://github.com/aplbrain/npyjs
+  	// under Apache License
+  	// https://github.com/aplbrain/npyjs/blob/b0cd99b7f4c2bff791b4977e16dec3478519920b/LICENSE
+  	// removed float16 support for brevity -- we don't need it
+  	// ------------------------------------------------------------
+  	class npyjs {
+  	
+  		constructor() {
+  			this.dtypes = {
+  				"<u1": {
+  					name: "uint8",
+  					size: 8,
+  					arrayConstructor: Uint8Array,
+  				},
+  				"|u1": {
+  					name: "uint8",
+  					size: 8,
+  					arrayConstructor: Uint8Array,
+  				},
+  				"<u2": {
+  					name: "uint16",
+  					size: 16,
+  					arrayConstructor: Uint16Array,
+  				},
+  				"|i1": {
+  					name: "int8",
+  					size: 8,
+  					arrayConstructor: Int8Array,
+  				},
+  				"<i2": {
+  					name: "int16",
+  					size: 16,
+  					arrayConstructor: Int16Array,
+  				},
+  				"<u4": {
+  					name: "uint32",
+  					size: 32,
+  					arrayConstructor: Uint32Array,
+  				},
+  				"<i4": {
+  					name: "int32",
+  					size: 32,
+  					arrayConstructor: Int32Array,
+  				},
+  				"<u8": {
+  					name: "uint64",
+  					size: 64,
+  					arrayConstructor: BigUint64Array,
+  				},
+  				"<i8": {
+  					name: "int64",
+  					size: 64,
+  					arrayConstructor: BigInt64Array,
+  				},
+  				"<f4": {
+  					name: "float32",
+  					size: 32,
+  					arrayConstructor: Float32Array
+  				},
+  				"<f8": {
+  					name: "float64",
+  					size: 64,
+  					arrayConstructor: Float64Array
+  				},
+  				// "<f2": {
+  				//     name: "float16",
+  				//     size: 16,
+  				//     arrayConstructor: Uint16Array,
+  				//     converter: this.convertFloat16 ? this.float16ToFloat32Array : undefined
+  				// },
+  			};
+  		}
+  	
+  		parse(arrayBufferContents) {
+  			// const version = arrayBufferContents.slice(6, 8); // Uint8-encoded
+  			const headerLength = new DataView(arrayBufferContents.slice(8, 10)).getUint8(0);
+  			const offsetBytes = 10 + headerLength;
+  	
+  			const hcontents = new TextDecoder("utf-8").decode(
+  				new Uint8Array(arrayBufferContents.slice(10, 10 + headerLength))
+  			);
+  			const header = JSON.parse(
+  				hcontents
+  					.toLowerCase() // True -> true
+  					.replace(/'/g, '"')
+  					.replace("(", "[")
+  					.replace(/,*\),*/g, "]")
+  			);
+  			const shape = header.shape;
+  			const dtype = this.dtypes[header.descr];
+  	
+  			if (!dtype) {
+  				console.error(`Unsupported dtype: ${header.descr}`);
+  				return null;
+  			}
+  	
+  			const nums = new dtype.arrayConstructor(
+  				arrayBufferContents,
+  				offsetBytes
+  			);
+  	
+  			// Convert float16 to float32 if converter exists
+  			const data = dtype.converter ? dtype.converter.call(this, nums) : nums;
+  	
+  			return {
+  				dtype: dtype.name,
+  				data: data,
+  				shape,
+  				fortranOrder: header.fortran_order
+  			};
+  		}
+  	
+  		async load(filename, callback, fetchArgs) {
+  			/*
+  			Loads an array from a stream of bytes.
+  			*/
+  			fetchArgs = fetchArgs || {};
+  			let arrayBuf;
+  			// If filename is ArrayBuffer
+  			if (filename instanceof ArrayBuffer) {
+  				arrayBuf = filename;
+  			}
+  			// If filename is a file path
+  			else {
+  				const resp = await fetch(filename, { ...fetchArgs });
+  				arrayBuf = await resp.arrayBuffer();
+  			}
+  			const result = this.parse(arrayBuf);
+  			if (callback) {
+  				return callback(result);
+  			}
+  			return result;
+  		}
+  	}
+  	
+  	
+  	class NDArray {
+  		/**
+  		 * Creates a multidimensional array similar to NumPy arrays
+  		 * 
+  		 * @param {any} data - The array data
+  		 * @param {Array<number>} shape - The shape of the array
+  		 * @param {string} dtype - The data type of the array
+  		 */
+  		constructor(data, shape, dtype) {
+  			this.data = data;
+  			this.shape = shape;
+  			this.dtype = dtype;
+  			this.ndim = shape.length;
+  	
+  			// Calculate total size from shape
+  			this._size = shape.reduce((acc, dim) => acc * dim, 1);
+  	
+  			// Validate data length matches shape
+  			if (data.length !== this._size) {
+  				throw new Error(`Data length ${data.length} doesn't match shape ${shape} (expected ${this._size})`);
+  			}
+  		}
+  	
+  		/**
+  		 * Converts multidimensional indices to flat index
+  		 * 
+  		 * @param {Array<number|null>} indices - Array of indices, can contain null for slicing
+  		 * @returns {number|Array<number>} - Flat index or array of indices for slicing
+  		 * @private
+  		 */
+  		_getIndices(indices) {
+  			// Handle case where all dimensions are requested (no indices)
+  			if (indices.length === 0) {
+  				return [...Array(this._size).keys()];
+  			}
+  	
+  			// Check that we don't have too many indices
+  			if (indices.filter(idx => idx !== null).length > this.shape.length) {
+  				throw new Error(`Too many indices for array with shape ${this.shape}`);
+  			}
+  	
+  			// If we have exact indices (no nulls), calculate flat index
+  			if (!indices.includes(null) && indices.length === this.shape.length) {
+  				// Validate all indices
+  				for (let i = 0; i < indices.length; i++) {
+  					if (indices[i] < 0) {
+  						indices[i] = this.shape[i] + indices[i]; // Handle negative indices like numpy
+  					}
+  	
+  					if (indices[i] < 0 || indices[i] >= this.shape[i]) {
+  						throw new Error(`Index ${indices[i]} is out of bounds for axis ${i} with size ${this.shape[i]}`);
+  					}
+  				}
+  	
+  				// Calculate flat index using strides
+  				let flatIndex = 0;
+  				let stride = 1;
+  	
+  				for (let i = this.shape.length - 1; i >= 0; i--) {
+  					flatIndex += indices[i] * stride;
+  					stride *= this.shape[i];
+  				}
+  	
+  				return flatIndex;
+  			}
+  	
+  			// Handle slicing (when some indices are null)
+  			// This returns all flat indices that match the specified dimensions
+  			const resultIndices = [];
+  			const completeIndices = [...indices];
+  	
+  			// Fill in missing indices with zeros
+  			while (completeIndices.length < this.shape.length) {
+  				completeIndices.push(0);
+  			}
+  	
+  			// Find which dimensions need to be iterated over (those with null)
+  			const dimToIterate = [];
+  			for (let i = 0; i < this.shape.length; i++) {
+  				if (i >= indices.length || indices[i] === null) {
+  					dimToIterate.push(i);
+  				}
+  			}
+  	
+  			// Generate all combinations of indices for the dimensions to iterate over
+  			const generateIndices = (currentDim, currentIndices) => {
+  				if (currentDim >= dimToIterate.length) {
+  					// Calculate flat index for this combination
+  					let flatIndex = 0;
+  					let stride = 1;
+  	
+  					for (let i = this.shape.length - 1; i >= 0; i--) {
+  						flatIndex += currentIndices[i] * stride;
+  						stride *= this.shape[i];
+  					}
+  	
+  					resultIndices.push(flatIndex);
+  					return;
+  				}
+  	
+  				const dim = dimToIterate[currentDim];
+  				for (let i = 0; i < this.shape[dim]; i++) {
+  					currentIndices[dim] = i;
+  					generateIndices(currentDim + 1, currentIndices);
+  				}
+  			};
+  	
+  			generateIndices(0, completeIndices);
+  			return resultIndices;
+  		}
+  	
+  		/**
+  		 * Gets values at specified indices
+  		 * 
+  		 * @param {...(number|null)} args - Indices for each dimension, null for full dimension
+  		 * @returns {any} - Value or subarray at the specified location
+  		 */
+  		get(...args) {
+  			// Handle case where args is array
+  			let indices = args;
+  			if (args.length === 1 && Array.isArray(args[0])) {
+  				indices = args[0];
+  			}
+  	
+  			const flatIndices = this._getIndices(indices);
+  	
+  			// If we got a single index, return the single value
+  			if (typeof flatIndices === 'number') {
+  				return this.data[flatIndices];
+  			}
+  	
+  			// Otherwise, create a new array with the values
+  			// We need to calculate the shape of the result
+  			const resultShape = [];
+  			for (let i = 0; i < this.shape.length; i++) {
+  				if (i >= indices.length || indices[i] === null) {
+  					resultShape.push(this.shape[i]);
+  				}
+  			}
+  	
+  			// If result is empty, it means we want the entire array
+  			if (resultShape.length === 0) {
+  				return this;
+  			}
+  	
+  			// Create new data array with the values at the flat indices
+  			const resultData = new this.data.constructor(flatIndices.length);
+  			for (let i = 0; i < flatIndices.length; i++) {
+  				resultData[i] = this.data[flatIndices[i]];
+  			}
+  	
+  			return new NDArray(resultData, resultShape, this.dtype);
+  		}
+  	
+  		/**
+  		 * Sets values at specified indices
+  		 * 
+  		 * @param {...*} args - Indices followed by value to set
+  		 */
+  		set(...args) {
+  			// Handle case where args is array
+  			let indices, value;
+  			if (args.length === 2 && Array.isArray(args[0])) {
+  				indices = args[0];
+  				value = args[1];
+  			} else {
+  				value = args[args.length - 1];
+  				indices = args.slice(0, args.length - 1);
+  			}
+  	
+  			const flatIndices = this._getIndices(indices);
+  	
+  			// If we got a single index, set the single value
+  			if (typeof flatIndices === 'number') {
+  				this.data[flatIndices] = value;
+  				return;
+  			}
+  	
+  			// Otherwise, set all indices to the value
+  			// If value is an array, distribute its values
+  			if (Array.isArray(value) || (value instanceof NDArray)) {
+  				const valueArray = value instanceof NDArray ? value.data : value;
+  				if (valueArray.length !== flatIndices.length) {
+  					throw new Error(`Cannot broadcast ${valueArray.length} values to ${flatIndices.length} indices`);
+  				}
+  	
+  				for (let i = 0; i < flatIndices.length; i++) {
+  					this.data[flatIndices[i]] = valueArray[i];
+  				}
+  			} else {
+  				// Set all indices to the same value
+  				for (const idx of flatIndices) {
+  					this.data[idx] = value;
+  				}
+  			}
+  		}
+  	
+  		/**
+  		 * Returns a string representation of the array
+  		 * 
+  		 * @returns {string} String representation of the array
+  		 */
+  		toString() {
+  			// Simple representation for 1D arrays
+  			if (this.shape.length === 1) {
+  				return `[${Array.from(this.data).join(', ')}]`;
+  			}
+  	
+  			// For higher dimensions, we'll just show shape and type
+  			return `NDArray(${this.shape.join('×')}, ${this.dtype})`;
+  		}
+  	
+  		static parse(arrayBufferContents) {
+  			const npy = new npyjs();
+  			const npyData = npy.parse(arrayBufferContents);
+  			if (!npyData) {
+  				throw new Error('Failed to parse NPY data');
+  			}
+  			// Convert data to NDArray
+  			return new NDArray(npyData.data, npyData.shape, npyData.dtype);
+  		}
+  	
+  		static async load(filename, callback, fetchArgs) {
+  			const npy = new npyjs();
+  			const npyData = await npy.load(filename, null, fetchArgs);
+  			if (!npyData) {
+  				throw new Error('Failed to load NPY data');
+  			}
+  			// Convert data to NDArray
+  			return new NDArray(npyData.data, npyData.shape, npyData.dtype);
+  		}
+  	}
+  </script>
+  <!-- end 'array.js' -->
   <!-- begin 'dataframe.js' -->
-<script>
-class DataFrame {
-	/**
-	 * Creates a DataFrame from a list of row objects
-	 * 
-	 * @param {Array<Object>} data - Array of row objects
-	 * @param {Array<string>} [columns] - Optional column names (will be inferred from data if not provided)
-	 */
-	constructor(data = [], columns = null) {
-		this.data = data;
-
-		// Infer columns from data if not provided
-		if (!columns && data.length > 0) {
-			this.columns = Object.keys(data[0]);
-		} else {
-			this.columns = columns || [];
-		}
-	}
-
-	/**
-	 * Returns the values for a specific column
-	 * 
-	 * @param {string} name - Column name
-	 * @returns {Array} - Values in the column
-	 */
-	col(name) {
-		if (!this.columns.includes(name)) {
-			throw new Error(`Column '${name}' not found in columns: ${this.columns.join(', ')}`);
-		}
-
-		return this.data.map(row => row[name]);
-	}
-
-	/**
-	 * Returns the values for a specific cell
-	 * @param {row_idx} row_idx - Row index
-	 * @param {col_name} col_name - Column name
-	 * @returns {any} - Value in the cell
-	 * @throws {Error} - If row index or column name is invalid
-	 */
-	get(row_idx, col_name) {
-		if (row_idx < 0 || row_idx >= this.data.length) {
-			throw new Error(`Row index ${row_idx} out of bounds (0 to ${this.data.length - 1})`);
-		}
-
-		if (!this.columns.includes(col_name)) {
-			throw new Error(`Column '${col_name}' not found in columns: ${this.columns.join(', ')}`);
-		}
-
-		return this.data[row_idx][col_name];
-	}
-
-	/**
-	 * Returns a specific row as an object
-	 * 
-	 * @param {number} rowIdx - Row index
-	 * @returns {Object} - Row as an object
-	 */
-	row(rowIdx) {
-		if (rowIdx < 0 || rowIdx >= this.data.length) {
-			throw new Error(`Row index ${rowIdx} out of bounds (0 to ${this.data.length - 1})`);
-		}
-
-		return this.data[rowIdx];
-	}
-
-	/**
-	 * Returns unique values in a specific column
-	 * @param {string} name - Column name
-	 * @returns {Set} - Unique values in the column
-	 */
-	col_unique(name) {
-		return new Set(this.col(name));
-	}
-
-	/**
-	 * Parses a CSV string into a DataFrame
-	 * 
-	 * @param {string} text - CSV text content
-	 * @returns {DataFrame} - New DataFrame instance
-	 */
-	static from_csv(text) {
-		// Split text into lines and filter out empty lines
-		const lines = text.split('\n').filter(line => line.trim().length > 0);
-
-		if (lines.length === 0) {
-			return new DataFrame();
-		}
-
-		// First line is the header
-		const header = lines[0].split(',').map(col => col.trim());
-
-		// Parse each line into a row object
-		const data = [];
-		for (let i = 1; i < lines.length; i++) {
-			const values = lines[i].split(',').map(val => val.trim());
-
-			// Create row object mapping column names to values
-			const row = {};
-			for (let j = 0; j < header.length; j++) {
-				// Try to convert to number if possible
-				const value = values[j];
-				if (value === undefined) continue;
-
-				// Handle quoted strings
-				if (value.startsWith('"') && value.endsWith('"')) {
-					row[header[j]] = value.slice(1, -1);
-				}
-				// Handle null values
-				else if (value === '' || value.toLowerCase() === 'null') {
-					row[header[j]] = null;
-				}
-				// Try converting to number
-				else if (!isNaN(value)) {
-					row[header[j]] = Number(value);
-				}
-				// Otherwise keep as string
-				else {
-					row[header[j]] = value;
-				}
-			}
-
-			data.push(row);
-		}
-
-		return new DataFrame(data, header);
-	}
-
-	/**
-	 * Converts DataFrame to CSV string
-	 * 
-	 * @returns {string} - CSV representation of the DataFrame
-	 */
-	to_csv() {
-		if (this.data.length === 0) {
-			return this.columns.join(',');
-		}
-
-		// Start with the header
-		const lines = [this.columns.join(',')];
-
-		// Add each row
-		for (const row of this.data) {
-			const values = this.columns.map(col => {
-				const val = row[col];
-
-				if (val === null || val === undefined) {
-					return '';
-				} else if (typeof val === 'string' && (val.includes(',') || val.includes('"'))) {
-					// Escape quotes and wrap in quotes
-					return `"${val.replace(/"/g, '""')}"`;
-				} else {
-					return String(val);
-				}
-			});
-
-			lines.push(values.join(','));
-		}
-
-		return lines.join('\n');
-	}
-
-	/**
-	 * Parses a JSONL string into a DataFrame
-	 * 
-	 * @param {string} text - JSONL text content
-	 * @returns {DataFrame} - New DataFrame instance
-	 */
-	static from_jsonl(text) {
-		// Parse each line as JSON
-		const data = text.trim().split('\n').map(line => JSON.parse(line));
-
-		// Extract all unique column names from all rows
-		const allColumns = new Set();
-		for (const row of data) {
-			Object.keys(row).forEach(key => allColumns.add(key));
-		}
-
-		return new DataFrame(data, Array.from(allColumns));
-	}
-
-	/**
-	 * Converts DataFrame to JSONL string
-	 * 
-	 * @returns {string} - JSONL representation of the DataFrame
-	 */
-	to_jsonl() {
-		return this.data.map(row => JSON.stringify(row)).join('\n');
-	}
-
-	/**
-	 * Returns the number of rows in the DataFrame
-	 * 
-	 * @returns {number} - Number of rows
-	 */
-	get length() {
-		return this.data.length;
-	}
-
-	/**
-	 * Returns a string representation of the DataFrame
-	 * 
-	 * @returns {string} - String representation
-	 */
-	toString() {
-		if (this.data.length === 0) {
-			return 'Empty DataFrame';
-		}
-
-		return `DataFrame with ${this.data.length} rows and ${this.columns.length} columns: ${this.columns.join(', ')}`;
-	}
-}
-
-</script>
-<!-- end 'dataframe.js' -->
+  <script>
+   class DataFrame {
+  		/**
+  		 * Creates a DataFrame from a list of row objects
+  		 * 
+  		 * @param {Array<Object>} data - Array of row objects
+  		 * @param {Array<string>} [columns] - Optional column names (will be inferred from data if not provided)
+  		 */
+  		constructor(data = [], columns = null) {
+  			this.data = data;
+  	
+  			// Infer columns from data if not provided
+  			if (!columns && data.length > 0) {
+  				this.columns = Object.keys(data[0]);
+  			} else {
+  				this.columns = columns || [];
+  			}
+  		}
+  	
+  		/**
+  		 * Returns the values for a specific column
+  		 * 
+  		 * @param {string} name - Column name
+  		 * @returns {Array} - Values in the column
+  		 */
+  		col(name) {
+  			if (!this.columns.includes(name)) {
+  				throw new Error(`Column '${name}' not found in columns: ${this.columns.join(', ')}`);
+  			}
+  	
+  			return this.data.map(row => row[name]);
+  		}
+  	
+  		/**
+  		 * Returns the values for a specific cell
+  		 * @param {row_idx} row_idx - Row index
+  		 * @param {col_name} col_name - Column name
+  		 * @returns {any} - Value in the cell
+  		 * @throws {Error} - If row index or column name is invalid
+  		 */
+  		get(row_idx, col_name) {
+  			if (row_idx < 0 || row_idx >= this.data.length) {
+  				throw new Error(`Row index ${row_idx} out of bounds (0 to ${this.data.length - 1})`);
+  			}
+  	
+  			if (!this.columns.includes(col_name)) {
+  				throw new Error(`Column '${col_name}' not found in columns: ${this.columns.join(', ')}`);
+  			}
+  	
+  			return this.data[row_idx][col_name];
+  		}
+  	
+  		/**
+  		 * Returns a specific row as an object
+  		 * 
+  		 * @param {number} rowIdx - Row index
+  		 * @returns {Object} - Row as an object
+  		 */
+  		row(rowIdx) {
+  			if (rowIdx < 0 || rowIdx >= this.data.length) {
+  				throw new Error(`Row index ${rowIdx} out of bounds (0 to ${this.data.length - 1})`);
+  			}
+  	
+  			return this.data[rowIdx];
+  		}
+  	
+  		/**
+  		 * Returns unique values in a specific column
+  		 * @param {string} name - Column name
+  		 * @returns {Set} - Unique values in the column
+  		 */
+  		col_unique(name) {
+  			return new Set(this.col(name));
+  		}
+  	
+  		/**
+  		 * Parses a CSV string into a DataFrame
+  		 * 
+  		 * @param {string} text - CSV text content
+  		 * @returns {DataFrame} - New DataFrame instance
+  		 */
+  		static from_csv(text) {
+  			// Split text into lines and filter out empty lines
+  			const lines = text.split('\n').filter(line => line.trim().length > 0);
+  	
+  			if (lines.length === 0) {
+  				return new DataFrame();
+  			}
+  	
+  			// First line is the header
+  			const header = lines[0].split(',').map(col => col.trim());
+  	
+  			// Parse each line into a row object
+  			const data = [];
+  			for (let i = 1; i < lines.length; i++) {
+  				const values = lines[i].split(',').map(val => val.trim());
+  	
+  				// Create row object mapping column names to values
+  				const row = {};
+  				for (let j = 0; j < header.length; j++) {
+  					// Try to convert to number if possible
+  					const value = values[j];
+  					if (value === undefined) continue;
+  	
+  					// Handle quoted strings
+  					if (value.startsWith('"') && value.endsWith('"')) {
+  						row[header[j]] = value.slice(1, -1);
+  					}
+  					// Handle null values
+  					else if (value === '' || value.toLowerCase() === 'null') {
+  						row[header[j]] = null;
+  					}
+  					// Try converting to number
+  					else if (!isNaN(value)) {
+  						row[header[j]] = Number(value);
+  					}
+  					// Otherwise keep as string
+  					else {
+  						row[header[j]] = value;
+  					}
+  				}
+  	
+  				data.push(row);
+  			}
+  	
+  			return new DataFrame(data, header);
+  		}
+  	
+  		/**
+  		 * Converts DataFrame to CSV string
+  		 * 
+  		 * @returns {string} - CSV representation of the DataFrame
+  		 */
+  		to_csv() {
+  			if (this.data.length === 0) {
+  				return this.columns.join(',');
+  			}
+  	
+  			// Start with the header
+  			const lines = [this.columns.join(',')];
+  	
+  			// Add each row
+  			for (const row of this.data) {
+  				const values = this.columns.map(col => {
+  					const val = row[col];
+  	
+  					if (val === null || val === undefined) {
+  						return '';
+  					} else if (typeof val === 'string' && (val.includes(',') || val.includes('"'))) {
+  						// Escape quotes and wrap in quotes
+  						return `"${val.replace(/"/g, '""')}"`;
+  					} else {
+  						return String(val);
+  					}
+  				});
+  	
+  				lines.push(values.join(','));
+  			}
+  	
+  			return lines.join('\n');
+  		}
+  	
+  		/**
+  		 * Parses a JSONL string into a DataFrame
+  		 * 
+  		 * @param {string} text - JSONL text content
+  		 * @returns {DataFrame} - New DataFrame instance
+  		 */
+  		static from_jsonl(text) {
+  			// Parse each line as JSON
+  			const data = text.trim().split('\n').map(line => JSON.parse(line));
+  	
+  			// Extract all unique column names from all rows
+  			const allColumns = new Set();
+  			for (const row of data) {
+  				Object.keys(row).forEach(key => allColumns.add(key));
+  			}
+  	
+  			return new DataFrame(data, Array.from(allColumns));
+  		}
+  	
+  		/**
+  		 * Converts DataFrame to JSONL string
+  		 * 
+  		 * @returns {string} - JSONL representation of the DataFrame
+  		 */
+  		to_jsonl() {
+  			return this.data.map(row => JSON.stringify(row)).join('\n');
+  		}
+  	
+  		/**
+  		 * Returns the number of rows in the DataFrame
+  		 * 
+  		 * @returns {number} - Number of rows
+  		 */
+  		get length() {
+  			return this.data.length;
+  		}
+  	
+  		/**
+  		 * Returns a string representation of the DataFrame
+  		 * 
+  		 * @returns {string} - String representation
+  		 */
+  		toString() {
+  			if (this.data.length === 0) {
+  				return 'Empty DataFrame';
+  			}
+  	
+  			return `DataFrame with ${this.data.length} rows and ${this.columns.length} columns: ${this.columns.join(', ')}`;
+  		}
+  	}
+  </script>
+  <!-- end 'dataframe.js' -->
   <!-- begin 'colorutil.js' -->
-<script>
-/**
- * Converts HSL color values to hexadecimal color representation
- * @param {number} h - Hue value (0-360)
- * @param {number} s - Saturation value (0-100)
- * @param {number} l - Lightness value (0-100)
- * @returns {string} Hexadecimal color string (e.g., "#ff0000")
- */
-function hslToHex(h, s, l) {
-	s /= 100;
-	l /= 100;
-
-	const c = (1 - Math.abs(2 * l - 1)) * s;
-	const x = c * (1 - Math.abs((h / 60) % 2 - 1));
-	const m = l - c / 2;
-
-	let r, g, b;
-
-	if (0 <= h && h < 60) {
-		[r, g, b] = [c, x, 0];
-	} else if (60 <= h && h < 120) {
-		[r, g, b] = [x, c, 0];
-	} else if (120 <= h && h < 180) {
-		[r, g, b] = [0, c, x];
-	} else if (180 <= h && h < 240) {
-		[r, g, b] = [0, x, c];
-	} else if (240 <= h && h < 300) {
-		[r, g, b] = [x, 0, c];
-	} else {
-		[r, g, b] = [c, 0, x];
-	}
-
-	const toHex = (value) => {
-		const hex = Math.round((value + m) * 255).toString(16);
-		return hex.length === 1 ? '0' + hex : hex;
-	};
-
-	return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-/**
- * Generates an array of visually distinct colors
- * @param {number} count - Number of colors to generate
- * @returns {string[]} Array of hexadecimal color strings
- */
-function generateDistinctColors(count) {
-	const colors = [];
-
-	for (let i = 0; i < count; i++) {
-		// Generate colors with good saturation and brightness
-		const h = Math.floor(Math.random() * 360); // Hue (0-360)
-		const s = Math.floor(50 + Math.random() * 50); // Saturation (50-100%)
-		const l = Math.floor(40 + Math.random() * 20); // Lightness (40-60%)
-
-		// Convert HSL to HEX
-		const color = hslToHex(h, s, l);
-		colors.push(color);
-	}
-
-	return colors;
-}
-</script>
-<!-- end 'colorutil.js' -->
+  <script>
+   /**
+  	 * Converts HSL color values to hexadecimal color representation
+  	 * @param {number} h - Hue value (0-360)
+  	 * @param {number} s - Saturation value (0-100)
+  	 * @param {number} l - Lightness value (0-100)
+  	 * @returns {string} Hexadecimal color string (e.g., "#ff0000")
+  	 */
+  	function hslToHex(h, s, l) {
+  		s /= 100;
+  		l /= 100;
+  	
+  		const c = (1 - Math.abs(2 * l - 1)) * s;
+  		const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  		const m = l - c / 2;
+  	
+  		let r, g, b;
+  	
+  		if (0 <= h && h < 60) {
+  			[r, g, b] = [c, x, 0];
+  		} else if (60 <= h && h < 120) {
+  			[r, g, b] = [x, c, 0];
+  		} else if (120 <= h && h < 180) {
+  			[r, g, b] = [0, c, x];
+  		} else if (180 <= h && h < 240) {
+  			[r, g, b] = [0, x, c];
+  		} else if (240 <= h && h < 300) {
+  			[r, g, b] = [x, 0, c];
+  		} else {
+  			[r, g, b] = [c, 0, x];
+  		}
+  	
+  		const toHex = (value) => {
+  			const hex = Math.round((value + m) * 255).toString(16);
+  			return hex.length === 1 ? '0' + hex : hex;
+  		};
+  	
+  		return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  	}
+  	
+  	/**
+  	 * Generates an array of visually distinct colors
+  	 * @param {number} count - Number of colors to generate
+  	 * @returns {string[]} Array of hexadecimal color strings
+  	 */
+  	function generateDistinctColors(count) {
+  		const colors = [];
+  	
+  		for (let i = 0; i < count; i++) {
+  			// Generate colors with good saturation and brightness
+  			const h = Math.floor(Math.random() * 360); // Hue (0-360)
+  			const s = Math.floor(50 + Math.random() * 50); // Saturation (50-100%)
+  			const l = Math.floor(40 + Math.random() * 20); // Lightness (40-60%)
+  	
+  			// Convert HSL to HEX
+  			const color = hslToHex(h, s, l);
+  			colors.push(color);
+  		}
+  	
+  		return colors;
+  	}
+  </script>
+  <!-- end 'colorutil.js' -->
   <!-- begin 'logger.js' -->
-<script>
-/**
- * Simple logging utility for the application
- */
-const logger = {
-	/**
-	 * Whether logging is enabled
-	 */
-	enabled: true,
-
-	/**
-	 * Log information message
-	 */
-	log(message, ...args) {
-		if (this.enabled) {
-			console.log(message, ...args);
-		}
-	},
-
-	/**
-	 * Log error message
-	 */
-	error(message, ...args) {
-		console.error(message, ...args);
-	},
-
-	/**
-	 * Start a performance timer
-	 */
-	time(label) {
-		if (this.enabled) {
-			console.time(label);
-		}
-	},
-
-	/**
-	 * End a performance timer
-	 */
-	timeEnd(label) {
-		if (this.enabled) {
-			console.timeEnd(label);
-		}
-	}
-};
-
-// Enable or disable logging via console
-window.toggleLogging = function (enable = true) {
-	logger.enabled = enable;
-	console.log(`Logging ${enable ? 'enabled' : 'disabled'}`);
-};
-
-/**
-* Simple utilities for showing/updating loading indicators
-*/
-const loading = {
-	/**
-	 * Show main loading state with optional progress
-	 */
-	showLoading(vm, message, detail = 'Please wait...', showProgress = false) {
-		vm.isLoading = true;
-		vm.loadingMessage = message;
-		vm.loadingDetail = detail;
-		vm.loadingProgress = showProgress;
-		if (!showProgress) {
-			vm.loadingProgressPercent = 0;
-		}
-		vm.statusMessage = message;
-	},
-
-	/**
-	 * Update loading progress
-	 */
-	updateProgress(vm, percent, detail = null) {
-		vm.loadingProgressPercent = percent;
-		if (detail) {
-			vm.loadingDetail = detail;
-		}
-	},
-
-	/**
-	 * Hide loading indicator
-	 */
-	hideLoading(vm) {
-		vm.isLoading = false;
-		vm.loadingProgress = false;
-	},
-
-	/**
-	 * Show plot updating indicator
-	 */
-	showUpdating(vm, isProcessingSelection = false) {
-		vm.isUpdatingPlot = true;
-		vm.processingSelection = isProcessingSelection;
-	},
-
-	/**
-	 * Hide updating indicators
-	 */
-	hideUpdating(vm) {
-		vm.isUpdatingPlot = false;
-		vm.processingSelection = false;
-	}
-};
-</script>
-<!-- end 'logger.js' -->
+  <script>
+   /**
+  	 * Simple logging utility for the application
+  	 */
+  	const logger = {
+  		/**
+  		 * Whether logging is enabled
+  		 */
+  		enabled: true,
+  	
+  		/**
+  		 * Log information message
+  		 */
+  		log(message, ...args) {
+  			if (this.enabled) {
+  				console.log(message, ...args);
+  			}
+  		},
+  	
+  		/**
+  		 * Log error message
+  		 */
+  		error(message, ...args) {
+  			console.error(message, ...args);
+  		},
+  	
+  		/**
+  		 * Start a performance timer
+  		 */
+  		time(label) {
+  			if (this.enabled) {
+  				console.time(label);
+  			}
+  		},
+  	
+  		/**
+  		 * End a performance timer
+  		 */
+  		timeEnd(label) {
+  			if (this.enabled) {
+  				console.timeEnd(label);
+  			}
+  		}
+  	};
+  	
+  	// Enable or disable logging via console
+  	window.toggleLogging = function (enable = true) {
+  		logger.enabled = enable;
+  		console.log(`Logging ${enable ? 'enabled' : 'disabled'}`);
+  	};
+  	
+  	/**
+  	* Simple utilities for showing/updating loading indicators
+  	*/
+  	const loading = {
+  		/**
+  		 * Show main loading state with optional progress
+  		 */
+  		showLoading(vm, message, detail = 'Please wait...', showProgress = false) {
+  			vm.isLoading = true;
+  			vm.loadingMessage = message;
+  			vm.loadingDetail = detail;
+  			vm.loadingProgress = showProgress;
+  			if (!showProgress) {
+  				vm.loadingProgressPercent = 0;
+  			}
+  			vm.statusMessage = message;
+  		},
+  	
+  		/**
+  		 * Update loading progress
+  		 */
+  		updateProgress(vm, percent, detail = null) {
+  			vm.loadingProgressPercent = percent;
+  			if (detail) {
+  				vm.loadingDetail = detail;
+  			}
+  		},
+  	
+  		/**
+  		 * Hide loading indicator
+  		 */
+  		hideLoading(vm) {
+  			vm.isLoading = false;
+  			vm.loadingProgress = false;
+  		},
+  	
+  		/**
+  		 * Show plot updating indicator
+  		 */
+  		showUpdating(vm, isProcessingSelection = false) {
+  			vm.isUpdatingPlot = true;
+  			vm.processingSelection = isProcessingSelection;
+  		},
+  	
+  		/**
+  		 * Hide updating indicators
+  		 */
+  		hideUpdating(vm) {
+  			vm.isUpdatingPlot = false;
+  			vm.processingSelection = false;
+  		}
+  	};
+  </script>
+  <!-- end 'logger.js' -->
   <!-- begin 'plotutil.js' -->
-<script>
-/**
- * Creates a layout configuration for a Plotly 3D scatter plot
- * @param {string} title - Title of the plot
- * @param {Object|null} cameraPosition - Optional camera position to preserve
- * @param {Object} axes - Object with x, y, z indices of PCA components to use
- * @param {Object|null} axisLabels - Optional object with labels for each axis
- * @returns {Object} Layout configuration object for Plotly
- */
-function createPlotLayout(title, cameraPosition = null, axes = { x: 0, y: 1, z: 2 }, axisLabels = null) {
-	const layout = {
-		title: title,
-		scene: {
-			xaxis: { title: axisLabels ? axisLabels.x : `PC${axes.x}` },
-			yaxis: { title: axisLabels ? axisLabels.y : `PC${axes.y}` },
-			zaxis: { title: axisLabels ? axisLabels.z : `PC${axes.z}` },
-			camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
-		},
-		margin: { l: 0, r: 0, b: 0, t: 50 },
-		hovermode: 'closest'
-	};
-
-	// Apply saved camera position if provided
-	if (cameraPosition) {
-		layout.scene.camera = cameraPosition;
-	}
-
-	return layout;
-}
-
-/**
- * Creates a default trace configuration for a Plotly 3D scatter plot
- * @returns {Object} Base trace configuration
- */
-function createDefaultTraceConfig() {
-	return {
-		mode: 'markers',
-		type: 'scatter3d',
-		// The hover template that matches the Python format
-		hovertemplate: '<b>Point Info</b><br>' +
-			'head: %{customdata[0]}<br>' +
-			'prompt: %{customdata[1]}<br>' +
-			'coord: [%{x:.2f}, %{y:.2f}, %{z:.2f}]<extra></extra>',
-	};
-}
-
-/**
- * Gets the current camera position from a Plotly plot
- * @param {Object} plotContainer - The Plotly plot container reference
- * @returns {Object|null} - The current camera position or null if it cannot be retrieved
- */
-function getCurrentCameraPosition(plotContainer) {
-	if (plotContainer && plotContainer._fullLayout) {
-		try {
-			// Deep clone to avoid reference issues
-			return JSON.parse(JSON.stringify(
-				plotContainer._fullLayout.scene.camera
-			));
-		} catch (e) {
-			console.warn("Could not get camera position:", e);
-			return null;
-		}
-	}
-	return null;
-}
-
-
-
-
-
-/**
- * Generate customdata for points based on their indices
- * 
- * @param {Object} plotData - The plot data object with all data columns
- * @param {Array<number>} indices - Array of point indices to generate customdata for
- * @param {string} selectionColumn - Column used for selection (will be included if not one of the hover fields)
- * @returns {Array<Array>} - Array of customdata arrays for each point
- */
-function generateCustomdata(plotData, indices, selectionColumn = null) {
-	// Generate customdata for hover and selection
-	return indices.map(i => {
-		// Always include the two hover columns
-		const data = [
-			plotData['activation.cls'][i],    // head
-			plotData['activation.prompt'][i], // prompt
-		];
-
-		// Add the selection column as third element if it's different from the hover columns
-		if (selectionColumn &&
-			selectionColumn !== 'activation.cls' &&
-			selectionColumn !== 'activation.prompt') {
-			data.push(plotData[selectionColumn][i]);
-		}
-
-		return data;
-	});
-}
-
-/**
- * Cache object for storing generated customdata
- */
-const customdataCache = {
-	data: {},
-
-	/**
-	 * Get cached customdata if available
-	 * 
-	 * @param {string} cacheKey - Cache key
-	 * @returns {Array|null} - Cached customdata or null if not found
-	 */
-	get(cacheKey) {
-		return this.data[cacheKey] || null;
-	},
-
-	/**
-	 * Store customdata in cache
-	 * 
-	 * @param {string} cacheKey - Cache key
-	 * @param {Array} customdata - Customdata to store
-	 */
-	set(cacheKey, customdata) {
-		this.data[cacheKey] = customdata;
-	},
-
-	/**
-	 * Clear the entire cache or a specific key
-	 * 
-	 * @param {string|null} cacheKey - Optional specific key to clear
-	 */
-	clear(cacheKey = null) {
-		if (cacheKey) {
-			delete this.data[cacheKey];
-		} else {
-			this.data = {};
-		}
-	}
-};
-
-/**
- * Generate customdata with caching support
- * 
- * @param {Object} plotData - The plot data object with all data columns
- * @param {Array<number>} indices - Array of point indices to generate customdata for
- * @param {string} selectionColumn - Column used for selection
- * @param {boolean} useCache - Whether to use the cache
- * @returns {Array<Array>} - Array of customdata arrays for each point
- */
-function getCustomdata(plotData, indices, selectionColumn = null, useCache = true) {
-	// Only use cache if instructed and we have indices
-	if (useCache && indices && indices.length > 0) {
-		// Create a cache key based on indices and selection column
-		const cacheKey = `${selectionColumn || 'default'}_${indices[0]}_${indices.length}`;
-
-		// Try to get from cache first
-		const cachedData = customdataCache.get(cacheKey);
-		if (cachedData) {
-			return cachedData;
-		}
-
-		// Generate new data
-		const customdata = generateCustomdata(plotData, indices, selectionColumn);
-
-		// Store in cache for future use
-		customdataCache.set(cacheKey, customdata);
-
-		return customdata;
-	}
-
-	// If not using cache, generate directly
-	return generateCustomdata(plotData, indices, selectionColumn);
-}
-
-/**
- * Clear the customdata cache when data changes
- */
-function clearCustomdataCache() {
-	customdataCache.clear();
-}
-
-
-
-/**
- * Create traces grouped by categorical value (for initial view)
- * @param {Object} plotData - The plot data object with coordinates and metadata
- * @param {string} selectedColumn - The column to group by
- * @param {Object} dataFrame - The DataFrame containing the data
- * @param {Object} options - Configuration options
- * @param {Object} options.defaultTraceConfig - The default trace configuration
- * @param {number} options.selectedSize - The point size for selected points
- * @param {number} options.selectedOpacity - The opacity for selected points
- * @param {string} options.selectionColumn - The column used for selection (optional)
- * @returns {Array} - Array of trace objects for Plotly
- */
-function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
-	console.time('Create Category Traces');
-
-	if (!plotData || !selectedColumn) return [];
-
-	const {
-		defaultTraceConfig = createDefaultTraceConfig(),
-		selectedSize = 6,
-		selectedOpacity = 1.0,
-		selectionColumn = selectedColumn, // Default to selectedColumn if not provided
-		useCache = true
-	} = options || {};
-
-	const uniqueValues = [...dataFrame.col_unique(selectedColumn)];
-	console.log(`Found ${uniqueValues.length} unique values for ${selectedColumn}`);
-
-	const traces = [];
-
-	// Colors for category differentiation
-	const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
-
-	// Create a trace for each unique value
-	uniqueValues.forEach((value, index) => {
-		console.log(`Creating trace for ${value}...`);
-		const indices = [];
-
-		// Find all points with this value
-		for (let i = 0; i < plotData[selectedColumn].length; i++) {
-			if (plotData[selectedColumn][i] === value) {
-				indices.push(i);
-			}
-		}
-
-		console.log(`Found ${indices.length} points for ${value}`);
-
-		// Get customdata with caching for better performance
-		const customdata = getCustomdata(plotData, indices, selectionColumn, useCache);
-
-		traces.push({
-			...defaultTraceConfig,
-			x: indices.map(i => plotData.x[i]),
-			y: indices.map(i => plotData.y[i]),
-			z: indices.map(i => plotData.z[i]),
-			name: String(value),
-			marker: {
-				size: selectedSize,
-				color: colors[index % colors.length],
-				opacity: selectedOpacity // Use the selected opacity for better visibility
-			},
-			customdata: customdata
-		});
-	});
-
-	console.timeEnd('Create Category Traces');
-	return traces;
-}
-
-/**
- * Create traces with selection highlighting
- * @param {Object} plotData - The plot data object with coordinates and metadata
- * @param {string} selectedColumn - The column to filter by
- * @param {Array} selectedValues - Array of selected values
- * @param {Object} options - Configuration options
- * @param {Object} options.defaultTraceConfig - The default trace configuration
- * @param {number} options.selectedSize - The point size for selected points
- * @param {number} options.nonSelectedSize - The point size for non-selected points
- * @param {number} options.selectedOpacity - The opacity for selected points
- * @param {number} options.nonSelectedOpacity - The opacity for non-selected points
- * @param {string} options.nonSelectedColor - The color for non-selected points
- * @param {Function} options.getSelectionColor - Function to get color for a selection index
- * @param {string} options.colorByColumn - The column used for coloring (optional)
- * @returns {Array} - Array of trace objects for Plotly
- */
-function createTracesWithSelection(plotData, selectedColumn, selectedValues, options) {
-	console.time('Create Selection Traces');
-
-	if (!plotData) return [];
-
-	const {
-		defaultTraceConfig = createDefaultTraceConfig(),
-		selectedSize = 6,
-		nonSelectedSize = 4,
-		selectedOpacity = 1.0,
-		nonSelectedOpacity = 0.4,
-		nonSelectedColor = '#969696',
-		getSelectionColor = (index) => ['#ff7f0e', '#2ca02c', '#d62728'][index % 3], // Default if not provided
-		colorByColumn = selectedColumn, // Default to selectedColumn if not provided
-		useCache = true
-	} = options || {};
-
-	// First, separate points into selected and non-selected
-	const selectedIndices = {};
-	const nonSelectedIndices = [];
-
-	// Group points by selection status
-	for (let i = 0; i < plotData[selectedColumn].length; i++) {
-		const value = plotData[selectedColumn][i];
-
-		if (selectedValues.includes(value)) {
-			if (!selectedIndices[value]) {
-				selectedIndices[value] = [];
-			}
-			selectedIndices[value].push(i);
-		} else {
-			nonSelectedIndices.push(i);
-		}
-	}
-
-	console.log(`Selection counts: ${Object.keys(selectedIndices).length} selected values, ${nonSelectedIndices.length} non-selected points`);
-
-	const traces = [];
-
-	// Add non-selected points (with configurable color/opacity)
-	if (nonSelectedIndices.length > 0) {
-		console.log(`Creating trace for ${nonSelectedIndices.length} non-selected points...`);
-
-		// Get customdata with caching for better performance
-		const customdata = getCustomdata(plotData, nonSelectedIndices, selectedColumn, useCache);
-
-		traces.push({
-			...defaultTraceConfig,
-			x: nonSelectedIndices.map(i => plotData.x[i]),
-			y: nonSelectedIndices.map(i => plotData.y[i]),
-			z: nonSelectedIndices.map(i => plotData.z[i]),
-			name: 'Other Points',
-			marker: {
-				size: nonSelectedSize,
-				color: nonSelectedColor,
-				opacity: nonSelectedOpacity
-			},
-			customdata: customdata
-		});
-	}
-
-	// Add a trace for each selected value
-	const selectedValuesArray = Object.keys(selectedIndices);
-	selectedValuesArray.forEach((value, index) => {
-		const indices = selectedIndices[value];
-		console.log(`Creating trace for selected value "${value}" with ${indices.length} points...`);
-
-		// Get customdata with caching for better performance
-		const customdata = getCustomdata(plotData, indices, selectedColumn, useCache);
-
-		// Use the getSelectionColor function passed as an option
-		const colorIndex = selectedValues.indexOf(value);
-		const color = getSelectionColor(colorIndex);
-
-		traces.push({
-			...defaultTraceConfig,
-			x: indices.map(i => plotData.x[i]),
-			y: indices.map(i => plotData.y[i]),
-			z: indices.map(i => plotData.z[i]),
-			name: `Selected: ${value}`,
-			marker: {
-				size: selectedSize,
-				color: color,
-				opacity: selectedOpacity
-			},
-			customdata: customdata
-		});
-	});
-
-	console.timeEnd('Create Selection Traces');
-	return traces;
-}
-</script>
-<!-- end 'plotutil.js' -->
+  <script>
+   /**
+  	 * Creates a layout configuration for a Plotly 3D scatter plot
+  	 * @param {string} title - Title of the plot
+  	 * @param {Object|null} cameraPosition - Optional camera position to preserve
+  	 * @param {Object} axes - Object with x, y, z indices of PCA components to use
+  	 * @param {Object|null} axisLabels - Optional object with labels for each axis
+  	 * @returns {Object} Layout configuration object for Plotly
+  	 */
+  	function createPlotLayout(title, cameraPosition = null, axes = { x: 0, y: 1, z: 2 }, axisLabels = null) {
+  		const layout = {
+  			title: title,
+  			scene: {
+  				xaxis: { title: axisLabels ? axisLabels.x : `PC${axes.x}` },
+  				yaxis: { title: axisLabels ? axisLabels.y : `PC${axes.y}` },
+  				zaxis: { title: axisLabels ? axisLabels.z : `PC${axes.z}` },
+  				camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
+  			},
+  			margin: { l: 0, r: 0, b: 0, t: 50 },
+  			hovermode: 'closest'
+  		};
+  	
+  		// Apply saved camera position if provided
+  		if (cameraPosition) {
+  			layout.scene.camera = cameraPosition;
+  		}
+  	
+  		return layout;
+  	}
+  	
+  	/**
+  	 * Creates a default trace configuration for a Plotly 3D scatter plot
+  	 * @returns {Object} Base trace configuration
+  	 */
+  	function createDefaultTraceConfig() {
+  		return {
+  			mode: 'markers',
+  			type: 'scatter3d',
+  			// The hover template that matches the Python format
+  			hovertemplate: '<b>Point Info</b><br>' +
+  				'head: %{customdata[0]}<br>' +
+  				'prompt: %{customdata[1]}<br>' +
+  				'coord: [%{x:.2f}, %{y:.2f}, %{z:.2f}]<extra></extra>',
+  		};
+  	}
+  	
+  	/**
+  	 * Gets the current camera position from a Plotly plot
+  	 * @param {Object} plotContainer - The Plotly plot container reference
+  	 * @returns {Object|null} - The current camera position or null if it cannot be retrieved
+  	 */
+  	function getCurrentCameraPosition(plotContainer) {
+  		if (plotContainer && plotContainer._fullLayout) {
+  			try {
+  				// Deep clone to avoid reference issues
+  				return JSON.parse(JSON.stringify(
+  					plotContainer._fullLayout.scene.camera
+  				));
+  			} catch (e) {
+  				console.warn("Could not get camera position:", e);
+  				return null;
+  			}
+  		}
+  		return null;
+  	}
+  	
+  	
+  	
+  	
+  	
+  	/**
+  	 * Generate customdata for points based on their indices
+  	 * 
+  	 * @param {Object} plotData - The plot data object with all data columns
+  	 * @param {Array<number>} indices - Array of point indices to generate customdata for
+  	 * @param {string} selectionColumn - Column used for selection (will be included if not one of the hover fields)
+  	 * @returns {Array<Array>} - Array of customdata arrays for each point
+  	 */
+  	function generateCustomdata(plotData, indices, selectionColumn = null) {
+  		// Generate customdata for hover and selection
+  		return indices.map(i => {
+  			// Always include the two hover columns
+  			const data = [
+  				plotData['activation.cls'][i],    // head
+  				plotData['activation.prompt'][i], // prompt
+  			];
+  	
+  			// Add the selection column as third element if it's different from the hover columns
+  			if (selectionColumn &&
+  				selectionColumn !== 'activation.cls' &&
+  				selectionColumn !== 'activation.prompt') {
+  				data.push(plotData[selectionColumn][i]);
+  			}
+  	
+  			return data;
+  		});
+  	}
+  	
+  	/**
+  	 * Cache object for storing generated customdata
+  	 */
+  	const customdataCache = {
+  		data: {},
+  	
+  		/**
+  		 * Get cached customdata if available
+  		 * 
+  		 * @param {string} cacheKey - Cache key
+  		 * @returns {Array|null} - Cached customdata or null if not found
+  		 */
+  		get(cacheKey) {
+  			return this.data[cacheKey] || null;
+  		},
+  	
+  		/**
+  		 * Store customdata in cache
+  		 * 
+  		 * @param {string} cacheKey - Cache key
+  		 * @param {Array} customdata - Customdata to store
+  		 */
+  		set(cacheKey, customdata) {
+  			this.data[cacheKey] = customdata;
+  		},
+  	
+  		/**
+  		 * Clear the entire cache or a specific key
+  		 * 
+  		 * @param {string|null} cacheKey - Optional specific key to clear
+  		 */
+  		clear(cacheKey = null) {
+  			if (cacheKey) {
+  				delete this.data[cacheKey];
+  			} else {
+  				this.data = {};
+  			}
+  		}
+  	};
+  	
+  	/**
+  	 * Generate customdata with caching support
+  	 * 
+  	 * @param {Object} plotData - The plot data object with all data columns
+  	 * @param {Array<number>} indices - Array of point indices to generate customdata for
+  	 * @param {string} selectionColumn - Column used for selection
+  	 * @param {boolean} useCache - Whether to use the cache
+  	 * @returns {Array<Array>} - Array of customdata arrays for each point
+  	 */
+  	function getCustomdata(plotData, indices, selectionColumn = null, useCache = true) {
+  		// Only use cache if instructed and we have indices
+  		if (useCache && indices && indices.length > 0) {
+  			// Create a cache key based on indices and selection column
+  			const cacheKey = `${selectionColumn || 'default'}_${indices[0]}_${indices.length}`;
+  	
+  			// Try to get from cache first
+  			const cachedData = customdataCache.get(cacheKey);
+  			if (cachedData) {
+  				return cachedData;
+  			}
+  	
+  			// Generate new data
+  			const customdata = generateCustomdata(plotData, indices, selectionColumn);
+  	
+  			// Store in cache for future use
+  			customdataCache.set(cacheKey, customdata);
+  	
+  			return customdata;
+  		}
+  	
+  		// If not using cache, generate directly
+  		return generateCustomdata(plotData, indices, selectionColumn);
+  	}
+  	
+  	/**
+  	 * Clear the customdata cache when data changes
+  	 */
+  	function clearCustomdataCache() {
+  		customdataCache.clear();
+  	}
+  	
+  	
+  	
+  	/**
+  	 * Create traces grouped by categorical value (for initial view)
+  	 * @param {Object} plotData - The plot data object with coordinates and metadata
+  	 * @param {string} selectedColumn - The column to group by
+  	 * @param {Object} dataFrame - The DataFrame containing the data
+  	 * @param {Object} options - Configuration options
+  	 * @param {Object} options.defaultTraceConfig - The default trace configuration
+  	 * @param {number} options.selectedSize - The point size for selected points
+  	 * @param {number} options.selectedOpacity - The opacity for selected points
+  	 * @param {string} options.selectionColumn - The column used for selection (optional)
+  	 * @returns {Array} - Array of trace objects for Plotly
+  	 */
+  	function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
+  		console.time('Create Category Traces');
+  	
+  		if (!plotData || !selectedColumn) return [];
+  	
+  		const {
+  			defaultTraceConfig = createDefaultTraceConfig(),
+  			selectedSize = 6,
+  			selectedOpacity = 1.0,
+  			selectionColumn = selectedColumn, // Default to selectedColumn if not provided
+  			useCache = true
+  		} = options || {};
+  	
+  		const uniqueValues = [...dataFrame.col_unique(selectedColumn)];
+  		console.log(`Found ${uniqueValues.length} unique values for ${selectedColumn}`);
+  	
+  		const traces = [];
+  	
+  		// Colors for category differentiation
+  		const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
+  	
+  		// Create a trace for each unique value
+  		uniqueValues.forEach((value, index) => {
+  			console.log(`Creating trace for ${value}...`);
+  			const indices = [];
+  	
+  			// Find all points with this value
+  			for (let i = 0; i < plotData[selectedColumn].length; i++) {
+  				if (plotData[selectedColumn][i] === value) {
+  					indices.push(i);
+  				}
+  			}
+  	
+  			console.log(`Found ${indices.length} points for ${value}`);
+  	
+  			// Get customdata with caching for better performance
+  			const customdata = getCustomdata(plotData, indices, selectionColumn, useCache);
+  	
+  			traces.push({
+  				...defaultTraceConfig,
+  				x: indices.map(i => plotData.x[i]),
+  				y: indices.map(i => plotData.y[i]),
+  				z: indices.map(i => plotData.z[i]),
+  				name: String(value),
+  				marker: {
+  					size: selectedSize,
+  					color: colors[index % colors.length],
+  					opacity: selectedOpacity // Use the selected opacity for better visibility
+  				},
+  				customdata: customdata
+  			});
+  		});
+  	
+  		console.timeEnd('Create Category Traces');
+  		return traces;
+  	}
+  	
+  	/**
+  	 * Create traces with selection highlighting
+  	 * @param {Object} plotData - The plot data object with coordinates and metadata
+  	 * @param {string} selectedColumn - The column to filter by
+  	 * @param {Array} selectedValues - Array of selected values
+  	 * @param {Object} options - Configuration options
+  	 * @param {Object} options.defaultTraceConfig - The default trace configuration
+  	 * @param {number} options.selectedSize - The point size for selected points
+  	 * @param {number} options.nonSelectedSize - The point size for non-selected points
+  	 * @param {number} options.selectedOpacity - The opacity for selected points
+  	 * @param {number} options.nonSelectedOpacity - The opacity for non-selected points
+  	 * @param {string} options.nonSelectedColor - The color for non-selected points
+  	 * @param {Function} options.getSelectionColor - Function to get color for a selection index
+  	 * @param {string} options.colorByColumn - The column used for coloring (optional)
+  	 * @returns {Array} - Array of trace objects for Plotly
+  	 */
+  	function createTracesWithSelection(plotData, selectedColumn, selectedValues, options) {
+  		console.time('Create Selection Traces');
+  	
+  		if (!plotData) return [];
+  	
+  		const {
+  			defaultTraceConfig = createDefaultTraceConfig(),
+  			selectedSize = 6,
+  			nonSelectedSize = 4,
+  			selectedOpacity = 1.0,
+  			nonSelectedOpacity = 0.4,
+  			nonSelectedColor = '#969696',
+  			getSelectionColor = (index) => ['#ff7f0e', '#2ca02c', '#d62728'][index % 3], // Default if not provided
+  			colorByColumn = selectedColumn, // Default to selectedColumn if not provided
+  			useCache = true
+  		} = options || {};
+  	
+  		// First, separate points into selected and non-selected
+  		const selectedIndices = {};
+  		const nonSelectedIndices = [];
+  	
+  		// Group points by selection status
+  		for (let i = 0; i < plotData[selectedColumn].length; i++) {
+  			const value = plotData[selectedColumn][i];
+  	
+  			if (selectedValues.includes(value)) {
+  				if (!selectedIndices[value]) {
+  					selectedIndices[value] = [];
+  				}
+  				selectedIndices[value].push(i);
+  			} else {
+  				nonSelectedIndices.push(i);
+  			}
+  		}
+  	
+  		console.log(`Selection counts: ${Object.keys(selectedIndices).length} selected values, ${nonSelectedIndices.length} non-selected points`);
+  	
+  		const traces = [];
+  	
+  		// Add non-selected points (with configurable color/opacity)
+  		if (nonSelectedIndices.length > 0) {
+  			console.log(`Creating trace for ${nonSelectedIndices.length} non-selected points...`);
+  	
+  			// Get customdata with caching for better performance
+  			const customdata = getCustomdata(plotData, nonSelectedIndices, selectedColumn, useCache);
+  	
+  			traces.push({
+  				...defaultTraceConfig,
+  				x: nonSelectedIndices.map(i => plotData.x[i]),
+  				y: nonSelectedIndices.map(i => plotData.y[i]),
+  				z: nonSelectedIndices.map(i => plotData.z[i]),
+  				name: 'Other Points',
+  				marker: {
+  					size: nonSelectedSize,
+  					color: nonSelectedColor,
+  					opacity: nonSelectedOpacity
+  				},
+  				customdata: customdata
+  			});
+  		}
+  	
+  		// Add a trace for each selected value
+  		const selectedValuesArray = Object.keys(selectedIndices);
+  		selectedValuesArray.forEach((value, index) => {
+  			const indices = selectedIndices[value];
+  			console.log(`Creating trace for selected value "${value}" with ${indices.length} points...`);
+  	
+  			// Get customdata with caching for better performance
+  			const customdata = getCustomdata(plotData, indices, selectedColumn, useCache);
+  	
+  			// Use the getSelectionColor function passed as an option
+  			const colorIndex = selectedValues.indexOf(value);
+  			const color = getSelectionColor(colorIndex);
+  	
+  			traces.push({
+  				...defaultTraceConfig,
+  				x: indices.map(i => plotData.x[i]),
+  				y: indices.map(i => plotData.y[i]),
+  				z: indices.map(i => plotData.z[i]),
+  				name: `Selected: ${value}`,
+  				marker: {
+  					size: selectedSize,
+  					color: color,
+  					opacity: selectedOpacity
+  				},
+  				customdata: customdata
+  			});
+  		});
+  	
+  		console.timeEnd('Create Selection Traces');
+  		return traces;
+  	}
+  </script>
+  <!-- end 'plotutil.js' -->
   <!-- begin 'dataloader.js' -->
-<script>
-/**
- * Functions for loading and processing data for the PCA visualization
- */
-
-/**
- * Load PCA data from NPY file
- * @returns {Promise<NDArray>} The loaded PCA array
- */
-function loadPcaData() {
-    logger.time('Load PCA NPY');
-    return NDArray.load("data/features/pca.npy").then(pcaArray => {
-        logger.timeEnd('Load PCA NPY');
-        logger.log('PCA data shape:', pcaArray.shape);
-        return pcaArray;
-    });
-}
-
-/**
- * Load metadata from JSONL file
- * @returns {Promise<DataFrame>} The loaded DataFrame
- */
-function loadMetadata() {
-    logger.time('Load JSONL');
-
-    return fetch("data/features/meta.jsonl")
-        .then(response => response.text())
-        .then(text => {
-            logger.log('JSONL text length:', text.length);
-            const dataFrame = DataFrame.from_jsonl(text);
-            logger.timeEnd('Load JSONL');
-            logger.log('DataFrame rows:', dataFrame.length);
-            return dataFrame;
-        });
-}
-
-/**
- * Process loaded PCA data and metadata into a format suitable for plotting
- * @param {NDArray} pcaArray - The PCA array
- * @param {DataFrame} dataFrame - The metadata DataFrame
- * @returns {Object} The processed plot data
- */
-function processData(pcaArray, dataFrame) {
-    if (!pcaArray || !dataFrame) {
-        throw new Error("PCA data or metadata not loaded");
-    }
-
-    const pcaData = pcaArray;
-
-    // Create the plot data object with arrays for all available PCA components
-    const plotData = {
-        // Initialize empty arrays for all PCA components
-        pcaComponents: []
-    };
-
-    // Initialize arrays for each PCA component
-    for (let i = 0; i < pcaData.shape[1]; i++) {
-        // Use the get method with null to get all values for a specific component
-        plotData.pcaComponents[i] = Array.from(pcaData.get(null, i).data);
-    }
-
-    // Add metadata columns from the DataFrame to plotData
-    for (const column of dataFrame.columns) {
-        plotData[column] = dataFrame.col(column);
-    }
-
-    return plotData;
-}
-
-/**
- * Update x, y, z arrays in plotData based on PCA axis selection
- * @param {Object} plotData - The plot data object 
- * @param {Object} pcaAxes - The selected PCA axes {x, y, z}
- * @param {Array<string>} pcaColumnNames - Array of PCA column names
- */
-function updatePlotCoordinates(plotData, pcaAxes, pcaColumnNames = null) {
-    if (pcaColumnNames && pcaColumnNames.length > 0) {
-        // Set x, y, z from the actual columns in the data
-        plotData.x = plotData[pcaColumnNames[pcaAxes.x]];
-        plotData.y = plotData[pcaColumnNames[pcaAxes.y]];
-        plotData.z = plotData[pcaColumnNames[pcaAxes.z]];
-    } else {
-        // Fall back to using pcaComponents
-        plotData.x = plotData.pcaComponents[pcaAxes.x];
-        plotData.y = plotData.pcaComponents[pcaAxes.y];
-        plotData.z = plotData.pcaComponents[pcaAxes.z];
-    }
-}
-
-/**
- * Find categorical columns in the DataFrame (those with fewer than 50 unique values)
- * @param {DataFrame} dataFrame - The metadata DataFrame
- * @returns {Array<string>} Array of column names that have categorical values
- */
-function findCategoricalColumns(dataFrame) {
-    return dataFrame.columns;
-    // return dataFrame.columns.filter(col => {
-    //     try {
-    //         const uniqueCount = dataFrame.col_unique(col).size;
-    //         // At least 2 unique values but not too many (fewer than 50)
-    //         return uniqueCount < 50;
-    //     } catch (e) {
-    //         logger.error(`Error checking column ${col}:`, e);
-    //         return false;
-    //     }
-    // });
-}
-
-/**
- * Load data from a JSONL file and process it
- * @param {Object} config - Configuration object with data loading parameters
- * @param {Function} updateProgressCallback - Callback function for updating loading progress
- * @returns {Promise<Object>} Object containing the data frame, pca array, and plot data
- */
-async function loadJsonlData(config, updateProgressCallback = () => { }) {
-    const { filePath, numericalPrefix } = config;
-
-    logger.time('Load Data');
-
-    // Update progress to 10%
-    updateProgressCallback(10, 'Downloading data file...');
-
-    // Load data from the configured file path
-    const response = await fetch(filePath);
-    const text = await response.text();
-    logger.log('JSONL text length:', text.length);
-    const dataFrame = DataFrame.from_jsonl(text);
-    logger.timeEnd('Load Data');
-
-    // Update progress to 40%
-    updateProgressCallback(40, 'Processing data...');
-
-    // Extract numerical columns (PCA components) based on prefix
-    logger.time('Extract PCA Components');
-    const pcaColumnNames = dataFrame.columns.filter(col => col.startsWith(numericalPrefix)).sort();
-    logger.log('Found PCA columns:', pcaColumnNames);
-    const pcaArray = extractPcaComponents(dataFrame, numericalPrefix, pcaColumnNames);
-    logger.timeEnd('Extract PCA Components');
-
-    // Update progress to 70%
-    updateProgressCallback(70, 'Preparing plot data');
-
-    // Process data
-    logger.time('Process Data');
-    const plotData = processDataFromDataFrame(dataFrame, pcaArray, { x: 0, y: 1, z: 2 }, pcaColumnNames);
-    logger.timeEnd('Process Data');
-
-    // Update progress to 90%
-    updateProgressCallback(90, 'Finding available columns...');
-
-    // Find available columns for selection
-    const availableColumns = findAvailableColumns(dataFrame, numericalPrefix);
-    logger.log('Available categorical columns:', availableColumns);
-
-    return {
-        dataFrame,
-        pcaArray,
-        plotData,
-        availableColumns,
-        pcaColumnNames
-    };
-}
-
-/**
- * Extract PCA components from the DataFrame based on the numerical prefix
- * @param {DataFrame} dataFrame - The DataFrame containing the data
- * @param {string} numericalPrefix - Prefix for numerical columns
- * @param {Array<string>} pcaColumnNames - Optional array of PCA column names
- * @returns {Object} PCA array-like object
- */
-function extractPcaComponents(dataFrame, numericalPrefix, pcaColumnNames = null) {
-    // Use provided column names or find them
-    const numericalColumns = pcaColumnNames ||
-        dataFrame.columns.filter(col => col.startsWith(numericalPrefix)).sort();
-
-    logger.log('Using numerical columns:', numericalColumns);
-
-    if (numericalColumns.length === 0) {
-        throw new Error(`No numerical columns found with prefix "${numericalPrefix}"`);
-    }
-
-    // Extract the numerical data into a virtual PCA array
-    const numRows = dataFrame.length;
-    const numCols = numericalColumns.length;
-
-    // Create a Float32Array to store the PCA data
-    const pcaData = new Float32Array(numRows * numCols);
-
-    // Fill the array with data from the DataFrame
-    for (let i = 0; i < numRows; i++) {
-        const row = dataFrame.row(i);
-        for (let j = 0; j < numCols; j++) {
-            const colName = numericalColumns[j];
-            pcaData[i * numCols + j] = row[colName] || 0;
-        }
-    }
-
-    // Create an NDArray-like object from the data
-    return {
-        data: pcaData,
-        shape: [numRows, numCols],
-        get: function (rowIdx, colIdx) {
-            if (rowIdx === null) {
-                // Extract entire column
-                const colData = new Float32Array(numRows);
-                for (let i = 0; i < numRows; i++) {
-                    colData[i] = this.data[i * numCols + colIdx];
-                }
-                return { data: colData };
-            } else if (colIdx === null) {
-                // Extract entire row
-                const rowData = new Float32Array(numCols);
-                for (let j = 0; j < numCols; j++) {
-                    rowData[j] = this.data[rowIdx * numCols + j];
-                }
-                return { data: rowData };
-            } else {
-                // Return a single value
-                return this.data[rowIdx * numCols + colIdx];
-            }
-        }
-    };
-}
-
-/**
- * Find available columns for selection (non-numerical columns)
- * @param {DataFrame} dataFrame - The DataFrame containing the data
- * @param {string} numericalPrefix - Prefix for numerical columns
- * @returns {Array<string>} Array of available column names
- */
-function findAvailableColumns(dataFrame, numericalPrefix) {
-    return dataFrame.columns.filter(col =>
-        !col.startsWith(numericalPrefix)
-    );
-}
-
-/**
- * Process loaded data into a format suitable for plotting
- * @param {DataFrame} dataFrame - The DataFrame containing the data
- * @param {Object} pcaArray - The PCA array-like object
- * @param {Object} pcaAxes - Optional axes selection {x, y, z}
- * @param {Array<string>} pcaColumnNames - Optional array of PCA column names
- * @returns {Object} The processed plot data
- */
-function processDataFromDataFrame(dataFrame, pcaArray, pcaAxes = { x: 0, y: 1, z: 2 }, pcaColumnNames = null) {
-    if (!pcaArray || !dataFrame) {
-        throw new Error("PCA data or metadata not available");
-    }
-
-    // Create the plot data object with arrays for all available PCA components
-    const plotData = {
-        // Initialize empty arrays for all PCA components
-        pcaComponents: []
-    };
-
-    // Initialize arrays for each PCA component
-    for (let i = 0; i < pcaArray.shape[1]; i++) {
-        // Use the get method with null to get all values for a specific component
-        plotData.pcaComponents[i] = Array.from(pcaArray.get(null, i).data);
-    }
-
-    // Add metadata columns from the DataFrame to plotData
-    for (const column of dataFrame.columns) {
-        plotData[column] = dataFrame.col(column);
-    }
-
-    // Initialize x, y, z with the selected components
-    if (pcaColumnNames && pcaColumnNames.length > 0) {
-        // Use column names directly if available
-        plotData.x = plotData[pcaColumnNames[pcaAxes.x]];
-        plotData.y = plotData[pcaColumnNames[pcaAxes.y]];
-        plotData.z = plotData[pcaColumnNames[pcaAxes.z]];
-    } else {
-        // Fall back to using pcaComponents
-        updatePlotCoordinates(plotData, pcaAxes);
-    }
-
-    return plotData;
-}
-
-/**
- * Parse URL parameters to override default configuration
- * @param {Object} dataConfig - Default data configuration
- * @param {Object} urlParams - Mapping of config keys to URL parameter names
- * @returns {Object} Updated configuration object
- */
-function parseUrlParams(dataConfig, urlParams) {
-    const urlSearchParams = new URLSearchParams(window.location.search);
-    const updatedConfig = { ...dataConfig };
-
-    // Update config from URL parameters if they exist
-    for (const [configKey, paramName] of Object.entries(urlParams)) {
-        const paramValue = urlSearchParams.get(paramName);
-        if (paramValue) {
-            // Handle array parameters (comma or tilde separated)
-            if (paramName === 'selected') {
-                updatedConfig.selectedValues = paramValue.includes('~')
-                    ? paramValue.split('~')
-                    : paramValue.split(',');
-            }
-            // Handle numeric parameters
-            else if (['xAxis', 'yAxis', 'zAxis', 'selOpacity', 'nonSelOpacity', 'selSize', 'nonSelSize'].includes(paramName)) {
-                updatedConfig[configKey] = Number(paramValue);
-            }
-            // Handle regular string parameters
-            else {
-                updatedConfig[configKey] = paramValue;
-            }
-            logger.log(`Using URL parameter ${paramName}=${paramValue} for ${configKey}`);
-        }
-    }
-
-    return updatedConfig;
-}
-
-/**
- * Update URL with current configuration
- * @param {Object} dataConfig - Current data configuration
- * @param {Object} urlParams - Mapping of config keys to URL parameter names
- * @param {Object} appState - Optional additional app state to include in URL
- * @returns {string} Updated base URL
- */
-function updateUrlWithConfig(dataConfig, urlParams, appState = {}) {
-    const url = new URL(window.location.href);
-    const params = url.searchParams;
-
-    // Set parameters from current configuration
-    for (const [configKey, paramName] of Object.entries(urlParams)) {
-        if (configKey in dataConfig) {
-            params.set(paramName, dataConfig[configKey]);
-        }
-    }
-
-    // Add additional state parameters if provided
-    if (Object.keys(appState).length > 0) {
-        // Handle selected values
-        if (appState.selectedValues && appState.selectedValues.length > 0) {
-            params.set(urlParams.selectedValues, appState.selectedValues.join('~'));
-        } else {
-            params.delete(urlParams.selectedValues);
-        }
-
-        // Handle axis settings
-        if (appState.pcaAxes) {
-            params.set(urlParams.xAxis, appState.pcaAxes.x);
-            params.set(urlParams.yAxis, appState.pcaAxes.y);
-            params.set(urlParams.zAxis, appState.pcaAxes.z);
-        }
-
-        // Handle appearance settings
-        if (appState.selectedOpacity !== undefined) params.set(urlParams.selectedOpacity, appState.selectedOpacity);
-        if (appState.nonSelectedOpacity !== undefined) params.set(urlParams.nonSelectedOpacity, appState.nonSelectedOpacity);
-        if (appState.selectedSize !== undefined) params.set(urlParams.selectedSize, appState.selectedSize);
-        if (appState.nonSelectedSize !== undefined) params.set(urlParams.nonSelectedSize, appState.nonSelectedSize);
-    }
-
-    // Update browser URL without reloading the page
-    window.history.replaceState({}, '', url.toString());
-
-    // Return the updated base URL
-    return url.toString().split('?')[0] + '?';
-}
-</script>
-<!-- end 'dataloader.js' -->
+  <script>
+   /**
+  	 * Functions for loading and processing data for the PCA visualization
+  	 */
+  	
+  	/**
+  	 * Load PCA data from NPY file
+  	 * @returns {Promise<NDArray>} The loaded PCA array
+  	 */
+  	function loadPcaData() {
+  	    logger.time('Load PCA NPY');
+  	    return NDArray.load("data/features/pca.npy").then(pcaArray => {
+  	        logger.timeEnd('Load PCA NPY');
+  	        logger.log('PCA data shape:', pcaArray.shape);
+  	        return pcaArray;
+  	    });
+  	}
+  	
+  	/**
+  	 * Load metadata from JSONL file
+  	 * @returns {Promise<DataFrame>} The loaded DataFrame
+  	 */
+  	function loadMetadata() {
+  	    logger.time('Load JSONL');
+  	
+  	    return fetch("data/features/meta.jsonl")
+  	        .then(response => response.text())
+  	        .then(text => {
+  	            logger.log('JSONL text length:', text.length);
+  	            const dataFrame = DataFrame.from_jsonl(text);
+  	            logger.timeEnd('Load JSONL');
+  	            logger.log('DataFrame rows:', dataFrame.length);
+  	            return dataFrame;
+  	        });
+  	}
+  	
+  	/**
+  	 * Process loaded PCA data and metadata into a format suitable for plotting
+  	 * @param {NDArray} pcaArray - The PCA array
+  	 * @param {DataFrame} dataFrame - The metadata DataFrame
+  	 * @returns {Object} The processed plot data
+  	 */
+  	function processData(pcaArray, dataFrame) {
+  	    if (!pcaArray || !dataFrame) {
+  	        throw new Error("PCA data or metadata not loaded");
+  	    }
+  	
+  	    const pcaData = pcaArray;
+  	
+  	    // Create the plot data object with arrays for all available PCA components
+  	    const plotData = {
+  	        // Initialize empty arrays for all PCA components
+  	        pcaComponents: []
+  	    };
+  	
+  	    // Initialize arrays for each PCA component
+  	    for (let i = 0; i < pcaData.shape[1]; i++) {
+  	        // Use the get method with null to get all values for a specific component
+  	        plotData.pcaComponents[i] = Array.from(pcaData.get(null, i).data);
+  	    }
+  	
+  	    // Add metadata columns from the DataFrame to plotData
+  	    for (const column of dataFrame.columns) {
+  	        plotData[column] = dataFrame.col(column);
+  	    }
+  	
+  	    return plotData;
+  	}
+  	
+  	/**
+  	 * Update x, y, z arrays in plotData based on PCA axis selection
+  	 * @param {Object} plotData - The plot data object 
+  	 * @param {Object} pcaAxes - The selected PCA axes {x, y, z}
+  	 * @param {Array<string>} pcaColumnNames - Array of PCA column names
+  	 */
+  	function updatePlotCoordinates(plotData, pcaAxes, pcaColumnNames = null) {
+  	    if (pcaColumnNames && pcaColumnNames.length > 0) {
+  	        // Set x, y, z from the actual columns in the data
+  	        plotData.x = plotData[pcaColumnNames[pcaAxes.x]];
+  	        plotData.y = plotData[pcaColumnNames[pcaAxes.y]];
+  	        plotData.z = plotData[pcaColumnNames[pcaAxes.z]];
+  	    } else {
+  	        // Fall back to using pcaComponents
+  	        plotData.x = plotData.pcaComponents[pcaAxes.x];
+  	        plotData.y = plotData.pcaComponents[pcaAxes.y];
+  	        plotData.z = plotData.pcaComponents[pcaAxes.z];
+  	    }
+  	}
+  	
+  	/**
+  	 * Find categorical columns in the DataFrame (those with fewer than 50 unique values)
+  	 * @param {DataFrame} dataFrame - The metadata DataFrame
+  	 * @returns {Array<string>} Array of column names that have categorical values
+  	 */
+  	function findCategoricalColumns(dataFrame) {
+  	    return dataFrame.columns;
+  	    // return dataFrame.columns.filter(col => {
+  	    //     try {
+  	    //         const uniqueCount = dataFrame.col_unique(col).size;
+  	    //         // At least 2 unique values but not too many (fewer than 50)
+  	    //         return uniqueCount < 50;
+  	    //     } catch (e) {
+  	    //         logger.error(`Error checking column ${col}:`, e);
+  	    //         return false;
+  	    //     }
+  	    // });
+  	}
+  	
+  	/**
+  	 * Load data from a JSONL file and process it
+  	 * @param {Object} config - Configuration object with data loading parameters
+  	 * @param {Function} updateProgressCallback - Callback function for updating loading progress
+  	 * @returns {Promise<Object>} Object containing the data frame, pca array, and plot data
+  	 */
+  	async function loadJsonlData(config, updateProgressCallback = () => { }) {
+  	    const { filePath, numericalPrefix } = config;
+  	
+  	    logger.time('Load Data');
+  	
+  	    // Update progress to 10%
+  	    updateProgressCallback(10, 'Downloading data file...');
+  	
+  	    // Load data from the configured file path
+  	    const response = await fetch(filePath);
+  	    const text = await response.text();
+  	    logger.log('JSONL text length:', text.length);
+  	    const dataFrame = DataFrame.from_jsonl(text);
+  	    logger.timeEnd('Load Data');
+  	
+  	    // Update progress to 40%
+  	    updateProgressCallback(40, 'Processing data...');
+  	
+  	    // Extract numerical columns (PCA components) based on prefix
+  	    logger.time('Extract PCA Components');
+  	    const pcaColumnNames = dataFrame.columns.filter(col => col.startsWith(numericalPrefix)).sort();
+  	    logger.log('Found PCA columns:', pcaColumnNames);
+  	    const pcaArray = extractPcaComponents(dataFrame, numericalPrefix, pcaColumnNames);
+  	    logger.timeEnd('Extract PCA Components');
+  	
+  	    // Update progress to 70%
+  	    updateProgressCallback(70, 'Preparing plot data');
+  	
+  	    // Process data
+  	    logger.time('Process Data');
+  	    const plotData = processDataFromDataFrame(dataFrame, pcaArray, { x: 0, y: 1, z: 2 }, pcaColumnNames);
+  	    logger.timeEnd('Process Data');
+  	
+  	    // Update progress to 90%
+  	    updateProgressCallback(90, 'Finding available columns...');
+  	
+  	    // Find available columns for selection
+  	    const availableColumns = findAvailableColumns(dataFrame, numericalPrefix);
+  	    logger.log('Available categorical columns:', availableColumns);
+  	
+  	    return {
+  	        dataFrame,
+  	        pcaArray,
+  	        plotData,
+  	        availableColumns,
+  	        pcaColumnNames
+  	    };
+  	}
+  	
+  	/**
+  	 * Extract PCA components from the DataFrame based on the numerical prefix
+  	 * @param {DataFrame} dataFrame - The DataFrame containing the data
+  	 * @param {string} numericalPrefix - Prefix for numerical columns
+  	 * @param {Array<string>} pcaColumnNames - Optional array of PCA column names
+  	 * @returns {Object} PCA array-like object
+  	 */
+  	function extractPcaComponents(dataFrame, numericalPrefix, pcaColumnNames = null) {
+  	    // Use provided column names or find them
+  	    const numericalColumns = pcaColumnNames ||
+  	        dataFrame.columns.filter(col => col.startsWith(numericalPrefix)).sort();
+  	
+  	    logger.log('Using numerical columns:', numericalColumns);
+  	
+  	    if (numericalColumns.length === 0) {
+  	        throw new Error(`No numerical columns found with prefix "${numericalPrefix}"`);
+  	    }
+  	
+  	    // Extract the numerical data into a virtual PCA array
+  	    const numRows = dataFrame.length;
+  	    const numCols = numericalColumns.length;
+  	
+  	    // Create a Float32Array to store the PCA data
+  	    const pcaData = new Float32Array(numRows * numCols);
+  	
+  	    // Fill the array with data from the DataFrame
+  	    for (let i = 0; i < numRows; i++) {
+  	        const row = dataFrame.row(i);
+  	        for (let j = 0; j < numCols; j++) {
+  	            const colName = numericalColumns[j];
+  	            pcaData[i * numCols + j] = row[colName] || 0;
+  	        }
+  	    }
+  	
+  	    // Create an NDArray-like object from the data
+  	    return {
+  	        data: pcaData,
+  	        shape: [numRows, numCols],
+  	        get: function (rowIdx, colIdx) {
+  	            if (rowIdx === null) {
+  	                // Extract entire column
+  	                const colData = new Float32Array(numRows);
+  	                for (let i = 0; i < numRows; i++) {
+  	                    colData[i] = this.data[i * numCols + colIdx];
+  	                }
+  	                return { data: colData };
+  	            } else if (colIdx === null) {
+  	                // Extract entire row
+  	                const rowData = new Float32Array(numCols);
+  	                for (let j = 0; j < numCols; j++) {
+  	                    rowData[j] = this.data[rowIdx * numCols + j];
+  	                }
+  	                return { data: rowData };
+  	            } else {
+  	                // Return a single value
+  	                return this.data[rowIdx * numCols + colIdx];
+  	            }
+  	        }
+  	    };
+  	}
+  	
+  	/**
+  	 * Find available columns for selection (non-numerical columns)
+  	 * @param {DataFrame} dataFrame - The DataFrame containing the data
+  	 * @param {string} numericalPrefix - Prefix for numerical columns
+  	 * @returns {Array<string>} Array of available column names
+  	 */
+  	function findAvailableColumns(dataFrame, numericalPrefix) {
+  	    return dataFrame.columns.filter(col =>
+  	        !col.startsWith(numericalPrefix)
+  	    );
+  	}
+  	
+  	/**
+  	 * Process loaded data into a format suitable for plotting
+  	 * @param {DataFrame} dataFrame - The DataFrame containing the data
+  	 * @param {Object} pcaArray - The PCA array-like object
+  	 * @param {Object} pcaAxes - Optional axes selection {x, y, z}
+  	 * @param {Array<string>} pcaColumnNames - Optional array of PCA column names
+  	 * @returns {Object} The processed plot data
+  	 */
+  	function processDataFromDataFrame(dataFrame, pcaArray, pcaAxes = { x: 0, y: 1, z: 2 }, pcaColumnNames = null) {
+  	    if (!pcaArray || !dataFrame) {
+  	        throw new Error("PCA data or metadata not available");
+  	    }
+  	
+  	    // Create the plot data object with arrays for all available PCA components
+  	    const plotData = {
+  	        // Initialize empty arrays for all PCA components
+  	        pcaComponents: []
+  	    };
+  	
+  	    // Initialize arrays for each PCA component
+  	    for (let i = 0; i < pcaArray.shape[1]; i++) {
+  	        // Use the get method with null to get all values for a specific component
+  	        plotData.pcaComponents[i] = Array.from(pcaArray.get(null, i).data);
+  	    }
+  	
+  	    // Add metadata columns from the DataFrame to plotData
+  	    for (const column of dataFrame.columns) {
+  	        plotData[column] = dataFrame.col(column);
+  	    }
+  	
+  	    // Initialize x, y, z with the selected components
+  	    if (pcaColumnNames && pcaColumnNames.length > 0) {
+  	        // Use column names directly if available
+  	        plotData.x = plotData[pcaColumnNames[pcaAxes.x]];
+  	        plotData.y = plotData[pcaColumnNames[pcaAxes.y]];
+  	        plotData.z = plotData[pcaColumnNames[pcaAxes.z]];
+  	    } else {
+  	        // Fall back to using pcaComponents
+  	        updatePlotCoordinates(plotData, pcaAxes);
+  	    }
+  	
+  	    return plotData;
+  	}
+  	
+  	/**
+  	 * Parse URL parameters to override default configuration
+  	 * @param {Object} dataConfig - Default data configuration
+  	 * @param {Object} urlParams - Mapping of config keys to URL parameter names
+  	 * @returns {Object} Updated configuration object
+  	 */
+  	function parseUrlParams(dataConfig, urlParams) {
+  	    const urlSearchParams = new URLSearchParams(window.location.search);
+  	    const updatedConfig = { ...dataConfig };
+  	
+  	    // Update config from URL parameters if they exist
+  	    for (const [configKey, paramName] of Object.entries(urlParams)) {
+  	        const paramValue = urlSearchParams.get(paramName);
+  	        if (paramValue) {
+  	            // Handle array parameters (comma or tilde separated)
+  	            if (paramName === 'selected') {
+  	                updatedConfig.selectedValues = paramValue.includes('~')
+  	                    ? paramValue.split('~')
+  	                    : paramValue.split(',');
+  	            }
+  	            // Handle numeric parameters
+  	            else if (['xAxis', 'yAxis', 'zAxis', 'selOpacity', 'nonSelOpacity', 'selSize', 'nonSelSize'].includes(paramName)) {
+  	                updatedConfig[configKey] = Number(paramValue);
+  	            }
+  	            // Handle regular string parameters
+  	            else {
+  	                updatedConfig[configKey] = paramValue;
+  	            }
+  	            logger.log(`Using URL parameter ${paramName}=${paramValue} for ${configKey}`);
+  	        }
+  	    }
+  	
+  	    return updatedConfig;
+  	}
+  	
+  	/**
+  	 * Update URL with current configuration
+  	 * @param {Object} dataConfig - Current data configuration
+  	 * @param {Object} urlParams - Mapping of config keys to URL parameter names
+  	 * @param {Object} appState - Optional additional app state to include in URL
+  	 * @returns {string} Updated base URL
+  	 */
+  	function updateUrlWithConfig(dataConfig, urlParams, appState = {}) {
+  	    const url = new URL(window.location.href);
+  	    const params = url.searchParams;
+  	
+  	    // Set parameters from current configuration
+  	    for (const [configKey, paramName] of Object.entries(urlParams)) {
+  	        if (configKey in dataConfig) {
+  	            params.set(paramName, dataConfig[configKey]);
+  	        }
+  	    }
+  	
+  	    // Add additional state parameters if provided
+  	    if (Object.keys(appState).length > 0) {
+  	        // Handle selected values
+  	        if (appState.selectedValues && appState.selectedValues.length > 0) {
+  	            params.set(urlParams.selectedValues, appState.selectedValues.join('~'));
+  	        } else {
+  	            params.delete(urlParams.selectedValues);
+  	        }
+  	
+  	        // Handle axis settings
+  	        if (appState.pcaAxes) {
+  	            params.set(urlParams.xAxis, appState.pcaAxes.x);
+  	            params.set(urlParams.yAxis, appState.pcaAxes.y);
+  	            params.set(urlParams.zAxis, appState.pcaAxes.z);
+  	        }
+  	
+  	        // Handle appearance settings
+  	        if (appState.selectedOpacity !== undefined) params.set(urlParams.selectedOpacity, appState.selectedOpacity);
+  	        if (appState.nonSelectedOpacity !== undefined) params.set(urlParams.nonSelectedOpacity, appState.nonSelectedOpacity);
+  	        if (appState.selectedSize !== undefined) params.set(urlParams.selectedSize, appState.selectedSize);
+  	        if (appState.nonSelectedSize !== undefined) params.set(urlParams.nonSelectedSize, appState.nonSelectedSize);
+  	    }
+  	
+  	    // Update browser URL without reloading the page
+  	    window.history.replaceState({}, '', url.toString());
+  	
+  	    // Return the updated base URL
+  	    return url.toString().split('?')[0] + '?';
+  	}
+  </script>
+  <!-- end 'dataloader.js' -->
   <!-- begin 'clipboard.js' -->
-<script>
-function formatHoverDataForClipboard(hoverData, selectionColumn) {
-	// Extract the hover text from data
-	if (!hoverData?.points?.length) return 'No point data available';
-	const point = hoverData.points[0];
-	const customData = point.customdata ?? [];
-	// Format the text in a clean way
-	let text = 'Point Info:\n';
-	if (customData.length > 0) text += `head: ${customData[0]}\n`;
-	if (customData.length > 1) text += `prompt: ${customData[1]}\n`;
-	// Add coordinates
-	text += `coord: [${point.x.toFixed(2)}, ${point.y.toFixed(2)}, ${point.z.toFixed(2)}]\n`;
-	if (customData.length > 2) text += `${selectionColumn}: ${customData[2]}\n`;
-	return text;
-}
-
-function copyHoverDataToClipboard(
-	hoverData,
-	selectionColumn,
-	cb = () => { },
-) {
-	if (!hoverData) return;
-	try {
-		const txt = formatHoverDataForClipboard(hoverData, selectionColumn);
-		navigator.clipboard.writeText(txt).then(
-			() => cb('Hover data copied to clipboard'),
-			err => { console.error(err); cb('Failed to copy hover data'); }
-		);
-	} catch (err) {
-		console.error(err);
-		cb('Error preparing hover data for clipboard');
-	}
-}
-</script>
-<!-- end 'clipboard.js' -->
+  <script>
+   function formatHoverDataForClipboard(hoverData, selectionColumn) {
+  		// Extract the hover text from data
+  		if (!hoverData?.points?.length) return 'No point data available';
+  		const point = hoverData.points[0];
+  		const customData = point.customdata ?? [];
+  		// Format the text in a clean way
+  		let text = 'Point Info:\n';
+  		if (customData.length > 0) text += `head: ${customData[0]}\n`;
+  		if (customData.length > 1) text += `prompt: ${customData[1]}\n`;
+  		// Add coordinates
+  		text += `coord: [${point.x.toFixed(2)}, ${point.y.toFixed(2)}, ${point.z.toFixed(2)}]\n`;
+  		if (customData.length > 2) text += `${selectionColumn}: ${customData[2]}\n`;
+  		return text;
+  	}
+  	
+  	function copyHoverDataToClipboard(
+  		hoverData,
+  		selectionColumn,
+  		cb = () => { },
+  	) {
+  		if (!hoverData) return;
+  		try {
+  			const txt = formatHoverDataForClipboard(hoverData, selectionColumn);
+  			navigator.clipboard.writeText(txt).then(
+  				() => cb('Hover data copied to clipboard'),
+  				err => { console.error(err); cb('Failed to copy hover data'); }
+  			);
+  		} catch (err) {
+  			console.error(err);
+  			cb('Error preparing hover data for clipboard');
+  		}
+  	}
+  </script>
+  <!-- end 'clipboard.js' -->
   <!-- begin 'pl-interface.js' -->
-<script>
-function computeCombinedUrl(baseUrl, selectedValues, selectionColumn) {
-	if (!selectedValues?.length) return baseUrl;
-
-	const baseUrlObj = new URL(baseUrl, window.location.href);
-	const params = baseUrlObj.searchParams;
-
-	if (selectionColumn === 'activation.model' || selectionColumn === 'activation.cls') {
-		const modelHeadMap = {};
-		selectedValues.forEach(v => {
-			const [model, l, h] = v.split(':');
-			if (!model || !l || !h) return;
-			(modelHeadMap[model] ??= []).push(`${l}${h}`);
-		});
-		const models = Object.keys(modelHeadMap);
-		if (models.length) {
-			params.set('models', models.join('~'));
-			models.forEach(m => params.set(`heads-${m}`, modelHeadMap[m].join('~')));
-		}
-	} else if (selectionColumn === 'activation.prompt') {
-		params.set('prompts', selectedValues.join('~'));
-	} else {
-		params.set(selectionColumn.split('.').pop(), selectedValues.join('~'));
-	}
-
-	return baseUrlObj.toString();
-}
-</script>
-<!-- end 'pl-interface.js' -->
+  <script>
+   function computeCombinedUrl(baseUrl, selectedValues, selectionColumn) {
+  		if (!selectedValues?.length) return baseUrl;
+  	
+  		const baseUrlObj = new URL(baseUrl, window.location.href);
+  		const params = baseUrlObj.searchParams;
+  	
+  		if (selectionColumn === 'activation.model' || selectionColumn === 'activation.cls') {
+  			const modelHeadMap = {};
+  			selectedValues.forEach(v => {
+  				const [model, l, h] = v.split(':');
+  				if (!model || !l || !h) return;
+  				(modelHeadMap[model] ??= []).push(`${l}${h}`);
+  			});
+  			const models = Object.keys(modelHeadMap);
+  			if (models.length) {
+  				params.set('models', models.join('~'));
+  				models.forEach(m => params.set(`heads-${m}`, modelHeadMap[m].join('~')));
+  			}
+  		} else if (selectionColumn === 'activation.prompt') {
+  			params.set('prompts', selectedValues.join('~'));
+  		} else {
+  			params.set(selectionColumn.split('.').pop(), selectedValues.join('~'));
+  		}
+  	
+  		return baseUrlObj.toString();
+  	}
+  </script>
+  <!-- end 'pl-interface.js' -->
   <!-- load main app -->
   <!-- begin 'app.js' -->
-<script>
-// Create Vue app
-const app = Vue.createApp({
-	// ==================================================
-	// CHUNK: App Data
-	// ==================================================
-	data() {
-		return {
-			title: 'Interactive 3D Embedding Visualization',
-			statusMessage: 'Loading data...',
-			isLoading: true,
-			loadingMessage: 'Loading data...',
-			loadingDetail: 'Initializing...',
-			loadingProgress: false,
-			loadingProgressPercent: 0,
-			processingSelection: false,
-			selectedValues: [],
-			plotData: null,
-			pcaArray: null,
-			dataFrame: null,
-			// Column selection dropdowns
-			colorByColumn: '', // Column for default coloring
-			selectionColumn: '', // Column for selection coloring
-			pendingColorByColumn: '', // Temp storage for color selection before applying
-			pendingSelectionColumn: '', // Temp storage for selection column before applying
-			showColorDropdown: false, // Control color dropdown visibility
-			showSelectionDropdown: false, // Control selection dropdown visibility
-			isUpdatingPlot: false, // Flag to show loading during plot updates
-			availableColumns: [],
-			pcaAxes: { x: 0, y: 1, z: 2 },
-			pcaColumnNames: [], // Store PCA column names
-			availablePcaAxes: [], // Will be populated with available components
-			selectionColors: [
-				'#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
-				'#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
-			],
-			initialSelectionColors: [
-				'#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
-				'#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
-			],
-			nonSelectedColor: '#969696', // Gray for non-selected points
-			nonSelectedOpacity: 0.05,
-			nonSelectedSize: 1,
-			selectedOpacity: 0.2,
-			selectedSize: 2,
-			baseUrl: 'https://miv.name/pattern-lens/demo/?',
-			dropdownTimeout: null,
-			configCollapsed: false,
-			showConfigPanel: false,
-			// Default trace configuration
-			defaultTraceConfig: createDefaultTraceConfig(),
-			// Store current camera position
-			currentCameraPosition: null,
-			// Store selection timing information
-			lastSelectionTime: 0,
-			// Debounce timeout
-			updatePlotTimeout: null,
-			// Flag to enable/disable customdata caching
-			useCustomdataCache: true,
-			// Last hover data for clipboard copy
-			lastHoverData: null,
-			// Flag to track if right mouse button is pressed
-			isRightMouseDown: false,
-			// Configuration for data loading
-			dataConfig: {
-				filePath: 'data/pca.jsonl', // Default path to the data file
-				numericalPrefix: 'pc.', // Prefix for numerical columns (PCA components)
-				defaultColorColumn: 'activation.model', // Default column for coloring
-				defaultSelectionColumn: 'activation.model', // Default column for selection
-			},
-			// URL params configuration
-			urlParams: {
-				filePath: 'dataPath',
-				numericalPrefix: 'numPrefix',
-				defaultColorColumn: 'colorBy',
-				defaultSelectionColumn: 'selectBy',
-				// New params for state preservation
-				xAxis: 'xAxis',
-				yAxis: 'yAxis',
-				zAxis: 'zAxis',
-				selectedValues: 'selected',
-				selectedOpacity: 'selOpacity',
-				nonSelectedOpacity: 'nonSelOpacity',
-				selectedSize: 'selSize',
-				nonSelectedSize: 'nonSelSize'
-			},
-			showHelpMenu: false, // Control help menu visibility
-		};
-	},
-	// ==================================================
-
-	computed: {
-		// Compute combined URL with all selected values
-		combinedUrl() {
-			return computeCombinedUrl(this.baseUrl, this.selectedValues, this.selectionColumn);
-		}
-	},
-
-	methods: {
-		// Toggle help menu visibility
-		toggleHelpMenu() {
-			this.showHelpMenu = !this.showHelpMenu;
-
-			// If opening the help, add a class to the body to prevent scrolling
-			if (this.showHelpMenu) {
-				document.body.style.overflow = 'hidden';
-			} else {
-				document.body.style.overflow = '';
-			}
-		},
-		// ==================================================
-		// CHUNK: config
-		// ==================================================
-		// Toggle configuration panel
-		toggleConfigPanel() {
-			this.showConfigPanel = !this.showConfigPanel;
-		},
-
-		// Apply configuration changes and reload data
-		applyConfigChanges() {
-			// Show loading indicator
-			loading.showLoading(this, 'Applying configuration...', 'Reloading data', true);
-
-			// Update URL with new configuration
-			this.baseUrl = updateUrlWithConfig(this.dataConfig, this.urlParams);
-
-			// Reload data with new configuration
-			this.loadData();
-		},
-		// ==================================================
-		// CHUNK: data loading
-		// ==================================================
-		// Load data from a single JSONL file
-		async loadData() {
-			loading.showLoading(this, 'Loading data...', 'Initializing', true);
-			logger.log('Starting data loading process');
-
-			try {
-				// Clear any existing customdata cache
-				clearCustomdataCache();
-
-				// Parse URL parameters to override default configuration
-				this.dataConfig = parseUrlParams(this.dataConfig, this.urlParams);
-
-				// Load and process data using the function from dataloader.js
-				const result = await loadJsonlData(this.dataConfig, (percent, detail) => {
-					loading.updateProgress(this, percent, detail);
-				});
-
-				// Update app data with results
-				this.dataFrame = result.dataFrame;
-				this.pcaArray = result.pcaArray;
-				this.plotData = result.plotData;
-				this.availableColumns = result.availableColumns;
-				this.availablePcaAxes = new Array(this.pcaArray.shape[1]).fill(0).map((_, i) => i);
-
-				// Get the list of PCA column names from the data
-				this.pcaColumnNames = result.pcaColumnNames ||
-					this.dataFrame.columns.filter(col => col.startsWith(this.dataConfig.numericalPrefix));
-
-				// Set default selected columns from configuration
-				this.colorByColumn = this.dataConfig.defaultColorColumn;
-				this.pendingColorByColumn = this.colorByColumn;
-				this.selectionColumn = this.dataConfig.defaultSelectionColumn;
-				this.pendingSelectionColumn = this.selectionColumn;
-
-				// Restore axis settings from URL if available
-				const urlParams = new URLSearchParams(window.location.search);
-				if (urlParams.has(this.urlParams.xAxis)) this.pcaAxes.x = Number(urlParams.get(this.urlParams.xAxis));
-				if (urlParams.has(this.urlParams.yAxis)) this.pcaAxes.y = Number(urlParams.get(this.urlParams.yAxis));
-				if (urlParams.has(this.urlParams.zAxis)) this.pcaAxes.z = Number(urlParams.get(this.urlParams.zAxis));
-
-				// Restore appearance settings from URL if available
-				if (urlParams.has(this.urlParams.selectedOpacity))
-					this.selectedOpacity = Number(urlParams.get(this.urlParams.selectedOpacity));
-				if (urlParams.has(this.urlParams.nonSelectedOpacity))
-					this.nonSelectedOpacity = Number(urlParams.get(this.urlParams.nonSelectedOpacity));
-				if (urlParams.has(this.urlParams.selectedSize))
-					this.selectedSize = Number(urlParams.get(this.urlParams.selectedSize));
-				if (urlParams.has(this.urlParams.nonSelectedSize))
-					this.nonSelectedSize = Number(urlParams.get(this.urlParams.nonSelectedSize));
-
-				// Restore selected values from URL if available
-				if (urlParams.has(this.urlParams.selectedValues)) {
-					const selectedParam = urlParams.get(this.urlParams.selectedValues);
-					this.selectedValues = selectedParam.includes('~')
-						? selectedParam.split('~')
-						: selectedParam.split(',');
-				}
-
-				loading.updateProgress(this, 95, 'Rendering plot...');
-				this.statusMessage = 'Data loaded successfully';
-
-				// Initialize the plot after data is loaded
-				this.initPlot();
-
-				loading.updateProgress(this, 100, 'Completing setup...');
-
-				loading.hideLoading(this);
-				logger.log('Data loading complete');
-			} catch (error) {
-				logger.error("Error loading data:", error);
-				this.statusMessage = `Error loading data: ${error.message}`;
-
-				loading.showLoading(this, 'Error loading data', error.message, false);
-				loading.hideLoading(this);
-			}
-		},
-
-		// Process loaded data into a format suitable for plotting
-		processData() {
-			return processDataFromDataFrame(this.dataFrame, this.pcaArray, this.pcaAxes, this.pcaColumnNames);
-		},
-
-		// ==================================================
-		// CHUNK: selection
-		// ==================================================
-
-		// Handle change of PCA axes
-		updatePlotAxes() {
-			logger.log('PCA axes changed', this.pcaAxes);
-			updatePlotCoordinates(this.plotData, this.pcaAxes, this.pcaColumnNames);
-			this.updatePlot(); // This will call updateUrlState
-		},
-
-		// Get current camera position from the plot (now using function from plotutil.js)
-		getCurrentCameraPosition() {
-			return getCurrentCameraPosition(this.$refs.plotContainer);
-		},
-
-		// Select a colorByColumn from the dropdown
-		selectColorByColumn(column) {
-			this.pendingColorByColumn = column;
-			this.showColorDropdown = false;
-		},
-
-		// Select a selectionColumn from the dropdown
-		selectSelectionColumn(column) {
-			this.pendingSelectionColumn = column;
-			this.showSelectionDropdown = false;
-		},
-
-		// Unified function to apply column changes
-		applyColumnChange(columnType) {
-			const isPendingColor = columnType === 'color';
-			const currentColumn = isPendingColor ? this.colorByColumn : this.selectionColumn;
-			const pendingColumn = isPendingColor ? this.pendingColorByColumn : this.pendingSelectionColumn;
-
-			if (!pendingColumn) return;
-
-			logger.log(`Changing ${columnType}-by column: ${currentColumn} → ${pendingColumn}`);
-
-			// Store current camera position before update
-			this.currentCameraPosition = this.getCurrentCameraPosition();
-
-			// Show plot updating indicator
-			loading.showUpdating(this);
-
-			// Update the column and clear selection if needed
-			if (currentColumn !== pendingColumn) {
-				// Clear customdata cache when column changes
-				clearCustomdataCache();
-
-				if (isPendingColor) {
-					this.colorByColumn = pendingColumn;
-				} else {
-					this.selectionColumn = pendingColumn;
-				}
-
-				this.selectedValues = []; // Clear selection when changing columns
-				this.updatePlot();
-			} else {
-				// Hide updating indicator if no change
-				loading.hideUpdating(this);
-			}
-		},
-
-		// Apply colorByColumn change
-		applyColorByColumn() {
-			this.applyColumnChange('color');
-			// Update the configuration and URL
-			if (this.colorByColumn) {
-				this.dataConfig.defaultColorColumn = this.colorByColumn;
-				this.updateUrlState();
-				logger.log(`Updated default color column in URL: ${this.colorByColumn}`);
-			}
-		},
-
-		// Apply selectionColumn change
-		applySelectionColumn() {
-			this.applyColumnChange('selection');
-			// Update the configuration and URL
-			if (this.selectionColumn) {
-				this.dataConfig.defaultSelectionColumn = this.selectionColumn;
-				this.updateUrlState();
-				logger.log(`Updated default selection column in URL: ${this.selectionColumn}`);
-			}
-		},
-
-		// Hide dropdowns with delay to allow for click
-		hideColorDropdownDelayed() {
-			this.dropdownTimeout = setTimeout(() => {
-				this.showColorDropdown = false;
-			}, 200);
-		},
-
-		hideSelectionDropdownDelayed() {
-			this.dropdownTimeout = setTimeout(() => {
-				this.showSelectionDropdown = false;
-			}, 200);
-		},
-
-		// New method to update URL state with current app state
-		updateUrlState() {
-			// Collect current state
-			const appState = {
-				selectedValues: this.selectedValues,
-				pcaAxes: this.pcaAxes,
-				selectedOpacity: this.selectedOpacity,
-				nonSelectedOpacity: this.nonSelectedOpacity,
-				selectedSize: this.selectedSize,
-				nonSelectedSize: this.nonSelectedSize
-			};
-
-			// Update URL with current state
-			updateUrlWithConfig(this.dataConfig, this.urlParams, appState);
-		},
-		// ==================================================
-		// CHUNK: traces
-		// ==================================================
-		// Create traces grouped by categorical value (for initial view) - now using function from plotutil.js
-		createTracesByCategory() {
-			logger.log('Creating traces by category');
-
-			// Use the createTracesByCategory function from plotutil.js with colorByColumn
-			return createTracesByCategory(
-				this.plotData,
-				this.colorByColumn,
-				this.dataFrame,
-				{
-					defaultTraceConfig: this.defaultTraceConfig,
-					selectedSize: this.selectedSize,
-					selectedOpacity: this.selectedOpacity,
-					// Add the selectionColumn so it's included in customdata
-					selectionColumn: this.selectionColumn,
-					useCache: this.useCustomdataCache
-				}
-			);
-		},
-
-		// Create traces with selection highlighting - now using function from plotutil.js
-		createTracesWithSelection() {
-			logger.log('Creating traces with selection highlighting');
-
-			// Use the createTracesWithSelection function from plotutil.js with selectionColumn
-			return createTracesWithSelection(
-				this.plotData,
-				this.selectionColumn,
-				this.selectedValues,
-				{
-					defaultTraceConfig: this.defaultTraceConfig,
-					selectedSize: this.selectedSize,
-					nonSelectedSize: this.nonSelectedSize,
-					selectedOpacity: this.selectedOpacity,
-					nonSelectedOpacity: this.nonSelectedOpacity,
-					nonSelectedColor: this.nonSelectedColor,
-					getSelectionColor: this.getSelectionColor.bind(this), // Use the component's getSelectionColor method
-					// Add colorByColumn so it's included in customdata
-					colorByColumn: this.colorByColumn,
-					useCache: this.useCustomdataCache
-				}
-			);
-		},
-
-		// Copy hover data to clipboard using the function from clipboard.js
-		copyHoverDataToClipboard() {
-			if (!this.lastHoverData) return;
-			copyHoverDataToClipboard(
-				this.lastHoverData,
-				this.selectionColumn,
-				(statusMsg) => { this.statusMessage = statusMsg; }
-			);
-		},
-
-		// ==================================================
-		// CHUNK: listeners
-		// ==================================================
-
-		// Setup event handlers for the plot
-		setupPlotEventHandlers() {
-			// Add click handler with proper binding
-			const boundHandlePointClick = this.handlePointClick.bind(this);
-			this.$refs.plotContainer.on('plotly_click', boundHandlePointClick);
-
-			// Add hover event handler to capture hover data
-			this.$refs.plotContainer.on('plotly_hover', (hoverData) => {
-				this.lastHoverData = hoverData;
-			});
-
-			// Add mousedown event listener to detect right clicks
-			this.$refs.plotContainer.addEventListener('mousedown', (e) => {
-				if (e.button === 2) { // Right mouse button
-					this.isRightMouseDown = true;
-					// Only prevent default and copy if we have hover data (meaning we're over a point)
-					if (this.lastHoverData && this.lastHoverData.points && this.lastHoverData.points.length > 0) {
-						e.preventDefault();
-						this.copyHoverDataToClipboard();
-					}
-				}
-			});
-
-			// Add mouseup event listener to reset right click flag
-			this.$refs.plotContainer.addEventListener('mouseup', (e) => {
-				if (e.button === 2) { // Right mouse button
-					this.isRightMouseDown = false;
-				}
-			});
-
-			// Add contextmenu event listener to prevent default context menu only when over points
-			this.$refs.plotContainer.addEventListener('contextmenu', (e) => {
-				if (this.lastHoverData && this.lastHoverData.points && this.lastHoverData.points.length > 0) {
-					e.preventDefault(); // Only prevent context menu if over a point
-				}
-			});
-
-			// Add relayout event handler to capture camera position changes
-			this.$refs.plotContainer.on('plotly_relayout', (eventData) => {
-				// Update our stored camera position when user interacts with the plot
-				this.currentCameraPosition = this.getCurrentCameraPosition();
-			});
-		},
-
-		// ==================================================
-		// CHUNK: initPlot
-		// ==================================================
-
-		// Initialize the plot
-		initPlot() {
-			this.statusMessage = 'Creating plot...';
-			logger.log('Initializing plot');
-
-			if (!this.plotData) {
-				logger.error("Plot data not available");
-				this.statusMessage = 'Error: Plot data not available';
-				return;
-			}
-
-			// Create initial traces by the selected categorical column
-			const traces = this.createTracesByCategory();
-
-			// Create axis labels based on column names
-			const axisLabels = this.pcaColumnNames.length > 0 ? {
-				x: this.pcaColumnNames[this.pcaAxes.x],
-				y: this.pcaColumnNames[this.pcaAxes.y],
-				z: this.pcaColumnNames[this.pcaAxes.z]
-			} : null;
-
-			// Create the plot
-			logger.time('Initial plot render');
-			Plotly.newPlot(
-				this.$refs.plotContainer,
-				traces,
-				createPlotLayout(this.title, null, this.pcaAxes, axisLabels)
-			);
-			logger.timeEnd('Initial plot render');
-
-			// Setup event handlers
-			this.setupPlotEventHandlers();
-
-			this.statusMessage = 'Plot ready - click points to select values, right-click to copy hover text';
-		},
-
-		// ==================================================
-		// CHUNK: handlePointClick
-		// ==================================================
-
-		// Handle point clicks
-		handlePointClick(data) {
-			// Don't process clicks if the right mouse button is down
-			if (this.isRightMouseDown) {
-				return;
-			}
-
-			if (data.points && data.points.length > 0) {
-				const point = data.points[0];
-
-				// Avoid processing clicks too rapidly
-				const now = Date.now();
-				if (now - this.lastSelectionTime < 300) { // 300ms debounce
-					return;
-				}
-				this.lastSelectionTime = now;
-
-				if (point.customdata) {
-					// Define the mapping of columns to customdata indices
-					const customDataIndices = {
-						'activation.cls': 0,
-						'activation.prompt': 1
-					};
-
-					// If the selection column is not one of the first two, it will be the third element
-					if (this.selectionColumn !== 'activation.cls' && this.selectionColumn !== 'activation.prompt') {
-						customDataIndices[this.selectionColumn] = 2;
-					}
-
-					// Check if the selection column is in our customdata indices mapping
-					if (this.selectionColumn in customDataIndices) {
-						const index = customDataIndices[this.selectionColumn];
-						const value = point.customdata[index];
-
-						if (value !== undefined) {
-							logger.log(`Selected ${this.selectionColumn}: ${value}`);
-
-							// Show processing indicator
-							loading.showUpdating(this, true);
-
-							// Store current camera position before update
-							this.currentCameraPosition = this.getCurrentCameraPosition();
-
-							// Use setTimeout to avoid blocking the UI
-							setTimeout(() => {
-								logger.time('Process Selection');
-
-								// Toggle selection
-								const valueIndex = this.selectedValues.indexOf(value);
-
-								if (valueIndex >= 0) {
-									// Remove if already selected
-									this.selectedValues.splice(valueIndex, 1);
-								} else {
-									// Add if not already selected
-									this.selectedValues.push(value);
-								}
-
-								logger.timeEnd('Process Selection');
-
-								// Update the visualization with some delay to prevent UI blocking
-								this.debounceUpdatePlot();
-
-								// Update URL with current selection
-								this.updateUrlState();
-							}, 10);
-						} else {
-							logger.error(`Could not find ${this.selectionColumn} value in customdata at index ${index}`);
-						}
-					} else {
-						logger.error(`Selection column ${this.selectionColumn} not found in customdata structure`);
-					}
-				}
-			}
-		},
-
-		// ==================================================
-		// CHUNK: update plot
-		// ==================================================
-
-		// Debounce the updatePlot call to prevent too frequent updates
-		debounceUpdatePlot() {
-			if (this.updatePlotTimeout) {
-				clearTimeout(this.updatePlotTimeout);
-			}
-
-			this.updatePlotTimeout = setTimeout(() => {
-				this.updatePlot();
-			}, 100);
-		},
-
-		// Update the plot based on selection
-		updatePlot() {
-			logger.time('Update Plot');
-			try {
-				// Show updating indicator
-				loading.showUpdating(this);
-
-				// Store current camera position before update if not already stored
-				if (!this.currentCameraPosition) {
-					this.currentCameraPosition = this.getCurrentCameraPosition();
-				}
-
-				// Create new traces based on selection state
-				const traces = this.selectedValues.length > 0
-					? this.createTracesWithSelection()
-					: this.createTracesByCategory();
-
-				// Create axis labels based on column names
-				const axisLabels = this.pcaColumnNames.length > 0 ? {
-					x: this.pcaColumnNames[this.pcaAxes.x],
-					y: this.pcaColumnNames[this.pcaAxes.y],
-					z: this.pcaColumnNames[this.pcaAxes.z]
-				} : null;
-
-				// First remove old event handlers to prevent duplicates
-				if (this.$refs.plotContainer && this.$refs.plotContainer.removeAllListeners) {
-					this.$refs.plotContainer.removeAllListeners('plotly_click');
-					this.$refs.plotContainer.removeAllListeners('plotly_hover');
-					this.$refs.plotContainer.removeAllListeners('plotly_relayout');
-				}
-
-				// Use complete redraw with newPlot to avoid potential issues
-				// Apply saved camera position in the layout
-				logger.time('Plot Render');
-				Plotly.newPlot(
-					this.$refs.plotContainer,
-					traces,
-					createPlotLayout(this.title, this.currentCameraPosition, this.pcaAxes, axisLabels)
-				);
-				logger.timeEnd('Plot Render');
-
-				// Setup event handlers again
-				this.setupPlotEventHandlers();
-
-				// Update URL with current state
-				this.updateUrlState();
-
-				// Hide updating indicators
-				loading.hideUpdating(this);
-				this.statusMessage = 'Plot updated - right-click on points to copy hover text';
-			} catch (error) {
-				logger.error("Error updating plot:", error);
-				this.statusMessage = `Error updating plot: ${error.message}`;
-				loading.hideUpdating(this);
-			}
-			logger.timeEnd('Update Plot');
-		},
-
-		// Toggle config section collapse
-		toggleConfigCollapse() {
-			this.configCollapsed = !this.configCollapsed;
-		},
-
-		// Clear selection
-		clearSelection() {
-			logger.log('Clearing all selections');
-			// Store current camera position before clearing
-			this.currentCameraPosition = this.getCurrentCameraPosition();
-
-			this.selectedValues = [];
-			// Reset colors back to initial set
-			this.selectionColors = [...this.initialSelectionColors];
-			this.updatePlot(); // This will update the URL state
-		},
-
-		// Remove a specific value from selection
-		removeSelectedValue(value) {
-			logger.log(`Removing from selection: ${value}`);
-			// Store current camera position before removing value
-			this.currentCameraPosition = this.getCurrentCameraPosition();
-
-			const index = this.selectedValues.indexOf(value);
-			if (index >= 0) {
-				this.selectedValues.splice(index, 1);
-				this.updatePlot(); // This will update the URL state
-			}
-		},
-
-		// Get selection color for display
-		getSelectionColor(index) {
-			return this.selectionColors[index % this.selectionColors.length];
-		},
-
-		// Generate new random colors that are visually distinct
-		regenerateColors() {
-			logger.log('Regenerating selection colors');
-			// Store current camera position before changing colors
-			this.currentCameraPosition = this.getCurrentCameraPosition();
-			// Using the imported generateDistinctColors function from colorutil.js
-			this.selectionColors = generateDistinctColors(9);
-			// Save the new colors as the initial set too
-			this.initialSelectionColors = [...this.selectionColors];
-			this.statusMessage = 'Colors regenerated';
-			// Always update the plot
-			this.updatePlot();
-		},
-
-		// ==================================================
-		// CHUNK: performance
-		// ==================================================
-		// Show performance information in console for debugging
-		logPerformanceInfo() {
-			logger.log('Performance Information:');
-			logger.log(`Total points: ${this.plotData?.x?.length || 'N/A'}`);
-			logger.log(`Color by: ${this.colorByColumn}, Select by: ${this.selectionColumn}`);
-			logger.log(`Total unique ${this.colorByColumn} values: ${this.availableColumns.length > 0 ?
-				this.dataFrame.col_unique(this.colorByColumn).size : 'N/A'}`);
-			logger.log(`Current selection: ${this.selectedValues.length} values`);
-			logger.log(`Available PCA components: ${this.availablePcaAxes.length}`);
-			logger.log(`Current axes: PC${this.pcaAxes.x + 1}, PC${this.pcaAxes.y + 1}, PC${this.pcaAxes.z + 1}`);
-			logger.log(`Customdata caching: ${this.useCustomdataCache ? 'Enabled' : 'Disabled'}`);
-
-			// Log cache info if available
-			if (customdataCache && customdataCache.data) {
-				const cacheKeys = Object.keys(customdataCache.data);
-				logger.log(`Customdata cache entries: ${cacheKeys.length}`);
-
-				if (cacheKeys.length > 0) {
-					const sampleKey = cacheKeys[0];
-					const sampleSize = customdataCache.data[sampleKey].length;
-					logger.log(`Sample cache entry (${sampleKey}): ${sampleSize} points`);
-				}
-			}
-
-			// Log memory usage if available
-			if (window.performance && window.performance.memory) {
-				const memory = window.performance.memory;
-				logger.log(`Used JS heap: ${(memory.usedJSHeapSize / (1024 * 1024)).toFixed(2)} MB`);
-				logger.log(`Total JS heap: ${(memory.totalJSHeapSize / (1024 * 1024)).toFixed(2)} MB`);
-			}
-		},
-
-		// Toggle customdata caching
-		toggleCustomdataCache() {
-			this.useCustomdataCache = !this.useCustomdataCache;
-			if (!this.useCustomdataCache) {
-				// Clear the cache when disabling
-				clearCustomdataCache();
-			}
-			logger.log(`Customdata caching ${this.useCustomdataCache ? 'enabled' : 'disabled'}`);
-			this.statusMessage = `Customdata caching ${this.useCustomdataCache ? 'enabled' : 'disabled'}`;
-		}
-	},
-
-	// ==================================================
-	// CHUNK: mounted
-	// ==================================================
-	mounted() {
-		// Load data when component is mounted
-		this.loadData();
-
-		// Set up keyboard shortcuts for debugging
-		window.addEventListener('keydown', (e) => {
-			// Ctrl+Shift+P to log performance info
-			if (e.ctrlKey && e.shiftKey && e.key === 'P') {
-				this.logPerformanceInfo();
-			}
-
-			// Ctrl+Shift+C to toggle customdata caching
-			if (e.ctrlKey && e.shiftKey && e.key === 'C') {
-				this.toggleCustomdataCache();
-			}
-		});
-	}
-});
-</script>
-<!-- end 'app.js' -->
+  <script>
+   // Create Vue app
+  	const app = Vue.createApp({
+  		// ==================================================
+  		// CHUNK: App Data
+  		// ==================================================
+  		data() {
+  			return {
+  				title: 'Interactive 3D Embedding Visualization',
+  				statusMessage: 'Loading data...',
+  				isLoading: true,
+  				loadingMessage: 'Loading data...',
+  				loadingDetail: 'Initializing...',
+  				loadingProgress: false,
+  				loadingProgressPercent: 0,
+  				processingSelection: false,
+  				selectedValues: [],
+  				plotData: null,
+  				pcaArray: null,
+  				dataFrame: null,
+  				// Column selection dropdowns
+  				colorByColumn: '', // Column for default coloring
+  				selectionColumn: '', // Column for selection coloring
+  				pendingColorByColumn: '', // Temp storage for color selection before applying
+  				pendingSelectionColumn: '', // Temp storage for selection column before applying
+  				showColorDropdown: false, // Control color dropdown visibility
+  				showSelectionDropdown: false, // Control selection dropdown visibility
+  				isUpdatingPlot: false, // Flag to show loading during plot updates
+  				availableColumns: [],
+  				pcaAxes: { x: 0, y: 1, z: 2 },
+  				pcaColumnNames: [], // Store PCA column names
+  				availablePcaAxes: [], // Will be populated with available components
+  				selectionColors: [
+  					'#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
+  					'#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+  				],
+  				initialSelectionColors: [
+  					'#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
+  					'#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+  				],
+  				nonSelectedColor: '#969696', // Gray for non-selected points
+  				nonSelectedOpacity: 0.05,
+  				nonSelectedSize: 1,
+  				selectedOpacity: 0.2,
+  				selectedSize: 2,
+  				baseUrl: 'https://miv.name/pattern-lens/demo/?',
+  				dropdownTimeout: null,
+  				configCollapsed: false,
+  				showConfigPanel: false,
+  				// Default trace configuration
+  				defaultTraceConfig: createDefaultTraceConfig(),
+  				// Store current camera position
+  				currentCameraPosition: null,
+  				// Store selection timing information
+  				lastSelectionTime: 0,
+  				// Debounce timeout
+  				updatePlotTimeout: null,
+  				// Flag to enable/disable customdata caching
+  				useCustomdataCache: true,
+  				// Last hover data for clipboard copy
+  				lastHoverData: null,
+  				// Flag to track if right mouse button is pressed
+  				isRightMouseDown: false,
+  				// Configuration for data loading
+  				dataConfig: {
+  					filePath: 'data/pca.jsonl', // Default path to the data file
+  					numericalPrefix: 'pc.', // Prefix for numerical columns (PCA components)
+  					defaultColorColumn: 'activation.model', // Default column for coloring
+  					defaultSelectionColumn: 'activation.model', // Default column for selection
+  				},
+  				// URL params configuration
+  				urlParams: {
+  					filePath: 'dataPath',
+  					numericalPrefix: 'numPrefix',
+  					defaultColorColumn: 'colorBy',
+  					defaultSelectionColumn: 'selectBy',
+  					// New params for state preservation
+  					xAxis: 'xAxis',
+  					yAxis: 'yAxis',
+  					zAxis: 'zAxis',
+  					selectedValues: 'selected',
+  					selectedOpacity: 'selOpacity',
+  					nonSelectedOpacity: 'nonSelOpacity',
+  					selectedSize: 'selSize',
+  					nonSelectedSize: 'nonSelSize'
+  				},
+  				showHelpMenu: false, // Control help menu visibility
+  			};
+  		},
+  		// ==================================================
+  	
+  		computed: {
+  			// Compute combined URL with all selected values
+  			combinedUrl() {
+  				return computeCombinedUrl(this.baseUrl, this.selectedValues, this.selectionColumn);
+  			}
+  		},
+  	
+  		methods: {
+  			// Toggle help menu visibility
+  			toggleHelpMenu() {
+  				this.showHelpMenu = !this.showHelpMenu;
+  	
+  				// If opening the help, add a class to the body to prevent scrolling
+  				if (this.showHelpMenu) {
+  					document.body.style.overflow = 'hidden';
+  				} else {
+  					document.body.style.overflow = '';
+  				}
+  			},
+  			// ==================================================
+  			// CHUNK: config
+  			// ==================================================
+  			// Toggle configuration panel
+  			toggleConfigPanel() {
+  				this.showConfigPanel = !this.showConfigPanel;
+  			},
+  	
+  			// Apply configuration changes and reload data
+  			applyConfigChanges() {
+  				// Show loading indicator
+  				loading.showLoading(this, 'Applying configuration...', 'Reloading data', true);
+  	
+  				// Update URL with new configuration
+  				this.baseUrl = updateUrlWithConfig(this.dataConfig, this.urlParams);
+  	
+  				// Reload data with new configuration
+  				this.loadData();
+  			},
+  			// ==================================================
+  			// CHUNK: data loading
+  			// ==================================================
+  			// Load data from a single JSONL file
+  			async loadData() {
+  				loading.showLoading(this, 'Loading data...', 'Initializing', true);
+  				logger.log('Starting data loading process');
+  	
+  				try {
+  					// Clear any existing customdata cache
+  					clearCustomdataCache();
+  	
+  					// Parse URL parameters to override default configuration
+  					this.dataConfig = parseUrlParams(this.dataConfig, this.urlParams);
+  	
+  					// Load and process data using the function from dataloader.js
+  					const result = await loadJsonlData(this.dataConfig, (percent, detail) => {
+  						loading.updateProgress(this, percent, detail);
+  					});
+  	
+  					// Update app data with results
+  					this.dataFrame = result.dataFrame;
+  					this.pcaArray = result.pcaArray;
+  					this.plotData = result.plotData;
+  					this.availableColumns = result.availableColumns;
+  					this.availablePcaAxes = new Array(this.pcaArray.shape[1]).fill(0).map((_, i) => i);
+  	
+  					// Get the list of PCA column names from the data
+  					this.pcaColumnNames = result.pcaColumnNames ||
+  						this.dataFrame.columns.filter(col => col.startsWith(this.dataConfig.numericalPrefix));
+  	
+  					// Set default selected columns from configuration
+  					this.colorByColumn = this.dataConfig.defaultColorColumn;
+  					this.pendingColorByColumn = this.colorByColumn;
+  					this.selectionColumn = this.dataConfig.defaultSelectionColumn;
+  					this.pendingSelectionColumn = this.selectionColumn;
+  	
+  					// Restore axis settings from URL if available
+  					const urlParams = new URLSearchParams(window.location.search);
+  					if (urlParams.has(this.urlParams.xAxis)) this.pcaAxes.x = Number(urlParams.get(this.urlParams.xAxis));
+  					if (urlParams.has(this.urlParams.yAxis)) this.pcaAxes.y = Number(urlParams.get(this.urlParams.yAxis));
+  					if (urlParams.has(this.urlParams.zAxis)) this.pcaAxes.z = Number(urlParams.get(this.urlParams.zAxis));
+  	
+  					// Restore appearance settings from URL if available
+  					if (urlParams.has(this.urlParams.selectedOpacity))
+  						this.selectedOpacity = Number(urlParams.get(this.urlParams.selectedOpacity));
+  					if (urlParams.has(this.urlParams.nonSelectedOpacity))
+  						this.nonSelectedOpacity = Number(urlParams.get(this.urlParams.nonSelectedOpacity));
+  					if (urlParams.has(this.urlParams.selectedSize))
+  						this.selectedSize = Number(urlParams.get(this.urlParams.selectedSize));
+  					if (urlParams.has(this.urlParams.nonSelectedSize))
+  						this.nonSelectedSize = Number(urlParams.get(this.urlParams.nonSelectedSize));
+  	
+  					// Restore selected values from URL if available
+  					if (urlParams.has(this.urlParams.selectedValues)) {
+  						const selectedParam = urlParams.get(this.urlParams.selectedValues);
+  						this.selectedValues = selectedParam.includes('~')
+  							? selectedParam.split('~')
+  							: selectedParam.split(',');
+  					}
+  	
+  					loading.updateProgress(this, 95, 'Rendering plot...');
+  					this.statusMessage = 'Data loaded successfully';
+  	
+  					// Initialize the plot after data is loaded
+  					this.initPlot();
+  	
+  					loading.updateProgress(this, 100, 'Completing setup...');
+  	
+  					loading.hideLoading(this);
+  					logger.log('Data loading complete');
+  				} catch (error) {
+  					logger.error("Error loading data:", error);
+  					this.statusMessage = `Error loading data: ${error.message}`;
+  	
+  					loading.showLoading(this, 'Error loading data', error.message, false);
+  					loading.hideLoading(this);
+  				}
+  			},
+  	
+  			// Process loaded data into a format suitable for plotting
+  			processData() {
+  				return processDataFromDataFrame(this.dataFrame, this.pcaArray, this.pcaAxes, this.pcaColumnNames);
+  			},
+  	
+  			// ==================================================
+  			// CHUNK: selection
+  			// ==================================================
+  	
+  			// Handle change of PCA axes
+  			updatePlotAxes() {
+  				logger.log('PCA axes changed', this.pcaAxes);
+  				updatePlotCoordinates(this.plotData, this.pcaAxes, this.pcaColumnNames);
+  				this.updatePlot(); // This will call updateUrlState
+  			},
+  	
+  			// Get current camera position from the plot (now using function from plotutil.js)
+  			getCurrentCameraPosition() {
+  				return getCurrentCameraPosition(this.$refs.plotContainer);
+  			},
+  	
+  			// Select a colorByColumn from the dropdown
+  			selectColorByColumn(column) {
+  				this.pendingColorByColumn = column;
+  				this.showColorDropdown = false;
+  			},
+  	
+  			// Select a selectionColumn from the dropdown
+  			selectSelectionColumn(column) {
+  				this.pendingSelectionColumn = column;
+  				this.showSelectionDropdown = false;
+  			},
+  	
+  			// Unified function to apply column changes
+  			applyColumnChange(columnType) {
+  				const isPendingColor = columnType === 'color';
+  				const currentColumn = isPendingColor ? this.colorByColumn : this.selectionColumn;
+  				const pendingColumn = isPendingColor ? this.pendingColorByColumn : this.pendingSelectionColumn;
+  	
+  				if (!pendingColumn) return;
+  	
+  				logger.log(`Changing ${columnType}-by column: ${currentColumn} → ${pendingColumn}`);
+  	
+  				// Store current camera position before update
+  				this.currentCameraPosition = this.getCurrentCameraPosition();
+  	
+  				// Show plot updating indicator
+  				loading.showUpdating(this);
+  	
+  				// Update the column and clear selection if needed
+  				if (currentColumn !== pendingColumn) {
+  					// Clear customdata cache when column changes
+  					clearCustomdataCache();
+  	
+  					if (isPendingColor) {
+  						this.colorByColumn = pendingColumn;
+  					} else {
+  						this.selectionColumn = pendingColumn;
+  					}
+  	
+  					this.selectedValues = []; // Clear selection when changing columns
+  					this.updatePlot();
+  				} else {
+  					// Hide updating indicator if no change
+  					loading.hideUpdating(this);
+  				}
+  			},
+  	
+  			// Apply colorByColumn change
+  			applyColorByColumn() {
+  				this.applyColumnChange('color');
+  				// Update the configuration and URL
+  				if (this.colorByColumn) {
+  					this.dataConfig.defaultColorColumn = this.colorByColumn;
+  					this.updateUrlState();
+  					logger.log(`Updated default color column in URL: ${this.colorByColumn}`);
+  				}
+  			},
+  	
+  			// Apply selectionColumn change
+  			applySelectionColumn() {
+  				this.applyColumnChange('selection');
+  				// Update the configuration and URL
+  				if (this.selectionColumn) {
+  					this.dataConfig.defaultSelectionColumn = this.selectionColumn;
+  					this.updateUrlState();
+  					logger.log(`Updated default selection column in URL: ${this.selectionColumn}`);
+  				}
+  			},
+  	
+  			// Hide dropdowns with delay to allow for click
+  			hideColorDropdownDelayed() {
+  				this.dropdownTimeout = setTimeout(() => {
+  					this.showColorDropdown = false;
+  				}, 200);
+  			},
+  	
+  			hideSelectionDropdownDelayed() {
+  				this.dropdownTimeout = setTimeout(() => {
+  					this.showSelectionDropdown = false;
+  				}, 200);
+  			},
+  	
+  			// New method to update URL state with current app state
+  			updateUrlState() {
+  				// Collect current state
+  				const appState = {
+  					selectedValues: this.selectedValues,
+  					pcaAxes: this.pcaAxes,
+  					selectedOpacity: this.selectedOpacity,
+  					nonSelectedOpacity: this.nonSelectedOpacity,
+  					selectedSize: this.selectedSize,
+  					nonSelectedSize: this.nonSelectedSize
+  				};
+  	
+  				// Update URL with current state
+  				updateUrlWithConfig(this.dataConfig, this.urlParams, appState);
+  			},
+  			// ==================================================
+  			// CHUNK: traces
+  			// ==================================================
+  			// Create traces grouped by categorical value (for initial view) - now using function from plotutil.js
+  			createTracesByCategory() {
+  				logger.log('Creating traces by category');
+  	
+  				// Use the createTracesByCategory function from plotutil.js with colorByColumn
+  				return createTracesByCategory(
+  					this.plotData,
+  					this.colorByColumn,
+  					this.dataFrame,
+  					{
+  						defaultTraceConfig: this.defaultTraceConfig,
+  						selectedSize: this.selectedSize,
+  						selectedOpacity: this.selectedOpacity,
+  						// Add the selectionColumn so it's included in customdata
+  						selectionColumn: this.selectionColumn,
+  						useCache: this.useCustomdataCache
+  					}
+  				);
+  			},
+  	
+  			// Create traces with selection highlighting - now using function from plotutil.js
+  			createTracesWithSelection() {
+  				logger.log('Creating traces with selection highlighting');
+  	
+  				// Use the createTracesWithSelection function from plotutil.js with selectionColumn
+  				return createTracesWithSelection(
+  					this.plotData,
+  					this.selectionColumn,
+  					this.selectedValues,
+  					{
+  						defaultTraceConfig: this.defaultTraceConfig,
+  						selectedSize: this.selectedSize,
+  						nonSelectedSize: this.nonSelectedSize,
+  						selectedOpacity: this.selectedOpacity,
+  						nonSelectedOpacity: this.nonSelectedOpacity,
+  						nonSelectedColor: this.nonSelectedColor,
+  						getSelectionColor: this.getSelectionColor.bind(this), // Use the component's getSelectionColor method
+  						// Add colorByColumn so it's included in customdata
+  						colorByColumn: this.colorByColumn,
+  						useCache: this.useCustomdataCache
+  					}
+  				);
+  			},
+  	
+  			// Copy hover data to clipboard using the function from clipboard.js
+  			copyHoverDataToClipboard() {
+  				if (!this.lastHoverData) return;
+  				copyHoverDataToClipboard(
+  					this.lastHoverData,
+  					this.selectionColumn,
+  					(statusMsg) => { this.statusMessage = statusMsg; }
+  				);
+  			},
+  	
+  			// ==================================================
+  			// CHUNK: listeners
+  			// ==================================================
+  	
+  			// Setup event handlers for the plot
+  			setupPlotEventHandlers() {
+  				// Add click handler with proper binding
+  				const boundHandlePointClick = this.handlePointClick.bind(this);
+  				this.$refs.plotContainer.on('plotly_click', boundHandlePointClick);
+  	
+  				// Add hover event handler to capture hover data
+  				this.$refs.plotContainer.on('plotly_hover', (hoverData) => {
+  					this.lastHoverData = hoverData;
+  				});
+  	
+  				// Add mousedown event listener to detect right clicks
+  				this.$refs.plotContainer.addEventListener('mousedown', (e) => {
+  					if (e.button === 2) { // Right mouse button
+  						this.isRightMouseDown = true;
+  						// Only prevent default and copy if we have hover data (meaning we're over a point)
+  						if (this.lastHoverData && this.lastHoverData.points && this.lastHoverData.points.length > 0) {
+  							e.preventDefault();
+  							this.copyHoverDataToClipboard();
+  						}
+  					}
+  				});
+  	
+  				// Add mouseup event listener to reset right click flag
+  				this.$refs.plotContainer.addEventListener('mouseup', (e) => {
+  					if (e.button === 2) { // Right mouse button
+  						this.isRightMouseDown = false;
+  					}
+  				});
+  	
+  				// Add contextmenu event listener to prevent default context menu only when over points
+  				this.$refs.plotContainer.addEventListener('contextmenu', (e) => {
+  					if (this.lastHoverData && this.lastHoverData.points && this.lastHoverData.points.length > 0) {
+  						e.preventDefault(); // Only prevent context menu if over a point
+  					}
+  				});
+  	
+  				// Add relayout event handler to capture camera position changes
+  				this.$refs.plotContainer.on('plotly_relayout', (eventData) => {
+  					// Update our stored camera position when user interacts with the plot
+  					this.currentCameraPosition = this.getCurrentCameraPosition();
+  				});
+  			},
+  	
+  			// ==================================================
+  			// CHUNK: initPlot
+  			// ==================================================
+  	
+  			// Initialize the plot
+  			initPlot() {
+  				this.statusMessage = 'Creating plot...';
+  				logger.log('Initializing plot');
+  	
+  				if (!this.plotData) {
+  					logger.error("Plot data not available");
+  					this.statusMessage = 'Error: Plot data not available';
+  					return;
+  				}
+  	
+  				// Create initial traces by the selected categorical column
+  				const traces = this.createTracesByCategory();
+  	
+  				// Create axis labels based on column names
+  				const axisLabels = this.pcaColumnNames.length > 0 ? {
+  					x: this.pcaColumnNames[this.pcaAxes.x],
+  					y: this.pcaColumnNames[this.pcaAxes.y],
+  					z: this.pcaColumnNames[this.pcaAxes.z]
+  				} : null;
+  	
+  				// Create the plot
+  				logger.time('Initial plot render');
+  				Plotly.newPlot(
+  					this.$refs.plotContainer,
+  					traces,
+  					createPlotLayout(this.title, null, this.pcaAxes, axisLabels)
+  				);
+  				logger.timeEnd('Initial plot render');
+  	
+  				// Setup event handlers
+  				this.setupPlotEventHandlers();
+  	
+  				this.statusMessage = 'Plot ready - click points to select values, right-click to copy hover text';
+  			},
+  	
+  			// ==================================================
+  			// CHUNK: handlePointClick
+  			// ==================================================
+  	
+  			// Handle point clicks
+  			handlePointClick(data) {
+  				// Don't process clicks if the right mouse button is down
+  				if (this.isRightMouseDown) {
+  					return;
+  				}
+  	
+  				if (data.points && data.points.length > 0) {
+  					const point = data.points[0];
+  	
+  					// Avoid processing clicks too rapidly
+  					const now = Date.now();
+  					if (now - this.lastSelectionTime < 300) { // 300ms debounce
+  						return;
+  					}
+  					this.lastSelectionTime = now;
+  	
+  					if (point.customdata) {
+  						// Define the mapping of columns to customdata indices
+  						const customDataIndices = {
+  							'activation.cls': 0,
+  							'activation.prompt': 1
+  						};
+  	
+  						// If the selection column is not one of the first two, it will be the third element
+  						if (this.selectionColumn !== 'activation.cls' && this.selectionColumn !== 'activation.prompt') {
+  							customDataIndices[this.selectionColumn] = 2;
+  						}
+  	
+  						// Check if the selection column is in our customdata indices mapping
+  						if (this.selectionColumn in customDataIndices) {
+  							const index = customDataIndices[this.selectionColumn];
+  							const value = point.customdata[index];
+  	
+  							if (value !== undefined) {
+  								logger.log(`Selected ${this.selectionColumn}: ${value}`);
+  	
+  								// Show processing indicator
+  								loading.showUpdating(this, true);
+  	
+  								// Store current camera position before update
+  								this.currentCameraPosition = this.getCurrentCameraPosition();
+  	
+  								// Use setTimeout to avoid blocking the UI
+  								setTimeout(() => {
+  									logger.time('Process Selection');
+  	
+  									// Toggle selection
+  									const valueIndex = this.selectedValues.indexOf(value);
+  	
+  									if (valueIndex >= 0) {
+  										// Remove if already selected
+  										this.selectedValues.splice(valueIndex, 1);
+  									} else {
+  										// Add if not already selected
+  										this.selectedValues.push(value);
+  									}
+  	
+  									logger.timeEnd('Process Selection');
+  	
+  									// Update the visualization with some delay to prevent UI blocking
+  									this.debounceUpdatePlot();
+  	
+  									// Update URL with current selection
+  									this.updateUrlState();
+  								}, 10);
+  							} else {
+  								logger.error(`Could not find ${this.selectionColumn} value in customdata at index ${index}`);
+  							}
+  						} else {
+  							logger.error(`Selection column ${this.selectionColumn} not found in customdata structure`);
+  						}
+  					}
+  				}
+  			},
+  	
+  			// ==================================================
+  			// CHUNK: update plot
+  			// ==================================================
+  	
+  			// Debounce the updatePlot call to prevent too frequent updates
+  			debounceUpdatePlot() {
+  				if (this.updatePlotTimeout) {
+  					clearTimeout(this.updatePlotTimeout);
+  				}
+  	
+  				this.updatePlotTimeout = setTimeout(() => {
+  					this.updatePlot();
+  				}, 100);
+  			},
+  	
+  			// Update the plot based on selection
+  			updatePlot() {
+  				logger.time('Update Plot');
+  				try {
+  					// Show updating indicator
+  					loading.showUpdating(this);
+  	
+  					// Store current camera position before update if not already stored
+  					if (!this.currentCameraPosition) {
+  						this.currentCameraPosition = this.getCurrentCameraPosition();
+  					}
+  	
+  					// Create new traces based on selection state
+  					const traces = this.selectedValues.length > 0
+  						? this.createTracesWithSelection()
+  						: this.createTracesByCategory();
+  	
+  					// Create axis labels based on column names
+  					const axisLabels = this.pcaColumnNames.length > 0 ? {
+  						x: this.pcaColumnNames[this.pcaAxes.x],
+  						y: this.pcaColumnNames[this.pcaAxes.y],
+  						z: this.pcaColumnNames[this.pcaAxes.z]
+  					} : null;
+  	
+  					// First remove old event handlers to prevent duplicates
+  					if (this.$refs.plotContainer && this.$refs.plotContainer.removeAllListeners) {
+  						this.$refs.plotContainer.removeAllListeners('plotly_click');
+  						this.$refs.plotContainer.removeAllListeners('plotly_hover');
+  						this.$refs.plotContainer.removeAllListeners('plotly_relayout');
+  					}
+  	
+  					// Use complete redraw with newPlot to avoid potential issues
+  					// Apply saved camera position in the layout
+  					logger.time('Plot Render');
+  					Plotly.newPlot(
+  						this.$refs.plotContainer,
+  						traces,
+  						createPlotLayout(this.title, this.currentCameraPosition, this.pcaAxes, axisLabels)
+  					);
+  					logger.timeEnd('Plot Render');
+  	
+  					// Setup event handlers again
+  					this.setupPlotEventHandlers();
+  	
+  					// Update URL with current state
+  					this.updateUrlState();
+  	
+  					// Hide updating indicators
+  					loading.hideUpdating(this);
+  					this.statusMessage = 'Plot updated - right-click on points to copy hover text';
+  				} catch (error) {
+  					logger.error("Error updating plot:", error);
+  					this.statusMessage = `Error updating plot: ${error.message}`;
+  					loading.hideUpdating(this);
+  				}
+  				logger.timeEnd('Update Plot');
+  			},
+  	
+  			// Toggle config section collapse
+  			toggleConfigCollapse() {
+  				this.configCollapsed = !this.configCollapsed;
+  			},
+  	
+  			// Clear selection
+  			clearSelection() {
+  				logger.log('Clearing all selections');
+  				// Store current camera position before clearing
+  				this.currentCameraPosition = this.getCurrentCameraPosition();
+  	
+  				this.selectedValues = [];
+  				// Reset colors back to initial set
+  				this.selectionColors = [...this.initialSelectionColors];
+  				this.updatePlot(); // This will update the URL state
+  			},
+  	
+  			// Remove a specific value from selection
+  			removeSelectedValue(value) {
+  				logger.log(`Removing from selection: ${value}`);
+  				// Store current camera position before removing value
+  				this.currentCameraPosition = this.getCurrentCameraPosition();
+  	
+  				const index = this.selectedValues.indexOf(value);
+  				if (index >= 0) {
+  					this.selectedValues.splice(index, 1);
+  					this.updatePlot(); // This will update the URL state
+  				}
+  			},
+  	
+  			// Get selection color for display
+  			getSelectionColor(index) {
+  				return this.selectionColors[index % this.selectionColors.length];
+  			},
+  	
+  			// Generate new random colors that are visually distinct
+  			regenerateColors() {
+  				logger.log('Regenerating selection colors');
+  				// Store current camera position before changing colors
+  				this.currentCameraPosition = this.getCurrentCameraPosition();
+  				// Using the imported generateDistinctColors function from colorutil.js
+  				this.selectionColors = generateDistinctColors(9);
+  				// Save the new colors as the initial set too
+  				this.initialSelectionColors = [...this.selectionColors];
+  				this.statusMessage = 'Colors regenerated';
+  				// Always update the plot
+  				this.updatePlot();
+  			},
+  	
+  			// ==================================================
+  			// CHUNK: performance
+  			// ==================================================
+  			// Show performance information in console for debugging
+  			logPerformanceInfo() {
+  				logger.log('Performance Information:');
+  				logger.log(`Total points: ${this.plotData?.x?.length || 'N/A'}`);
+  				logger.log(`Color by: ${this.colorByColumn}, Select by: ${this.selectionColumn}`);
+  				logger.log(`Total unique ${this.colorByColumn} values: ${this.availableColumns.length > 0 ?
+  					this.dataFrame.col_unique(this.colorByColumn).size : 'N/A'}`);
+  				logger.log(`Current selection: ${this.selectedValues.length} values`);
+  				logger.log(`Available PCA components: ${this.availablePcaAxes.length}`);
+  				logger.log(`Current axes: PC${this.pcaAxes.x + 1}, PC${this.pcaAxes.y + 1}, PC${this.pcaAxes.z + 1}`);
+  				logger.log(`Customdata caching: ${this.useCustomdataCache ? 'Enabled' : 'Disabled'}`);
+  	
+  				// Log cache info if available
+  				if (customdataCache && customdataCache.data) {
+  					const cacheKeys = Object.keys(customdataCache.data);
+  					logger.log(`Customdata cache entries: ${cacheKeys.length}`);
+  	
+  					if (cacheKeys.length > 0) {
+  						const sampleKey = cacheKeys[0];
+  						const sampleSize = customdataCache.data[sampleKey].length;
+  						logger.log(`Sample cache entry (${sampleKey}): ${sampleSize} points`);
+  					}
+  				}
+  	
+  				// Log memory usage if available
+  				if (window.performance && window.performance.memory) {
+  					const memory = window.performance.memory;
+  					logger.log(`Used JS heap: ${(memory.usedJSHeapSize / (1024 * 1024)).toFixed(2)} MB`);
+  					logger.log(`Total JS heap: ${(memory.totalJSHeapSize / (1024 * 1024)).toFixed(2)} MB`);
+  				}
+  			},
+  	
+  			// Toggle customdata caching
+  			toggleCustomdataCache() {
+  				this.useCustomdataCache = !this.useCustomdataCache;
+  				if (!this.useCustomdataCache) {
+  					// Clear the cache when disabling
+  					clearCustomdataCache();
+  				}
+  				logger.log(`Customdata caching ${this.useCustomdataCache ? 'enabled' : 'disabled'}`);
+  				this.statusMessage = `Customdata caching ${this.useCustomdataCache ? 'enabled' : 'disabled'}`;
+  			}
+  		},
+  	
+  		// ==================================================
+  		// CHUNK: mounted
+  		// ==================================================
+  		mounted() {
+  			// Load data when component is mounted
+  			this.loadData();
+  	
+  			// Set up keyboard shortcuts for debugging
+  			window.addEventListener('keydown', (e) => {
+  				// Ctrl+Shift+P to log performance info
+  				if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+  					this.logPerformanceInfo();
+  				}
+  	
+  				// Ctrl+Shift+C to toggle customdata caching
+  				if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+  					this.toggleCustomdataCache();
+  				}
+  			});
+  		}
+  	});
+  </script>
+  <!-- end 'app.js' -->
   <!-- Load styles -->
   <!-- begin 'style.css' -->
-<style>
-/* ==================================================
-   CHUNK: Base Styles
-   ================================================== */
-body {
-	font-family: Arial, sans-serif;
-	margin: 0;
-	padding: 20px;
-	max-width: 1200px;
-	margin: 0 auto;
-}
-
-h1 {
-	color: #333;
-	text-align: center;
-	margin-bottom: 20px;
-}
-
-/* Base button styles */
-button {
-	padding: 8px 16px;
-	background-color: #4CAF50;
-	color: white;
-	border: none;
-	border-radius: 4px;
-	cursor: pointer;
-}
-
-button:hover {
-	background-color: #45a049;
-}
-
-button.secondary {
-	background-color: #2196F3;
-}
-
-button.secondary:hover {
-	background-color: #0b7dda;
-}
-
-.apply-button {
-	padding: 6px 12px;
-	background-color: #4CAF50;
-	color: white;
-	border: none;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 14px;
-}
-
-.apply-button:hover {
-	background-color: #45a049;
-}
-
-/* Form controls */
-select,
-input {
-	padding: 8px;
-	border-radius: 4px;
-	border: 1px solid #ddd;
-}
-
-input[type="range"] {
-	flex: 1;
-}
-
-input[type="color"] {
-	width: 40px;
-	height: 25px;
-}
-
-input[type="number"] {
-	width: 60px;
-	text-align: center;
-}
-
-/* ==================================================
-   CHUNK: Layout Components
-   ================================================== */
-.controls {
-	display: flex;
-	justify-content: space-between;
-	margin-bottom: 15px;
-	align-items: center;
-}
-
-.control-group {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-}
-
-.status-message {
-	color: #666;
-	font-style: italic;
-}
-
-.plot-container {
-	height: 600px;
-	width: 100%;
-	margin: 20px 0;
-	position: relative;
-}
-
-.control-row {
-	display: flex;
-	align-items: center;
-	margin-bottom: 12px;
-}
-
-.control-label {
-	width: 80px;
-	flex-shrink: 0;
-}
-
-.control-input {
-	flex: 1;
-	display: flex;
-	align-items: center;
-	gap: 10px;
-}
-
-/* ==================================================
-   CHUNK: Dropdown and Selection Controls
-   ================================================== */
-.combo-select {
-	position: relative;
-	display: inline-block;
-}
-
-.combo-select input {
-	width: 150px;
-}
-
-.combo-select .dropdown {
-	position: absolute;
-	top: 100%;
-	left: 0;
-	right: 0;
-	background: white;
-	border: 1px solid #ddd;
-	border-top: none;
-	z-index: 10;
-	max-height: 200px;
-	overflow-y: auto;
-}
-
-.combo-select .dropdown-item {
-	padding: 8px;
-	cursor: pointer;
-}
-
-.combo-select .dropdown-item:hover {
-	background-color: #f1f1f1;
-}
-
-/* Column selection controls */
-.column-controls {
-	display: flex;
-	gap: 15px;
-	flex-wrap: wrap;
-}
-
-.column-control {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
-.column-control label {
-	font-weight: bold;
-	white-space: nowrap;
-}
-
-.column-control .combo-select {
-	min-width: 160px;
-}
-
-/* Axis controls */
-.axis-controls {
-	display: flex;
-	justify-content: center;
-	gap: 20px;
-	margin-bottom: 15px;
-	background-color: #f5f5f5;
-	padding: 10px;
-	border-radius: 4px;
-}
-
-.axis-control {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
-.axis-control label {
-	font-weight: bold;
-}
-
-.axis-control select {
-	min-width: 80px;
-	padding: 5px;
-	border-radius: 4px;
-	border: 1px solid #ddd;
-}
-
-/* ==================================================
-   CHUNK: Selected Values Display
-   ================================================== */
-.selection-display {
-	margin: 10px 0;
-	padding: 10px;
-	border: 1px solid #ddd;
-	border-radius: 4px;
-	min-height: 30px;
-}
-
-.selected-value {
-	display: inline-block;
-	margin-right: 10px;
-	padding: 5px 10px;
-	border-radius: 3px;
-	font-weight: bold;
-	color: white;
-	position: relative;
-}
-
-.selected-value .remove-btn {
-	visibility: hidden;
-	position: absolute;
-	top: -10px;
-	right: -10px;
-	background-color: #f44336;
-	color: white;
-	border-radius: 50%;
-	width: 22px;
-	height: 22px;
-	font-size: 16px;
-	line-height: 20px;
-	text-align: center;
-	cursor: pointer;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.selected-value:hover .remove-btn {
-	visibility: visible;
-}
-
-/* ==================================================
-   CHUNK: Configuration Panels
-   ================================================== */
-/* Common configuration panel styles */
-.config-display,
-.config-panel {
-	margin-top: 20px;
-	border: 1px solid #ddd;
-	border-radius: 4px;
-	overflow: hidden;
-}
-
-.config-header {
-	background-color: #f1f1f1;
-	padding: 10px 15px;
-	cursor: pointer;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-}
-
-.config-header h3 {
-	margin: 0;
-	font-size: 16px;
-}
-
-.config-content {
-	padding: 15px;
-	display: flex;
-	flex-wrap: wrap;
-	gap: 20px;
-}
-
-.config-section {
-	flex: 1;
-	min-width: 300px;
-	padding: 15px;
-	border: 1px solid #ddd;
-	border-radius: 4px;
-}
-
-.config-section h4 {
-	margin-top: 0;
-	margin-bottom: 15px;
-	padding-bottom: 8px;
-	border-bottom: 1px solid #eee;
-}
-
-.collapse-icon {
-	transition: transform 0.3s;
-}
-
-.collapse-icon.rotated {
-	transform: rotate(-90deg);
-}
-
-/* Data Configuration Panel specific styles */
-.config-panel {
-	margin-bottom: 20px;
-}
-
-.config-panel .control-label {
-	width: 120px;
-}
-
-.config-panel .control-input input[type="text"] {
-	width: 100%;
-}
-
-.config-panel .apply-button {
-	margin-top: 10px;
-}
-
-/* ==================================================
-   CHUNK: URL Section
-   ================================================== */
-.url-section {
-	margin-top: 20px;
-	padding: 15px;
-	border: 1px solid #ddd;
-	border-radius: 4px;
-}
-
-.url-section input {
-	width: 100%;
-	margin-bottom: 10px;
-}
-
-.generated-links {
-	margin-top: 10px;
-}
-
-.generated-link {
-	display: block;
-	margin-bottom: 5px;
-	color: #2196F3;
-	text-decoration: none;
-}
-
-.generated-link:hover {
-	text-decoration: underline;
-}
-
-/* ==================================================
-   CHUNK: Loading and Progress Indicators
-   ================================================== */
-@keyframes spin {
-	0% {
-		transform: rotate(0deg);
-	}
-
-	100% {
-		transform: rotate(360deg);
-	}
-}
-
-/* Main loading overlay */
-.loading-overlay {
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	background-color: rgba(255, 255, 255, 0.9);
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-	z-index: 10;
-	padding: 20px;
-	border-radius: 8px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-	max-width: 80%;
-}
-
-.loading-spinner {
-	border: 4px solid rgba(0, 0, 0, 0.1);
-	border-radius: 50%;
-	border-top: 4px solid #3498db;
-	width: 40px;
-	height: 40px;
-	animation: spin 1s linear infinite;
-	margin-bottom: 15px;
-}
-
-/* Progress bar */
-.loading-progress {
-	width: 300px;
-	background-color: #f1f1f1;
-	border-radius: 4px;
-	margin: 15px 0;
-	display: flex;
-	align-items: center;
-}
-
-.loading-progress-bar {
-	height: 15px;
-	border-radius: 4px;
-	background-color: #3498db;
-	transition: width 0.3s ease;
-}
-
-.loading-progress-percentage {
-	margin-left: 8px;
-	font-size: 14px;
-	color: #3498db;
-}
-
-/* Processing indicator */
-.processing-indicator {
-	position: absolute;
-	bottom: 20px;
-	right: 20px;
-	background-color: rgba(255, 255, 255, 0.9);
-	padding: 10px;
-	border-radius: 4px;
-	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	z-index: 5;
-	border-left: 4px solid #f39c12;
-}
-
-/* Updating indicator */
-.updating-indicator {
-	position: absolute;
-	top: 20px;
-	right: 20px;
-	background-color: rgba(255, 255, 255, 0.9);
-	padding: 10px;
-	border-radius: 4px;
-	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	z-index: 5;
-	border-left: 4px solid #3498db;
-}
-
-/* Mini spinner for indicators */
-.mini-spinner {
-	border: 3px solid rgba(0, 0, 0, 0.1);
-	border-radius: 50%;
-	border-top: 3px solid #3498db;
-	width: 20px;
-	height: 20px;
-	animation: spin 1s linear infinite;
-}
-
-/* ===================================================
-   CHUNK: config buttons
-   ================================================== */
-
-.column-control {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin-bottom: 10px;
-	flex-wrap: wrap;
-}
-
-@media (max-width: 768px) {
-	.column-control {
-		flex-direction: column;
-		align-items: flex-start;
-	}
-
-	.column-control .combo-select {
-		width: 100%;
-	}
-
-	.column-control .button-group {
-		display: flex;
-		gap: 5px;
-		margin-top: 5px;
-	}
-}
-
-/* ==================================================
-   CHUNK: Help Button and Modal
-   ================================================== */
-.help-container {
-	position: absolute;
-	top: 20px;
-	right: 20px;
-	z-index: 100;
-}
-
-.help-button {
-	width: 32px;
-	height: 32px;
-	border-radius: 50%;
-	background-color: #2196F3;
-	color: white;
-	font-size: 18px;
-	font-weight: bold;
-	border: none;
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-}
-
-.help-button:hover {
-	background-color: #0b7dda;
-}
-
-.help-modal {
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	background-color: rgba(0, 0, 0, 0.5);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	z-index: 1000;
-}
-
-.help-modal-content {
-	background-color: white;
-	border-radius: 8px;
-	width: 80%;
-	max-width: 800px;
-	max-height: 90vh;
-	display: flex;
-	flex-direction: column;
-	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-.help-modal-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 15px 20px;
-	border-bottom: 1px solid #eee;
-}
-
-.help-modal-header h2 {
-	margin: 0;
-	color: #333;
-}
-
-.help-close-button {
-	font-size: 28px;
-	font-weight: bold;
-	cursor: pointer;
-	color: #aaa;
-}
-
-.help-close-button:hover {
-	color: #333;
-}
-
-.help-modal-body {
-	padding: 20px;
-	overflow-y: auto;
-	max-height: calc(90vh - 70px);
-}
-
-.help-section {
-	margin-bottom: 25px;
-}
-
-.help-section h3 {
-	margin-top: 0;
-	margin-bottom: 10px;
-	color: #2196F3;
-	border-bottom: 1px solid #eee;
-	padding-bottom: 5px;
-}
-
-.help-section ul {
-	margin: 0;
-	padding-left: 20px;
-}
-
-.help-section li {
-	margin-bottom: 8px;
-}
-
-.help-section ul ul {
-	margin-top: 5px;
-}
-
-@media (max-width: 600px) {
-	.help-modal-content {
-		width: 95%;
-	}
-
-	.help-section li {
-		margin-bottom: 12px;
-	}
-}
-</style>
-<!-- end 'style.css' -->
-</head>
-
-<body>
+  <style>
+   /* ==================================================
+  	   CHUNK: Base Styles
+  	   ================================================== */
+  	body {
+  		font-family: Arial, sans-serif;
+  		margin: 0;
+  		padding: 20px;
+  		max-width: 1200px;
+  		margin: 0 auto;
+  	}
+  	
+  	h1 {
+  		color: #333;
+  		text-align: center;
+  		margin-bottom: 20px;
+  	}
+  	
+  	/* Base button styles */
+  	button {
+  		padding: 8px 16px;
+  		background-color: #4CAF50;
+  		color: white;
+  		border: none;
+  		border-radius: 4px;
+  		cursor: pointer;
+  	}
+  	
+  	button:hover {
+  		background-color: #45a049;
+  	}
+  	
+  	button.secondary {
+  		background-color: #2196F3;
+  	}
+  	
+  	button.secondary:hover {
+  		background-color: #0b7dda;
+  	}
+  	
+  	.apply-button {
+  		padding: 6px 12px;
+  		background-color: #4CAF50;
+  		color: white;
+  		border: none;
+  		border-radius: 4px;
+  		cursor: pointer;
+  		font-size: 14px;
+  	}
+  	
+  	.apply-button:hover {
+  		background-color: #45a049;
+  	}
+  	
+  	/* Form controls */
+  	select,
+  	input {
+  		padding: 8px;
+  		border-radius: 4px;
+  		border: 1px solid #ddd;
+  	}
+  	
+  	input[type="range"] {
+  		flex: 1;
+  	}
+  	
+  	input[type="color"] {
+  		width: 40px;
+  		height: 25px;
+  	}
+  	
+  	input[type="number"] {
+  		width: 60px;
+  		text-align: center;
+  	}
+  	
+  	/* ==================================================
+  	   CHUNK: Layout Components
+  	   ================================================== */
+  	.controls {
+  		display: flex;
+  		justify-content: space-between;
+  		margin-bottom: 15px;
+  		align-items: center;
+  	}
+  	
+  	.control-group {
+  		display: flex;
+  		align-items: center;
+  		gap: 10px;
+  	}
+  	
+  	.status-message {
+  		color: #666;
+  		font-style: italic;
+  	}
+  	
+  	.plot-container {
+  		height: 600px;
+  		width: 100%;
+  		margin: 20px 0;
+  		position: relative;
+  	}
+  	
+  	.control-row {
+  		display: flex;
+  		align-items: center;
+  		margin-bottom: 12px;
+  	}
+  	
+  	.control-label {
+  		width: 80px;
+  		flex-shrink: 0;
+  	}
+  	
+  	.control-input {
+  		flex: 1;
+  		display: flex;
+  		align-items: center;
+  		gap: 10px;
+  	}
+  	
+  	/* ==================================================
+  	   CHUNK: Dropdown and Selection Controls
+  	   ================================================== */
+  	.combo-select {
+  		position: relative;
+  		display: inline-block;
+  	}
+  	
+  	.combo-select input {
+  		width: 150px;
+  	}
+  	
+  	.combo-select .dropdown {
+  		position: absolute;
+  		top: 100%;
+  		left: 0;
+  		right: 0;
+  		background: white;
+  		border: 1px solid #ddd;
+  		border-top: none;
+  		z-index: 10;
+  		max-height: 200px;
+  		overflow-y: auto;
+  	}
+  	
+  	.combo-select .dropdown-item {
+  		padding: 8px;
+  		cursor: pointer;
+  	}
+  	
+  	.combo-select .dropdown-item:hover {
+  		background-color: #f1f1f1;
+  	}
+  	
+  	/* Column selection controls */
+  	.column-controls {
+  		display: flex;
+  		gap: 15px;
+  		flex-wrap: wrap;
+  	}
+  	
+  	.column-control {
+  		display: flex;
+  		align-items: center;
+  		gap: 8px;
+  	}
+  	
+  	.column-control label {
+  		font-weight: bold;
+  		white-space: nowrap;
+  	}
+  	
+  	.column-control .combo-select {
+  		min-width: 160px;
+  	}
+  	
+  	/* Axis controls */
+  	.axis-controls {
+  		display: flex;
+  		justify-content: center;
+  		gap: 20px;
+  		margin-bottom: 15px;
+  		background-color: #f5f5f5;
+  		padding: 10px;
+  		border-radius: 4px;
+  	}
+  	
+  	.axis-control {
+  		display: flex;
+  		align-items: center;
+  		gap: 8px;
+  	}
+  	
+  	.axis-control label {
+  		font-weight: bold;
+  	}
+  	
+  	.axis-control select {
+  		min-width: 80px;
+  		padding: 5px;
+  		border-radius: 4px;
+  		border: 1px solid #ddd;
+  	}
+  	
+  	/* ==================================================
+  	   CHUNK: Selected Values Display
+  	   ================================================== */
+  	.selection-display {
+  		margin: 10px 0;
+  		padding: 10px;
+  		border: 1px solid #ddd;
+  		border-radius: 4px;
+  		min-height: 30px;
+  	}
+  	
+  	.selected-value {
+  		display: inline-block;
+  		margin-right: 10px;
+  		padding: 5px 10px;
+  		border-radius: 3px;
+  		font-weight: bold;
+  		color: white;
+  		position: relative;
+  	}
+  	
+  	.selected-value .remove-btn {
+  		visibility: hidden;
+  		position: absolute;
+  		top: -10px;
+  		right: -10px;
+  		background-color: #f44336;
+  		color: white;
+  		border-radius: 50%;
+  		width: 22px;
+  		height: 22px;
+  		font-size: 16px;
+  		line-height: 20px;
+  		text-align: center;
+  		cursor: pointer;
+  		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  	}
+  	
+  	.selected-value:hover .remove-btn {
+  		visibility: visible;
+  	}
+  	
+  	/* ==================================================
+  	   CHUNK: Configuration Panels
+  	   ================================================== */
+  	/* Common configuration panel styles */
+  	.config-display,
+  	.config-panel {
+  		margin-top: 20px;
+  		border: 1px solid #ddd;
+  		border-radius: 4px;
+  		overflow: hidden;
+  	}
+  	
+  	.config-header {
+  		background-color: #f1f1f1;
+  		padding: 10px 15px;
+  		cursor: pointer;
+  		display: flex;
+  		justify-content: space-between;
+  		align-items: center;
+  	}
+  	
+  	.config-header h3 {
+  		margin: 0;
+  		font-size: 16px;
+  	}
+  	
+  	.config-content {
+  		padding: 15px;
+  		display: flex;
+  		flex-wrap: wrap;
+  		gap: 20px;
+  	}
+  	
+  	.config-section {
+  		flex: 1;
+  		min-width: 300px;
+  		padding: 15px;
+  		border: 1px solid #ddd;
+  		border-radius: 4px;
+  	}
+  	
+  	.config-section h4 {
+  		margin-top: 0;
+  		margin-bottom: 15px;
+  		padding-bottom: 8px;
+  		border-bottom: 1px solid #eee;
+  	}
+  	
+  	.collapse-icon {
+  		transition: transform 0.3s;
+  	}
+  	
+  	.collapse-icon.rotated {
+  		transform: rotate(-90deg);
+  	}
+  	
+  	/* Data Configuration Panel specific styles */
+  	.config-panel {
+  		margin-bottom: 20px;
+  	}
+  	
+  	.config-panel .control-label {
+  		width: 120px;
+  	}
+  	
+  	.config-panel .control-input input[type="text"] {
+  		width: 100%;
+  	}
+  	
+  	.config-panel .apply-button {
+  		margin-top: 10px;
+  	}
+  	
+  	/* ==================================================
+  	   CHUNK: URL Section
+  	   ================================================== */
+  	.url-section {
+  		margin-top: 20px;
+  		padding: 15px;
+  		border: 1px solid #ddd;
+  		border-radius: 4px;
+  	}
+  	
+  	.url-section input {
+  		width: 100%;
+  		margin-bottom: 10px;
+  	}
+  	
+  	.generated-links {
+  		margin-top: 10px;
+  	}
+  	
+  	.generated-link {
+  		display: block;
+  		margin-bottom: 5px;
+  		color: #2196F3;
+  		text-decoration: none;
+  	}
+  	
+  	.generated-link:hover {
+  		text-decoration: underline;
+  	}
+  	
+  	/* ==================================================
+  	   CHUNK: Loading and Progress Indicators
+  	   ================================================== */
+  	@keyframes spin {
+  		0% {
+  			transform: rotate(0deg);
+  		}
+  	
+  		100% {
+  			transform: rotate(360deg);
+  		}
+  	}
+  	
+  	/* Main loading overlay */
+  	.loading-overlay {
+  		position: absolute;
+  		top: 0;
+  		left: 0;
+  		right: 0;
+  		bottom: 0;
+  		background-color: rgba(255, 255, 255, 0.9);
+  		display: flex;
+  		flex-direction: column;
+  		justify-content: center;
+  		align-items: center;
+  		z-index: 10;
+  		padding: 20px;
+  		border-radius: 8px;
+  		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  		max-width: 80%;
+  	}
+  	
+  	.loading-spinner {
+  		border: 4px solid rgba(0, 0, 0, 0.1);
+  		border-radius: 50%;
+  		border-top: 4px solid #3498db;
+  		width: 40px;
+  		height: 40px;
+  		animation: spin 1s linear infinite;
+  		margin-bottom: 15px;
+  	}
+  	
+  	/* Progress bar */
+  	.loading-progress {
+  		width: 300px;
+  		background-color: #f1f1f1;
+  		border-radius: 4px;
+  		margin: 15px 0;
+  		display: flex;
+  		align-items: center;
+  	}
+  	
+  	.loading-progress-bar {
+  		height: 15px;
+  		border-radius: 4px;
+  		background-color: #3498db;
+  		transition: width 0.3s ease;
+  	}
+  	
+  	.loading-progress-percentage {
+  		margin-left: 8px;
+  		font-size: 14px;
+  		color: #3498db;
+  	}
+  	
+  	/* Processing indicator */
+  	.processing-indicator {
+  		position: absolute;
+  		bottom: 20px;
+  		right: 20px;
+  		background-color: rgba(255, 255, 255, 0.9);
+  		padding: 10px;
+  		border-radius: 4px;
+  		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  		display: flex;
+  		align-items: center;
+  		gap: 10px;
+  		z-index: 5;
+  		border-left: 4px solid #f39c12;
+  	}
+  	
+  	/* Updating indicator */
+  	.updating-indicator {
+  		position: absolute;
+  		top: 20px;
+  		right: 20px;
+  		background-color: rgba(255, 255, 255, 0.9);
+  		padding: 10px;
+  		border-radius: 4px;
+  		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  		display: flex;
+  		align-items: center;
+  		gap: 10px;
+  		z-index: 5;
+  		border-left: 4px solid #3498db;
+  	}
+  	
+  	/* Mini spinner for indicators */
+  	.mini-spinner {
+  		border: 3px solid rgba(0, 0, 0, 0.1);
+  		border-radius: 50%;
+  		border-top: 3px solid #3498db;
+  		width: 20px;
+  		height: 20px;
+  		animation: spin 1s linear infinite;
+  	}
+  	
+  	/* ===================================================
+  	   CHUNK: config buttons
+  	   ================================================== */
+  	
+  	.column-control {
+  		display: flex;
+  		align-items: center;
+  		gap: 8px;
+  		margin-bottom: 10px;
+  		flex-wrap: wrap;
+  	}
+  	
+  	@media (max-width: 768px) {
+  		.column-control {
+  			flex-direction: column;
+  			align-items: flex-start;
+  		}
+  	
+  		.column-control .combo-select {
+  			width: 100%;
+  		}
+  	
+  		.column-control .button-group {
+  			display: flex;
+  			gap: 5px;
+  			margin-top: 5px;
+  		}
+  	}
+  	
+  	/* ==================================================
+  	   CHUNK: Help Button and Modal
+  	   ================================================== */
+  	.help-container {
+  		position: absolute;
+  		top: 20px;
+  		right: 20px;
+  		z-index: 100;
+  	}
+  	
+  	.help-button {
+  		width: 32px;
+  		height: 32px;
+  		border-radius: 50%;
+  		background-color: #2196F3;
+  		color: white;
+  		font-size: 18px;
+  		font-weight: bold;
+  		border: none;
+  		cursor: pointer;
+  		display: flex;
+  		align-items: center;
+  		justify-content: center;
+  		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  	}
+  	
+  	.help-button:hover {
+  		background-color: #0b7dda;
+  	}
+  	
+  	.help-modal {
+  		position: fixed;
+  		top: 0;
+  		left: 0;
+  		width: 100%;
+  		height: 100%;
+  		background-color: rgba(0, 0, 0, 0.5);
+  		display: flex;
+  		align-items: center;
+  		justify-content: center;
+  		z-index: 1000;
+  	}
+  	
+  	.help-modal-content {
+  		background-color: white;
+  		border-radius: 8px;
+  		width: 80%;
+  		max-width: 800px;
+  		max-height: 90vh;
+  		display: flex;
+  		flex-direction: column;
+  		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  	}
+  	
+  	.help-modal-header {
+  		display: flex;
+  		justify-content: space-between;
+  		align-items: center;
+  		padding: 15px 20px;
+  		border-bottom: 1px solid #eee;
+  	}
+  	
+  	.help-modal-header h2 {
+  		margin: 0;
+  		color: #333;
+  	}
+  	
+  	.help-close-button {
+  		font-size: 28px;
+  		font-weight: bold;
+  		cursor: pointer;
+  		color: #aaa;
+  	}
+  	
+  	.help-close-button:hover {
+  		color: #333;
+  	}
+  	
+  	.help-modal-body {
+  		padding: 20px;
+  		overflow-y: auto;
+  		max-height: calc(90vh - 70px);
+  	}
+  	
+  	.help-section {
+  		margin-bottom: 25px;
+  	}
+  	
+  	.help-section h3 {
+  		margin-top: 0;
+  		margin-bottom: 10px;
+  		color: #2196F3;
+  		border-bottom: 1px solid #eee;
+  		padding-bottom: 5px;
+  	}
+  	
+  	.help-section ul {
+  		margin: 0;
+  		padding-left: 20px;
+  	}
+  	
+  	.help-section li {
+  		margin-bottom: 8px;
+  	}
+  	
+  	.help-section ul ul {
+  		margin-top: 5px;
+  	}
+  	
+  	@media (max-width: 600px) {
+  		.help-modal-content {
+  			width: 95%;
+  		}
+  	
+  		.help-section li {
+  			margin-bottom: 12px;
+  		}
+  	}
+  </style>
+  <!-- end 'style.css' -->
+ </head>
+ <body>
   <div id="app">
-    <h1>{{ title }}</h1>
-    <!-- Add this after the <h1>{{ title }}</h1> line (approximately line 25) -->
-    <div class="help-container">
-      <button id="help-button" class="help-button" @click="toggleHelpMenu">?</button>
-      <!-- Help Modal -->
-      <div class="help-modal" v-show="showHelpMenu">
-        <div class="help-modal-content">
-          <div class="help-modal-header">
-            <h2>Help - How to Use This Tool</h2>
-            <span class="help-close-button" @click="toggleHelpMenu">&times;</span>
-          </div>
-          <div class="help-modal-body">
-            <div class="help-section">
-              <h3>Basic Navigation</h3>
-              <ul>
-                <li><strong>Rotate the plot:</strong> Click and drag (if not over a point)</li>
-                <li><strong>Zoom:</strong> Scroll wheel or pinch gesture</li>
-                <li><strong>Pan:</strong> Right-click and drag (if not over a point)</li>
-                <li><strong>View details:</strong> Hover over points</li>
-              </ul>
-            </div>
-            <div class="help-section">
-              <h3>Data Selection and Visualization</h3>
-              <ul>
-                <li><strong>Select points:</strong> Click on points to select by category</li>
-                <li><strong>Copy point data:</strong> Right-click on a point</li>
-                <li><strong>Change color grouping:</strong> Use "Default color by" dropdown</li>
-                <li><strong>Change selection grouping:</strong> Use "Select by" dropdown</li>
-                <li><strong>Clear selection:</strong> Click "Clear Selection" button</li>
-                <li><strong>Change colors:</strong> Click "Regenerate Colors" button</li>
-              </ul>
-            </div>
-            <div class="help-section">
-              <h3>Visualization Controls</h3>
-              <ul>
-                <li><strong>Change 3D axes:</strong> Use X-Axis, Y-Axis, Z-Axis dropdowns to select different dimensions</li>
-                <li><strong>Adjust appearance:</strong> Use "Plot Configuration" panel to change point sizes and opacity</li>
-                <li><strong>Link to current view:</strong> Copy your current url</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+   <h1>
+    {{ title }}
+   </h1>
+   <!-- Add this after the <h1>{{ title }}</h1> line (approximately line 25) -->
+   <div class="help-container">
+    <button @click="toggleHelpMenu" class="help-button" id="help-button">
+     ?
+    </button>
+    <!-- Help Modal -->
+    <div class="help-modal" v-show="showHelpMenu">
+     <div class="help-modal-content">
+      <div class="help-modal-header">
+       <h2>
+        Help - How to Use This Tool
+       </h2>
+       <span @click="toggleHelpMenu" class="help-close-button">
+        ×
+       </span>
       </div>
+      <div class="help-modal-body">
+       <div class="help-section">
+        <h3>
+         Basic Navigation
+        </h3>
+        <ul>
+         <li>
+          <strong>
+           Rotate the plot:
+          </strong>
+          Click and drag (if not over a point)
+         </li>
+         <li>
+          <strong>
+           Zoom:
+          </strong>
+          Scroll wheel or pinch gesture
+         </li>
+         <li>
+          <strong>
+           Pan:
+          </strong>
+          Right-click and drag (if not over a point)
+         </li>
+         <li>
+          <strong>
+           View details:
+          </strong>
+          Hover over points
+         </li>
+        </ul>
+       </div>
+       <div class="help-section">
+        <h3>
+         Data Selection and Visualization
+        </h3>
+        <ul>
+         <li>
+          <strong>
+           Select points:
+          </strong>
+          Click on points to select by category
+         </li>
+         <li>
+          <strong>
+           Copy point data:
+          </strong>
+          Right-click on a point
+         </li>
+         <li>
+          <strong>
+           Change color grouping:
+          </strong>
+          Use "Default color by" dropdown
+         </li>
+         <li>
+          <strong>
+           Change selection grouping:
+          </strong>
+          Use "Select by" dropdown
+         </li>
+         <li>
+          <strong>
+           Clear selection:
+          </strong>
+          Click "Clear Selection" button
+         </li>
+         <li>
+          <strong>
+           Change colors:
+          </strong>
+          Click "Regenerate Colors" button
+         </li>
+        </ul>
+       </div>
+       <div class="help-section">
+        <h3>
+         Visualization Controls
+        </h3>
+        <ul>
+         <li>
+          <strong>
+           Change 3D axes:
+          </strong>
+          Use X-Axis, Y-Axis, Z-Axis dropdowns to select different dimensions
+         </li>
+         <li>
+          <strong>
+           Adjust appearance:
+          </strong>
+          Use "Plot Configuration" panel to change point sizes and opacity
+         </li>
+         <li>
+          <strong>
+           Link to current view:
+          </strong>
+          Copy your current url
+         </li>
+        </ul>
+       </div>
+      </div>
+     </div>
     </div>
-    <!-- main controls -->
-    <div class="controls">
-      <div class="control-group">
-        <button @click="clearSelection">Clear Selection</button>
-        <button class="secondary" @click="regenerateColors">Regenerate Colors</button>
-      </div>
-      <div class="status-message">{{ statusMessage }}</div>
+   </div>
+   <!-- main controls -->
+   <div class="controls">
+    <div class="control-group">
+     <button @click="clearSelection">
+      Clear Selection
+     </button>
+     <button @click="regenerateColors" class="secondary">
+      Regenerate Colors
+     </button>
     </div>
-    <!-- Column Selection Controls -->
-    <div class="column-controls">
-      <div class="column-control">
-        <label>Default color by:</label>
-        <div class="combo-select">
-          <input type="text" v-model="pendingColorByColumn" @focus="showColorDropdown = true" @blur="hideColorDropdownDelayed" placeholder="Select column" />
-          <div class="dropdown" v-if="showColorDropdown">
-            <div v-for="column in availableColumns" class="dropdown-item" @mousedown.prevent="selectColorByColumn(column)"> {{ column }} </div>
-          </div>
-        </div>
-        <button class="apply-button" @click="applyColorByColumn">Apply</button>
-      </div>
-      <div class="column-control">
-        <label>Select by:</label>
-        <div class="combo-select">
-          <input type="text" v-model="pendingSelectionColumn" @focus="showSelectionDropdown = true" @blur="hideSelectionDropdownDelayed" placeholder="Select column" />
-          <div class="dropdown" v-if="showSelectionDropdown">
-            <div v-for="column in availableColumns" class="dropdown-item" @mousedown.prevent="selectSelectionColumn(column)"> {{ column }} </div>
-          </div>
-        </div>
-        <button class="apply-button" @click="applySelectionColumn">Apply</button>
-      </div>
+    <div class="status-message">
+     {{ statusMessage }}
     </div>
-    <!-- Axis Selection -->
-    <div class="axis-controls">
-      <div v-for="(axis, axisName) in {x: 'X', y: 'Y', z: 'Z'}" class="axis-control">
-        <label>{{ axisName }}-Axis:</label>
-        <select v-model="pcaAxes[axis.toLowerCase()]" @change="updatePlotAxes">
-          <option v-for="(_, index) in availablePcaAxes" :value="index"> {{ pcaColumnNames && pcaColumnNames.length > index ? pcaColumnNames[index] : 'PC' + index }} </option>
-        </select>
+   </div>
+   <!-- Column Selection Controls -->
+   <div class="column-controls">
+    <div class="column-control">
+     <label>
+      Default color by:
+     </label>
+     <div class="combo-select">
+      <input @blur="hideColorDropdownDelayed" @focus="showColorDropdown = true" placeholder="Select column" type="text" v-model="pendingColorByColumn"/>
+      <div class="dropdown" v-if="showColorDropdown">
+       <div @mousedown.prevent="selectColorByColumn(column)" class="dropdown-item" v-for="column in availableColumns">
+        {{ column }}
+       </div>
       </div>
+     </div>
+     <button @click="applyColorByColumn" class="apply-button">
+      Apply
+     </button>
     </div>
-    <div id="plot-container" class="plot-container" ref="plotContainer">
-      <!-- Loading overlay -->
-      <div v-if="isLoading" class="loading-overlay">
-        <div class="loading-spinner"></div>
-        <h3>{{ loadingMessage }}</h3>
-        <p>{{ loadingDetail }}</p>
-        <div v-if="loadingProgress" class="loading-progress">
-          <div class="loading-progress-bar" :style="{ width: loadingProgressPercent + '%' }"></div>
-          <span class="loading-progress-percentage">{{ loadingProgressPercent }}%</span>
-        </div>
+    <div class="column-control">
+     <label>
+      Select by:
+     </label>
+     <div class="combo-select">
+      <input @blur="hideSelectionDropdownDelayed" @focus="showSelectionDropdown = true" placeholder="Select column" type="text" v-model="pendingSelectionColumn"/>
+      <div class="dropdown" v-if="showSelectionDropdown">
+       <div @mousedown.prevent="selectSelectionColumn(column)" class="dropdown-item" v-for="column in availableColumns">
+        {{ column }}
+       </div>
       </div>
-      <!-- Processing selection indicator -->
-      <div v-if="processingSelection" class="processing-indicator">
-        <div class="mini-spinner"></div>
-        <span>Processing selection...</span>
-      </div>
-      <!-- Plot updating indicator -->
-      <div v-if="isUpdatingPlot && !processingSelection" class="updating-indicator">
-        <div class="mini-spinner"></div>
-        <span>Updating plot...</span>
-      </div>
+     </div>
+     <button @click="applySelectionColumn" class="apply-button">
+      Apply
+     </button>
     </div>
-    <!-- Configuration Panel -->
-    <div class="config-panel">
-      <div class="config-header" @click="toggleConfigPanel">
-        <h3>Data Configuration</h3>
-        <span class="collapse-icon" :class="{ rotated: !showConfigPanel }">▼</span>
-      </div>
-      <div class="config-content" v-show="showConfigPanel">
-        <div class="control-row">
-          <div class="control-label">File Path:</div>
-          <div class="control-input">
-            <input type="text" v-model="dataConfig.filePath" placeholder="Path to JSONL file">
-          </div>
-        </div>
-        <div class="control-row">
-          <div class="control-label">Numerical Prefix:</div>
-          <div class="control-input">
-            <input type="text" v-model="dataConfig.numericalPrefix" placeholder="Prefix for numerical columns (e.g., pc.)">
-          </div>
-        </div>
-        <div class="control-row">
-          <button @click="applyConfigChanges" class="apply-button">Apply Configuration</button>
-        </div>
-      </div>
+   </div>
+   <!-- Axis Selection -->
+   <div class="axis-controls">
+    <div class="axis-control" v-for="(axis, axisName) in {x: 'X', y: 'Y', z: 'Z'}">
+     <label>
+      {{ axisName }}-Axis:
+     </label>
+     <select @change="updatePlotAxes" v-model="pcaAxes[axis.toLowerCase()]">
+      <option :value="index" v-for="(_, index) in availablePcaAxes">
+       {{ pcaColumnNames &amp;&amp; pcaColumnNames.length &gt; index ? pcaColumnNames[index] : 'PC' + index }}
+      </option>
+     </select>
     </div>
+   </div>
+   <div class="plot-container" id="plot-container" ref="plotContainer">
+    <!-- Loading overlay -->
+    <div class="loading-overlay" v-if="isLoading">
+     <div class="loading-spinner">
+     </div>
+     <h3>
+      {{ loadingMessage }}
+     </h3>
+     <p>
+      {{ loadingDetail }}
+     </p>
+     <div class="loading-progress" v-if="loadingProgress">
+      <div :style="{ width: loadingProgressPercent + '%' }" class="loading-progress-bar">
+      </div>
+      <span class="loading-progress-percentage">
+       {{ loadingProgressPercent }}%
+      </span>
+     </div>
+    </div>
+    <!-- Processing selection indicator -->
+    <div class="processing-indicator" v-if="processingSelection">
+     <div class="mini-spinner">
+     </div>
+     <span>
+      Processing selection...
+     </span>
+    </div>
+    <!-- Plot updating indicator -->
+    <div class="updating-indicator" v-if="isUpdatingPlot &amp;&amp; !processingSelection">
+     <div class="mini-spinner">
+     </div>
+     <span>
+      Updating plot...
+     </span>
+    </div>
+   </div>
+   <!-- Configuration Panel -->
+   <div class="config-panel">
+    <div @click="toggleConfigPanel" class="config-header">
+     <h3>
+      Data Configuration
+     </h3>
+     <span :class="{ rotated: !showConfigPanel }" class="collapse-icon">
+      ▼
+     </span>
+    </div>
+    <div class="config-content" v-show="showConfigPanel">
+     <div class="control-row">
+      <div class="control-label">
+       File Path:
+      </div>
+      <div class="control-input">
+       <input placeholder="Path to JSONL file" type="text" v-model="dataConfig.filePath"/>
+      </div>
+     </div>
+     <div class="control-row">
+      <div class="control-label">
+       Numerical Prefix:
+      </div>
+      <div class="control-input">
+       <input placeholder="Prefix for numerical columns (e.g., pc.)" type="text" v-model="dataConfig.numericalPrefix"/>
+      </div>
+     </div>
+     <div class="control-row">
+      <button @click="applyConfigChanges" class="apply-button">
+       Apply Configuration
+      </button>
+     </div>
+    </div>
+   </div>
+   <div>
+    <h3>
+     Selected Values:
+    </h3>
+    <div class="selection-display">
+     <template v-if="selectedValues.length === 0">
+      None
+     </template>
+     <span :key="val" :style="{ backgroundColor: getSelectionColor(i) }" class="selected-value" v-for="(val, i) in selectedValues">
+      {{ val }}
+      <div @click="removeSelectedValue(val)" class="remove-btn" title="Remove">
+       ×
+      </div>
+     </span>
+    </div>
+   </div>
+   <div class="config-display">
+    <div @click="toggleConfigCollapse" class="config-header">
+     <h3>
+      Plot Configuration
+     </h3>
+     <span :class="{ rotated: configCollapsed }" class="collapse-icon">
+      ▼
+     </span>
+    </div>
+    <div class="config-content" v-show="!configCollapsed">
+     <div class="config-section">
+      <h4>
+       Non-selected Points
+      </h4>
+      <div class="control-row">
+       <div class="control-label">
+        Opacity:
+       </div>
+       <div class="control-input">
+        <input @change="updatePlot" max="1" min="0" step="0.01" type="range" v-model.number="nonSelectedOpacity"/>
+        <input @change="updatePlot" max="1" min="0" step="0.01" type="number" v-model.number="nonSelectedOpacity"/>
+       </div>
+      </div>
+      <div class="control-row">
+       <div class="control-label">
+        Size:
+       </div>
+       <div class="control-input">
+        <input @change="updatePlot" max="10" min="0.5" step="0.5" type="range" v-model.number="nonSelectedSize"/>
+        <input @change="updatePlot" max="10" min="0.5" step="0.5" type="number" v-model.number="nonSelectedSize"/>
+       </div>
+      </div>
+      <div class="control-row">
+       <div class="control-label">
+        Color:
+       </div>
+       <div class="control-input">
+        <input @change="updatePlot" type="color" v-model="nonSelectedColor"/>
+       </div>
+      </div>
+     </div>
+     <div class="config-section">
+      <h4>
+       Selected Points
+      </h4>
+      <div class="control-row">
+       <div class="control-label">
+        Opacity:
+       </div>
+       <div class="control-input">
+        <input @change="updatePlot" max="1" min="0" step="0.01" type="range" v-model.number="selectedOpacity"/>
+        <input @change="updatePlot" max="1" min="0" step="0.01" type="number" v-model.number="selectedOpacity"/>
+       </div>
+      </div>
+      <div class="control-row">
+       <div class="control-label">
+        Size:
+       </div>
+       <div class="control-input">
+        <input @change="updatePlot" max="10" min="0.5" step="0.5" type="range" v-model.number="selectedSize"/>
+        <input @change="updatePlot" max="10" min="0.5" step="0.5" type="number" v-model.number="selectedSize"/>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+   <div class="url-section">
+    <h3>
+     Generated Link:
+    </h3>
     <div>
-      <h3>Selected Values:</h3>
-      <div class="selection-display">
-        <template v-if="selectedValues.length === 0">None</template>
-        <span v-for="(val, i) in selectedValues" :key="val" class="selected-value" :style="{ backgroundColor: getSelectionColor(i) }"> {{ val }} <div class="remove-btn" @click="removeSelectedValue(val)" title="Remove">×</div>
-        </span>
+     <input placeholder="Enter base URL" type="text" v-model="baseUrl">
+      <div class="generated-links" v-if="selectedValues.length &gt; 0">
+       <h4>
+        Combined Link:
+       </h4>
+       <a :href="combinedUrl" class="generated-link" target="_blank">
+        {{ combinedUrl }}
+       </a>
       </div>
+     </input>
     </div>
-    <div class="config-display">
-      <div class="config-header" @click="toggleConfigCollapse">
-        <h3>Plot Configuration</h3>
-        <span class="collapse-icon" :class="{ rotated: configCollapsed }">▼</span>
-      </div>
-      <div class="config-content" v-show="!configCollapsed">
-        <div class="config-section">
-          <h4>Non-selected Points</h4>
-          <div class="control-row">
-            <div class="control-label">Opacity:</div>
-            <div class="control-input">
-              <input type="range" min="0" max="1" step="0.01" v-model.number="nonSelectedOpacity" @change="updatePlot">
-              <input type="number" min="0" max="1" step="0.01" v-model.number="nonSelectedOpacity" @change="updatePlot">
-            </div>
-          </div>
-          <div class="control-row">
-            <div class="control-label">Size:</div>
-            <div class="control-input">
-              <input type="range" min="0.5" max="10" step="0.5" v-model.number="nonSelectedSize" @change="updatePlot">
-              <input type="number" min="0.5" max="10" step="0.5" v-model.number="nonSelectedSize" @change="updatePlot">
-            </div>
-          </div>
-          <div class="control-row">
-            <div class="control-label">Color:</div>
-            <div class="control-input">
-              <input type="color" v-model="nonSelectedColor" @change="updatePlot">
-            </div>
-          </div>
-        </div>
-        <div class="config-section">
-          <h4>Selected Points</h4>
-          <div class="control-row">
-            <div class="control-label">Opacity:</div>
-            <div class="control-input">
-              <input type="range" min="0" max="1" step="0.01" v-model.number="selectedOpacity" @change="updatePlot">
-              <input type="number" min="0" max="1" step="0.01" v-model.number="selectedOpacity" @change="updatePlot">
-            </div>
-          </div>
-          <div class="control-row">
-            <div class="control-label">Size:</div>
-            <div class="control-input">
-              <input type="range" min="0.5" max="10" step="0.5" v-model.number="selectedSize" @change="updatePlot">
-              <input type="number" min="0.5" max="10" step="0.5" v-model.number="selectedSize" @change="updatePlot">
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="url-section">
-      <h3>Generated Link:</h3>
-      <div>
-        <input type="text" v-model="baseUrl" placeholder="Enter base URL" />
-        <div class="generated-links" v-if="selectedValues.length > 0">
-          <h4>Combined Link:</h4>
-          <a :href="combinedUrl" target="_blank" class="generated-link"> {{ combinedUrl }} </a>
-        </div>
-      </div>
-    </div>
+   </div>
   </div>
   <script>
-    // Mount the app to the container
+   // Mount the app to the container
     app.mount('#app');
   </script>
-</body>
-
+ </body>
 </html>
