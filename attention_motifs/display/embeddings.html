@@ -8,7 +8,8 @@
   <!-- Load Plotly.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.2/plotly.min.js"></script>
   <!-- Load utilities -->
-  <script>
+  <!-- begin 'array.js' -->
+<script>
 // ------------------------------------------------------------
 // this file has been modified from original code at:
 // https://github.com/aplbrain/npyjs
@@ -380,7 +381,9 @@ class NDArray {
 	}
 }
 </script>
-  <script>
+<!-- end 'array.js' -->
+  <!-- begin 'dataframe.js' -->
+<script>
 class DataFrame {
 	/**
 	 * Creates a DataFrame from a list of row objects
@@ -594,7 +597,9 @@ class DataFrame {
 }
 
 </script>
-  <script>
+<!-- end 'dataframe.js' -->
+  <!-- begin 'colorutil.js' -->
+<script>
 /**
  * Converts HSL color values to hexadecimal color representation
  * @param {number} h - Hue value (0-360)
@@ -656,7 +661,9 @@ function generateDistinctColors(count) {
 	return colors;
 }
 </script>
-  <script>
+<!-- end 'colorutil.js' -->
+  <!-- begin 'logger.js' -->
+<script>
 /**
  * Simple logging utility for the application
  */
@@ -760,7 +767,9 @@ const loading = {
 	}
 };
 </script>
-  <script>
+<!-- end 'logger.js' -->
+  <!-- begin 'plotutil.js' -->
+<script>
 /**
  * Creates a layout configuration for a Plotly 3D scatter plot
  * @param {string} title - Title of the plot
@@ -1119,7 +1128,9 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 	return traces;
 }
 </script>
-  <script>
+<!-- end 'plotutil.js' -->
+  <!-- begin 'dataloader.js' -->
+<script>
 /**
  * Functions for loading and processing data for the PCA visualization
  */
@@ -1482,7 +1493,9 @@ function updateUrlWithConfig(dataConfig, urlParams, appState = {}) {
     return url.toString().split('?')[0] + '?';
 }
 </script>
-  <script>
+<!-- end 'dataloader.js' -->
+  <!-- begin 'clipboard.js' -->
+<script>
 function formatHoverDataForClipboard(hoverData, selectionColumn) {
 	// Extract the hover text from data
 	if (!hoverData?.points?.length) return 'No point data available';
@@ -1516,7 +1529,9 @@ function copyHoverDataToClipboard(
 	}
 }
 </script>
-  <script>
+<!-- end 'clipboard.js' -->
+  <!-- begin 'pl-interface.js' -->
+<script>
 function computeCombinedUrl(baseUrl, selectedValues, selectionColumn) {
 	if (!selectedValues?.length) return baseUrl;
 
@@ -1544,8 +1559,10 @@ function computeCombinedUrl(baseUrl, selectedValues, selectionColumn) {
 	return baseUrlObj.toString();
 }
 </script>
+<!-- end 'pl-interface.js' -->
   <!-- load main app -->
-  <script>
+  <!-- begin 'app.js' -->
+<script>
 // Create Vue app
 const app = Vue.createApp({
 	// ==================================================
@@ -2288,8 +2305,10 @@ const app = Vue.createApp({
 	}
 });
 </script>
+<!-- end 'app.js' -->
   <!-- Load styles -->
-  <style>
+  <!-- begin 'style.css' -->
+<style>
 /* ==================================================
    CHUNK: Base Styles
    ================================================== */
@@ -2895,6 +2914,7 @@ input[type="number"] {
 	}
 }
 </style>
+<!-- end 'style.css' -->
 </head>
 
 <body>

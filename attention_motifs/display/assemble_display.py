@@ -38,7 +38,7 @@ def inline_html_assets(
 		)
 		# read the content and create the replacement
 		content: str = (base_path / filename).read_text()
-		replacement: str = f"<{tag_type}>\n{content}\n</{tag_type}>"
+		replacement: str = f"<!-- begin '{filename}' -->\n<{tag_type}>\n{content}\n</{tag_type}>\n<!-- end '{filename}' -->"
 		# perform the replacement
 		html = html.replace(pattern, replacement)
 
