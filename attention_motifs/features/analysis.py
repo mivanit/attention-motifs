@@ -18,6 +18,7 @@ import matplotlib.gridspec as gridspec
 # muutils
 from muutils.tensor_info import array_summary
 from muutils.json_serialize import json_serialize
+from tqdm import tqdm
 
 
 def null_stats(df: pl.DataFrame) -> pl.DataFrame:
@@ -553,7 +554,7 @@ class DistanceTensorResult:
 		# build tensor prompt‑by‑prompt
 		D: Float[np.ndarray, "h h p"] = np.full((h, h, p), np.nan, dtype=float)
 
-		for k, prompt in enumerate(prompt_values):
+		for k, prompt in tqdm(enumerate(prompt_values), desc="prompts", total=p):
 			existing_cls = [cls for cls in cls_values if (cls, prompt) in vectors]
 			idxs = [cls_to_i[cls] for cls in existing_cls]
 			if len(idxs) < 2:  # 0 or 1 row → nothing to compare
