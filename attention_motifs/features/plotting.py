@@ -149,7 +149,6 @@ def apply_pca(
 		ax2.legend()
 
 		plt.tight_layout()
-		plt.show()
 
 		# Print summary
 		print(f"Number of components: {n_components}")
@@ -172,7 +171,8 @@ def plot_embedding(
 	alpha: float | dict[str, float] = 0.9,
 	marker_size: int | dict[str, int] = 1,
 	ax: plt.Axes | None = None,
-) -> None:
+	do_legend: bool = True,
+) -> list:
 	"""Scatter plot of 2D embedding with points colored by label.
 
 	# Parameters:
@@ -241,12 +241,15 @@ def plot_embedding(
 	ax.set_ylabel(f"Dim {dims[1]}")
 
 	# Create legend with large dots
-	legend = plt.legend(
-		handles=handles,
-		loc="upper left",
-		bbox_to_anchor=(1, 1),
-		title="Labels",
-	)
+	if do_legend:
+		plt.legend(
+			handles=handles,
+			loc="upper left",
+			bbox_to_anchor=(1, 1),
+			title="Labels",
+		)
+
+	return handles
 
 
 def plot_embedding_kde(embedding: np.ndarray, labels: pl.Series, title: str) -> None:

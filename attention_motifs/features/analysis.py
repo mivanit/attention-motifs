@@ -315,6 +315,7 @@ def plot_importance_covariance(
 	tick_pad: int = 30,
 	importance_threshold: float | None = None,
 	fontsize: int = 8,
+	imp_legend_align: float = -0.3,
 ) -> tuple[list[str], np.ndarray]:
 	# ---------- pick feature sequence ------------------------------------
 	if feature_order is not None:
@@ -393,7 +394,7 @@ def plot_importance_covariance(
 		ax_imp.plot(np.arange(len(s)), s, "o", markersize=5, label=m)
 	ax_imp.legend(
 		loc="center left", 
-		bbox_to_anchor=(-0.3, 0.5),  # x,y in axes fraction units
+		bbox_to_anchor=(imp_legend_align, 0.5),  # x,y in axes fraction units
 		borderaxespad=0,
 	)
 	ax_imp.tick_params(axis="x", labelbottom=False)
@@ -416,7 +417,6 @@ def plot_importance_covariance(
 	# 	ax_hist.invert_yaxis()
 
 	plt.tight_layout()
-	plt.show()
 
 	return features, cov
 
