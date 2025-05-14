@@ -20,6 +20,15 @@ from muutils.tensor_info import array_summary
 from muutils.json_serialize import json_serialize
 from tqdm import tqdm
 
+def parse_cls(cls_: str) -> tuple[str, int, int]:
+	"""
+	Split ``{model}:L{layer}:H{head}`` into (model, layer, head).
+	"""
+	model_part, layer_part, head_part = cls_.split(":")
+	layer = int(layer_part[1:])  # drop leading "L"
+	head = int(head_part[1:])  # drop leading "H"
+	return model_part, layer, head
+
 
 def null_stats(df: pl.DataFrame) -> pl.DataFrame:
 	"""Returns a dataframe with the count of missing values (NaN, null, etc.) for each column.
@@ -619,6 +628,134 @@ class DistanceTensorResult:
 		ax.set_ylabel("Density")
 
 		return ax
+
+	def plot_heatmap(
+		self,
+		*,
+		figsize: tuple[int, int] = (9, 9),
+		stripe_thickness: float = 0.018,
+		top_label_space: float = 0.04,
+		left_label_space: float = 0.08,
+		model_font: int = 8,     # ← pass size here (default a bit smaller)
+		layer_font: int = 7,     # kept but no longer used
+		major_grid_colour: str = "red",
+		minor_grid_colour: str = "red",
+		show: bool = True,
+	) -> plt.Figure:
+		"""
+		Draw the distance matrix with:
+
+		* rows / columns sorted by (model, layer, head);
+		* colour stripes encoding model (hue) + depth (lightness);
+		* model labels on both axes (no layer numbers);
+		* red grid (major at model boundaries).
+		"""
+		# ---------------- sort -------------------------------------------------
+		parsed_entries: list[tuple[str, int, int]] = [parse_cls(t) for t in self.cls_values]
+		sort_indices: list[int] = sorted(
+			range(len(self.cls_values)), key=lambda i: parsed_entries[i]
+		)
+		sorted_entries: list[tuple[str, int, int]] = [parsed_entries[i] for i in sort_indices]
+		distance_matrix: np.ndarray = self.mean_dists[np.ix_(sort_indices, sort_indices)]
+		size: int = len(sorted_entries)
+
+		# ---------------- colours ---------------------------------------------
+		models: list[str] = sorted({model for model, _, _ in sorted_entries})
+		model_rgb: dict[str, tuple[float, float, float]] = {
+			model: plt.cm.tab10(i)[:3] for i, model in enumerate(models)
+		}
+
+		max_layer_for_model: dict[str, int] = {}
+		for model, layer, _ in sorted_entries:
+			max_layer_for_model[model] = max(max_layer_for_model.get(model, -1), layer)
+
+		def entry_rgba(entry: tuple[str, int, int]) -> tuple[float, float, float, float]:
+			model, layer, _ = entry
+			base_rgb = np.asarray(model_rgb[model])
+			depth_scale = (
+				0.3 + 0.7 * (layer / max_layer_for_model[model])
+				if max_layer_for_model[model]
+				else 0.5
+			)
+			blended_rgb = base_rgb * depth_scale + (1.0 - depth_scale)
+			return (*blended_rgb, 1.0)
+
+		rgba_entries: list[tuple[float, float, float, float]] = [entry_rgba(e) for e in sorted_entries]
+		stripe_top: np.ndarray = np.array(rgba_entries).reshape(1, -1, 4)
+		stripe_left: np.ndarray = np.array(rgba_entries).reshape(-1, 1, 4)  # ← no reverse
+
+		# ---------------- figure / main heat-map -------------------------------
+		figure, axis_main = plt.subplots(figsize=figsize)
+		heat_img = axis_main.matshow(distance_matrix)
+		axis_main.set_xticks([])
+		axis_main.set_yticks([])
+		axis_main.set_aspect("equal")
+
+		# ---------------- stripes ------------------------------------------------
+		axis_top = axis_main.inset_axes(
+			[0, 1.0 + top_label_space * 0.4, 1, stripe_thickness],
+			transform=axis_main.transAxes,
+			sharex=axis_main,
+		)
+		axis_top.imshow(stripe_top, aspect="auto", origin="upper")
+		axis_top.set_axis_off()
+
+		axis_left = axis_main.inset_axes(
+			[-stripe_thickness - left_label_space * 0.4, 0, stripe_thickness, 1],
+			transform=axis_main.transAxes,
+			sharey=axis_main,
+		)
+		axis_left.imshow(stripe_left, aspect="auto", origin="upper")
+		axis_left.set_axis_off()
+
+		# ---------------- model-label axes --------------------------------------
+		axis_top_labels = axis_main.inset_axes(
+			[0, 1.0 + stripe_thickness + top_label_space * 0.2, 1, top_label_space * 0.8],
+			transform=axis_main.transAxes,
+			sharex=axis_main,
+		)
+		axis_top_labels.set_axis_off()
+
+		axis_left_labels = axis_main.inset_axes(
+			[-stripe_thickness - left_label_space, 0, top_label_space * 0.8, 1],
+			transform=axis_main.transAxes,
+			sharey=axis_main,
+		)
+		axis_left_labels.set_axis_off()
+
+		# ---------------- spans & gridlines -------------------------------------
+		model_spans: dict[str, list[int]] = {}
+		for index, (model, layer, _) in enumerate(sorted_entries):
+			model_spans.setdefault(model, [index, index])[1] = index  # extend end
+
+		# boundaries
+		model_boundaries: list[float] = [
+			end + 0.5 for _, (_, end) in model_spans.items() if end + 1 < size
+		]
+
+		for boundary in model_boundaries:
+			# manual adjustment here, idk why it's needed
+			axis_main.axvline(boundary+2, color=major_grid_colour, lw=0.1, zorder=2)
+			axis_main.axhline(boundary, color=major_grid_colour, lw=0.1, zorder=2)
+
+		# ---------------- annotations (model names only) ------------------------
+		for model, (start, end) in model_spans.items():
+			center: float = (start + end) / 2
+
+			axis_top_labels.text(
+				center, 0.5, model, ha="center", va="center", fontsize=model_font
+			)
+			axis_left_labels.text(
+				0.5, center, model, ha="center", va="center", fontsize=model_font, rotation=90
+			)
+
+		# ---------------- colour-bar --------------------------------------------
+		colour_bar = figure.colorbar(heat_img, ax=axis_main, fraction=0.045, pad=0.03)
+		colour_bar.ax.set_ylabel("Mean distance", rotation=270, labelpad=13)
+
+		if show:
+			plt.show()
+		return figure
 
 
 def groups_by_covariance(
