@@ -27,6 +27,7 @@ dependencies = [
     "matplotlib>=3.8.0",
     "pillow>=11.0.0",
 	"dash>=3.0.1",
+	"beautifulsoup4",
     # jupyter
     "ipykernel>=6.29.5",
     "ipywidgets>=8.1.5",

@@ -30,6 +30,8 @@ beartype==0.14.1
     #   attention-motifs
     #   pattern-lens
     #   transformer-lens
+beautifulsoup4==4.13.4
+    # via attention-motifs
 better-abc==0.0.3
     # via transformer-lens
 blinker==1.9.0
@@ -478,6 +480,8 @@ six==1.17.0
     #   tensorboard
 smmap==5.0.2
     # via gitdb
+soupsieve==2.7
+    # via beautifulsoup4
 stack-data==0.6.3
     # via ipython
 sympy==1.13.1
@@ -546,6 +550,7 @@ typeguard==4.4.2
 typing-extensions==4.12.2
     # via
     #   attention-motifs
+    #   beautifulsoup4
     #   dash
     #   huggingface-hub
     #   ipython
