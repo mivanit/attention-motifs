@@ -84,6 +84,7 @@ const app = Vue.createApp({
 				nonSelectedSize: 'nonSelSize'
 			},
 			showHelpMenu: false, // Control help menu visibility
+			hoverColumns: ['activation.cls', 'activation.prompt'], // Columns to show in hover text
 		};
 	},
 	// ==================================================
@@ -342,7 +343,8 @@ const app = Vue.createApp({
 					selectedOpacity: this.selectedOpacity,
 					// Add the selectionColumn so it's included in customdata
 					selectionColumn: this.selectionColumn,
-					useCache: this.useCustomdataCache
+					useCache: this.useCustomdataCache,
+					hoverColumns: this.hoverColumns,
 				}
 			);
 		},
@@ -366,7 +368,8 @@ const app = Vue.createApp({
 					getSelectionColor: this.getSelectionColor.bind(this), // Use the component's getSelectionColor method
 					// Add colorByColumn so it's included in customdata
 					colorByColumn: this.colorByColumn,
-					useCache: this.useCustomdataCache
+					useCache: this.useCustomdataCache,
+					hoverColumns: this.hoverColumns,
 				}
 			);
 		},
@@ -377,6 +380,7 @@ const app = Vue.createApp({
 			copyHoverDataToClipboard(
 				this.lastHoverData,
 				this.selectionColumn,
+				this.hoverColumns, // Pass hover columns configuration
 				(statusMsg) => { this.statusMessage = statusMsg; }
 			);
 		},

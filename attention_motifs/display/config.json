@@ -1,0 +1,13 @@
+{
+	"dataConfig": {
+		"filePath": "data/features/pca.jsonl",
+		"numericalPrefix": "pc.",
+		"defaultColorColumn": "activation.model",
+		"defaultSelectionColumn": "activation.cls"
+	},
+	"hoverColumns": [
+		"activation.cls",
+		"activation.prompt",
+		"activation.n_ctx"
+	]
+}

@@ -59,6 +59,14 @@ function applyConfigFromFile(vm, config) {
 			logger.log(`Applying config.${key} = ${JSON.stringify(configValue)}`);
 			vm[key] = configValue;
 		}
+		else if (key === 'hoverColumns' && Array.isArray(configValue)) {
+			// Replace the hover columns array
+			logger.log(`Applying config.hoverColumns = ${JSON.stringify(configValue)}`);
+			vm.hoverColumns = [...configValue];
+
+			// Clear customdata cache since hover columns changed
+			clearCustomdataCache();
+		}
 	});
 
 	// Sync pending values with their primary values

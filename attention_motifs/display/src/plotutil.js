@@ -144,11 +144,12 @@ const customdataCache = {
  * @param {boolean} useCache - Whether to use the cache
  * @returns {Array<Array>} - Array of customdata arrays for each point
  */
-function getCustomdata(plotData, indices, selectionColumn = null, useCache = true) {
+function getCustomdata(plotData, indices, selectionColumn = null, hoverColumns = ['activation.cls', 'activation.prompt'], useCache = true) {
 	// Only use cache if instructed and we have indices
 	if (useCache && indices && indices.length > 0) {
-		// Create a cache key based on indices and selection column
-		const cacheKey = `${selectionColumn || 'default'}_${indices[0]}_${indices.length}`;
+		// Create a cache key based on indices, selection column, and hover columns
+		const hoverColumnsKey = hoverColumns.join(',');
+		const cacheKey = `${selectionColumn || 'default'}_${hoverColumnsKey}_${indices[0]}_${indices.length}`;
 
 		// Try to get from cache first
 		const cachedData = customdataCache.get(cacheKey);
@@ -156,17 +157,14 @@ function getCustomdata(plotData, indices, selectionColumn = null, useCache = tru
 			return cachedData;
 		}
 
-		// Generate new data
-		const customdata = generateCustomdata(plotData, indices, selectionColumn);
-
-		// Store in cache for future use
+		// Generate new data and store in cache
+		const customdata = generateCustomdata(plotData, indices, selectionColumn, hoverColumns);
 		customdataCache.set(cacheKey, customdata);
-
 		return customdata;
 	}
 
 	// If not using cache, generate directly
-	return generateCustomdata(plotData, indices, selectionColumn);
+	return generateCustomdata(plotData, indices, selectionColumn, hoverColumns);
 }
 
 /**
