@@ -328,10 +328,11 @@ def plot_importance_covariance(
 	else:
 		# Fall back to importance-sorted order
 		scores_df = importance_df.sort(metrics[0], descending=descending).select(
-			"feature", *metrics,
+			"feature",
+			*metrics,
 		)
 		features = scores_df["feature"].to_list()
-	
+
 	if importance_threshold is not None:
 		# Filter features based on the importance threshold
 		scores_df = scores_df.filter(pl.col(metrics[0]) > importance_threshold)
@@ -393,7 +394,7 @@ def plot_importance_covariance(
 		s = scores_df[m].to_numpy()
 		ax_imp.plot(np.arange(len(s)), s, "o", markersize=5, label=m)
 	ax_imp.legend(
-		loc="center left", 
+		loc="center left",
 		bbox_to_anchor=(imp_legend_align, 0.5),  # x,y in axes fraction units
 		borderaxespad=0,
 	)
@@ -435,12 +436,14 @@ class DistanceTensorResult:
 		assert self.distances.shape[0] == n
 		assert self.distances.shape[1] == n
 		return n
-	
-	def match_cls(self, cls_filter: str|Callable[[str], bool]) -> "DistanceTensorResult":
+
+	def match_cls(
+		self, cls_filter: str | Callable[[str], bool]
+	) -> "DistanceTensorResult":
 		"""Return a new DistanceTensorResult with only the matching classes."""
 		cls_filter_func: Callable[[str], bool]
 		if isinstance(cls_filter, str):
-			cls_filter_func = lambda cls: cls.startswith(cls_filter) # noqa: E731
+			cls_filter_func = lambda cls: cls.startswith(cls_filter)  # noqa: E731
 		else:
 			cls_filter_func = cls_filter
 
@@ -448,7 +451,9 @@ class DistanceTensorResult:
 			i for i, cls in enumerate(self.cls_values) if cls_filter_func(cls)
 		]
 		matching_cls: list[str] = [self.cls_values[i] for i in matching_cls_idxs]
-		matching_dists: Float[np.ndarray, "h h p"] = self.distances[matching_cls_idxs, matching_cls_idxs]
+		matching_dists: Float[np.ndarray, "h h p"] = self.distances[
+			matching_cls_idxs, matching_cls_idxs
+		]
 		return DistanceTensorResult(
 			cls_values=matching_cls,
 			prompt_values=self.prompt_values,
