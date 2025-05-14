@@ -170,6 +170,8 @@ def plot_embedding(
 	title: str = "2D PCA Embedding",
 	alpha: float | dict[str, float] = 0.9,
 	marker_size: int | dict[str, int] = 1,
+	color_map: dict[str, str] | None = None,
+	unknown_color: str = "#bfbfbf",
 	ax: plt.Axes | None = None,
 	do_legend: bool = True,
 ) -> list:
@@ -184,7 +186,14 @@ def plot_embedding(
 	    Dimensions to plot (defaults to (0, 1))
 	 - `title : str`
 	    Plot title (defaults to "2D PCA Embedding")
+	 - `color_map : dict[str, str] | None`
+	    Optional mapping label → color; falls back to ``unknown_color``.
+	 - `unknown_color : str`
+	    Color used for any label *not* in ``color_map`` (gray by default).
 	"""
+	# Keep original default behaviour if no palette supplied
+	color_map = color_map or {}
+
 	if ax is None:
 		_, ax = plt.subplots(figsize=(10, 10))
 
@@ -194,43 +203,43 @@ def plot_embedding(
 	# Get unique labels for coloring
 	unique_labels = np.unique(label_values)
 
-	# Create colormap with enough colors
-	cmap = plt.cm.get_cmap("tab10" if len(unique_labels) <= 20 else "Set3")
-
 	# Store handles for legend
-	handles = []
+	handles: list[plt.Line2D] = []
 
-	# Plot each label group with a different color
-	for i, label in enumerate(unique_labels):
+	# ------------------------------------------------------------------
+	# Plot each label group, picking the requested colour if available.
+	# ------------------------------------------------------------------
+	for label in unique_labels:
 		mask = label_values == label
-		color = cmap(i)
-		if isinstance(alpha, dict):
-			alpha_value = alpha.get(label, alpha.get(None, 0.9))
-		else:
-			alpha_value = alpha
-		if isinstance(marker_size, dict):
-			marker_size_value = marker_size.get(label, marker_size.get(None, 1))
-		else:
-			marker_size_value = marker_size
+		# Explicit palette first, fallback to ``unknown_color``:
+		color = color_map.get(label, unknown_color)
 
-		# Main scatter plot (small points)
+		# Support per-label alpha / marker size like the original
+		alpha_value = alpha.get(label, alpha.get(None, 0.9)) if isinstance(alpha, dict) else alpha
+		size_value = (
+			marker_size.get(label, marker_size.get(None, 1))
+			if isinstance(marker_size, dict)
+			else marker_size
+		)
+
+		# Main scatter plot
 		ax.scatter(
 			embedding[mask, dims[0]],
 			embedding[mask, dims[1]],
 			c=[color],
 			alpha=alpha_value,
-			s=marker_size_value,
+			s=size_value,
 			edgecolors="none",
 		)
 
-		# Create a separate point for the legend (not displayed in the plot)
+		# Phantom point for the legend
 		handle = plt.Line2D(
 			[0],
 			[0],
 			marker="o",
 			color="w",
 			markerfacecolor=color,
-			markersize=10,  # Big marker size for legend
+			markersize=10,
 			label=str(label),
 		)
 		handles.append(handle)
@@ -242,14 +251,10 @@ def plot_embedding(
 
 	# Create legend with large dots
 	if do_legend:
-		plt.legend(
-			handles=handles,
-			loc="upper left",
-			bbox_to_anchor=(1, 1),
-			title="Labels",
-		)
+		plt.legend(handles=handles, loc="upper left", bbox_to_anchor=(1, 1), title="Labels")
 
 	return handles
+
 
 
 def plot_embedding_kde(embedding: np.ndarray, labels: pl.Series, title: str) -> None:
