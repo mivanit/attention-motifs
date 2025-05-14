@@ -20,6 +20,7 @@ from muutils.tensor_info import array_summary
 from muutils.json_serialize import json_serialize
 from tqdm import tqdm
 
+
 def parse_cls(cls_: str) -> tuple[str, int, int]:
 	"""
 	Split ``{model}:L{layer}:H{head}`` into (model, layer, head).
@@ -636,8 +637,8 @@ class DistanceTensorResult:
 		stripe_thickness: float = 0.018,
 		top_label_space: float = 0.04,
 		left_label_space: float = 0.08,
-		model_font: int = 8,     # ← pass size here (default a bit smaller)
-		layer_font: int = 7,     # kept but no longer used
+		model_font: int = 8,  # ← pass size here (default a bit smaller)
+		layer_font: int = 7,  # kept but no longer used
 		major_grid_colour: str = "red",
 		minor_grid_colour: str = "red",
 		show: bool = True,
@@ -651,12 +652,18 @@ class DistanceTensorResult:
 		* red grid (major at model boundaries).
 		"""
 		# ---------------- sort -------------------------------------------------
-		parsed_entries: list[tuple[str, int, int]] = [parse_cls(t) for t in self.cls_values]
+		parsed_entries: list[tuple[str, int, int]] = [
+			parse_cls(t) for t in self.cls_values
+		]
 		sort_indices: list[int] = sorted(
 			range(len(self.cls_values)), key=lambda i: parsed_entries[i]
 		)
-		sorted_entries: list[tuple[str, int, int]] = [parsed_entries[i] for i in sort_indices]
-		distance_matrix: np.ndarray = self.mean_dists[np.ix_(sort_indices, sort_indices)]
+		sorted_entries: list[tuple[str, int, int]] = [
+			parsed_entries[i] for i in sort_indices
+		]
+		distance_matrix: np.ndarray = self.mean_dists[
+			np.ix_(sort_indices, sort_indices)
+		]
 		size: int = len(sorted_entries)
 
 		# ---------------- colours ---------------------------------------------
@@ -669,7 +676,9 @@ class DistanceTensorResult:
 		for model, layer, _ in sorted_entries:
 			max_layer_for_model[model] = max(max_layer_for_model.get(model, -1), layer)
 
-		def entry_rgba(entry: tuple[str, int, int]) -> tuple[float, float, float, float]:
+		def entry_rgba(
+			entry: tuple[str, int, int],
+		) -> tuple[float, float, float, float]:
 			model, layer, _ = entry
 			base_rgb = np.asarray(model_rgb[model])
 			depth_scale = (
@@ -680,9 +689,13 @@ class DistanceTensorResult:
 			blended_rgb = base_rgb * depth_scale + (1.0 - depth_scale)
 			return (*blended_rgb, 1.0)
 
-		rgba_entries: list[tuple[float, float, float, float]] = [entry_rgba(e) for e in sorted_entries]
+		rgba_entries: list[tuple[float, float, float, float]] = [
+			entry_rgba(e) for e in sorted_entries
+		]
 		stripe_top: np.ndarray = np.array(rgba_entries).reshape(1, -1, 4)
-		stripe_left: np.ndarray = np.array(rgba_entries).reshape(-1, 1, 4)  # ← no reverse
+		stripe_left: np.ndarray = np.array(rgba_entries).reshape(
+			-1, 1, 4
+		)  # ← no reverse
 
 		# ---------------- figure / main heat-map -------------------------------
 		figure, axis_main = plt.subplots(figsize=figsize)
@@ -710,7 +723,12 @@ class DistanceTensorResult:
 
 		# ---------------- model-label axes --------------------------------------
 		axis_top_labels = axis_main.inset_axes(
-			[0, 1.0 + stripe_thickness + top_label_space * 0.2, 1, top_label_space * 0.8],
+			[
+				0,
+				1.0 + stripe_thickness + top_label_space * 0.2,
+				1,
+				top_label_space * 0.8,
+			],
 			transform=axis_main.transAxes,
 			sharex=axis_main,
 		)
@@ -735,7 +753,7 @@ class DistanceTensorResult:
 
 		for boundary in model_boundaries:
 			# manual adjustment here, idk why it's needed
-			axis_main.axvline(boundary+2, color=major_grid_colour, lw=0.1, zorder=2)
+			axis_main.axvline(boundary + 2, color=major_grid_colour, lw=0.1, zorder=2)
 			axis_main.axhline(boundary, color=major_grid_colour, lw=0.1, zorder=2)
 
 		# ---------------- annotations (model names only) ------------------------
@@ -746,7 +764,13 @@ class DistanceTensorResult:
 				center, 0.5, model, ha="center", va="center", fontsize=model_font
 			)
 			axis_left_labels.text(
-				0.5, center, model, ha="center", va="center", fontsize=model_font, rotation=90
+				0.5,
+				center,
+				model,
+				ha="center",
+				va="center",
+				fontsize=model_font,
+				rotation=90,
 			)
 
 		# ---------------- colour-bar --------------------------------------------
