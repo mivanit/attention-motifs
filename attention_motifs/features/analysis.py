@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from functools import cached_property
 import json
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Callable, Iterable, Sequence
 import math
 from collections import defaultdict
 from statistics import median
@@ -435,6 +435,25 @@ class DistanceTensorResult:
 		assert self.distances.shape[0] == n
 		assert self.distances.shape[1] == n
 		return n
+	
+	def match_cls(self, cls_filter: str|Callable[[str], bool]) -> "DistanceTensorResult":
+		"""Return a new DistanceTensorResult with only the matching classes."""
+		cls_filter_func: Callable[[str], bool]
+		if isinstance(cls_filter, str):
+			cls_filter_func = lambda cls: cls.startswith(cls_filter) # noqa: E731
+		else:
+			cls_filter_func = cls_filter
+
+		matching_cls_idxs: list[int] = [
+			i for i, cls in enumerate(self.cls_values) if cls_filter_func(cls)
+		]
+		matching_cls: list[str] = [self.cls_values[i] for i in matching_cls_idxs]
+		matching_dists: Float[np.ndarray, "h h p"] = self.distances[matching_cls_idxs, matching_cls_idxs]
+		return DistanceTensorResult(
+			cls_values=matching_cls,
+			prompt_values=self.prompt_values,
+			distances=matching_dists,
+		)
 
 	@cached_property
 	def mean_dists(self) -> Float[np.ndarray, "h h"]:
