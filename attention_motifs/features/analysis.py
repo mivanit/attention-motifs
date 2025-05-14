@@ -503,10 +503,16 @@ class DistanceTensorResult(SerializableDataclass):
 		matching_cls_idxs: list[int] = [
 			i for i, cls in enumerate(self.cls_values) if cls_filter_func(cls)
 		]
+		matching_cls_idxs_np = np.array(matching_cls_idxs, dtype=int)
 		matching_cls: list[str] = [self.cls_values[i] for i in matching_cls_idxs]
-		matching_dists: Float[np.ndarray, "h h p"] = self.distances[
-			matching_cls_idxs, matching_cls_idxs
-		]
+		matching_dists: Float[np.ndarray, "h h *p"]
+
+		if self.is_reduced:
+			matching_dists = self.distances[np.ix_(matching_cls_idxs_np, matching_cls_idxs_np)]
+		else:
+			p: int = self.distances.shape[2]
+			matching_dists = self.distances[np.ix_(matching_cls_idxs_np, matching_cls_idxs_np, np.arange(p))]
+
 		return DistanceTensorResult(
 			cls_values=matching_cls,
 			prompt_values=self.prompt_values,

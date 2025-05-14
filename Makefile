@@ -1485,3 +1485,8 @@ demo: demo-clean demo-activations demo-figures demo-server
 .PHONY: demo-docs		
 demo-docs: demo-clean demo-activations demo-figures
 	@echo "generate demo for docs (no server)"
+
+.PHONY: assemble-display
+assemble-display:
+	@echo "assemble display files"
+	
