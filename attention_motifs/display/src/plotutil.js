@@ -224,7 +224,7 @@ function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
 		console.log(`Found ${indices.length} points for ${value}`);
 
 		// Get customdata with caching for better performance
-		const customdata = getCustomdata(plotData, indices, selectionColumn, useCache);
+		const customdata = getCustomdata(plotData, indices, selectionColumn, options.hoverColumns, useCache);
 
 		traces.push({
 			...defaultTraceConfig,
@@ -305,7 +305,7 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 		console.log(`Creating trace for ${nonSelectedIndices.length} non-selected points...`);
 
 		// Get customdata with caching for better performance
-		const customdata = getCustomdata(plotData, nonSelectedIndices, selectedColumn, useCache);
+		const customdata = getCustomdata(plotData, nonSelectedIndices, selectedColumn, options.hoverColumns, useCache);
 
 		traces.push({
 			...defaultTraceConfig,
@@ -329,7 +329,7 @@ function createTracesWithSelection(plotData, selectedColumn, selectedValues, opt
 		console.log(`Creating trace for selected value "${value}" with ${indices.length} points...`);
 
 		// Get customdata with caching for better performance
-		const customdata = getCustomdata(plotData, indices, selectedColumn, useCache);
+		const customdata = getCustomdata(plotData, indices, selectedColumn, options.hoverColumns, useCache);
 
 		// Use the getSelectionColor function passed as an option
 		const colorIndex = selectedValues.indexOf(value);
