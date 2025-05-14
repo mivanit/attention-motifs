@@ -64,6 +64,21 @@ function applyConfigFromFile(vm, config) {
 			logger.log(`Applying config.hoverColumns = ${JSON.stringify(configValue)}`);
 			vm.hoverColumns = [...configValue];
 
+			// Update the defaultTraceConfig with the new hover template
+			if (typeof createDynamicTraceConfig === 'function') {
+				vm.defaultTraceConfig = createDynamicTraceConfig(vm.hoverColumns);
+				logger.log('Updated defaultTraceConfig with new hover columns');
+			} else {
+				// Directly update hovertemplate if createDynamicTraceConfig is not available
+				vm.defaultTraceConfig = {
+					...vm.defaultTraceConfig,
+					hovertemplate: createHoverTemplate ?
+						createHoverTemplate(vm.hoverColumns) :
+						vm.defaultTraceConfig.hovertemplate
+				};
+				logger.log('Updated hovertemplate in defaultTraceConfig');
+			}
+
 			// Clear customdata cache since hover columns changed
 			clearCustomdataCache();
 		}

@@ -131,7 +131,24 @@ async function loadJsonlData(config, updateProgressCallback = () => { }) {
 
     // Extract numerical columns (PCA components) based on prefix
     logger.time('Extract PCA Components');
-    const pcaColumnNames = dataFrame.columns.filter(col => col.startsWith(numericalPrefix)).sort();
+    const pcaColumnNames = dataFrame.columns.filter(col => col.startsWith(numericalPrefix))
+    .sort((a, b) => {
+        // Try to extract numbers from the column names (e.g., "pc.5" -> 5)
+        const aStr = a.split('.').pop();
+        const bStr = b.split('.').pop();
+        
+        // Try to parse as integers
+        const numA = parseInt(aStr);
+        const numB = parseInt(bStr);
+        
+        // If both can be parsed as valid numbers, sort numerically
+        if (!isNaN(numA) && !isNaN(numB)) {
+            return numA - numB;
+        }
+        
+        // Otherwise, fall back to lexicographical (string) sorting
+        return aStr.localeCompare(bStr);
+    });
     logger.log('Found PCA columns:', pcaColumnNames);
     const pcaArray = extractPcaComponents(dataFrame, numericalPrefix, pcaColumnNames);
     logger.timeEnd('Extract PCA Components');

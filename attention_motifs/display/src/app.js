@@ -47,7 +47,7 @@ const app = Vue.createApp({
 			configCollapsed: false,
 			showConfigPanel: false,
 			// Default trace configuration
-			defaultTraceConfig: createDefaultTraceConfig(),
+			defaultTraceConfig: null,
 			// Store current camera position
 			currentCameraPosition: null,
 			// Store selection timing information
@@ -187,6 +187,10 @@ const app = Vue.createApp({
 						? selectedParam.split('~')
 						: selectedParam.split(',');
 				}
+
+				// Update defaultTraceConfig with current hover columns
+				this.defaultTraceConfig = createDynamicTraceConfig(this.hoverColumns);
+				logger.log('Updated defaultTraceConfig with current hover columns in loadData');
 
 				loading.updateProgress(this, 95, 'Rendering plot...');
 				this.statusMessage = 'Data loaded successfully';

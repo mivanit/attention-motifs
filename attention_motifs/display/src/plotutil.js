@@ -64,37 +64,6 @@ function getCurrentCameraPosition(plotContainer) {
 }
 
 
-
-
-
-/**
- * Generate customdata for points based on their indices
- * 
- * @param {Object} plotData - The plot data object with all data columns
- * @param {Array<number>} indices - Array of point indices to generate customdata for
- * @param {string} selectionColumn - Column used for selection (will be included if not one of the hover fields)
- * @returns {Array<Array>} - Array of customdata arrays for each point
- */
-function generateCustomdata(plotData, indices, selectionColumn = null) {
-	// Generate customdata for hover and selection
-	return indices.map(i => {
-		// Always include the two hover columns
-		const data = [
-			plotData['activation.cls'][i],    // head
-			plotData['activation.prompt'][i], // prompt
-		];
-
-		// Add the selection column as third element if it's different from the hover columns
-		if (selectionColumn &&
-			selectionColumn !== 'activation.cls' &&
-			selectionColumn !== 'activation.prompt') {
-			data.push(plotData[selectionColumn][i]);
-		}
-
-		return data;
-	});
-}
-
 /**
  * Cache object for storing generated customdata
  */

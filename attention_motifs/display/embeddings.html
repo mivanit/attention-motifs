@@ -770,6 +770,67 @@
   	};
   </script>
   <!-- end 'logger.js' -->
+  <!-- begin 'hover.js' -->
+  <script>
+   /**
+  	 * Creates a hover template based on provided hover columns
+  	 * @param {Array<string>} hoverColumns - Columns to show in hover text
+  	 * @returns {string} - Formatted hover template string
+  	 */
+  	function createHoverTemplate(hoverColumns) {
+  		let template = '<b>Point Info</b><br>';
+  	
+  		// Add each hover column to the template
+  		hoverColumns.forEach((col, index) => {
+  			// Display just the last part of the column name after the last dot
+  			const displayName = col.split('.').pop();
+  			template += `${displayName}: %{customdata[${index}]}<br>`;
+  		});
+  	
+  		// Add coordinates at the end
+  		template += 'coord: [%{x:.2f}, %{y:.2f}, %{z:.2f}]<extra></extra>';
+  	
+  		return template;
+  	}
+  	
+  	/**
+  	 * Creates a trace configuration for a Plotly 3D scatter plot with dynamic hover template
+  	 * @param {Array<string>} hoverColumns - Columns to display in hover text
+  	 * @returns {Object} - Trace configuration object
+  	 */
+  	function createDynamicTraceConfig(hoverColumns) {
+  		return {
+  			mode: 'markers',
+  			type: 'scatter3d',
+  			hovertemplate: createHoverTemplate(hoverColumns)
+  		};
+  	}
+  	
+  	/**
+  	 * Generate customdata for points based on their indices
+  	 * 
+  	 * @param {Object} plotData - The plot data object with all data columns
+  	 * @param {Array<number>} indices - Array of point indices to generate customdata for
+  	 * @param {string} selectionColumn - Column used for selection (will be included if not one of the hover fields)
+  	 * @param {Array<string>} hoverColumns - Columns to show in hover text
+  	 * @returns {Array<Array>} - Array of customdata arrays for each point
+  	 */
+  	function generateCustomdata(plotData, indices, selectionColumn = null, hoverColumns = ['activation.cls', 'activation.prompt']) {
+  		// Generate customdata for hover and selection
+  		return indices.map(i => {
+  			// Start with an array for the hover columns
+  			const data = hoverColumns.map(col => plotData[col]?.[i] ?? 'N/A');
+  	
+  			// Add the selection column as an additional element if it's not already in the hover columns
+  			if (selectionColumn && !hoverColumns.includes(selectionColumn)) {
+  				data.push(plotData[selectionColumn][i]);
+  			}
+  	
+  			return data;
+  		});
+  	}
+  </script>
+  <!-- end 'hover.js' -->
   <!-- begin 'plotutil.js' -->
   <script>
    /**
@@ -837,37 +898,6 @@
   		return null;
   	}
   	
-  	
-  	
-  	
-  	
-  	/**
-  	 * Generate customdata for points based on their indices
-  	 * 
-  	 * @param {Object} plotData - The plot data object with all data columns
-  	 * @param {Array<number>} indices - Array of point indices to generate customdata for
-  	 * @param {string} selectionColumn - Column used for selection (will be included if not one of the hover fields)
-  	 * @returns {Array<Array>} - Array of customdata arrays for each point
-  	 */
-  	function generateCustomdata(plotData, indices, selectionColumn = null) {
-  		// Generate customdata for hover and selection
-  		return indices.map(i => {
-  			// Always include the two hover columns
-  			const data = [
-  				plotData['activation.cls'][i],    // head
-  				plotData['activation.prompt'][i], // prompt
-  			];
-  	
-  			// Add the selection column as third element if it's different from the hover columns
-  			if (selectionColumn &&
-  				selectionColumn !== 'activation.cls' &&
-  				selectionColumn !== 'activation.prompt') {
-  				data.push(plotData[selectionColumn][i]);
-  			}
-  	
-  			return data;
-  		});
-  	}
   	
   	/**
   	 * Cache object for storing generated customdata
@@ -1264,7 +1294,24 @@
   	
   	    // Extract numerical columns (PCA components) based on prefix
   	    logger.time('Extract PCA Components');
-  	    const pcaColumnNames = dataFrame.columns.filter(col => col.startsWith(numericalPrefix)).sort();
+  	    const pcaColumnNames = dataFrame.columns.filter(col => col.startsWith(numericalPrefix))
+  	    .sort((a, b) => {
+  	        // Try to extract numbers from the column names (e.g., "pc.5" -> 5)
+  	        const aStr = a.split('.').pop();
+  	        const bStr = b.split('.').pop();
+  	        
+  	        // Try to parse as integers
+  	        const numA = parseInt(aStr);
+  	        const numB = parseInt(bStr);
+  	        
+  	        // If both can be parsed as valid numbers, sort numerically
+  	        if (!isNaN(numA) && !isNaN(numB)) {
+  	            return numA - numB;
+  	        }
+  	        
+  	        // Otherwise, fall back to lexicographical (string) sorting
+  	        return aStr.localeCompare(bStr);
+  	    });
   	    logger.log('Found PCA columns:', pcaColumnNames);
   	    const pcaArray = extractPcaComponents(dataFrame, numericalPrefix, pcaColumnNames);
   	    logger.timeEnd('Extract PCA Components');
@@ -1628,6 +1675,21 @@
   				logger.log(`Applying config.hoverColumns = ${JSON.stringify(configValue)}`);
   				vm.hoverColumns = [...configValue];
   	
+  				// Update the defaultTraceConfig with the new hover template
+  				if (typeof createDynamicTraceConfig === 'function') {
+  					vm.defaultTraceConfig = createDynamicTraceConfig(vm.hoverColumns);
+  					logger.log('Updated defaultTraceConfig with new hover columns');
+  				} else {
+  					// Directly update hovertemplate if createDynamicTraceConfig is not available
+  					vm.defaultTraceConfig = {
+  						...vm.defaultTraceConfig,
+  						hovertemplate: createHoverTemplate ?
+  							createHoverTemplate(vm.hoverColumns) :
+  							vm.defaultTraceConfig.hovertemplate
+  					};
+  					logger.log('Updated hovertemplate in defaultTraceConfig');
+  				}
+  	
   				// Clear customdata cache since hover columns changed
   				clearCustomdataCache();
   			}
@@ -1646,56 +1708,6 @@
   	}
   </script>
   <!-- end 'cfg.js' -->
-  <!-- begin 'hover.js' -->
-  <script>
-   /**
-  	 * Create dynamic hover template based on hover columns configuration
-  	 */
-  	function createHoverTemplate(hoverColumns) {
-  		let template = '<b>Point Info</b><br>';
-  	
-  		// Add each hover column to the template
-  		hoverColumns.forEach((col, index) => {
-  			// Display just the last part of the column name after the last dot
-  			const displayName = col.split('.').pop();
-  			template += `${displayName}: %{customdata[${index}]}<br>`;
-  		});
-  	
-  		// Add coordinates at the end
-  		template += 'coord: [%{x:.2f}, %{y:.2f}, %{z:.2f}]<extra></extra>';
-  	
-  		return template;
-  	}
-  	
-  	/**
-  	 * Creates a default trace configuration for a Plotly 3D scatter plot with dynamic hover template
-  	 */
-  	function createDynamicTraceConfig(hoverColumns) {
-  		return {
-  			mode: 'markers',
-  			type: 'scatter3d',
-  			hovertemplate: createHoverTemplate(hoverColumns)
-  		};
-  	}
-  	
-  	/**
-  	 * Updated generateCustomdata function to use configurable hover columns
-  	 */
-  	function generateCustomdata(plotData, indices, selectionColumn = null, hoverColumns = ['activation.cls', 'activation.prompt']) {
-  		return indices.map(i => {
-  			// Start with an array for the hover columns
-  			const data = hoverColumns.map(col => plotData[col]?.[i] ?? 'N/A');
-  	
-  			// Add the selection column as an additional element if it's not already in the hover columns
-  			if (selectionColumn && !hoverColumns.includes(selectionColumn)) {
-  				data.push(plotData[selectionColumn][i]);
-  			}
-  	
-  			return data;
-  		});
-  	}
-  </script>
-  <!-- end 'hover.js' -->
   <!-- load main app -->
   <!-- begin 'app.js' -->
   <script>
@@ -1748,7 +1760,7 @@
   				configCollapsed: false,
   				showConfigPanel: false,
   				// Default trace configuration
-  				defaultTraceConfig: createDefaultTraceConfig(),
+  				defaultTraceConfig: null,
   				// Store current camera position
   				currentCameraPosition: null,
   				// Store selection timing information
@@ -1888,6 +1900,10 @@
   							? selectedParam.split('~')
   							: selectedParam.split(',');
   					}
+  	
+  					// Update defaultTraceConfig with current hover columns
+  					this.defaultTraceConfig = createDynamicTraceConfig(this.hoverColumns);
+  					logger.log('Updated defaultTraceConfig with current hover columns in loadData');
   	
   					loading.updateProgress(this, 95, 'Rendering plot...');
   					this.statusMessage = 'Data loaded successfully';
