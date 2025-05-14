@@ -1489,4 +1489,4 @@ demo-docs: demo-clean demo-activations demo-figures
 .PHONY: assemble-display
 assemble-display:
 	@echo "assemble display files"
-	
+	$(PYTHON) -m attention_motifs.display.assemble_display --input-path attention_motifs/display/src/embeddings.html --output-path attention_motifs/display/embeddings.html

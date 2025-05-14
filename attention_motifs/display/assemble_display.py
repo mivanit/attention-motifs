@@ -26,7 +26,11 @@ def inline_html_assets(
 			raise ValueError(err_msg)
 
 		# Dynamically create the pattern for the given tag and filename
-		pattern: str = rf'<{tag_type} src="{filename}"></{tag_type}>'
+		pattern: str
+		if tag_type == "script":
+			pattern = rf'<script src="{filename}"></script>'
+		elif tag_type == "style":
+			pattern = rf'<link rel="stylesheet" href="{filename}">'
 		# assert it's in the text exactly once
 		assert html.count(pattern) == 1, (
 			f"Pattern {pattern} should be in the html exactly once, found {html.count(pattern) = }"
