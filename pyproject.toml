@@ -125,6 +125,7 @@ exclude = ["__pycache__"]
 		"uv.lock",
 		"LICENSE",
 		"*.png",
+		"*.pdf",
 	]
 	[tool.lmcat.glob_process]
 		"[mM]akefile" = "makefile_recipes"
