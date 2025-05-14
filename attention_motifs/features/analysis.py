@@ -14,11 +14,13 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from sklearn.decomposition import PCA
 import matplotlib.gridspec as gridspec
+from tqdm import tqdm
 
 # muutils
 from muutils.tensor_info import array_summary
 from muutils.json_serialize import json_serialize
-from tqdm import tqdm
+from muutils.json_serialize import SerializableDataclass, serializable_dataclass, serializable_field
+from zanj import ZANJ
 
 
 def parse_cls(cls_: str) -> tuple[str, int, int]:
@@ -433,13 +435,49 @@ def plot_importance_covariance(
 	return features, cov
 
 
-@dataclass
-class DistanceTensorResult:
+@serializable_dataclass(methods_no_override=["serialize", "load"])
+class DistanceTensorResult(SerializableDataclass):
 	"""Return object for `build_distance_tensor`."""
 
 	cls_values: list[str]
 	prompt_values: list[str]
-	distances: Float[np.ndarray, "h h p"]
+	distances: Float[np.ndarray, "h h p"]|Float[np.ndarray, "h h"]
+	is_reduced: bool = serializable_field(default=False)
+
+	def serialize(self) -> dict:
+		return dict(
+			__muutils_format__="DistanceTensorResult(SerializableDataclass)",
+			cls_values=self.cls_values,
+			prompt_values=self.prompt_values,
+			distances=self.mean_dists,
+			is_reduced=True,
+		)
+
+	@classmethod
+	def load(cls, data: dict) -> "DistanceTensorResult":
+		"""Load a `DistanceTensorResult` from a dictionary."""
+		assert data["is_reduced"], "data must be reduced when loading -- non-reduced would be huge!"
+		return cls(
+			cls_values=data["cls_values"],
+			prompt_values=data["prompt_values"],
+			distances=data["distances"],
+			is_reduced=True,
+		)
+	
+	def save(self, path: Path|str, zanj: ZANJ|None = None) -> None:
+		if zanj is None:
+			zanj = ZANJ()
+		zanj.save(
+			self.serialize(),
+			path,
+		)
+	
+	@classmethod
+	def read(cls, path: Path|str, zanj: ZANJ|None = None) -> "DistanceTensorResult":
+		if zanj is None:
+			zanj = ZANJ()
+		return zanj.read(path)
+
 
 	@property
 	def n_heads(self) -> int:
@@ -469,11 +507,15 @@ class DistanceTensorResult:
 			cls_values=matching_cls,
 			prompt_values=self.prompt_values,
 			distances=matching_dists,
+			is_reduced=self.is_reduced,
 		)
 
 	@cached_property
 	def mean_dists(self) -> Float[np.ndarray, "h h"]:
-		return self.distances.mean(axis=-1)
+		if self.is_reduced:
+			return self.distances
+		else:
+			return self.distances.mean(axis=-1)
 
 	def get_closest_heads(
 		self, head: str, n_closest: int = 5
@@ -602,6 +644,7 @@ class DistanceTensorResult:
 		alpha: float = 0.01,
 		n_samples: int | None = 128,
 	) -> plt.Axes:
+		assert not self.is_reduced, "plot_hists() only works if we haven't reduced"
 		max_dist: float = np.max(self.distances)
 		bins = np.linspace(0, max_dist, bins)
 		n_heads: int = self.n_heads
