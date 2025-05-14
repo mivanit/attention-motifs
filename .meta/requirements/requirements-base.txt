@@ -233,6 +233,7 @@ numpy==1.26.4
     #   numba
     #   pandas
     #   pattern-lens
+    #   pot
     #   pysr
     #   scikit-learn
     #   scipy
@@ -314,6 +315,8 @@ plotly==6.0.1
     #   attention-motifs
     #   dash
 polars==1.26.0
+    # via attention-motifs
+pot==0.9.5
     # via attention-motifs
 prompt-toolkit==3.0.50
     # via ipython
@@ -410,6 +413,7 @@ scipy==1.15.2
     # via
     #   attention-motifs
     #   pattern-lens
+    #   pot
     #   pynndescent
     #   scikit-learn
     #   umap-learn
