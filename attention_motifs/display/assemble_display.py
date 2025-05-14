@@ -60,6 +60,7 @@ def inline_html_assets(
 
 	if prettify:
 		from bs4 import BeautifulSoup
+
 		soup: BeautifulSoup = BeautifulSoup(html, "html.parser")
 		html = soup.prettify()
 
@@ -82,7 +83,13 @@ def inline_html_file(
 	for asset in base_path.glob("*.css"):
 		assets.append(("style", asset.name))
 	# inline the assets
-	html_new: str = inline_html_assets(html, assets, base_path, include_filename_comments=include_filename_comments, prettify=prettify)
+	html_new: str = inline_html_assets(
+		html,
+		assets,
+		base_path,
+		include_filename_comments=include_filename_comments,
+		prettify=prettify,
+	)
 	# write the new HTML file
 	output_path.write_text(html_new)
 
