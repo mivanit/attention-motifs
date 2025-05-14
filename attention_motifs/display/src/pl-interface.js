@@ -1,4 +1,4 @@
-function computeCombinedUrl(baseUrl, selectedValues, selectionColumn) {
+function computePatternsUrl(baseUrl, selectedValues, selectionColumn) {
 	if (!selectedValues?.length) return baseUrl;
 
 	const baseUrlObj = new URL(baseUrl, window.location.href);

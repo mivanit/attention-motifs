@@ -90,8 +90,8 @@ const app = Vue.createApp({
 
 	computed: {
 		// Compute combined URL with all selected values
-		combinedUrl() {
-			return computeCombinedUrl(this.baseUrl, this.selectedValues, this.selectionColumn);
+		patternsUrl() {
+			return computePatternsUrl(this.baseUrl, this.selectedValues, this.selectionColumn);
 		}
 	},
 
