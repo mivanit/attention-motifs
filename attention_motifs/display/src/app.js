@@ -444,8 +444,10 @@ const app = Vue.createApp({
 				return;
 			}
 
-			// Create initial traces by the selected categorical column
-			const traces = this.createTracesByCategory();
+			// Create initial traces based on whether we have selected values
+			const traces = this.selectedValues.length > 0
+				? this.createTracesWithSelection()
+				: this.createTracesByCategory();
 
 			// Create axis labels based on column names
 			const axisLabels = this.pcaColumnNames.length > 0 ? {
@@ -722,8 +724,20 @@ const app = Vue.createApp({
 	// CHUNK: mounted
 	// ==================================================
 	mounted() {
-		// Load data when component is mounted
-		this.loadData();
+		// First try to load config.json
+		loadConfigFile().then(config => {
+			// Apply configuration if found
+			if (config) {
+				applyConfigFromFile(this, config);
+			}
+
+			// Then load data (which will also apply URL parameters)
+			this.loadData();
+		}).catch(error => {
+			logger.error("Error loading config file:", error);
+			// Load data anyway even if config.json loading fails
+			this.loadData();
+		});
 
 		// Set up keyboard shortcuts for debugging
 		window.addEventListener('keydown', (e) => {
