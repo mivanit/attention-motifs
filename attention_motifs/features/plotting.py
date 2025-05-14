@@ -137,7 +137,7 @@ def apply_pca(
 		ax1.set_xlabel("Principal Component")
 		ax1.set_ylabel("Explained Variance Ratio")
 		ax1.set_title("Individual Explained Variance")
-		ax1.set_xticks(range(min(10, len(explained_variance))))
+		ax1.set_xticks(range(len(explained_variance)))
 
 		# Plot cumulative explained variance
 		ax2.plot(range(len(cumulative_variance)), cumulative_variance, "o-")
@@ -145,7 +145,7 @@ def apply_pca(
 		ax2.set_xlabel("Number of Components")
 		ax2.set_ylabel("Cumulative Explained Variance")
 		ax2.set_title("Cumulative Explained Variance")
-		ax2.set_xticks(range(0, min(20, len(cumulative_variance)), 2))
+		ax2.set_xticks(range(0, len(cumulative_variance), 2))
 		ax2.legend()
 
 		plt.tight_layout()
