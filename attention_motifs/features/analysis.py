@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from functools import cached_property
 import json
 from pathlib import Path
@@ -19,7 +18,11 @@ from tqdm import tqdm
 # muutils
 from muutils.tensor_info import array_summary
 from muutils.json_serialize import json_serialize
-from muutils.json_serialize import SerializableDataclass, serializable_dataclass, serializable_field
+from muutils.json_serialize import (
+	SerializableDataclass,
+	serializable_dataclass,
+	serializable_field,
+)
 from zanj import ZANJ
 
 
@@ -441,7 +444,7 @@ class DistanceTensorResult(SerializableDataclass):
 
 	cls_values: list[str]
 	prompt_values: list[str]
-	distances: Float[np.ndarray, "h h p"]|Float[np.ndarray, "h h"]
+	distances: Float[np.ndarray, "h h p"] | Float[np.ndarray, "h h"]
 	is_reduced: bool = serializable_field(default=False)
 
 	def serialize(self) -> dict:
@@ -456,28 +459,29 @@ class DistanceTensorResult(SerializableDataclass):
 	@classmethod
 	def load(cls, data: dict) -> "DistanceTensorResult":
 		"""Load a `DistanceTensorResult` from a dictionary."""
-		assert data["is_reduced"], "data must be reduced when loading -- non-reduced would be huge!"
+		assert data["is_reduced"], (
+			"data must be reduced when loading -- non-reduced would be huge!"
+		)
 		return cls(
 			cls_values=data["cls_values"],
 			prompt_values=data["prompt_values"],
 			distances=data["distances"],
 			is_reduced=True,
 		)
-	
-	def save(self, path: Path|str, zanj: ZANJ|None = None) -> None:
+
+	def save(self, path: Path | str, zanj: ZANJ | None = None) -> None:
 		if zanj is None:
 			zanj = ZANJ()
 		zanj.save(
 			self.serialize(),
 			path,
 		)
-	
+
 	@classmethod
-	def read(cls, path: Path|str, zanj: ZANJ|None = None) -> "DistanceTensorResult":
+	def read(cls, path: Path | str, zanj: ZANJ | None = None) -> "DistanceTensorResult":
 		if zanj is None:
 			zanj = ZANJ()
 		return zanj.read(path)
-
 
 	@property
 	def n_heads(self) -> int:
