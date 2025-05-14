@@ -215,7 +215,9 @@ def plot_embedding(
 		color = color_map.get(label, unknown_color)
 
 		# Support per-label alpha / marker size like the original
-		alpha_value = alpha.get(label, alpha.get(None, 0.9)) if isinstance(alpha, dict) else alpha
+		alpha_value = (
+			alpha.get(label, alpha.get(None, 0.9)) if isinstance(alpha, dict) else alpha
+		)
 		size_value = (
 			marker_size.get(label, marker_size.get(None, 1))
 			if isinstance(marker_size, dict)
@@ -251,10 +253,11 @@ def plot_embedding(
 
 	# Create legend with large dots
 	if do_legend:
-		plt.legend(handles=handles, loc="upper left", bbox_to_anchor=(1, 1), title="Labels")
+		plt.legend(
+			handles=handles, loc="upper left", bbox_to_anchor=(1, 1), title="Labels"
+		)
 
 	return handles
-
 
 
 def plot_embedding_kde(embedding: np.ndarray, labels: pl.Series, title: str) -> None:

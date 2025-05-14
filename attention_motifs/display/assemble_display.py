@@ -1,6 +1,7 @@
 from typing import Literal
 from pathlib import Path
 
+
 # TODO: move this to muutils
 def inline_html_assets(
 	html: str,
@@ -65,7 +66,7 @@ def inline_html_file(
 
 if __name__ == "__main__":
 	import argparse
-	
+
 	parser: argparse.ArgumentParser = argparse.ArgumentParser(
 		description="Inline local CSS/JS files into an HTML document."
 	)
