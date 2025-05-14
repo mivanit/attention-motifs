@@ -1534,7 +1534,7 @@
   <!-- end 'clipboard.js' -->
   <!-- begin 'pl-interface.js' -->
   <script>
-   function computeCombinedUrl(baseUrl, selectedValues, selectionColumn) {
+   function computePatternsUrl(baseUrl, selectedValues, selectionColumn) {
   		if (!selectedValues?.length) return baseUrl;
   	
   		const baseUrlObj = new URL(baseUrl, window.location.href);
@@ -1562,6 +1562,84 @@
   	}
   </script>
   <!-- end 'pl-interface.js' -->
+  <!-- begin 'cfg.js' -->
+  <script>
+   /**
+  	 * Loads configuration from config.json file in the current directory
+  	 * @returns {Promise<Object|null>} Configuration object or null if not found
+  	 */
+  	async function loadConfigFile() {
+  		try {
+  			logger.log('Attempting to load config.json...');
+  			const response = await fetch('config.json');
+  	
+  			// If the file doesn't exist or can't be loaded, return null
+  			if (!response.ok) {
+  				logger.log('No config.json found or unable to load.');
+  				return null;
+  			}
+  	
+  			const config = await response.json();
+  			logger.log('Loaded config.json:', config);
+  			return config;
+  		} catch (error) {
+  			logger.error('Error loading config.json:', error);
+  			return null;
+  		}
+  	}
+  	
+  	/**
+  	 * Applies configuration from config file to app data
+  	 * @param {Vue} vm - Vue instance (this)
+  	 * @param {Object} config - Configuration object from config.json
+  	 */
+  	function applyConfigFromFile(vm, config) {
+  		if (!config) return;
+  	
+  		logger.log('Applying configuration from config.json');
+  	
+  		// Process all keys in the config object
+  		Object.keys(config).forEach(key => {
+  			const configValue = config[key];
+  	
+  			// Handle special case for nested objects that need merging
+  			if (key === 'dataConfig' && configValue && typeof configValue === 'object') {
+  				// Merge dataConfig object instead of replacing
+  				vm.dataConfig = vm.dataConfig || {};
+  				Object.keys(configValue).forEach(subKey => {
+  					logger.log(`Applying config.dataConfig.${subKey} = ${JSON.stringify(configValue[subKey])}`);
+  					vm.dataConfig[subKey] = configValue[subKey];
+  				});
+  			}
+  			// Handle special case for pcaAxes object
+  			else if (key === 'pcaAxes' && configValue && typeof configValue === 'object') {
+  				// Merge pcaAxes object
+  				vm.pcaAxes = vm.pcaAxes || { x: 0, y: 1, z: 2 };
+  				Object.keys(configValue).forEach(axisKey => {
+  					logger.log(`Applying config.pcaAxes.${axisKey} = ${configValue[axisKey]}`);
+  					vm.pcaAxes[axisKey] = configValue[axisKey];
+  				});
+  			}
+  			// Apply other top-level properties directly
+  			else if (typeof configValue !== 'undefined') {
+  				logger.log(`Applying config.${key} = ${JSON.stringify(configValue)}`);
+  				vm[key] = configValue;
+  			}
+  		});
+  	
+  		// Sync pending values with their primary values
+  		if (typeof vm.colorByColumn !== 'undefined') {
+  			vm.pendingColorByColumn = vm.colorByColumn;
+  		}
+  	
+  		if (typeof vm.selectionColumn !== 'undefined') {
+  			vm.pendingSelectionColumn = vm.selectionColumn;
+  		}
+  	
+  		logger.log('Configuration applied from config.json');
+  	}
+  </script>
+  <!-- end 'cfg.js' -->
   <!-- load main app -->
   <!-- begin 'app.js' -->
   <script>
@@ -1657,8 +1735,8 @@
   	
   		computed: {
   			// Compute combined URL with all selected values
-  			combinedUrl() {
-  				return computeCombinedUrl(this.baseUrl, this.selectedValues, this.selectionColumn);
+  			patternsUrl() {
+  				return computePatternsUrl(this.baseUrl, this.selectedValues, this.selectionColumn);
   			}
   		},
   	
@@ -2011,8 +2089,10 @@
   					return;
   				}
   	
-  				// Create initial traces by the selected categorical column
-  				const traces = this.createTracesByCategory();
+  				// Create initial traces based on whether we have selected values
+  				const traces = this.selectedValues.length > 0
+  					? this.createTracesWithSelection()
+  					: this.createTracesByCategory();
   	
   				// Create axis labels based on column names
   				const axisLabels = this.pcaColumnNames.length > 0 ? {
@@ -2289,8 +2369,20 @@
   		// CHUNK: mounted
   		// ==================================================
   		mounted() {
-  			// Load data when component is mounted
-  			this.loadData();
+  			// First try to load config.json
+  			loadConfigFile().then(config => {
+  				// Apply configuration if found
+  				if (config) {
+  					applyConfigFromFile(this, config);
+  				}
+  	
+  				// Then load data (which will also apply URL parameters)
+  				this.loadData();
+  			}).catch(error => {
+  				logger.error("Error loading config file:", error);
+  				// Load data anyway even if config.json loading fails
+  				this.loadData();
+  			});
   	
   			// Set up keyboard shortcuts for debugging
   			window.addEventListener('keydown', (e) => {
@@ -3267,8 +3359,8 @@
        <h4>
         Combined Link:
        </h4>
-       <a :href="combinedUrl" class="generated-link" target="_blank">
-        {{ combinedUrl }}
+       <a :href="patternsUrl" class="generated-link" target="_blank">
+        {{ patternsUrl }}
        </a>
       </div>
      </input>
