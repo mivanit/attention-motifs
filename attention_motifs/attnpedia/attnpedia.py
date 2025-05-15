@@ -1,6 +1,6 @@
 import json
 import matplotlib.colors as mcolors
-from typing import Callable, Literal, Dict, List, Tuple
+from typing import Callable, Literal
 import warnings
 from pathlib import Path
 import importlib.resources

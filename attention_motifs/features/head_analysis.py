@@ -57,7 +57,7 @@ def create_head_embedding_df(
 ) -> pl.DataFrame:
 	"""
 	Create a polars DataFrame from head distance data, with embeddings and type information.
-	
+
 	# Parameters:
 	 - `head_dists : DistanceTensorResult`
 		The head distances object containing cls_values and distances
@@ -71,7 +71,7 @@ def create_head_embedding_df(
 		Number of neighbors to consider for manifold methods (default: 15)
 	 - `random_state : int`
 		Random seed for reproducibility (default: 42)
-	
+
 	# Returns:
 	 - `pl.DataFrame`
 		A dataframe with one row per head, containing:
@@ -162,7 +162,7 @@ def create_head_embedding_df(
 
 	# Get head type groups
 	head_type_groups: dict[str, str] = attnpedia.head_type_groups()
-	
+
 	primary_types: list[str] = [
 		head_to_type.get(cls, "unknown") for cls in head_dists.cls_values
 	]
@@ -174,7 +174,7 @@ def create_head_embedding_df(
 	type_groups: list[str] = [
 		head_type_groups.get(ptype, "unknown") for ptype in primary_types
 	]
-	
+
 	# Create basic dataframe
 	df: pl.DataFrame = pl.DataFrame(
 		{
@@ -298,6 +298,7 @@ def create_embedding_df_multi(
 
 EMBED_CMAP: str = "gist_ncar"
 
+
 def plot_head_embeddings(
 	df: pl.DataFrame,
 	prefix: str,
@@ -313,15 +314,15 @@ def plot_head_embeddings(
 	# Create AttentionPedia if not provided
 	if attnpedia is None:
 		attnpedia = AttentionPedia()
-		
+
 	# Create figure and axes if not provided
 	fig: plt.Figure | None = None
 	if ax is None:
 		fig, ax = plt.subplots(figsize=(12, 10))
-	
+
 	# Get unique values for color assignment
 	categories: list = df[color_by].unique().to_list()
-	
+
 	# Get colors based on the color_by column
 	cmap: matplotlib.colors.Colormap
 	color_map: dict
@@ -334,14 +335,18 @@ def plot_head_embeddings(
 		# For type_group, get colors from the JSON file's group definitions
 		color_map = {
 			group_name: group_info.get("color", attnpedia._unknown_color)
-			for group_name, group_info in attnpedia.groups_data.get("groups", {}).items()
+			for group_name, group_info in attnpedia.groups_data.get(
+				"groups", {}
+			).items()
 		}
 		color_map["unknown"] = attnpedia._unknown_color
 		unknown_color = attnpedia._unknown_color
 	else:
 		# For other columns, use a default colormap
 		cmap = plt.cm.get_cmap("tab10", len(categories))
-		color_map = {cat: matplotlib.colors.rgb2hex(cmap(i)) for i, cat in enumerate(categories)}
+		color_map = {
+			cat: matplotlib.colors.rgb2hex(cmap(i)) for i, cat in enumerate(categories)
+		}
 		unknown_color = attnpedia._unknown_color
 
 	# Extract embedding dimensions
@@ -471,10 +476,10 @@ def plot_head_embeddings_multi(
 	# Create AttentionPedia if not provided
 	if attnpedia is None:
 		attnpedia = AttentionPedia()
-	
+
 	# Get unique values for color assignment (for shared legend)
 	categories: list = df[color_by].unique().to_list()
-	
+
 	# Get colors based on the color_by column
 	color_map: dict
 	if color_by == "primary_type":
@@ -484,14 +489,18 @@ def plot_head_embeddings_multi(
 		# For type_group, get colors from the JSON file's group definitions
 		color_map = {
 			group_name: group_info.get("color", attnpedia._unknown_color)
-			for group_name, group_info in attnpedia.groups_data.get("groups", {}).items()
+			for group_name, group_info in attnpedia.groups_data.get(
+				"groups", {}
+			).items()
 		}
 		color_map["unknown"] = attnpedia._unknown_color
 	else:
 		# For other columns, use a default colormap
 		cmap = plt.cm.get_cmap("tab10", len(categories))
-		color_map = {cat: matplotlib.colors.rgb2hex(cmap(i)) for i, cat in enumerate(categories)}
-	
+		color_map = {
+			cat: matplotlib.colors.rgb2hex(cmap(i)) for i, cat in enumerate(categories)
+		}
+
 	# Use attnpedia's unknown color
 	unknown_color: str = attnpedia._unknown_color
 
