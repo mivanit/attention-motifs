@@ -52,13 +52,6 @@
 				"SAE-survey:Long Range Context Tracking"
 			],
 			"color": "#F781BF"
-		},
-		"greater_than": {
-			"types": [
-				"greater-than:YY Identifier",
-				"greater-than:Static-Year Retriever"
-			],
-			"color": "#1B9E77"
 		}
 	},
 	"unknown_color": "#777777"

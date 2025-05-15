@@ -306,17 +306,14 @@ def plot_head_embeddings(
 	alphas: tuple[float, float] = (0.7, 0.3),
 	sizes: tuple[int, int] = (60, 20),
 	ax: plt.Axes | None = None,
+	figsize: tuple[int, int] = (12, 10),
+	title: str | None = None,
 ) -> tuple[plt.Figure | None, plt.Axes]:
 	"""Plot head embeddings colored by the specified column"""
 
 	# Create AttentionPedia if not provided
 	if attnpedia is None:
 		attnpedia = AttentionPedia()
-
-	# Create figure and axes if not provided
-	fig: plt.Figure | None = None
-	if ax is None:
-		fig, ax = plt.subplots(figsize=(12, 10))
 
 	# Get unique values for color assignment
 	categories: list = df[color_by].unique().to_list()
@@ -353,10 +350,15 @@ def plot_head_embeddings(
 
 	# Check if columns exist
 	if x_col not in df.columns or y_col not in df.columns:
-		print(f"Warning: Columns {x_col} or {y_col} not found in DataFrame")
-		if ax is not None:
-			ax.set_title(f"Embedding not found: {prefix}")
-		return fig, ax
+		raise ValueError(
+			f"Embedding columns '{x_col}' or '{y_col}' not found in DataFrame"
+		)
+	
+	# Create figure and axes if not provided
+	fig: plt.Figure | None = None
+	ax_provided: bool = ax is not None
+	if not ax_provided:
+		fig, ax = plt.subplots(figsize=figsize)
 
 	# Create scatter plot
 	for cat in categories:
@@ -382,44 +384,29 @@ def plot_head_embeddings(
 		)
 
 	# Extract embedding metadata from the prefix
+	# prefix: str = f"embed.{method}.d2.b{n_neighbors}"
 	parts: list[str] = prefix.split(".")
-
-	# Get method (after mdl.something)
-	try:
-		method_idx: int = parts.index("mdl") + 2
-		method: str = parts[method_idx]
-	except (ValueError, IndexError):
-		method: str = "unknown"
-
-	# Get n_components and n_neighbors
-	try:
-		ndim_idx: int = parts.index("ndim")
-		n_components: int = int(parts[ndim_idx + 1])
-	except (ValueError, IndexError):
-		n_components: int = 0
-
-	try:
-		nb_idx: int = parts.index("nb")
-		n_neighbors: int = int(parts[nb_idx + 1])
-	except (ValueError, IndexError):
-		n_neighbors: int = 0
+	method: str = parts[1]
+	n_neighbors: int = int(parts[3][1:])
 
 	ax.set_xlabel(f"Dimension {dims[0]}")
 	ax.set_ylabel(f"Dimension {dims[1]}")
 
 	# Simpler title if inside a grid
-	if ax is not None:
-		ax.set_title(f"{method}, n_neighbors={n_neighbors}")
+	if title is None:
+		if ax_provided:
+			ax.set_title(f"{method}, n_neighbors={n_neighbors}")
+		else:
+			title = (
+				f"Head Embeddings via {method}\n"
+				f"colored by '{color_by}' ({len(categories)} categories), n_neighbors={n_neighbors}"
+			)
+			ax.set_title(title)
 	else:
-		title: str = (
-			f"Head Embeddings via {method}\n"
-			f"n_components={n_components}, n_neighbors={n_neighbors}\n"
-			f"colored by '{color_by}' ({len(categories)} categories)"
-		)
 		ax.set_title(title)
 
 	# Add legend (potentially outside plot for many categories)
-	if ax is None:  # Only add legend to individual plots
+	if not ax_provided:  # Only add legend to individual plots
 		if len(categories) > 10:
 			ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
 		else:
@@ -439,7 +426,6 @@ def plot_head_embeddings_multi(
 	alphas: tuple[float, float] = (0.7, 0.3),
 	sizes: tuple[int, int] = (60, 20),
 	methods: list[str] | None = None,
-	n_components: int | None = None,
 	n_neighbors_list: list[int] | None = None,
 	figsize: tuple[int, int] = (20, 16),
 ) -> tuple[plt.Figure, np.ndarray]:
@@ -594,7 +580,7 @@ def plot_head_embeddings_multi(
 		labels=legend_labels,
 		loc="lower center",
 		bbox_to_anchor=(0.5, -0.02),
-		ncol=min(6, len(categories)),
+		ncol=min(7, len(categories)),
 	)
 
 	# Add overall title
