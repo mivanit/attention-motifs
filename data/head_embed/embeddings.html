@@ -815,17 +815,24 @@
   	 * @param {Array<string>} hoverColumns - Columns to show in hover text
   	 * @returns {Array<Array>} - Array of customdata arrays for each point
   	 */
-  	function generateCustomdata(plotData, indices, selectionColumn = null, hoverColumns = ['activation.cls', 'activation.prompt']) {
+  	function generateCustomdata(
+  		plotData,
+  		indices,
+  		selectionColumn = null,
+  		hoverColumns = ['activation.cls', 'activation.prompt']
+  	) {
   		// Generate customdata for hover and selection
   		return indices.map(i => {
-  			// Start with an array for the hover columns
+  			// existing hover data
   			const data = hoverColumns.map(col => plotData[col]?.[i] ?? 'N/A');
   	
-  			// Add the selection column as an additional element if it's not already in the hover columns
+  			// if we're including the selection column
   			if (selectionColumn && !hoverColumns.includes(selectionColumn)) {
   				data.push(plotData[selectionColumn][i]);
   			}
   	
+  			// also store the global index at the end
+  			data.push(i);
   			return data;
   		});
   	}
@@ -2165,17 +2172,15 @@
   					}
   					this.lastSelectionTime = now;
   	
-  					// Get the point index from the event data
-  					const pointIndex = point.pointIndex || point.pointNumber;
+  					// Grab the global index from the last item in customdata
+  					const customdataArray = point.customdata;
+  					if (!customdataArray) return;
   	
-  					// Check if we have a valid point index and the selection column exists in plot data
-  					if (pointIndex === undefined || !this.plotData || !this.plotData[this.selectionColumn]) {
-  						console.error("Cannot determine point index or find selection column in data");
-  						return;
-  					}
+  					// The last entry is the global index we pushed
+  					const globalIndex = customdataArray[customdataArray.length - 1];
   	
-  					// Get the value directly from the plot data using the point index
-  					const selectionValue = this.plotData[this.selectionColumn][pointIndex];
+  					// Now fetch the correct row value
+  					const selectionValue = this.plotData[this.selectionColumn][globalIndex];
   	
   					if (selectionValue !== undefined) {
   						logger.log(`Selected ${this.selectionColumn}: ${selectionValue}`);

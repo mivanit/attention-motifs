@@ -504,17 +504,15 @@ const app = Vue.createApp({
 				}
 				this.lastSelectionTime = now;
 
-				// Get the point index from the event data
-				const pointIndex = point.pointIndex || point.pointNumber;
+				// Grab the global index from the last item in customdata
+				const customdataArray = point.customdata;
+				if (!customdataArray) return;
 
-				// Check if we have a valid point index and the selection column exists in plot data
-				if (pointIndex === undefined || !this.plotData || !this.plotData[this.selectionColumn]) {
-					console.error("Cannot determine point index or find selection column in data");
-					return;
-				}
+				// The last entry is the global index we pushed
+				const globalIndex = customdataArray[customdataArray.length - 1];
 
-				// Get the value directly from the plot data using the point index
-				const selectionValue = this.plotData[this.selectionColumn][pointIndex];
+				// Now fetch the correct row value
+				const selectionValue = this.plotData[this.selectionColumn][globalIndex];
 
 				if (selectionValue !== undefined) {
 					logger.log(`Selected ${this.selectionColumn}: ${selectionValue}`);

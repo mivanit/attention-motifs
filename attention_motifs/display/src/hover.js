@@ -45,18 +45,20 @@ function generateCustomdata(
 	plotData,
 	indices,
 	selectionColumn = null,
-	hoverColumns = ['activation.cls', 'activation.prompt'],
+	hoverColumns = ['activation.cls', 'activation.prompt']
 ) {
 	// Generate customdata for hover and selection
 	return indices.map(i => {
-		// Start with an array for the hover columns
+		// existing hover data
 		const data = hoverColumns.map(col => plotData[col]?.[i] ?? 'N/A');
 
-		// Add the selection column as an additional element if it's not already in the hover columns
+		// if we're including the selection column
 		if (selectionColumn && !hoverColumns.includes(selectionColumn)) {
 			data.push(plotData[selectionColumn][i]);
 		}
 
+		// also store the global index at the end
+		data.push(i);
 		return data;
 	});
 }
