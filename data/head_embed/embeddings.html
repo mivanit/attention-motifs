@@ -1021,18 +1021,75 @@
   			nonSelectedOpacity = 0.4,
   			nonSelectedColor = '#969696',
   	
-  			// For customdata / hover, defaults to the same as selectedColumn
+  			// For customdata / hover
   			selectionColumn = selectedColumn,
   			hoverColumns = ['activation.cls', 'activation.prompt'],
   			useCache = true,
   		} = options || {};
   	
+  		// -----------------------------------------------------
+  		// 1) Check if this column is numeric.
+  		//    We'll do a continuous colorscale if numeric.
+  		// -----------------------------------------------------
+  		const columnData = plotData[selectedColumn];
+  	
+  		// Quick test for numeric: every value is a number and not NaN.
+  		// (Adjust logic to handle nulls or missing data as you prefer.)
+  		const isNumeric = columnData.every(
+  			(val) => typeof val === 'number' && !isNaN(val)
+  		);
+  	
+  		if (isNumeric) {
+  			// Single trace with continuous colormap
+  			// Filter out invalid values (null, undefined, NaN) when computing min/max
+  			const validValues = columnData.filter((v) => v != null && !isNaN(v));
+  			const cmin = Math.min(...validValues);
+  			const cmax = Math.max(...validValues);
+  	
+  			// We'll just include *all* points in a single trace
+  			const indices = columnData.map((_, i) => i);
+  	
+  			// Build customdata for all points
+  			const customdata = getCustomdata(
+  				plotData,
+  				indices,
+  				selectionColumn,
+  				hoverColumns,
+  				useCache
+  			);
+  	
+  			const trace = {
+  				...defaultTraceConfig,
+  				x: indices.map((i) => plotData.x[i]),
+  				y: indices.map((i) => plotData.y[i]),
+  				z: indices.map((i) => plotData.z[i]),
+  				name: selectedColumn,
+  				marker: {
+  					size: selectedSize,
+  					opacity: selectedOpacity,
+  					color: columnData,
+  					colorscale: 'Viridis',  // or another Plotly colormap
+  					cmin: cmin,
+  					cmax: cmax,
+  					showscale: true,        // show the color scale legend
+  				},
+  				customdata,
+  			};
+  	
+  			console.timeEnd('Create Category Traces');
+  			return [trace];
+  		}
+  	
+  		// -----------------------------------------------------
+  		// 2) Otherwise, treat it as categorical as before.
+  		//    (Below is your existing logic, unchanged.)
+  		// -----------------------------------------------------
   		// Identify distinct values in this column
   		const allValues = [...dataFrame.col_unique(selectedColumn)];
   	
   		// Filter out known "invalid" entries
   		const knownValues = allValues.filter(
-  			v => v !== null && v !== 'None' && v !== 'unknown'
+  			(v) => v !== null && v !== 'None' && v !== 'unknown'
   		);
   	
   		// Collect indices for all unknown (null/None/unknown)
@@ -1047,7 +1104,7 @@
   		// Prepare result array of Plotly trace objects
   		const traces = [];
   	
-  		// Create one "Other Points" trace for unknown/null values, using the non-selected style
+  		// Create one "Other Points" trace for unknown/null values
   		if (unknownIndices.length > 0) {
   			const customdata = getCustomdata(
   				plotData,
@@ -1059,21 +1116,20 @@
   	
   			traces.push({
   				...defaultTraceConfig,
-  				x: unknownIndices.map(i => plotData.x[i]),
-  				y: unknownIndices.map(i => plotData.y[i]),
-  				z: unknownIndices.map(i => plotData.z[i]),
+  				x: unknownIndices.map((i) => plotData.x[i]),
+  				y: unknownIndices.map((i) => plotData.y[i]),
+  				z: unknownIndices.map((i) => plotData.z[i]),
   				name: 'Other Points',
   				marker: {
   					size: nonSelectedSize,
   					color: nonSelectedColor,
-  					opacity: nonSelectedOpacity
+  					opacity: nonSelectedOpacity,
   				},
-  				customdata
+  				customdata,
   			});
   		}
   	
   		// Make one trace per valid category
-  		// Customize this color palette or logic as you like
   		const colors = [
   			'#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
   			'#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
@@ -1088,7 +1144,7 @@
   				}
   			}
   	
-  			// Build customdata for hover text, if needed
+  			// Build customdata for hover text
   			const customdata = getCustomdata(
   				plotData,
   				indices,
@@ -1099,22 +1155,23 @@
   	
   			traces.push({
   				...defaultTraceConfig,
-  				x: indices.map(i => plotData.x[i]),
-  				y: indices.map(i => plotData.y[i]),
-  				z: indices.map(i => plotData.z[i]),
+  				x: indices.map((i) => plotData.x[i]),
+  				y: indices.map((i) => plotData.y[i]),
+  				z: indices.map((i) => plotData.z[i]),
   				name: String(value),
   				marker: {
   					size: selectedSize,
   					color: colors[index % colors.length],
-  					opacity: selectedOpacity
+  					opacity: selectedOpacity,
   				},
-  				customdata
+  				customdata,
   			});
   		});
   	
   		console.timeEnd('Create Category Traces');
   		return traces;
   	}
+  	
   	
   	/**
   	 * Create traces with selection highlighting
