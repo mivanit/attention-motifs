@@ -57,28 +57,28 @@ def create_head_embedding_df(
 ) -> pl.DataFrame:
 	"""
 	Create a polars DataFrame from head distance data, with embeddings and type information.
-
+	
 	# Parameters:
 	 - `head_dists : DistanceTensorResult`
-	    The head distances object containing cls_values and distances
+		The head distances object containing cls_values and distances
 	 - `attnpedia : Optional[AttentionPedia]`
-	    AttentionPedia object for head type lookups, if None a new one will be created
+		AttentionPedia object for head type lookups, if None a new one will be created
 	 - `embedding_method : Literal["isomap", "umap", "tsne", "pca"]`
-	    Method to use for dimensionality reduction
+		Method to use for dimensionality reduction
 	 - `n_components : int`
-	    Number of dimensions for the embedding (default: 3)
+		Number of dimensions for the embedding (default: 3)
 	 - `n_neighbors : int`
-	    Number of neighbors to consider for manifold methods (default: 15)
+		Number of neighbors to consider for manifold methods (default: 15)
 	 - `random_state : int`
-	    Random seed for reproducibility (default: 42)
-
+		Random seed for reproducibility (default: 42)
+	
 	# Returns:
 	 - `pl.DataFrame`
-	    A dataframe with one row per head, containing:
-	    - cls string
-	    - model, layer, head extracted from cls
-	    - embedding dimensions (embed.0, embed.1, etc.)
-	    - head types (primary_type and all_types)
+		A dataframe with one row per head, containing:
+		- cls string
+		- model, layer, head extracted from cls
+		- embedding dimensions (embed.0, embed.1, etc.)
+		- head types (primary_type, type_group, and all_types)
 	"""
 	# kwargs
 	reducer_kwargs_: dict[str, Any] = reducer_kwargs or {}
@@ -160,6 +160,9 @@ def create_head_embedding_df(
 	head_to_type: dict[str, str] = attnpedia.head_to_type()
 	head_to_types: dict[str, list[str]] = attnpedia.head_to_types()
 
+	# Get head type groups
+	head_type_groups: dict[str, str] = attnpedia.head_type_groups()
+	
 	primary_types: list[str] = [
 		head_to_type.get(cls, "unknown") for cls in head_dists.cls_values
 	]
@@ -167,6 +170,11 @@ def create_head_embedding_df(
 		", ".join(head_to_types.get(cls, ["unknown"])) for cls in head_dists.cls_values
 	]
 
+	# Add the type_group column using the mapping from the JSON file
+	type_groups: list[str] = [
+		head_type_groups.get(ptype, "unknown") for ptype in primary_types
+	]
+	
 	# Create basic dataframe
 	df: pl.DataFrame = pl.DataFrame(
 		{
@@ -175,6 +183,7 @@ def create_head_embedding_df(
 			"layer": layers,
 			"head": heads,
 			"primary_type": primary_types,
+			"type_group": type_groups,  # Add the type_group column
 			"all_types": all_types,
 		}
 	)
@@ -287,51 +296,53 @@ def create_embedding_df_multi(
 	return result_df
 
 
-EMBED_CMAP: str = "hsv"
+EMBED_CMAP: str = "gist_ncar"
 
 def plot_head_embeddings(
 	df: pl.DataFrame,
 	prefix: str,
+	attnpedia: AttentionPedia | None = None,
 	color_by: str = "primary_type",
 	dims: tuple[int, int] = (0, 1),
 	alphas: tuple[float, float] = (0.7, 0.3),
 	sizes: tuple[int, int] = (60, 20),
-	unknown_color: str = "gray",
 	ax: plt.Axes | None = None,
 ) -> tuple[plt.Figure | None, plt.Axes]:
-	"""Plot head embeddings colored by the specified column
+	"""Plot head embeddings colored by the specified column"""
 
-	# Parameters:
-	 - `df : pl.DataFrame`
-	    DataFrame containing head embeddings
-	 - `prefix : str`
-	    Column prefix for embeddings (e.g., "embed.mdl.ALL.isomap.ndim.2.nb.8")
-	 - `color_by : str`
-	    Column to use for coloring points (default: "primary_type")
-	 - `dims : tuple[int, int]`
-	    Dimensions to plot (default: (0, 1))
-	 - `alphas : tuple[float, float]`
-	    Alpha values for (known, unknown) categories (default: (0.7, 0.3))
-	 - `sizes : tuple[int, int]`
-	    Point sizes for (known, unknown) categories (default: (60, 20))
-	 - `unknown_color : str`
-	    Color to use for "unknown" category (default: "gray")
-	 - `ax : plt.Axes | None`
-	    Optional axes to plot on. If None, creates a new figure and axes.
-
-	# Returns:
-	 - `tuple[plt.Figure | None, plt.Axes]`
-	    Figure (None if ax was provided) and Axes objects
-	"""
+	# Create AttentionPedia if not provided
+	if attnpedia is None:
+		attnpedia = AttentionPedia()
+		
 	# Create figure and axes if not provided
 	fig: plt.Figure | None = None
 	if ax is None:
 		fig, ax = plt.subplots(figsize=(12, 10))
-
+	
 	# Get unique values for color assignment
 	categories: list = df[color_by].unique().to_list()
-	cmap: matplotlib.colors.Colormap = plt.cm.get_cmap(EMBED_CMAP, len(categories))
-	color_map: dict = {cat: cmap(i) for i, cat in enumerate(categories)}
+	
+	# Get colors based on the color_by column
+	cmap: matplotlib.colors.Colormap
+	color_map: dict
+	unknown_color: str
+	if color_by == "primary_type":
+		# Use the colors defined in the JSON file
+		color_map = attnpedia.head_type_colors()
+		unknown_color = attnpedia._unknown_color
+	elif color_by == "type_group":
+		# For type_group, get colors from the JSON file's group definitions
+		color_map = {
+			group_name: group_info.get("color", attnpedia._unknown_color)
+			for group_name, group_info in attnpedia.groups_data.get("groups", {}).items()
+		}
+		color_map["unknown"] = attnpedia._unknown_color
+		unknown_color = attnpedia._unknown_color
+	else:
+		# For other columns, use a default colormap
+		cmap = plt.cm.get_cmap("tab10", len(categories))
+		color_map = {cat: matplotlib.colors.rgb2hex(cmap(i)) for i, cat in enumerate(categories)}
+		unknown_color = attnpedia._unknown_color
 
 	# Extract embedding dimensions
 	x_col: str = f"{prefix}.dim.{dims[0]}"
@@ -419,11 +430,11 @@ def plot_head_embeddings(
 
 def plot_head_embeddings_multi(
 	df: pl.DataFrame,
+	attnpedia: AttentionPedia | None = None,
 	color_by: str = "primary_type",
 	dims: tuple[int, int] = (0, 1),
 	alphas: tuple[float, float] = (0.7, 0.3),
 	sizes: tuple[int, int] = (60, 20),
-	unknown_color: str = "gray",
 	methods: list[str] | None = None,
 	n_components: int | None = None,
 	n_neighbors_list: list[int] | None = None,
@@ -434,6 +445,8 @@ def plot_head_embeddings_multi(
 	# Parameters:
 	 - `df : pl.DataFrame`
 	    DataFrame containing head embeddings
+	 - `attnpedia : AttentionPedia | None`
+	    AttentionPedia object for color lookups
 	 - `color_by : str`
 	    Column to use for coloring points (default: "primary_type")
 	 - `dims : tuple[int, int]`
@@ -442,8 +455,6 @@ def plot_head_embeddings_multi(
 	    Alpha values for (known, unknown) categories (default: (0.7, 0.3))
 	 - `sizes : tuple[int, int]`
 	    Point sizes for (known, unknown) categories (default: (60, 20))
-	 - `unknown_color : str`
-	    Color to use for "unknown" category (default: "gray")
 	 - `methods : list[str] | None`
 	    Methods to include in grid (default: all methods in DataFrame)
 	 - `n_components : int | None`
@@ -457,10 +468,32 @@ def plot_head_embeddings_multi(
 	 - `tuple[plt.Figure, np.ndarray]`
 	    Figure and array of Axes objects
 	"""
+	# Create AttentionPedia if not provided
+	if attnpedia is None:
+		attnpedia = AttentionPedia()
+	
 	# Get unique values for color assignment (for shared legend)
 	categories: list = df[color_by].unique().to_list()
-	cmap: matplotlib.colors.Colormap = plt.cm.get_cmap(EMBED_CMAP, len(categories))
-	color_map: dict = {cat: cmap(i) for i, cat in enumerate(categories)}
+	
+	# Get colors based on the color_by column
+	color_map: dict
+	if color_by == "primary_type":
+		# Use the colors defined in the JSON file
+		color_map = attnpedia.head_type_colors()
+	elif color_by == "type_group":
+		# For type_group, get colors from the JSON file's group definitions
+		color_map = {
+			group_name: group_info.get("color", attnpedia._unknown_color)
+			for group_name, group_info in attnpedia.groups_data.get("groups", {}).items()
+		}
+		color_map["unknown"] = attnpedia._unknown_color
+	else:
+		# For other columns, use a default colormap
+		cmap = plt.cm.get_cmap("tab10", len(categories))
+		color_map = {cat: matplotlib.colors.rgb2hex(cmap(i)) for i, cat in enumerate(categories)}
+	
+	# Use attnpedia's unknown color
+	unknown_color: str = attnpedia._unknown_color
 
 	# Find all available methods and n_neighbors values
 	methods_found: set[str] = set()
@@ -533,11 +566,11 @@ def plot_head_embeddings_multi(
 			_, _ = plot_head_embeddings(
 				df=df,
 				prefix=prefix,
+				attnpedia=attnpedia,
 				color_by=color_by,
 				dims=dims,
 				alphas=alphas,
 				sizes=sizes,
-				unknown_color=unknown_color,
 				ax=axes[i, j],
 			)
 
@@ -563,7 +596,7 @@ def plot_head_embeddings_multi(
 				[0],
 				marker="o",
 				color="w",
-				markerfacecolor=color_map[cat],
+				markerfacecolor=color_map.get(cat, unknown_color),
 				markersize=16,
 				markeredgewidth=0,
 				alpha=alphas[0],

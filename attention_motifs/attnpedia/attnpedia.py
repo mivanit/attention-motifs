@@ -1,5 +1,6 @@
 import json
-from typing import Callable, Literal
+import matplotlib.colors as mcolors
+from typing import Callable, Literal, Dict, List, Tuple
 import warnings
 from pathlib import Path
 import importlib.resources
@@ -13,8 +14,17 @@ ATTNPEDIA_PATH: Path = (
 	Path(importlib.resources.files(attention_motifs)) / "attnpedia" / "attn-pedia.json"
 )
 
+ATTNPEDIA_GROUPS_PATH: Path = (
+	Path(importlib.resources.files(attention_motifs))
+	/ "attnpedia"
+	/ "attn-pedia-groups.json"
+)
+
 if not ATTNPEDIA_PATH.is_file():
 	warnings.warn(f"attpedia json does not exist: {ATTNPEDIA_PATH = }.")
+
+if not ATTNPEDIA_GROUPS_PATH.is_file():
+	warnings.warn(f"attpedia groups json does not exist: {ATTNPEDIA_GROUPS_PATH = }.")
 
 
 AttentionPediaSchema = list[
@@ -37,8 +47,24 @@ AttentionPediaSchema = list[
 
 
 class AttentionPedia:
-	def __init__(self, path: Path = ATTNPEDIA_PATH):
+	def __init__(
+		self, path: Path = ATTNPEDIA_PATH, groups_path: Path = ATTNPEDIA_GROUPS_PATH
+	):
 		self.data_raw: AttentionPediaSchema = json.loads(path.read_text())
+
+		# Load group definitions and colors
+		try:
+			self.groups_data: dict = json.loads(groups_path.read_text())
+			self._unknown_color: str = self.groups_data.get("unknown_color", "#17BECF")
+		except (FileNotFoundError, json.JSONDecodeError):
+			warnings.warn(f"Could not load attention groups from {groups_path}.")
+			self.groups_data = {"groups": {}}
+			self._unknown_color = "#17BECF"
+
+		# Initialize cache for derived data
+		self._head_type_colors: dict[str, str] | None = None
+		self._head_type_groups: dict[str, str] | None = None
+		self._generate_head_type_maps()
 
 	def dataframe(self) -> pl.DataFrame:
 		df_raw: list[dict] = list()
@@ -144,3 +170,79 @@ class AttentionPedia:
 				drop_papers=drop_papers,
 			).items()
 		}
+
+	def head_type_colors(self, refresh: bool = False) -> dict[str, str]:
+		"""Get a mapping of attention head types to color codes.
+
+		Uses consistent coloring where similar head types have similar colors.
+
+		# Parameters:
+		 - `refresh : bool`
+		    Force regeneration of the color mapping (default: False)
+
+		# Returns:
+		 - `dict[str, str]`
+		    Dictionary mapping attention head types to hex color codes
+		"""
+		if self._head_type_colors is None or refresh:
+			self._generate_head_type_maps()
+
+		return self._head_type_colors
+
+	def head_type_groups(self, refresh: bool = False) -> dict[str, str]:
+		"""Get a mapping of attention head types to their group names.
+
+		# Parameters:
+		 - `refresh : bool`
+		    Force regeneration of the group mapping (default: False)
+
+		# Returns:
+		 - `dict[str, str]`
+		    Dictionary mapping attention head types to group names
+		"""
+		if self._head_type_groups is None or refresh:
+			self._generate_head_type_maps()
+
+		return self._head_type_groups
+
+	def _generate_head_type_maps(self) -> None:
+		"""Generate color and group mappings for attention head types from the groups JSON."""
+		group_data: dict = self.groups_data.get("groups", {})
+
+		# Initialize empty dictionaries
+		color_dict: dict[str, str] = {}
+		group_dict: dict[str, str] = {}
+
+		# Process each group
+		for group_name, group_info in group_data.items():
+			types: list[str] = group_info.get("types", [])
+			base_color: str = group_info.get("color", self._unknown_color)
+			base_rgb: tuple = mcolors.to_rgb(base_color)
+
+			# Create color variations for items in this group
+			if len(types) == 1:
+				# If only one item, use the base color
+				color_dict[types[0]] = base_color
+			else:
+				# Create variations by adjusting brightness/saturation
+				for i, type_name in enumerate(types):
+					# Get variation factor (more items = more variation)
+					factor: float = 0.2 * (i / (len(types) - 1 or 1) - 0.5)
+
+					# Create variation (lighten/darken)
+					new_rgb: tuple = tuple(
+						min(max(c * (1 + factor), 0), 1) for c in base_rgb
+					)
+					color_dict[type_name] = mcolors.rgb2hex(new_rgb)
+
+			# Assign group to each type
+			for type_name in types:
+				group_dict[type_name] = group_name
+
+		# Add 'unknown' with a distinct color
+		color_dict["unknown"] = self._unknown_color
+		group_dict["unknown"] = "unknown"
+
+		# Store the results
+		self._head_type_colors = color_dict
+		self._head_type_groups = group_dict
