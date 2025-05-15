@@ -287,6 +287,8 @@ def create_embedding_df_multi(
 	return result_df
 
 
+EMBED_CMAP: str = "hsv"
+
 def plot_head_embeddings(
 	df: pl.DataFrame,
 	prefix: str,
@@ -328,7 +330,7 @@ def plot_head_embeddings(
 
 	# Get unique values for color assignment
 	categories: list = df[color_by].unique().to_list()
-	cmap: matplotlib.colors.Colormap = plt.cm.get_cmap("tab10", len(categories))
+	cmap: matplotlib.colors.Colormap = plt.cm.get_cmap(EMBED_CMAP, len(categories))
 	color_map: dict = {cat: cmap(i) for i, cat in enumerate(categories)}
 
 	# Extract embedding dimensions
@@ -457,7 +459,7 @@ def plot_head_embeddings_multi(
 	"""
 	# Get unique values for color assignment (for shared legend)
 	categories: list = df[color_by].unique().to_list()
-	cmap: matplotlib.colors.Colormap = plt.cm.get_cmap("tab10", len(categories))
+	cmap: matplotlib.colors.Colormap = plt.cm.get_cmap(EMBED_CMAP, len(categories))
 	color_map: dict = {cat: cmap(i) for i, cat in enumerate(categories)}
 
 	# Find all available methods and n_neighbors values
