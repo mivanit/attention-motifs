@@ -345,7 +345,7 @@ class NDArray {
 		}
 
 		// For higher dimensions, we'll just show shape and type
-		return `NDArray(${this.shape.join('×')}, ${this.dtype})`;
+		return `NDArray(${this.shape.join('X')}, ${this.dtype})`;
 	}
 
 	static parse(arrayBufferContents) {

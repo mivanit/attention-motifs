@@ -360,7 +360,7 @@
   			}
   	
   			// For higher dimensions, we'll just show shape and type
-  			return `NDArray(${this.shape.join('×')}, ${this.dtype})`;
+  			return `NDArray(${this.shape.join('X')}, ${this.dtype})`;
   		}
   	
   		static parse(arrayBufferContents) {
@@ -2979,11 +2979,11 @@
   		font-size: 28px;
   		font-weight: bold;
   		cursor: pointer;
-  		color: #aaa;
+  		color: #bc5555;
   	}
   	
   	.help-close-button:hover {
-  		color: #333;
+  		color: #bd0000;
   	}
   	
   	.help-modal-body {
@@ -3047,7 +3047,7 @@
         Help - How to Use This Tool
        </h2>
        <span @click="toggleHelpMenu" class="help-close-button">
-        ×
+        X
        </span>
       </div>
       <div class="help-modal-body">
@@ -3259,7 +3259,7 @@
       Data Configuration
      </h3>
      <span :class="{ rotated: !showConfigPanel }" class="collapse-icon">
-      ▼
+      V
      </span>
     </div>
     <div class="config-content" v-show="showConfigPanel">
@@ -3297,7 +3297,7 @@
      <span :key="val" :style="{ backgroundColor: getSelectionColor(i) }" class="selected-value" v-for="(val, i) in selectedValues">
       {{ val }}
       <div @click="removeSelectedValue(val)" class="remove-btn" title="Remove">
-       ×
+       X
       </div>
      </span>
     </div>
@@ -3308,7 +3308,7 @@
       Plot Configuration
      </h3>
      <span :class="{ rotated: configCollapsed }" class="collapse-icon">
-      ▼
+      V
      </span>
     </div>
     <div class="config-content" v-show="!configCollapsed">

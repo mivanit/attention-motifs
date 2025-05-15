@@ -35,7 +35,7 @@
         <div class="help-modal-content">
           <div class="help-modal-header">
             <h2>Help - How to Use This Tool</h2>
-            <span class="help-close-button" @click="toggleHelpMenu">&times;</span>
+            <span class="help-close-button" @click="toggleHelpMenu">X</span>
           </div>
           <div class="help-modal-body">
             <div class="help-section">
@@ -136,7 +136,7 @@
     <div class="config-panel">
       <div class="config-header" @click="toggleConfigPanel">
         <h3>Data Configuration</h3>
-        <span class="collapse-icon" :class="{ rotated: !showConfigPanel }">▼</span>
+        <span class="collapse-icon" :class="{ rotated: !showConfigPanel }">V</span>
       </div>
       <div class="config-content" v-show="showConfigPanel">
         <div class="control-row">
@@ -160,14 +160,14 @@
       <h3>Selected Values:</h3>
       <div class="selection-display">
         <template v-if="selectedValues.length === 0">None</template>
-        <span v-for="(val, i) in selectedValues" :key="val" class="selected-value" :style="{ backgroundColor: getSelectionColor(i) }"> {{ val }} <div class="remove-btn" @click="removeSelectedValue(val)" title="Remove">×</div>
+        <span v-for="(val, i) in selectedValues" :key="val" class="selected-value" :style="{ backgroundColor: getSelectionColor(i) }"> {{ val }} <div class="remove-btn" @click="removeSelectedValue(val)" title="Remove">X</div>
         </span>
       </div>
     </div>
     <div class="config-display">
       <div class="config-header" @click="toggleConfigCollapse">
         <h3>Plot Configuration</h3>
-        <span class="collapse-icon" :class="{ rotated: configCollapsed }">▼</span>
+        <span class="collapse-icon" :class="{ rotated: configCollapsed }">V</span>
       </div>
       <div class="config-content" v-show="!configCollapsed">
         <div class="config-section">

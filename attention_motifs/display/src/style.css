@@ -555,11 +555,11 @@ input[type="number"] {
 	font-size: 28px;
 	font-weight: bold;
 	cursor: pointer;
-	color: #aaa;
+	color: #bc5555;
 }
 
 .help-close-button:hover {
-	color: #333;
+	color: #bd0000;
 }
 
 .help-modal-body {
