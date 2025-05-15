@@ -308,6 +308,8 @@ def plot_head_embeddings(
 	ax: plt.Axes | None = None,
 	figsize: tuple[int, int] = (12, 10),
 	title: str | None = None,
+	xlim: tuple[float, float] | None = None,
+	ylim: tuple[float, float] | None = None,
 ) -> tuple[plt.Figure | None, plt.Axes]:
 	"""Plot head embeddings colored by the specified column"""
 
@@ -411,6 +413,12 @@ def plot_head_embeddings(
 			ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
 		else:
 			ax.legend()
+
+	# Set x and y limits if provided
+	if xlim is not None:
+		ax.set_xlim(xlim)
+	if ylim is not None:
+		ax.set_ylim(ylim)
 
 	if fig is not None:
 		plt.tight_layout()
