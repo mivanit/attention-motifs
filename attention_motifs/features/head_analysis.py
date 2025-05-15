@@ -183,7 +183,7 @@ def create_head_embedding_df(
 			"layer": layers,
 			"head": heads,
 			"type.primary": type_primary,
-			"type.group": type_groups,  # Add the type_group column
+			"type.group": type_groups,
 			"type.all": type_all,
 		}
 	)
@@ -265,7 +265,7 @@ def create_embedding_df_multi(
 		renamed_df: pl.DataFrame = df.clone()
 		for i in range(n_components):
 			old_col: str = f"embed.{i}"
-			new_col: str = f"embed.mdl.{match_model_str}.{method}.ndim.{n_components}.nb.{n_neighbors}.dim.{i}"
+			new_col: str = f"embed.{method}.d{n_components}.b{n_neighbors}.dim.{i}"
 			renamed_df = renamed_df.rename({old_col: new_col})
 
 		# Store the DataFrame
@@ -273,7 +273,7 @@ def create_embedding_df_multi(
 
 	# Extract base columns (non-embedding columns) from the first DataFrame
 	base_cols: list[str] = [
-		col for col in dfs[0].columns if not col.startswith("embed.mdl.")
+		col for col in dfs[0].columns if not col.startswith("embed.")
 	]
 
 	# Start with the first DataFrame
@@ -282,7 +282,7 @@ def create_embedding_df_multi(
 	# Add embedding columns from all other DataFrames
 	for df in dfs[1:]:
 		embed_cols: list[str] = [
-			col for col in df.columns if col.startswith("embed.mdl.")
+			col for col in df.columns if col.startswith("embed.")
 		]
 		result_df = result_df.with_columns(df.select(embed_cols))
 
@@ -508,35 +508,18 @@ def plot_head_embeddings_multi(
 	methods_found: set[str] = set()
 	n_neighbors_found: set[int] = set()
 	match_model_str: str = None
-	n_components_found: int = None
 
 	# Simple pattern matching to find all embedding columns and extract their metadata
-	embed_cols: list[str] = [col for col in df.columns if col.startswith("embed.mdl.")]
+	embed_cols: list[str] = [col for col in df.columns if col.startswith("embed.")]
 
 	for col in embed_cols:
 		parts: list[str] = col.split(".")
 
-		# Need minimum structure to parse
-		if len(parts) < 10:
-			continue
-
 		# Extract information
+		# f"embed.{method}.d{n_components_val}.b{n_neighbors}"
 		try:
-			mdl_idx: int = parts.index("mdl")
-			if match_model_str is None and mdl_idx + 1 < len(parts):
-				match_model_str = parts[mdl_idx + 1]
-
-			method_idx: int = mdl_idx + 2
-			if method_idx < len(parts):
-				methods_found.add(parts[method_idx])
-
-			ndim_idx: int = parts.index("ndim")
-			if n_components_found is None and ndim_idx + 1 < len(parts):
-				n_components_found = int(parts[ndim_idx + 1])
-
-			nb_idx: int = parts.index("nb")
-			if nb_idx + 1 < len(parts):
-				n_neighbors_found.add(int(parts[nb_idx + 1]))
+			methods_found.add(parts[1])
+			n_neighbors_found.add(int(parts[3][1:]))
 		except (ValueError, IndexError):
 			continue
 
@@ -545,18 +528,12 @@ def plot_head_embeddings_multi(
 		raise ValueError("No embedding columns found in DataFrame")
 
 	methods_list: list[str] = sorted(methods_found) if methods is None else methods
-	n_components_val: int = n_components_found if n_components is None else n_components
 	n_neighbors_vals: list[int] = (
 		sorted(n_neighbors_found) if n_neighbors_list is None else n_neighbors_list
 	)
 
 	if match_model_str is None:
 		match_model_str = "ALL"
-
-	print(f"Found methods: {methods_list}")
-	print(f"Found n_neighbors: {n_neighbors_vals}")
-	print(f"Using n_components: {n_components_val}")
-	print(f"Using model: {match_model_str}")
 
 	# Create the grid of plots
 	n_rows: int = len(n_neighbors_vals)
@@ -569,7 +546,7 @@ def plot_head_embeddings_multi(
 	for i, n_neighbors in enumerate(n_neighbors_vals):
 		for j, method in enumerate(methods_list):
 			# Construct prefix for this cell
-			prefix: str = f"embed.mdl.{match_model_str}.{method}.ndim.{n_components_val}.nb.{n_neighbors}"
+			prefix: str = f"embed.{method}.d2.b{n_neighbors}"
 
 			# Plot on this axis
 			_, _ = plot_head_embeddings(
@@ -626,11 +603,11 @@ def plot_head_embeddings_multi(
 	fig.suptitle(
 		(
 			"Head Embeddings Comparison"
-			+ (
-				"(all models)"
-				if match_model_str == "ALL"
-				else f"(model: '{match_model_str}'"
-			)
+			# + (
+			# 	"(all models)"
+			# 	if match_model_str == "ALL"
+			# 	else f"(model: '{match_model_str}'"
+			# )
 			+ f"\ncolored by '{color_by}' ({len(categories)} categories)"
 		),
 		fontsize=20,

@@ -504,64 +504,55 @@ const app = Vue.createApp({
 				}
 				this.lastSelectionTime = now;
 
-				if (point.customdata) {
-					// Define the mapping of columns to customdata indices
-					const customDataIndices = {
-						'activation.cls': 0,
-						'activation.prompt': 1
-					};
+				// Get the point index from the event data
+				const pointIndex = point.pointIndex || point.pointNumber;
 
-					// If the selection column is not one of the first two, it will be the third element
-					if (this.selectionColumn !== 'activation.cls' && this.selectionColumn !== 'activation.prompt') {
-						customDataIndices[this.selectionColumn] = 2;
-					}
+				// Check if we have a valid point index and the selection column exists in plot data
+				if (pointIndex === undefined || !this.plotData || !this.plotData[this.selectionColumn]) {
+					console.error("Cannot determine point index or find selection column in data");
+					return;
+				}
 
-					// Check if the selection column is in our customdata indices mapping
-					if (this.selectionColumn in customDataIndices) {
-						const index = customDataIndices[this.selectionColumn];
-						const value = point.customdata[index];
+				// Get the value directly from the plot data using the point index
+				const selectionValue = this.plotData[this.selectionColumn][pointIndex];
 
-						if (value !== undefined) {
-							logger.log(`Selected ${this.selectionColumn}: ${value}`);
+				if (selectionValue !== undefined) {
+					logger.log(`Selected ${this.selectionColumn}: ${selectionValue}`);
 
-							// Show processing indicator
-							loading.showUpdating(this, true);
+					// Show processing indicator
+					loading.showUpdating(this, true);
 
-							// Store current camera position before update
-							this.currentCameraPosition = this.getCurrentCameraPosition();
+					// Store current camera position before update
+					this.currentCameraPosition = this.getCurrentCameraPosition();
 
-							// Use setTimeout to avoid blocking the UI
-							setTimeout(() => {
-								logger.time('Process Selection');
+					// Use setTimeout to avoid blocking the UI
+					setTimeout(() => {
+						logger.time('Process Selection');
 
-								// Toggle selection
-								const valueIndex = this.selectedValues.indexOf(value);
+						// Toggle selection
+						const valueIndex = this.selectedValues.indexOf(selectionValue);
 
-								if (valueIndex >= 0) {
-									// Remove if already selected
-									this.selectedValues.splice(valueIndex, 1);
-								} else {
-									// Add if not already selected
-									this.selectedValues.push(value);
-								}
-
-								logger.timeEnd('Process Selection');
-
-								// Update the visualization with some delay to prevent UI blocking
-								this.debounceUpdatePlot();
-
-								// Update URL with current selection
-								this.updateUrlState();
-							}, 10);
+						if (valueIndex >= 0) {
+							// Remove if already selected
+							this.selectedValues.splice(valueIndex, 1);
 						} else {
-							logger.error(`Could not find ${this.selectionColumn} value in customdata at index ${index}`);
+							// Add if not already selected
+							this.selectedValues.push(selectionValue);
 						}
-					} else {
-						logger.error(`Selection column ${this.selectionColumn} not found in customdata structure`);
-					}
+
+						logger.timeEnd('Process Selection');
+
+						// Update the visualization with some delay to prevent UI blocking
+						this.debounceUpdatePlot();
+
+						// Update URL with current selection
+						this.updateUrlState();
+					}, 10);
+				} else {
+					logger.error(`Could not find ${this.selectionColumn} value for point at index ${pointIndex}`);
 				}
 			}
-		},
+		}
 
 		// ==================================================
 		// CHUNK: update plot
