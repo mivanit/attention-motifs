@@ -16,14 +16,10 @@ from sklearn.decomposition import PCA
 import sklearn.base
 import umap
 
-# muutils
-import muutils.tensor_info
-from muutils.dbg import dbg_tensor
-
 # attention-motifs
 from attention_motifs.features.analysis import parse_cls, DistanceTensorResult
-from attention_motifs.features.head_analysis import filter_umap_warns
 from attention_motifs.attnpedia.attnpedia import AttentionPedia
+
 
 def filter_umap_warns():
 	warnings.filterwarnings(
@@ -44,6 +40,7 @@ def filter_umap_warns():
 		message=r"n_jobs value .* overridden .* random_state",
 		module=r"^umap\.umap_$",
 	)
+
 
 EmbeddingMethod = Literal["isomap", "umap", "tsne", "pca"]
 
@@ -289,6 +286,7 @@ def create_embedding_df_multi(
 
 	return result_df
 
+
 def plot_head_embeddings(
 	df: pl.DataFrame,
 	prefix: str,
@@ -349,8 +347,10 @@ def plot_head_embeddings(
 		cat_df: pl.DataFrame = df.filter(pl.col(color_by) == cat)
 		scatter_kwargs: dict = dict(
 			alpha=alphas[0] if cat != "unknown" else alphas[1],
-			markersize=sizes[0] if cat != "unknown" else sizes[1],  # Use markersize instead of size
-			markeredgecolor='none',  # Remove marker edges
+			markersize=sizes[0]
+			if cat != "unknown"
+			else sizes[1],  # Use markersize instead of size
+			markeredgecolor="none",  # Remove marker edges
 			marker="o",
 			linestyle="",
 		)
@@ -582,7 +582,11 @@ def plot_head_embeddings_multi(
 	fig.suptitle(
 		(
 			"Head Embeddings Comparison"
-			+ ("(all models)" if match_model_str == "ALL" else f"(model: '{match_model_str}'")
+			+ (
+				"(all models)"
+				if match_model_str == "ALL"
+				else f"(model: '{match_model_str}'"
+			)
 			+ f"\ncolored by '{color_by}' ({len(categories)} categories)"
 		),
 		fontsize=20,
