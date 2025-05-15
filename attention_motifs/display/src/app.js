@@ -143,9 +143,13 @@ const app = Vue.createApp({
 				this.dataConfig = parseUrlParams(this.dataConfig, this.urlParams);
 
 				// Load and process data using the function from dataloader.js
-				const result = await loadJsonlData(this.dataConfig, (percent, detail) => {
-					loading.updateProgress(this, percent, detail);
-				});
+				const result = await loadJsonlData(
+					this.dataConfig.filePath,
+					this.dataConfig.numericalPrefix,
+					(percent, detail) => {
+						loading.updateProgress(this, percent, detail);
+					}
+				);
 
 				// Update app data with results
 				this.dataFrame = result.dataFrame;

@@ -2,13 +2,13 @@
 	"dataConfig": {
 		"filePath": "embed.mdl.ALL.ndim.2.nb.2-4-8-16-32-64.jsonl",
 		"numericalPrefix": "embed.mdl.ALL.isomap.ndim.2.nb.2.dim.",
-		"defaultColorColumn": "primary_type",
-		"defaultSelectionColumn": "primary_type"
+		"defaultColorColumn": "type.primary",
+		"defaultSelectionColumn": "type.primary"
 	},
 	"hoverColumns": [
 		"cls",
-		"primary_type",
-		"all_types",
+		"type.primary",
+		"type.all"
 	],
 	"pcaAxes": { "x": 0, "y": 1, "z": 2 }
 }

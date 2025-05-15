@@ -61,9 +61,7 @@ function updatePlotCoordinates(plotData, pcaAxes, pcaColumnNames = null) {
  * @param {Function} updateProgressCallback - Callback function for updating loading progress
  * @returns {Promise<Object>} Object containing the data frame, pca array, and plot data
  */
-async function loadJsonlData(config, updateProgressCallback = () => { }) {
-    const { filePath, numericalPrefix } = config;
-
+async function loadJsonlData(filePath, numericalPrefix, updateProgressCallback = () => { }) {
     logger.time('Load Data');
 
     // Update progress to 10%
@@ -72,7 +70,7 @@ async function loadJsonlData(config, updateProgressCallback = () => { }) {
     // Load data from the configured file path
     const response = await fetch(filePath);
     const text = await response.text();
-    logger.log('JSONL text length:', text.length);
+    logger.log('JSONL text length:', filePath, text.length);
     const dataFrame = DataFrame.from_jsonl(text);
     logger.timeEnd('Load Data');
 
@@ -82,23 +80,23 @@ async function loadJsonlData(config, updateProgressCallback = () => { }) {
     // Extract numerical columns (PCA components) based on prefix
     logger.time('Extract PCA Components');
     const pcaColumnNames = dataFrame.columns.filter(col => col.startsWith(numericalPrefix))
-    .sort((a, b) => {
-        // Try to extract numbers from the column names (e.g., "pc.5" -> 5)
-        const aStr = a.split('.').pop();
-        const bStr = b.split('.').pop();
-        
-        // Try to parse as integers
-        const numA = parseInt(aStr);
-        const numB = parseInt(bStr);
-        
-        // If both can be parsed as valid numbers, sort numerically
-        if (!isNaN(numA) && !isNaN(numB)) {
-            return numA - numB;
-        }
-        
-        // Otherwise, fall back to lexicographical (string) sorting
-        return aStr.localeCompare(bStr);
-    });
+        .sort((a, b) => {
+            // Try to extract numbers from the column names (e.g., "pc.5" -> 5)
+            const aStr = a.split('.').pop();
+            const bStr = b.split('.').pop();
+
+            // Try to parse as integers
+            const numA = parseInt(aStr);
+            const numB = parseInt(bStr);
+
+            // If both can be parsed as valid numbers, sort numerically
+            if (!isNaN(numA) && !isNaN(numB)) {
+                return numA - numB;
+            }
+
+            // Otherwise, fall back to lexicographical (string) sorting
+            return aStr.localeCompare(bStr);
+        });
     logger.log('Found PCA columns:', pcaColumnNames);
     const pcaArray = extractPcaComponents(dataFrame, numericalPrefix, pcaColumnNames);
     logger.timeEnd('Extract PCA Components');

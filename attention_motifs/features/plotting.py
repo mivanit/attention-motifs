@@ -170,7 +170,7 @@ def plot_embedding(
 	title: str = "2D PCA Embedding",
 	alpha: float | dict[str, float] = 0.9,
 	marker_size: int | dict[str, int] = 1,
-	color_map: dict|str|None = None,
+	color_map: dict | str | None = None,
 	unknown_color: str = "#bfbfbf",
 	ax: plt.Axes | None = None,
 	do_legend: bool = True,
@@ -209,9 +209,7 @@ def plot_embedding(
 		plt_cm_cmap = plt.cm.get_cmap(
 			color_map if isinstance(color_map, str) else "tab10"
 		)
-		cmap = {
-			label: plt_cm_cmap(i) for i, label in enumerate(unique_labels)
-		}
+		cmap = {label: plt_cm_cmap(i) for i, label in enumerate(unique_labels)}
 	# Ensure unknown color is in the color map
 	if "unknown" not in cmap:
 		cmap["unknown"] = unknown_color
@@ -224,7 +222,7 @@ def plot_embedding(
 	# ------------------------------------------------------------------
 	for label in unique_labels:
 		mask = label_values == label
-		
+
 		# Support per-label alpha / marker size like the original
 		alpha_value = (
 			alpha.get(label, alpha.get(None, 0.9)) if isinstance(alpha, dict) else alpha
