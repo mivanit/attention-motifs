@@ -3,37 +3,6 @@
  */
 
 /**
- * Load PCA data from NPY file
- * @returns {Promise<NDArray>} The loaded PCA array
- */
-function loadPcaData() {
-    logger.time('Load PCA NPY');
-    return NDArray.load("data/features/pca.npy").then(pcaArray => {
-        logger.timeEnd('Load PCA NPY');
-        logger.log('PCA data shape:', pcaArray.shape);
-        return pcaArray;
-    });
-}
-
-/**
- * Load metadata from JSONL file
- * @returns {Promise<DataFrame>} The loaded DataFrame
- */
-function loadMetadata() {
-    logger.time('Load JSONL');
-
-    return fetch("data/features/meta.jsonl")
-        .then(response => response.text())
-        .then(text => {
-            logger.log('JSONL text length:', text.length);
-            const dataFrame = DataFrame.from_jsonl(text);
-            logger.timeEnd('Load JSONL');
-            logger.log('DataFrame rows:', dataFrame.length);
-            return dataFrame;
-        });
-}
-
-/**
  * Process loaded PCA data and metadata into a format suitable for plotting
  * @param {NDArray} pcaArray - The PCA array
  * @param {DataFrame} dataFrame - The metadata DataFrame
@@ -84,25 +53,6 @@ function updatePlotCoordinates(plotData, pcaAxes, pcaColumnNames = null) {
         plotData.y = plotData.pcaComponents[pcaAxes.y];
         plotData.z = plotData.pcaComponents[pcaAxes.z];
     }
-}
-
-/**
- * Find categorical columns in the DataFrame (those with fewer than 50 unique values)
- * @param {DataFrame} dataFrame - The metadata DataFrame
- * @returns {Array<string>} Array of column names that have categorical values
- */
-function findCategoricalColumns(dataFrame) {
-    return dataFrame.columns;
-    // return dataFrame.columns.filter(col => {
-    //     try {
-    //         const uniqueCount = dataFrame.col_unique(col).size;
-    //         // At least 2 unique values but not too many (fewer than 50)
-    //         return uniqueCount < 50;
-    //     } catch (e) {
-    //         logger.error(`Error checking column ${col}:`, e);
-    //         return false;
-    //     }
-    // });
 }
 
 /**

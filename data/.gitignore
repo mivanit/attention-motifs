@@ -1,5 +1,7 @@
 features/**
 head_embed/**
+!head_embed/config.json
+!head_embed/embeddings.html
 # scalar_features_fixed.jsonl
 # scalar_features.jsonl
 # scalar_features.jsonl.gz
