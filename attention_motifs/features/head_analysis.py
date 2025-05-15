@@ -281,9 +281,7 @@ def create_embedding_df_multi(
 
 	# Add embedding columns from all other DataFrames
 	for df in dfs[1:]:
-		embed_cols: list[str] = [
-			col for col in df.columns if col.startswith("embed.")
-		]
+		embed_cols: list[str] = [col for col in df.columns if col.startswith("embed.")]
 		result_df = result_df.with_columns(df.select(embed_cols))
 
 	# Save if a path is provided
