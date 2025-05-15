@@ -1491,3 +1491,4 @@ assemble-display:
 	@echo "assemble display files"
 	$(PYTHON) -m attention_motifs.display.assemble_display --input-path attention_motifs/display/src/embeddings.html --output-path attention_motifs/display/embeddings.html
 	cp attention_motifs/display/embeddings.html data/embeddings.html
+	cp attention_motifs/display/embeddings.html data/head_embed/embeddings.html
