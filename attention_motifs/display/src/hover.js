@@ -41,7 +41,12 @@ function createDynamicTraceConfig(hoverColumns) {
  * @param {Array<string>} hoverColumns - Columns to show in hover text
  * @returns {Array<Array>} - Array of customdata arrays for each point
  */
-function generateCustomdata(plotData, indices, selectionColumn = null, hoverColumns = ['activation.cls', 'activation.prompt']) {
+function generateCustomdata(
+	plotData,
+	indices,
+	selectionColumn = null,
+	hoverColumns = ['activation.cls', 'activation.prompt'],
+) {
 	// Generate customdata for hover and selection
 	return indices.map(i => {
 		// Start with an array for the hover columns
