@@ -353,7 +353,7 @@ def plot_head_embeddings(
 		raise ValueError(
 			f"Embedding columns '{x_col}' or '{y_col}' not found in DataFrame"
 		)
-	
+
 	# Create figure and axes if not provided
 	fig: plt.Figure | None = None
 	ax_provided: bool = ax is not None
