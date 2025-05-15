@@ -146,7 +146,9 @@ function clearCustomdataCache() {
 
 
 /**
- * Create traces grouped by categorical value (for initial view)
+ * Create traces grouped by categorical value (for initial view).
+ * Points with a value of null, "None" or "unknown" in selectedColumn
+ * get merged into the "Other Points" trace and use the non-selected style.
  * @param {Object} plotData - The plot data object with coordinates and metadata
  * @param {string} selectedColumn - The column to group by
  * @param {Object} dataFrame - The DataFrame containing the data
@@ -157,43 +159,101 @@ function clearCustomdataCache() {
  * @param {string} options.selectionColumn - The column used for selection (optional)
  * @returns {Array} - Array of trace objects for Plotly
  */
-function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
+function createTracesByCategory(
+	plotData,
+	selectedColumn,
+	dataFrame,
+	options
+) {
 	console.time('Create Category Traces');
-
 	if (!plotData || !selectedColumn) return [];
 
 	const {
+		// Defaults if not provided
 		defaultTraceConfig = createDefaultTraceConfig(),
 		selectedSize = 6,
 		selectedOpacity = 1.0,
-		selectionColumn = selectedColumn, // Default to selectedColumn if not provided
-		useCache = true
+
+		// The non-selected style
+		nonSelectedSize = 4,
+		nonSelectedOpacity = 0.4,
+		nonSelectedColor = '#969696',
+
+		// For customdata / hover, defaults to the same as selectedColumn
+		selectionColumn = selectedColumn,
+		hoverColumns = ['activation.cls', 'activation.prompt'],
+		useCache = true,
 	} = options || {};
 
-	const uniqueValues = [...dataFrame.col_unique(selectedColumn)];
-	console.log(`Found ${uniqueValues.length} unique values for ${selectedColumn}`);
+	// Identify distinct values in this column
+	const allValues = [...dataFrame.col_unique(selectedColumn)];
 
+	// Filter out known "invalid" entries
+	const knownValues = allValues.filter(
+		v => v !== null && v !== 'None' && v !== 'unknown'
+	);
+
+	// Collect indices for all unknown (null/None/unknown)
+	const unknownIndices = [];
+	for (let i = 0; i < plotData[selectedColumn].length; i++) {
+		const val = plotData[selectedColumn][i];
+		if (val === null || val === 'None' || val === 'unknown') {
+			unknownIndices.push(i);
+		}
+	}
+
+	// Prepare result array of Plotly trace objects
 	const traces = [];
 
-	// Colors for category differentiation
-	const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
+	// Create one "Other Points" trace for unknown/null values, using the non-selected style
+	if (unknownIndices.length > 0) {
+		const customdata = getCustomdata(
+			plotData,
+			unknownIndices,
+			selectionColumn,
+			hoverColumns,
+			useCache
+		);
 
-	// Create a trace for each unique value
-	uniqueValues.forEach((value, index) => {
-		console.log(`Creating trace for ${value}...`);
+		traces.push({
+			...defaultTraceConfig,
+			x: unknownIndices.map(i => plotData.x[i]),
+			y: unknownIndices.map(i => plotData.y[i]),
+			z: unknownIndices.map(i => plotData.z[i]),
+			name: 'Other Points',
+			marker: {
+				size: nonSelectedSize,
+				color: nonSelectedColor,
+				opacity: nonSelectedOpacity
+			},
+			customdata
+		});
+	}
+
+	// Make one trace per valid category
+	// Customize this color palette or logic as you like
+	const colors = [
+		'#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+		'#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+	];
+
+	knownValues.forEach((value, index) => {
+		// Gather row indices for this category
 		const indices = [];
-
-		// Find all points with this value
 		for (let i = 0; i < plotData[selectedColumn].length; i++) {
 			if (plotData[selectedColumn][i] === value) {
 				indices.push(i);
 			}
 		}
 
-		console.log(`Found ${indices.length} points for ${value}`);
-
-		// Get customdata with caching for better performance
-		const customdata = getCustomdata(plotData, indices, selectionColumn, options.hoverColumns, useCache);
+		// Build customdata for hover text, if needed
+		const customdata = getCustomdata(
+			plotData,
+			indices,
+			selectionColumn,
+			hoverColumns,
+			useCache
+		);
 
 		traces.push({
 			...defaultTraceConfig,
@@ -204,9 +264,9 @@ function createTracesByCategory(plotData, selectedColumn, dataFrame, options) {
 			marker: {
 				size: selectedSize,
 				color: colors[index % colors.length],
-				opacity: selectedOpacity // Use the selected opacity for better visibility
+				opacity: selectedOpacity
 			},
-			customdata: customdata
+			customdata
 		});
 	});
 

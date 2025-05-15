@@ -338,9 +338,6 @@ const app = Vue.createApp({
 		// ==================================================
 		// Create traces grouped by categorical value (for initial view) - now using function from plotutil.js
 		createTracesByCategory() {
-			logger.log('Creating traces by category');
-
-			// Use the createTracesByCategory function from plotutil.js with colorByColumn
 			return createTracesByCategory(
 				this.plotData,
 				this.colorByColumn,
@@ -349,7 +346,12 @@ const app = Vue.createApp({
 					defaultTraceConfig: this.defaultTraceConfig,
 					selectedSize: this.selectedSize,
 					selectedOpacity: this.selectedOpacity,
-					// Add the selectionColumn so it's included in customdata
+
+					// <-- Add these three
+					nonSelectedSize: this.nonSelectedSize,
+					nonSelectedOpacity: this.nonSelectedOpacity,
+					nonSelectedColor: this.nonSelectedColor,
+
 					selectionColumn: this.selectionColumn,
 					useCache: this.useCustomdataCache,
 					hoverColumns: this.hoverColumns,
@@ -359,9 +361,6 @@ const app = Vue.createApp({
 
 		// Create traces with selection highlighting - now using function from plotutil.js
 		createTracesWithSelection() {
-			logger.log('Creating traces with selection highlighting');
-
-			// Use the createTracesWithSelection function from plotutil.js with selectionColumn
 			return createTracesWithSelection(
 				this.plotData,
 				this.selectionColumn,
