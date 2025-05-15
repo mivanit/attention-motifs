@@ -55,11 +55,11 @@ class AttentionPedia:
 		# Load group definitions and colors
 		try:
 			self.groups_data: dict = json.loads(groups_path.read_text())
-			self._unknown_color: str = self.groups_data.get("unknown_color", "#17BECF")
+			self._unknown_color: str = self.groups_data.get("unknown_color", "#777777")
 		except (FileNotFoundError, json.JSONDecodeError):
 			warnings.warn(f"Could not load attention groups from {groups_path}.")
 			self.groups_data = {"groups": {}}
-			self._unknown_color = "#17BECF"
+			self._unknown_color = "#777777"
 
 		# Initialize cache for derived data
 		self._head_type_colors: dict[str, str] | None = None

@@ -78,7 +78,7 @@ def create_head_embedding_df(
 		- cls string
 		- model, layer, head extracted from cls
 		- embedding dimensions (embed.0, embed.1, etc.)
-		- head types (primary_type, type_group, and all_types)
+		- head types ("type.primary", "type.group", "type.all")
 	"""
 	# kwargs
 	reducer_kwargs_: dict[str, Any] = reducer_kwargs or {}
@@ -163,16 +163,16 @@ def create_head_embedding_df(
 	# Get head type groups
 	head_type_groups: dict[str, str] = attnpedia.head_type_groups()
 
-	primary_types: list[str] = [
+	type_primary: list[str] = [
 		head_to_type.get(cls, "unknown") for cls in head_dists.cls_values
 	]
-	all_types: list[str] = [
+	type_all: list[str] = [
 		", ".join(head_to_types.get(cls, ["unknown"])) for cls in head_dists.cls_values
 	]
 
 	# Add the type_group column using the mapping from the JSON file
 	type_groups: list[str] = [
-		head_type_groups.get(ptype, "unknown") for ptype in primary_types
+		head_type_groups.get(ptype, "unknown") for ptype in type_primary
 	]
 
 	# Create basic dataframe
@@ -182,9 +182,9 @@ def create_head_embedding_df(
 			"model": models,
 			"layer": layers,
 			"head": heads,
-			"primary_type": primary_types,
-			"type_group": type_groups,  # Add the type_group column
-			"all_types": all_types,
+			"type.primary": type_primary,
+			"type.group": type_groups,  # Add the type_group column
+			"type.all": type_all,
 		}
 	)
 
@@ -303,7 +303,7 @@ def plot_head_embeddings(
 	df: pl.DataFrame,
 	prefix: str,
 	attnpedia: AttentionPedia | None = None,
-	color_by: str = "primary_type",
+	color_by: str = "type.primary",
 	dims: tuple[int, int] = (0, 1),
 	alphas: tuple[float, float] = (0.7, 0.3),
 	sizes: tuple[int, int] = (60, 20),
@@ -327,11 +327,11 @@ def plot_head_embeddings(
 	cmap: matplotlib.colors.Colormap
 	color_map: dict
 	unknown_color: str
-	if color_by == "primary_type":
+	if color_by == "type.primary":
 		# Use the colors defined in the JSON file
 		color_map = attnpedia.head_type_colors()
 		unknown_color = attnpedia._unknown_color
-	elif color_by == "type_group":
+	elif color_by == "type.group":
 		# For type_group, get colors from the JSON file's group definitions
 		color_map = {
 			group_name: group_info.get("color", attnpedia._unknown_color)
@@ -436,7 +436,7 @@ def plot_head_embeddings(
 def plot_head_embeddings_multi(
 	df: pl.DataFrame,
 	attnpedia: AttentionPedia | None = None,
-	color_by: str = "primary_type",
+	color_by: str = "type.primary",
 	dims: tuple[int, int] = (0, 1),
 	alphas: tuple[float, float] = (0.7, 0.3),
 	sizes: tuple[int, int] = (60, 20),
@@ -453,7 +453,7 @@ def plot_head_embeddings_multi(
 	 - `attnpedia : AttentionPedia | None`
 	    AttentionPedia object for color lookups
 	 - `color_by : str`
-	    Column to use for coloring points (default: "primary_type")
+	    Column to use for coloring points (default: "type.primary")
 	 - `dims : tuple[int, int]`
 	    Dimensions to plot (default: (0, 1))
 	 - `alphas : tuple[float, float]`
@@ -482,10 +482,10 @@ def plot_head_embeddings_multi(
 
 	# Get colors based on the color_by column
 	color_map: dict
-	if color_by == "primary_type":
+	if color_by == "type.primary":
 		# Use the colors defined in the JSON file
 		color_map = attnpedia.head_type_colors()
-	elif color_by == "type_group":
+	elif color_by == "type.group":
 		# For type_group, get colors from the JSON file's group definitions
 		color_map = {
 			group_name: group_info.get("color", attnpedia._unknown_color)

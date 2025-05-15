@@ -170,7 +170,7 @@ def plot_embedding(
 	title: str = "2D PCA Embedding",
 	alpha: float | dict[str, float] = 0.9,
 	marker_size: int | dict[str, int] = 1,
-	color_map: dict[str, str] | None = None,
+	color_map: dict|str|None = None,
 	unknown_color: str = "#bfbfbf",
 	ax: plt.Axes | None = None,
 	do_legend: bool = True,
@@ -191,9 +191,6 @@ def plot_embedding(
 	 - `unknown_color : str`
 	    Color used for any label *not* in ``color_map`` (gray by default).
 	"""
-	# Keep original default behaviour if no palette supplied
-	color_map = color_map or {}
-
 	if ax is None:
 		_, ax = plt.subplots(figsize=(10, 10))
 
@@ -203,6 +200,22 @@ def plot_embedding(
 	# Get unique labels for coloring
 	unique_labels = np.unique(label_values)
 
+	# Create colormap with enough colors
+	cmap: dict
+	if isinstance(color_map, dict):
+		# Use provided color map
+		cmap = color_map
+	else:
+		plt_cm_cmap = plt.cm.get_cmap(
+			color_map if isinstance(color_map, str) else "tab10"
+		)
+		cmap = {
+			label: plt_cm_cmap(i) for i, label in enumerate(unique_labels)
+		}
+	# Ensure unknown color is in the color map
+	if "unknown" not in cmap:
+		cmap["unknown"] = unknown_color
+
 	# Store handles for legend
 	handles: list[plt.Line2D] = []
 
@@ -211,9 +224,7 @@ def plot_embedding(
 	# ------------------------------------------------------------------
 	for label in unique_labels:
 		mask = label_values == label
-		# Explicit palette first, fallback to ``unknown_color``:
-		color = color_map.get(label, unknown_color)
-
+		
 		# Support per-label alpha / marker size like the original
 		alpha_value = (
 			alpha.get(label, alpha.get(None, 0.9)) if isinstance(alpha, dict) else alpha
@@ -225,6 +236,7 @@ def plot_embedding(
 		)
 
 		# Main scatter plot
+		color = cmap.get(label, unknown_color)
 		ax.scatter(
 			embedding[mask, dims[0]],
 			embedding[mask, dims[1]],
