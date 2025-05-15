@@ -552,7 +552,7 @@ const app = Vue.createApp({
 					logger.error(`Could not find ${this.selectionColumn} value for point at index ${pointIndex}`);
 				}
 			}
-		}
+		},
 
 		// ==================================================
 		// CHUNK: update plot
