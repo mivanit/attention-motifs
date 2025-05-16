@@ -15,17 +15,26 @@ function createPlotLayout(title, cameraPosition = null, axes = { x: 0, y: 1, z: 
 			zaxis: { title: axisLabels ? axisLabels.z : `PC${axes.z}` },
 			camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } }
 		},
+		// Set larger legend font size and constant marker sizing
+		legend: {
+			font: {
+				size: 16     // Increase text size
+			},
+			itemsizing: 'constant',  // Keeps marker size constant
+			itemwidth: 200            // Increase space for the legend markers
+		},
 		margin: { l: 0, r: 0, b: 0, t: 50 },
 		hovermode: 'closest'
 	};
 
-	// Apply saved camera position if provided
+	// Preserve saved camera position if available
 	if (cameraPosition) {
 		layout.scene.camera = cameraPosition;
 	}
 
 	return layout;
 }
+
 
 /**
  * Creates a default trace configuration for a Plotly 3D scatter plot
