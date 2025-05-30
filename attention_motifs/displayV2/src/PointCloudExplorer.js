@@ -3,7 +3,7 @@ class PointCloudExplorer {
 		this.scene = new THREE.Scene();
 		this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 		this.renderer = new THREE.WebGLRenderer({ antialias: true });
-		
+
 		this.voxelGrid = new VoxelGrid(20, 500);
 		this.controls = new Controls(this.camera);
 		this.points = [];
@@ -32,6 +32,8 @@ class PointCloudExplorer {
 		});
 
 		this.controls.setOnWindowResize(() => {
+			this.camera.aspect = window.innerWidth / window.innerHeight;
+			this.camera.updateProjectionMatrix();
 			this.renderer.setSize(window.innerWidth, window.innerHeight);
 		});
 
@@ -58,10 +60,10 @@ class PointCloudExplorer {
 		}
 
 		this.voxelGrid.distributePoints(this.points);
-		this.updateLOD();
+		this.updateVisibility();
 	}
 
-	updateLOD() {
+	updateVisibility() {
 		const cameraPos = this.camera.position;
 		const newActiveVoxels = [];
 		let totalRenderedPoints = 0;
@@ -73,28 +75,22 @@ class PointCloudExplorer {
 		this.voxelGrid.getAllVoxels().forEach((voxel, voxelKey) => {
 			const distance = cameraPos.distanceTo(voxel.center);
 
-			if (distance < this.controls.settings.lodDistance * 3) {
+			// Simple distance culling - no LOD
+			if (distance < this.controls.settings.renderDistance) {
 				newActiveVoxels.push(voxelKey);
 
 				const geometry = new THREE.BufferGeometry();
 				const positions = [];
 				const colors = [];
 
-				// LOD logic: use all points if close, subsample if far
-				let pointsToRender = voxel.points;
-				if (distance > this.controls.settings.lodDistance) {
-					const lodFactor = Math.max(0.05, this.controls.settings.lodDistance / distance);
-					const step = Math.ceil(1 / lodFactor);
-					pointsToRender = voxel.points.filter((_, i) => i % step === 0);
-				}
-
-				pointsToRender.forEach(point => {
+				// Render all points in this voxel
+				voxel.points.forEach(point => {
 					positions.push(point.position.x, point.position.y, point.position.z);
 					colors.push(point.color.r, point.color.g, point.color.b);
 				});
 
 				if (positions.length > 0) {
-					totalRenderedPoints += pointsToRender.length;
+					totalRenderedPoints += voxel.points.length;
 
 					geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
 					geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
@@ -108,7 +104,7 @@ class PointCloudExplorer {
 					});
 
 					voxel.mesh = new THREE.Points(geometry, material);
-					voxel.mesh.userData = { voxelKey, points: pointsToRender };
+					voxel.mesh.userData = { voxelKey, points: voxel.points };
 					this.scene.add(voxel.mesh);
 				}
 			}
@@ -136,8 +132,8 @@ class PointCloudExplorer {
 				}
 			});
 		} else {
-			// Refresh LOD for other settings
-			this.updateLOD();
+			// Refresh visibility for distance changes
+			this.updateVisibility();
 		}
 	}
 
@@ -146,9 +142,9 @@ class PointCloudExplorer {
 
 		this.controls.updateMovement();
 
-		// Only update LOD every few frames for performance, or when movement occurs
+		// Only update visibility every few frames for performance, or when movement occurs
 		if (this.frameCount % 3 === 0 || this.controls.isMoving()) {
-			this.updateLOD();
+			this.updateVisibility();
 		}
 		this.frameCount++;
 

@@ -172,82 +172,164 @@
   <!-- end 'VoxelGrid.js' -->
   <!-- begin 'controls.js' -->
   <script>
-   class VoxelGrid {
-			constructor(voxelSize = 20, worldSize = 500) {
-				this.voxelSize = voxelSize;
-				this.worldSize = worldSize;
-				this.voxelsPerSide = Math.ceil(this.worldSize * 2 / this.voxelSize);
-				this.voxelGrid = new Map();
-				this.activeVoxels = new Set();
-			}
+   class Controls {
+		    constructor(camera) {
+		        this.camera = camera;
+		        this.settings = {
+		            pointSize: 2.0,
+		            opacity: 0.8,
+		            renderDistance: 50,
+		            speed: 5,
+		            pointCount: 10000
+		        };
 		
-			clear() {
-				this.voxelGrid.clear();
-				this.activeVoxels.clear();
-			}
+		        this.keys = {};
+		        this.mouseX = 0;
+		        this.mouseY = 0;
+		        this.velocity = new THREE.Vector3();
+		        this.direction = new THREE.Vector3();
 		
-			getVoxelKey(position) {
-				const x = Math.floor((position.x + this.worldSize) / this.voxelSize);
-				const y = Math.floor((position.y + this.worldSize) / this.voxelSize);
-				const z = Math.floor((position.z + this.worldSize) / this.voxelSize);
-				return `${x},${y},${z}`;
-			}
+		        this.onSettingChange = null;
+		        this.onWindowResize = null;
+		        this.onMouseMove = null;
 		
-			getVoxelCenter(voxelKey) {
-				const [x, y, z] = voxelKey.split(',').map(Number);
-				return new THREE.Vector3(
-					(x + 0.5) * this.voxelSize - this.worldSize,
-					(y + 0.5) * this.voxelSize - this.worldSize,
-					(z + 0.5) * this.voxelSize - this.worldSize
-				);
-			}
+		        this.setupEventListeners();
+		        this.setupControls();
+		    }
 		
-			distributePoints(points) {
-				this.voxelGrid.clear();
+		    setupEventListeners() {
+		        document.addEventListener('keydown', (e) => {
+		            this.keys[e.code] = true;
+		        });
 		
-				points.forEach(point => {
-					const voxelKey = this.getVoxelKey(point.position);
+		        document.addEventListener('keyup', (e) => {
+		            this.keys[e.code] = false;
+		        });
 		
-					if (!this.voxelGrid.has(voxelKey)) {
-						this.voxelGrid.set(voxelKey, {
-							points: [],
-							mesh: null,
-							center: this.getVoxelCenter(voxelKey)
-						});
-					}
+		        document.addEventListener('mousemove', (e) => {
+		            if (document.pointerLockElement === document.body) {
+		                // Fixed: Reverse mouse X axis and Y axis
+		                this.mouseX -= e.movementX * 0.002;
+		                this.mouseY -= e.movementY * 0.002;
+		                this.mouseY = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.mouseY));
+		            }
 		
-					this.voxelGrid.get(voxelKey).points.push(point);
-				});
-			}
+		            if (this.onMouseMove) {
+		                this.onMouseMove(e);
+		            }
+		        });
 		
-			getVoxel(voxelKey) {
-				return this.voxelGrid.get(voxelKey);
-			}
+		        // Fixed: Use double-click instead of single click for pointer lock
+		        document.addEventListener('dblclick', () => {
+		            if (document.pointerLockElement === document.body) {
+		                document.exitPointerLock();
+		            } else {
+		                document.body.requestPointerLock();
+		            }
+		        });
 		
-			getAllVoxels() {
-				return this.voxelGrid;
-			}
+		        // Add escape key to exit pointer lock
+		        document.addEventListener('keydown', (e) => {
+		            if (e.code === 'Escape' && document.pointerLockElement === document.body) {
+		                document.exitPointerLock();
+		            }
+		        });
 		
-			clearMeshes(scene) {
-				this.activeVoxels.forEach(voxelKey => {
-					const voxel = this.voxelGrid.get(voxelKey);
-					if (voxel && voxel.mesh) {
-						scene.remove(voxel.mesh);
-						if (voxel.mesh.geometry) voxel.mesh.geometry.dispose();
-						if (voxel.mesh.material) voxel.mesh.material.dispose();
-						voxel.mesh = null;
-					}
-				});
-				this.activeVoxels.clear();
-			}
+		        window.addEventListener('resize', () => {
+		            if (this.onWindowResize) {
+		                this.onWindowResize();
+		            }
+		        });
+		    }
 		
-			setActiveVoxels(voxelKeys) {
-				this.activeVoxels = new Set(voxelKeys);
-			}
+		    setupControls() {
+		        const controlElements = {
+		            pointSize: document.getElementById('pointSize'),
+		            opacity: document.getElementById('opacity'),
+		            renderDistance: document.getElementById('lodDistance'),
+		            speed: document.getElementById('speed'),
+		            pointCount: document.getElementById('pointCount')
+		        };
 		
-			getActiveVoxels() {
-				return this.activeVoxels;
-			}
+		        const valueElements = {
+		            pointSize: document.getElementById('pointSizeValue'),
+		            opacity: document.getElementById('opacityValue'),
+		            renderDistance: document.getElementById('lodDistanceValue'),
+		            speed: document.getElementById('speedValue'),
+		            pointCount: document.getElementById('pointCountValue')
+		        };
+		
+		        Object.keys(controlElements).forEach(key => {
+		            const control = controlElements[key];
+		            const valueDisplay = valueElements[key];
+		
+		            if (control && valueDisplay) {
+		                control.addEventListener('input', () => {
+		                    const value = parseFloat(control.value);
+		                    this.settings[key] = value;
+		                    valueDisplay.textContent = value;
+		
+		                    if (this.onSettingChange) {
+		                        this.onSettingChange(key, value);
+		                    }
+		                });
+		            }
+		        });
+		    }
+		
+		    updateMovement() {
+		        // Mouse look
+		        this.camera.rotation.set(this.mouseY, this.mouseX, 0, 'YXZ');
+		
+		        // Movement
+		        this.velocity.set(0, 0, 0);
+		
+		        // Fixed: Reverse forward/back movement
+		        if (this.keys['KeyW']) this.velocity.z += 1;  // Forward
+		        if (this.keys['KeyS']) this.velocity.z -= 1;  // Back
+		        if (this.keys['KeyA']) this.velocity.x -= 1;  // Left
+		        if (this.keys['KeyD']) this.velocity.x += 1;  // Right
+		
+		        const speedMultiplier = this.keys['ShiftLeft'] ? 3 : 1;
+		        this.velocity.normalize().multiplyScalar(this.settings.speed * speedMultiplier * 0.016);
+		
+		        // Apply movement relative to camera direction
+		        this.direction.set(0, 0, -1);
+		        this.direction.applyQuaternion(this.camera.quaternion);
+		
+		        const right = new THREE.Vector3();
+		        right.crossVectors(this.direction, this.camera.up).normalize();
+		
+		        const forward = new THREE.Vector3();
+		        forward.crossVectors(this.camera.up, right).normalize();
+		
+		        this.camera.position.addScaledVector(right, this.velocity.x);
+		        this.camera.position.addScaledVector(forward, this.velocity.z);
+		    }
+		
+		    isMoving() {
+		        return this.velocity.length() > 0;
+		    }
+		
+		    setOnSettingChange(callback) {
+		        this.onSettingChange = callback;
+		    }
+		
+		    setOnWindowResize(callback) {
+		        this.onWindowResize = callback;
+		    }
+		
+		    setOnMouseMove(callback) {
+		        this.onMouseMove = callback;
+		    }
+		
+		    checkHover(event, activeVoxels, allVoxels) {
+		        // Simple hover implementation - you can expand this
+		        const hoverInfo = document.getElementById('hover-info');
+		        if (hoverInfo) {
+		            hoverInfo.style.display = 'none';
+		        }
+		    }
 		}
   </script>
   <!-- end 'controls.js' -->
@@ -258,7 +340,7 @@
 				this.scene = new THREE.Scene();
 				this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 				this.renderer = new THREE.WebGLRenderer({ antialias: true });
-				
+		
 				this.voxelGrid = new VoxelGrid(20, 500);
 				this.controls = new Controls(this.camera);
 				this.points = [];
@@ -287,6 +369,8 @@
 				});
 		
 				this.controls.setOnWindowResize(() => {
+					this.camera.aspect = window.innerWidth / window.innerHeight;
+					this.camera.updateProjectionMatrix();
 					this.renderer.setSize(window.innerWidth, window.innerHeight);
 				});
 		
@@ -313,10 +397,10 @@
 				}
 		
 				this.voxelGrid.distributePoints(this.points);
-				this.updateLOD();
+				this.updateVisibility();
 			}
 		
-			updateLOD() {
+			updateVisibility() {
 				const cameraPos = this.camera.position;
 				const newActiveVoxels = [];
 				let totalRenderedPoints = 0;
@@ -328,28 +412,22 @@
 				this.voxelGrid.getAllVoxels().forEach((voxel, voxelKey) => {
 					const distance = cameraPos.distanceTo(voxel.center);
 		
-					if (distance < this.controls.settings.lodDistance * 3) {
+					// Simple distance culling - no LOD
+					if (distance < this.controls.settings.renderDistance) {
 						newActiveVoxels.push(voxelKey);
 		
 						const geometry = new THREE.BufferGeometry();
 						const positions = [];
 						const colors = [];
 		
-						// LOD logic: use all points if close, subsample if far
-						let pointsToRender = voxel.points;
-						if (distance > this.controls.settings.lodDistance) {
-							const lodFactor = Math.max(0.05, this.controls.settings.lodDistance / distance);
-							const step = Math.ceil(1 / lodFactor);
-							pointsToRender = voxel.points.filter((_, i) => i % step === 0);
-						}
-		
-						pointsToRender.forEach(point => {
+						// Render all points in this voxel
+						voxel.points.forEach(point => {
 							positions.push(point.position.x, point.position.y, point.position.z);
 							colors.push(point.color.r, point.color.g, point.color.b);
 						});
 		
 						if (positions.length > 0) {
-							totalRenderedPoints += pointsToRender.length;
+							totalRenderedPoints += voxel.points.length;
 		
 							geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
 							geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
@@ -363,7 +441,7 @@
 							});
 		
 							voxel.mesh = new THREE.Points(geometry, material);
-							voxel.mesh.userData = { voxelKey, points: pointsToRender };
+							voxel.mesh.userData = { voxelKey, points: voxel.points };
 							this.scene.add(voxel.mesh);
 						}
 					}
@@ -391,8 +469,8 @@
 						}
 					});
 				} else {
-					// Refresh LOD for other settings
-					this.updateLOD();
+					// Refresh visibility for distance changes
+					this.updateVisibility();
 				}
 			}
 		
@@ -401,9 +479,9 @@
 		
 				this.controls.updateMovement();
 		
-				// Only update LOD every few frames for performance, or when movement occurs
+				// Only update visibility every few frames for performance, or when movement occurs
 				if (this.frameCount % 3 === 0 || this.controls.isMoving()) {
-					this.updateLOD();
+					this.updateVisibility();
 				}
 				this.frameCount++;
 		
