@@ -1,50 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>3D Point Cloud Explorer</title>
+	<meta charset="utf-8" />
+	<meta content="width=device-width, initial-scale=1.0" name="viewport" />
+	<title>Simple Point Cloud Explorer</title>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 	<link rel="stylesheet" href="style.css">
-	<script src="VoxelGrid.js"></script>
-	<script src="controls.js"></script>
-	<script src="PointCloudExplorer.js"></script>
+	<script src="PointCloud.js"></script>
 </head>
+
 <body>
 	<div id="container">
 		<div id="controls">
 			<div class="control-group">
-				<label>Point Size: <span class="value-display" id="pointSizeValue">2.0</span></label>
-				<input type="range" id="pointSize" min="0.5" max="10" step="0.1" value="2.0">
+				<label> Point Size: <span class="value-display" id="pointSizeValue">3.0</span>
+				</label>
+				<input id="pointSize" max="10" min="0.5" step="0.1" type="range" value="3.0" />
 			</div>
 			<div class="control-group">
-				<label>Opacity: <span class="value-display" id="opacityValue">0.8</span></label>
-				<input type="range" id="opacity" min="0.1" max="1" step="0.05" value="0.8">
+				<label> Opacity: <span class="value-display" id="opacityValue">0.8</span>
+				</label>
+				<input id="opacity" max="1" min="0.1" step="0.05" type="range" value="0.8" />
 			</div>
 			<div class="control-group">
-				<label>LOD Distance: <span class="value-display" id="lodDistanceValue">50</span></label>
-				<input type="range" id="lodDistance" min="20" max="10000" step="5" value="50">
+				<label> Speed: <span class="value-display" id="speedValue">10</span>
+				</label>
+				<input id="speed" max="50" min="1" step="1" type="range" value="10" />
 			</div>
 			<div class="control-group">
-				<label>Speed: <span class="value-display" id="speedValue">5</span></label>
-				<input type="range" id="speed" min="1" max="20" step="0.5" value="5">
-			</div>
-			<div class="control-group">
-				<label>Point Count: <span class="value-display" id="pointCountValue">10000</span></label>
-				<input type="range" id="pointCount" min="1000" max="500000" step="1000" value="50000">
+				<label> Point Count: <span class="value-display" id="pointCountValue">25000</span>
+				</label>
+				<input id="pointCount" max="100000" min="1000" step="5000" type="range" value="25000" />
 			</div>
 		</div>
-		<div id="info">
-			WASD: Move | Shift: Sprint | Mouse: Look around<br>
-			Points rendered: <span id="renderedCount">0</span>
+		<div id="info"> WASD: Move | Q/E: Roll | Shift: Sprint | Double-click: Mouse look | ESC: Exit mouse look <br /> Points: <span id="renderedCount">0</span>
 		</div>
-		<div id="hover-info"></div>
 	</div>
-	<script>
-		// Initialize the application when DOM is loaded
-		document.addEventListener('DOMContentLoaded', () => {
-			new PointCloudExplorer();
-		});
-	</script>
 </body>
+<script>
+	document.addEventListener('DOMContentLoaded', () => {
+    new PointCloud();
+});
+</script>
+
 </html>
