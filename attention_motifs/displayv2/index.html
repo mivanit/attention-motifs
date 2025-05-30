@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>3D Point Cloud Explorer</title>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+			background: #000;
+			font-family: 'Courier New', monospace;
+			overflow: hidden;
+		}
+
+		#container {
+			position: relative;
+			width: 100vw;
+			height: 100vh;
+		}
+
+		#controls {
+			position: absolute;
+			top: 20px;
+			left: 20px;
+			background: rgba(0, 0, 0, 0.8);
+			padding: 15px;
+			border-radius: 8px;
+			color: #00ff00;
+			z-index: 100;
+			min-width: 250px;
+		}
+
+		.control-group {
+			margin-bottom: 10px;
+		}
+
+		label {
+			display: block;
+			margin-bottom: 5px;
+			font-size: 12px;
+		}
+
+		select,
+		input[type="range"] {
+			width: 100%;
+			background: #333;
+			color: #00ff00;
+			border: 1px solid #555;
+			padding: 5px;
+		}
+
+		input[type="range"] {
+			height: 20px;
+		}
+
+		.value-display {
+			display: inline-block;
+			float: right;
+			font-weight: bold;
+		}
+
+		#info {
+			position: absolute;
+			bottom: 20px;
+			left: 20px;
+			background: rgba(0, 0, 0, 0.8);
+			padding: 10px;
+			border-radius: 8px;
+			color: #00ff00;
+			font-size: 12px;
+		}
+
+		#hover-info {
+			position: absolute;
+			background: rgba(0, 0, 0, 0.9);
+			color: #00ff00;
+			padding: 8px;
+			border-radius: 4px;
+			font-size: 11px;
+			pointer-events: none;
+			z-index: 200;
+			display: none;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="container">
+		<div id="controls">
+			<div class="control-group">
+				<label>Point Size: <span class="value-display" id="pointSizeValue">2.0</span></label>
+				<input type="range" id="pointSize" min="0.5" max="10" step="0.1" value="2.0">
+			</div>
+			<div class="control-group">
+				<label>Opacity: <span class="value-display" id="opacityValue">0.8</span></label>
+				<input type="range" id="opacity" min="0.1" max="1" step="0.05" value="0.8">
+			</div>
+			<div class="control-group">
+				<label>LOD Distance: <span class="value-display" id="lodDistanceValue">50</span></label>
+				<input type="range" id="lodDistance" min="20" max="200" step="5" value="50">
+			</div>
+			<div class="control-group">
+				<label>Speed: <span class="value-display" id="speedValue">5</span></label>
+				<input type="range" id="speed" min="1" max="20" step="0.5" value="5">
+			</div>
+			<div class="control-group">
+				<label>Point Count: <span class="value-display" id="pointCountValue">10000</span></label>
+				<input type="range" id="pointCount" min="1000" max="50000" step="1000" value="10000">
+			</div>
+		</div>
+		<div id="info"> WASD: Move | Shift: Sprint | Mouse: Look around<br> Points rendered: <span id="renderedCount">0</span>
+		</div>
+		<div id="hover-info"></div>
+	</div>
+	<script>
+		class PointCloudExplorer {
+			constructor() {
+				this.scene = new THREE.Scene();
+				this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+				this.renderer = new THREE.WebGLRenderer({ antialias: true });
+				this.raycaster = new THREE.Raycaster();
+				this.mouse = new THREE.Vector2();
+
+				this.setupRenderer();
+				this.setupControls();
+				this.setupVoxelGrid();
+				this.generatePoints();
+				this.setupEventListeners();
+				this.animate();
+			}
+
+			setupRenderer() {
+				this.renderer.setSize(window.innerWidth, window.innerHeight);
+				this.renderer.setClearColor(0x000011);
+				document.getElementById('container').appendChild(this.renderer.domElement);
+
+				this.camera.position.set(0, 0, 0);
+			}
+
+			setupControls() {
+				this.movement = {
+					forward: false,
+					backward: false,
+					left: false,
+					right: false,
+					up: false,
+					down: false,
+					sprint: false
+				};
+
+				this.mouseControls = {
+					isLocked: false,
+					sensitivity: 0.002,
+					pitch: 0,
+					yaw: 0
+				};
+
+				this.settings = {
+					pointSize: 2.0,
+					opacity: 0.8,
+					lodDistance: 50,
+					speed: 5,
+					pointCount: 10000
+				};
+			}
+
+			setupVoxelGrid() {
+				this.voxelSize = 20;
+				this.worldSize = 500;
+				this.voxelsPerSide = Math.ceil(this.worldSize * 2 / this.voxelSize);
+				this.voxelGrid = new Map();
+				this.activeVoxels = new Set();
+			}
+
+			generatePoints() {
+				this.points = [];
+				const count = this.settings.pointCount;
+
+				for (let i = 0; i < count; i++) {
+					const point = {
+						id: i,
+						position: new THREE.Vector3(
+							(Math.random() - 0.5) * this.worldSize * 2,
+							(Math.random() - 0.5) * this.worldSize * 2,
+							(Math.random() - 0.5) * this.worldSize * 2
+						),
+						color: new THREE.Color().setHSL(Math.random(), 0.7, 0.6)
+					};
+					this.points.push(point);
+				}
+
+				this.distributePointsToVoxels();
+				this.updateLOD();
+			}
+
+			distributePointsToVoxels() {
+				this.voxelGrid.clear();
+
+				this.points.forEach(point => {
+					const voxelKey = this.getVoxelKey(point.position);
+
+					if (!this.voxelGrid.has(voxelKey)) {
+						this.voxelGrid.set(voxelKey, {
+							points: [],
+							mesh: null,
+							center: this.getVoxelCenter(voxelKey)
+						});
+					}
+
+					this.voxelGrid.get(voxelKey).points.push(point);
+				});
+			}
+
+			getVoxelKey(position) {
+				const x = Math.floor((position.x + this.worldSize) / this.voxelSize);
+				const y = Math.floor((position.y + this.worldSize) / this.voxelSize);
+				const z = Math.floor((position.z + this.worldSize) / this.voxelSize);
+				return `${x},${y},${z}`;
+			}
+
+			getVoxelCenter(voxelKey) {
+				const [x, y, z] = voxelKey.split(',').map(Number);
+				return new THREE.Vector3(
+					(x + 0.5) * this.voxelSize - this.worldSize,
+					(y + 0.5) * this.voxelSize - this.worldSize,
+					(z + 0.5) * this.voxelSize - this.worldSize
+				);
+			}
+
+			updateLOD() {
+				const cameraPos = this.camera.position;
+				const newActiveVoxels = new Set();
+				let totalRenderedPoints = 0;
+
+				// Clear old meshes
+				this.activeVoxels.forEach(voxelKey => {
+					const voxel = this.voxelGrid.get(voxelKey);
+					if (voxel && voxel.mesh) {
+						this.scene.remove(voxel.mesh);
+						if (voxel.mesh.geometry) voxel.mesh.geometry.dispose();
+						if (voxel.mesh.material) voxel.mesh.material.dispose();
+						voxel.mesh = null;
+					}
+				});
+
+				// Create new meshes for visible voxels
+				this.voxelGrid.forEach((voxel, voxelKey) => {
+					const distance = cameraPos.distanceTo(voxel.center);
+
+					if (distance < this.settings.lodDistance * 3) {
+						newActiveVoxels.add(voxelKey);
+
+						const geometry = new THREE.BufferGeometry();
+						const positions = [];
+						const colors = [];
+
+						// LOD logic: use all points if close, subsample if far
+						let pointsToRender = voxel.points;
+						if (distance > this.settings.lodDistance) {
+							const lodFactor = Math.max(0.05, this.settings.lodDistance / distance);
+							const step = Math.ceil(1 / lodFactor);
+							pointsToRender = voxel.points.filter((_, i) => i % step === 0);
+						}
+
+						pointsToRender.forEach(point => {
+							positions.push(point.position.x, point.position.y, point.position.z);
+							colors.push(point.color.r, point.color.g, point.color.b);
+						});
+
+						if (positions.length > 0) {
+							totalRenderedPoints += pointsToRender.length;
+
+							geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+							geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+							const material = new THREE.PointsMaterial({
+								size: this.settings.pointSize,
+								opacity: this.settings.opacity,
+								transparent: this.settings.opacity < 1,
+								vertexColors: true,
+								sizeAttenuation: true
+							});
+
+							voxel.mesh = new THREE.Points(geometry, material);
+							voxel.mesh.userData = { voxelKey, points: pointsToRender };
+							this.scene.add(voxel.mesh);
+						}
+					}
+				});
+
+				this.activeVoxels = newActiveVoxels;
+				document.getElementById('renderedCount').textContent = totalRenderedPoints;
+			}
+
+			setupEventListeners() {
+				// Keyboard controls
+				document.addEventListener('keydown', (e) => {
+					switch (e.code) {
+						case 'KeyW': this.movement.forward = true; break;
+						case 'KeyS': this.movement.backward = true; break;
+						case 'KeyA': this.movement.left = true; break;
+						case 'KeyD': this.movement.right = true; break;
+						case 'Space': this.movement.up = true; e.preventDefault(); break;
+						case 'KeyC': this.movement.down = true; break;
+						case 'ShiftLeft': case 'ShiftRight': this.movement.sprint = true; break;
+					}
+				});
+
+				document.addEventListener('keyup', (e) => {
+					switch (e.code) {
+						case 'KeyW': this.movement.forward = false; break;
+						case 'KeyS': this.movement.backward = false; break;
+						case 'KeyA': this.movement.left = false; break;
+						case 'KeyD': this.movement.right = false; break;
+						case 'Space': this.movement.up = false; break;
+						case 'KeyC': this.movement.down = false; break;
+						case 'ShiftLeft': case 'ShiftRight': this.movement.sprint = false; break;
+					}
+				});
+
+				// Mouse controls
+				document.addEventListener('click', () => {
+					document.body.requestPointerLock();
+				});
+
+				document.addEventListener('pointerlockchange', () => {
+					this.mouseControls.isLocked = document.pointerLockElement === document.body;
+				});
+
+				document.addEventListener('mousemove', (e) => {
+					if (this.mouseControls.isLocked) {
+						this.mouseControls.yaw -= e.movementX * this.mouseControls.sensitivity;
+						this.mouseControls.pitch -= e.movementY * this.mouseControls.sensitivity;
+						this.mouseControls.pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.mouseControls.pitch));
+
+						this.camera.rotation.order = 'YXZ';
+						this.camera.rotation.y = this.mouseControls.yaw;
+						this.camera.rotation.x = this.mouseControls.pitch;
+					} else {
+						this.updateMousePosition(e);
+						this.checkHover(e);
+					}
+				});
+
+				// UI controls
+				this.setupUIControls();
+
+				// Window resize
+				window.addEventListener('resize', () => {
+					this.camera.aspect = window.innerWidth / window.innerHeight;
+					this.camera.updateProjectionMatrix();
+					this.renderer.setSize(window.innerWidth, window.innerHeight);
+				});
+			}
+
+			setupUIControls() {
+				const controls = [
+					{ id: 'pointSize', prop: 'pointSize', display: 'pointSizeValue' },
+					{ id: 'opacity', prop: 'opacity', display: 'opacityValue' },
+					{ id: 'lodDistance', prop: 'lodDistance', display: 'lodDistanceValue' },
+					{ id: 'speed', prop: 'speed', display: 'speedValue' },
+					{ id: 'pointCount', prop: 'pointCount', display: 'pointCountValue' }
+				];
+
+				controls.forEach(({ id, prop, display }) => {
+					const element = document.getElementById(id);
+					const valueDisplay = document.getElementById(display);
+
+					element.addEventListener('input', (e) => {
+						this.settings[prop] = parseFloat(e.target.value);
+						valueDisplay.textContent = this.settings[prop];
+
+						if (prop === 'pointCount') {
+							// Clear existing points and meshes first
+							this.activeVoxels.forEach(voxelKey => {
+								const voxel = this.voxelGrid.get(voxelKey);
+								if (voxel && voxel.mesh) {
+									this.scene.remove(voxel.mesh);
+									if (voxel.mesh.geometry) voxel.mesh.geometry.dispose();
+									if (voxel.mesh.material) voxel.mesh.material.dispose();
+								}
+							});
+							this.activeVoxels.clear();
+							this.voxelGrid.clear();
+							this.generatePoints();
+						} else if (prop === 'pointSize' || prop === 'opacity') {
+							// Update existing materials
+							this.activeVoxels.forEach(voxelKey => {
+								const voxel = this.voxelGrid.get(voxelKey);
+								if (voxel && voxel.mesh && voxel.mesh.material) {
+									voxel.mesh.material.size = this.settings.pointSize;
+									voxel.mesh.material.opacity = this.settings.opacity;
+									voxel.mesh.material.transparent = this.settings.opacity < 1;
+									voxel.mesh.material.needsUpdate = true;
+								}
+							});
+						} else {
+							this.updateLOD();
+						}
+					});
+				});
+			}
+
+			updateMousePosition(event) {
+				this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+				this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+			}
+
+			checkHover(event) {
+				this.raycaster.setFromCamera(this.mouse, this.camera);
+
+				const meshes = [];
+				this.activeVoxels.forEach(voxelKey => {
+					const voxel = this.voxelGrid.get(voxelKey);
+					if (voxel && voxel.mesh) {
+						meshes.push(voxel.mesh);
+					}
+				});
+
+				const intersects = this.raycaster.intersectObjects(meshes);
+				const hoverInfo = document.getElementById('hover-info');
+
+				if (intersects.length > 0) {
+					const intersection = intersects[0];
+					const pointIndex = intersection.index;
+					const voxelPoints = intersection.object.userData.points;
+
+					if (pointIndex < voxelPoints.length) {
+						const point = voxelPoints[pointIndex];
+						const pos = point.position;
+
+						hoverInfo.style.display = 'block';
+						hoverInfo.style.left = (event.clientX + 10) + 'px';
+						hoverInfo.style.top = (event.clientY - 10) + 'px';
+						hoverInfo.innerHTML = `
+                            <strong>Point ID:</strong> ${point.id}<br>
+                            <strong>Position:</strong><br>
+                            X: ${pos.x.toFixed(2)}<br>
+                            Y: ${pos.y.toFixed(2)}<br>
+                            Z: ${pos.z.toFixed(2)}
+                        `;
+					}
+				} else {
+					hoverInfo.style.display = 'none';
+				}
+			}
+
+			updateMovement() {
+				const speed = this.settings.speed * (this.movement.sprint ? 3 : 1);
+				const direction = new THREE.Vector3();
+
+				this.camera.getWorldDirection(direction);
+				const right = new THREE.Vector3().crossVectors(direction, this.camera.up).normalize();
+				const up = new THREE.Vector3(0, 1, 0);
+
+				if (this.movement.forward) this.camera.position.addScaledVector(direction, speed);
+				if (this.movement.backward) this.camera.position.addScaledVector(direction, -speed);
+				if (this.movement.left) this.camera.position.addScaledVector(right, -speed);
+				if (this.movement.right) this.camera.position.addScaledVector(right, speed);
+				if (this.movement.up) this.camera.position.addScaledVector(up, speed);
+				if (this.movement.down) this.camera.position.addScaledVector(up, -speed);
+			}
+
+			animate() {
+				requestAnimationFrame(() => this.animate());
+
+				this.updateMovement();
+
+				// Only update LOD every few frames for performance, or when movement occurs
+				if (this.frameCount % 3 === 0 || this.isMoving()) {
+					this.updateLOD();
+				}
+				this.frameCount = (this.frameCount || 0) + 1;
+
+				this.renderer.render(this.scene, this.camera);
+			}
+
+			isMoving() {
+				return Object.values(this.movement).some(m => m);
+			}
+		}
+
+		// Initialize the application
+		new PointCloudExplorer();
+	</script>
+</body>
+
+</html>

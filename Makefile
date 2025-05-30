@@ -1439,6 +1439,9 @@ help: help-targets info
 # ==================================================
 # (put them down here, or delimit with ~~~~~)
 
+
+# CONFIGURE DEMO
+# --------------------------------------------------
 HF_TOKEN ?= $(shell cat .meta/local/.hf_token)
 DEMO_PROMPTS ?= data/pile_demo.jsonl
 # DEMO_MODEL ?= gpt2-small
@@ -1450,45 +1453,54 @@ DEMO_ARGS ?= --min-chars 128 --max-chars 512
 # DEMO_DATA ?= docs/temp
 DEMO_DATA ?= /home/miv/projects/attn/website/patterns/docs
 N_PROC ?= 12
+# --------------------------------------------------
 
-.PHONY: demo-clean
-demo-clean:
+
+.PHONY: am-clean
+am-clean:
+	@echo "clean up all attention-motifs generated files"
 	rm -rf $(DEMO_DATA)
 
-.PHONY: demo-activations
-demo-activations:
-	HF_TOKEN=$(HF_TOKEN) $(PYTHON) -m pattern_lens.activations --model $(DEMO_MODEL) --prompts $(DEMO_PROMPTS) --raw-prompts --save-path $(DEMO_DATA) --n-samples $(DEMO_N_SAMPLES) $(DEMO_ARGS)
+.PHONY: am-download-models
+am-download-models:
+	@echo "download models specified in 'DEMO_MODELS'. optional."
+	$(PYTHON) scripts/download_models.py $(DEMO_MODELS)
 
-.PHONY: demo-figures
-demo-figures:
-	$(PYTHON) -m attention_motifs.figure_funcs --model $(DEMO_MODEL) --save-path $(DEMO_DATA) -p $(N_PROC) --n-samples $(DEMO_N_SAMPLES)
+.PHONY: am-activations
+am-activations:
+	@echo "generate activations given models and prompts"
+	HF_TOKEN=$(HF_TOKEN) $(PYTHON) -m pattern_lens.activations --model $(DEMO_MODELS) --prompts $(DEMO_PROMPTS) --raw-prompts --save-path $(DEMO_DATA) --n-samples $(DEMO_N_SAMPLES) $(DEMO_ARGS)
 
+.PHONY: am-figures
+am-figures:
+	@echo "generate attention matrix figures for pattern-lens"
+	$(PYTHON) -m attention_motifs.figure_funcs --model $(DEMO_MODELS) --save-path $(DEMO_DATA) --n-samples $(DEMO_N_SAMPLES)
+
+.PHONY: am-server-patternlens
+am-server-patternlens:
+	@echo "start the pattern lens server"
+	$(PYTHON) -m pattern_lens.server --rewrite-index --path $(DEMO_DATA)
 
 FEAT_KWARGS ?=
 
-.PHONY: demo-features
-demo-features:
+.PHONY: am-features
+am-features:
+	@echo "generate features for attention patterns"
 	NUMBA_CACHE_DIR=.numba-cache $(PYTHON) -m attention_motifs.features.generate --act-path $(DEMO_DATA) --processes $(N_PROC) $(FEAT_KWARGS)
 
-.PHONY: demo-server-patternlens
-demo-server-patternlens:
-	$(PYTHON) -m pattern_lens.server --rewrite-index --path $(DEMO_DATA)
-
-.PHONY: demo-server-embed
-demo-server-embed:
-	$(PYTHON) -m http.server --directory display/
-
-.PHONY: demo
-demo: demo-clean demo-activations demo-figures demo-server
-	@echo "generate demo"
-
-.PHONY: demo-docs		
-demo-docs: demo-clean demo-activations demo-figures
-	@echo "generate demo for docs (no server)"
-
-.PHONY: assemble-display
-assemble-display:
-	@echo "assemble display files"
+.PHONY: am-assemble-display
+am-assemble-display:
+	@echo "assemble embedding display files"
 	$(PYTHON) -m attention_motifs.display.assemble_display --input-path attention_motifs/display/src/embeddings.html --output-path attention_motifs/display/embeddings.html
-	cp attention_motifs/display/embeddings.html data/embeddings.html
-	cp attention_motifs/display/embeddings.html data/head_embed/embeddings.html
+	cp attention_motifs/display/embeddings.html data/features/index.html
+	cp attention_motifs/display/embeddings.html data/head_embed/index.html
+
+.PHONY: am-server-embed
+am-server-embed: am-assemble-display
+	@echo "start the attention head embedding server"
+	$(PYTHON) -m http.server --directory data/features/
+
+am-help:
+	@echo -n "# attention-motifs make targets"
+	@echo ":"
+	@cat Makefile | sed -n '/^\.PHONY: / h; /\(^\t@*echo\|^\t:\)/ {H; x; /PHONY/ s/.PHONY: \(.*\)\n.*"\(.*\)"/    make \1\t\2/p; d; x}' | grep "am-*" | sort -k2,2 | expand -t 35
