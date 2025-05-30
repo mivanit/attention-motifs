@@ -155,8 +155,9 @@ class PointCloud {
         if (this.keys['KeyQ']) this.roll += 0.02;
         if (this.keys['KeyE']) this.roll -= 0.02;
         
-        // Apply rotation in order: Y (yaw), X (pitch), Z (roll)
-        this.camera.rotation.set(this.mouseY, this.mouseX, this.roll, 'YXZ');
+        // Build rotation using Euler angles and convert to quaternion
+        const euler = new THREE.Euler(this.mouseY, this.mouseX, this.roll, 'YXZ');
+        this.camera.quaternion.setFromEuler(euler);
         
         // Movement relative to camera orientation
         this.velocity.set(0, 0, 0);
@@ -166,14 +167,16 @@ class PointCloud {
         if (this.keys['KeyA']) this.velocity.x -= 1;  // Left
         if (this.keys['KeyD']) this.velocity.x += 1;  // Right
         
-        const speedMultiplier = this.keys['ShiftLeft'] ? 3 : 1;
-        this.velocity.normalize().multiplyScalar(this.settings.speed * speedMultiplier * 0.016);
-        
-        // Transform movement vector by camera rotation
-        this.velocity.applyQuaternion(this.camera.quaternion);
-        
-        // Apply movement to camera position
-        this.camera.position.add(this.velocity);
+        if (this.velocity.length() > 0) {
+            const speedMultiplier = this.keys['ShiftLeft'] ? 3 : 1;
+            this.velocity.normalize().multiplyScalar(this.settings.speed * speedMultiplier * 0.016);
+            
+            // Transform movement vector by camera rotation
+            this.velocity.applyQuaternion(this.camera.quaternion);
+            
+            // Apply movement to camera position
+            this.camera.position.add(this.velocity);
+        }
     }
     
     animate() {
