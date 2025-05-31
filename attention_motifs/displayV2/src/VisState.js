@@ -23,7 +23,7 @@ class VisState extends EventTarget {
 
 	toggle(id) {
 		this.selection.has(id) ? this.selection.delete(id)
-		: this.selection.add(id);
+			: this.selection.add(id);
 		this._fire("selection");
 	}
 	clearSel() { this.selection.clear(); this._fire("selection"); }
