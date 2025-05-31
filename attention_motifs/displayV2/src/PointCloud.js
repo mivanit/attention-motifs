@@ -18,9 +18,10 @@ class PointCloud {
         /* ── colouring & selection ──── */
         this.state = new VisState(model);
         this.selMgr = new SelectionManager(model, this.state);
+        this.state.addEventListener('selection', () => this._updateColors());
 
         /* ── tunables ───────────────── */
-        this.settings = { pointSize: 3.0, opacity: 0.8, speed: 10 };
+        this.settings = { pointSize: 0.1, opacity: 0.8, speed: 10 };
 
         /* movement state */
         this.keys = {};
@@ -199,7 +200,6 @@ class PointCloud {
         const hit = this.raycaster.intersectObject(this.points, false)[0];
         this.hoverId = hit ? hit.index : null;
 
-        this._updateColors();
         if (this.uiManager) this.uiManager.updateUI();
         this.renderer.render(this.scene, this.camera);
     }

@@ -134,9 +134,10 @@ class UIManager {
         document.getElementById('renderedCount').textContent =
             this.pointCloud.points.geometry.getAttribute('position').count;
 
-        document.getElementById('statsPosX').textContent = p.x.toFixed(1);
-        document.getElementById('statsPosY').textContent = p.y.toFixed(1);
-        document.getElementById('statsPosZ').textContent = p.z.toFixed(1);
+        const p = this.pointCloud.camera.position;
+            document.getElementById('statsPosX').textContent = p.x.toFixed(3);
+            document.getElementById('statsPosY').textContent = p.y.toFixed(3);
+            document.getElementById('statsPosZ').textContent = p.z.toFixed(3);
     }
 
     /* called by PointCloud when geometry is rebuilt */

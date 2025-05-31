@@ -1,0 +1,10 @@
+{
+	"dataFile": "pca.jsonl",
+	"numericalPrefix": "pc.",
+	"defaultColorColumn": "activation.model",
+	"defaultSelectionColumn": "activation.model",
+	"hoverColumns": [
+		"activation.cls",
+		"activation.prompt"
+	]
+}
