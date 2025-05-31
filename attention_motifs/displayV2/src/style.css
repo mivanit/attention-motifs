@@ -167,3 +167,61 @@ input[type="range"] {
 .nav-row:last-child {
 	margin-bottom: 0;
 }
+
+#canvas-container {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 75vw;
+	height: 100vh;
+	background: #000
+}
+
+.control-panel {
+	position: absolute;
+	top: 10px;
+	left: 76vw;
+	width: 22vw;
+	background: rgba(30, 30, 30, .9);
+	padding: 10px;
+	border: 1px solid #444;
+	font-size: 14px;
+	line-height: 1.4;
+	color: #ddd
+}
+
+.control-panel label {
+	display: block;
+	margin-top: 6px
+}
+
+.control-panel select,
+input[type=range] {
+	width: 100%
+}
+
+button {
+	margin-top: 8px;
+	padding: 5px 10px;
+	background: #333;
+	color: #eee;
+	border: 1px solid #555;
+	border-radius: 4px;
+	cursor: pointer
+}
+
+button:hover {
+	background: #444
+}
+
+.hover-panel {
+	position: absolute;
+	display: none;
+	min-width: 160px;
+	max-width: 240px;
+	font-size: 12px;
+	pointer-events: none;
+	padding: 6px;
+	background: rgba(0, 0, 0, .8);
+	border: 1px solid #555
+}
