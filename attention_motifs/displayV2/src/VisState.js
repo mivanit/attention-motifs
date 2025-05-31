@@ -1,4 +1,4 @@
-/* VisState.js  ── replaces previous version */
+/* VisState.js  -- replaces previous version */
 class VisState extends EventTarget {
 	constructor(model) {
 		super();

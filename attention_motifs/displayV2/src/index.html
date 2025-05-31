@@ -5,11 +5,11 @@
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width,initial-scale=1.0" />
 	<title>Simple Point Cloud Explorer</title>
-	<!-- ── libraries / styles ───────────────────── -->
+	<!-- -- libraries / styles --------------------- -->
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 	<link rel="stylesheet" href="navball.css">
 	<link rel="stylesheet" href="style.css">
-	<!-- ── app code (kept in separate files) ─────── -->
+	<!-- -- app code (kept in separate files) ------- -->
 	<script src="config.js"></script>
 	<script src="ColorUtil.js"></script>
 	<script src="DataFrame.js"></script>
@@ -23,9 +23,9 @@
 
 <body>
 	<div id="container"><!-- single outer container -->
-		<!-- ────────── always-visible shortcuts ────────── -->
+		<!-- ---------- always-visible shortcuts ---------- -->
 		<div id="shortcuts"></div>
-		<!-- ────────── Help menu ────────── -->
+		<!-- ---------- Help menu ---------- -->
 		<div id="helpMenu" class="menu">
 			<div class="help-section">
 				<h3>Movement</h3>
@@ -44,7 +44,7 @@
 			</div>
 			<div class="close-hint">Press H to close</div>
 		</div>
-		<!-- ────────── Controls menu (point-count removed) ────────── -->
+		<!-- ---------- Controls menu (point-count removed) ---------- -->
 		<div id="controlsMenu" class="menu">
 			<div class="control-group">
 				<label>Point Size: <span class="value-display" id="pointSizeValue">3.0</span></label>
@@ -60,7 +60,7 @@
 			</div>
 			<div class="close-hint">Press M to close</div>
 		</div>
-		<!-- ────────── Stats menu ────────── -->
+		<!-- ---------- Stats menu ---------- -->
 		<div id="statsMenu" class="menu">
 			<div class="stats-group">
 				<h3>Rendering Stats</h3>
@@ -76,7 +76,7 @@
 			</div>
 			<div class="close-hint">Press J to close</div>
 		</div>
-		<!-- ────────── Navigation bar with navball ────────── -->
+		<!-- ---------- Navigation bar with navball ---------- -->
 		<div id="navbar" class="menu">
 			<div id="navball-container">
 				<div class="navball-crosshair"></div>
@@ -91,7 +91,7 @@
 			</div>
 		</div>
 	</div><!-- /#container -->
-	<!-- ────────── bootstrap script ────────── -->
+	<!-- ---------- bootstrap script ---------- -->
 	<script>
 		document.addEventListener('DOMContentLoaded', async () => {
 			await getConfig();                                       // merge in config.json if present

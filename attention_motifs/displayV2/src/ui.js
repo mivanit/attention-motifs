@@ -2,7 +2,7 @@ class UIManager {
     constructor(pointCloud) {
         this.pointCloud = pointCloud;
 
-        /* ── UI panels & hot-keys ─────────────────────────────── */
+        /* -- UI panels & hot-keys ------------------------------- */
         this.uiConfig = {
             help: { key: 'KeyH', elementId: 'helpMenu', shortcutText: 'h – help', visible: false },
             menu: { key: 'KeyM', elementId: 'controlsMenu', shortcutText: 'm – menu', visible: false },
@@ -10,7 +10,7 @@ class UIManager {
             stats: { key: 'KeyJ', elementId: 'statsMenu', shortcutText: 'j – stats', visible: false }
         };
 
-        /* ── column cycling helpers (C / V) ───────────────────── */
+        /* -- column cycling helpers (C / V) --------------------- */
         this.categoricalColumns = this.pointCloud.model.df.columns
             .filter(c => !c.startsWith(CONFIG.numericalPrefix));
         this.colorIdx = Math.max(0,
@@ -18,7 +18,7 @@ class UIManager {
         this.selectIdx = Math.max(0,
             this.categoricalColumns.indexOf(this.pointCloud.state.selectBy));
 
-        /* ── FPS tracking ─────────────────────────────────────── */
+        /* -- FPS tracking --------------------------------------- */
         this.frameCount = 0;
         this.lastTime = performance.now();
         this.fps = 60;

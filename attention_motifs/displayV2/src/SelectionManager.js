@@ -1,4 +1,4 @@
-/* SelectionManager.js  ── replaces previous version */
+/* SelectionManager.js  -- replaces previous version */
 class SelectionManager {
 	constructor(model, state) {
 		this.model = model;

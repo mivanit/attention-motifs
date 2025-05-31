@@ -3,26 +3,26 @@ class PointCloud {
     constructor(model) {
         this.model = model;
 
-        /* ── THREE essentials ───────────────────────────────── */
+        /* -- THREE essentials --------------------------------- */
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(
             75, window.innerWidth / window.innerHeight, 0.1, 2000);
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
 
-        /* ── helpers ------------------------------------------ */
+        /* -- helpers ------------------------------------------ */
         this.raycaster = new THREE.Raycaster();
         this.pointerNDC = new THREE.Vector2();
         this.pointerScreen = { x: 0, y: 0 };     // for tooltip
         this.hoverId = null;
         this.prevHoverId = null;
 
-        /* ── colouring / selection ---------------------------- */
+        /* -- colouring / selection ---------------------------- */
         this.state = new VisState(model);
         this.selMgr = new SelectionManager(model, this.state);
         this.state.addEventListener('selection', () => this._updateColors());
         this.state.addEventListener('vis', () => this._updateColors());
 
-        /* ── viewer tunables ---------------------------------- */
+        /* -- viewer tunables ---------------------------------- */
         this.settings = { pointSize: 0.1, opacity: 0.8, speed: 10 };
 
         /* movement state */
