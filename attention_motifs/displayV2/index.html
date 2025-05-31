@@ -1388,7 +1388,7 @@
 			// load config (merges config.json if it exists) 
 			await getConfig();
 			// load the dataset described in CONFIG 
-			const model = await DataModel.load(CONFIG.datafile, CONFIG.numericalPrefix);
+			const model = await DataModel.load(CONFIG.dataFile, CONFIG.numericalPrefix);
 			// create the viewer 
 			const pointCloud = new PointCloud(model);
 			const uiManager = new UIManager(pointCloud);
