@@ -5,6 +5,7 @@ class Navball {
 
 		this.yaw = 0;
 		this.pitch = 0;
+		this.roll = 0;  // Add roll tracking
 		this.isDragging = false;
 		this.lastMouseX = 0;
 		this.lastMouseY = 0;
@@ -154,13 +155,16 @@ class Navball {
 	}
 
 	updateRotation() {
+		// Apply all three rotations: yaw (Y), pitch (X), roll (Z)
 		this.navballMesh.rotation.set(0, 0, 0);
 		this.navballMesh.rotateY(this.yaw);
 		this.navballMesh.rotateX(this.pitch);
+		this.navballMesh.rotateZ(this.roll);
 
 		this.axisGroup.rotation.set(0, 0, 0);
 		this.axisGroup.rotateY(this.yaw);
 		this.axisGroup.rotateX(this.pitch);
+		this.axisGroup.rotateZ(this.roll);
 	}
 
 	animate() {
@@ -169,24 +173,23 @@ class Navball {
 	}
 
 	// API methods for external control
-	setRotation(yaw, pitch) {
+	setRotation(yaw, pitch, roll = 0) {
 		this.yaw = yaw;
 		this.pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+		this.roll = roll;
 		this.updateRotation();
 	}
 
 	getRotation() {
-		return { yaw: this.yaw, pitch: this.pitch };
+		return { yaw: this.yaw, pitch: this.pitch, roll: this.roll };
 	}
 
-	// Sync with camera orientation
+	// Sync with camera orientation - extract full rotation from quaternion
 	syncWithCamera(camera) {
-		const forward = new THREE.Vector3(0, 0, -1);
-		forward.applyQuaternion(camera.quaternion);
+		// Extract Euler angles from camera quaternion
+		const euler = new THREE.Euler();
+		euler.setFromQuaternion(camera.quaternion, 'YXZ'); // YXZ order matches camera rotation order
 
-		const yaw = Math.atan2(forward.x, -forward.z);
-		const pitch = Math.asin(forward.y);
-
-		this.setRotation(yaw, pitch);
+		this.setRotation(euler.y, euler.x, euler.z);
 	}
 }

@@ -54,7 +54,7 @@ class UIManager {
         const shortcutsContainer = document.getElementById('shortcuts');
 
         // Clear existing content except for movement text
-        shortcutsContainer.innerHTML = '<div>wasd+mouse to move</div>';
+        shortcutsContainer.innerHTML = '<div>wasd to move</div><div>mouse+Q/E to change view</div>';
 
         // Add shortcuts based on config
         Object.entries(this.uiConfig).forEach(([action, config]) => {
