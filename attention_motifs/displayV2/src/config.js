@@ -1,5 +1,5 @@
 /* global, mutable CONFIG + helper to merge an optional config.json */
-export let CONFIG = {
+let CONFIG = {
 	dataFile: "pca.jsonl",
 	numericalPrefix: "pc.",
 	defaultColorColumn: "activation.model",
@@ -12,7 +12,7 @@ export let CONFIG = {
  * Missing keys fall back to the defaults above.
  * @returns {Promise<object>} resolved CONFIG object
  */
-export async function getConfig() {
+async function getConfig() {
 	try {
 		const r = await fetch("config.json");
 		if (!r.ok) {

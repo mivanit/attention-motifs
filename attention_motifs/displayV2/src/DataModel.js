@@ -24,12 +24,12 @@ class DataModel {
 
 	row(idx) { return this.df.data[idx]; }
 
-	static async load() {
-		const resp = await fetch(CONFIG.dataFile);
+	static async load(filename, numericalPrefix) {
+		const resp = await fetch(filename);
 		const text = await resp.text();
-		const df = DataFrame.fromJSONL(text);
+		const df = DataFrame.from_jsonl(text);
 		const numeric = df.columns
-			.filter(c => c.startsWith(CONFIG.numericalPrefix))
+			.filter(c => c.startsWith(numericalPrefix))
 			.sort();
 		return new DataModel(df, numeric);
 	}

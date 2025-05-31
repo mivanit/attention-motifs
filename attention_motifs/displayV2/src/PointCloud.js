@@ -1,12 +1,12 @@
 class PointCloud {
-    constructor() {
+    /**
+     * @param {DataModel|null} model  –  DataModel with PCA rows,
+     *                                  or null to fall back to a random demo cloud.
+     */
+    constructor(model) {
+        this.model = model;                     // <-- keep the model reference
         this.scene = new THREE.Scene();
-        this.camera = new THREE.PerspectiveCamera(
-            75,
-            window.innerWidth / window.innerHeight,
-            0.1,
-            2000
-        );
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
 
         /* ---------- point-cloud settings ---------- */
@@ -15,15 +15,15 @@ class PointCloud {
             pointSize: 3.0,
             opacity: 0.8,
             speed: 10,
-            pointCount: 25000
+            pointCount: 25000          // max points to render
         };
 
         /* ---------- movement state ---------- */
         this.keys = {};
-        this.pitch = 0;            // current total pitch, for clamping
-        this.mouseDX = 0;            // frame-accumulated mouse delta X
-        this.mouseDY = 0;            // frame-accumulated mouse delta Y
-        this.rollSpeed = 0.02;         // radians per frame when Q/E held
+        this.pitch = 0;
+        this.mouseDX = 0;
+        this.mouseDY = 0;
+        this.rollSpeed = 0.02;
         this.velocity = new THREE.Vector3();
 
         this.init();
@@ -41,20 +41,14 @@ class PointCloud {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setClearColor(0x000011);
         document.getElementById('container').appendChild(this.renderer.domElement);
-        /* start inside the cloud, looking −Z */
-        this.camera.position.set(0, 0, 0);
+        this.camera.position.set(0, 0, 0);   // start inside the cloud
     }
 
     /* ===== input / pointer-lock ===== */
     setupMovement() {
-        document.addEventListener('keydown', e => {
-            this.keys[e.code] = true;
-        });
-        document.addEventListener('keyup', e => {
-            this.keys[e.code] = false;
-        });
+        document.addEventListener('keydown', e => { this.keys[e.code] = true; });
+        document.addEventListener('keyup', e => { this.keys[e.code] = false; });
 
-        /* accumulate raw mouse deltas only while in pointer-lock */
         document.addEventListener('mousemove', e => {
             if (document.pointerLockElement === document.body) {
                 this.mouseDX += e.movementX;
@@ -62,21 +56,18 @@ class PointCloud {
             }
         });
 
-        /* double-click toggles pointer-lock */
         document.addEventListener('dblclick', () => {
             (document.pointerLockElement === document.body)
                 ? document.exitPointerLock()
                 : document.body.requestPointerLock();
         });
 
-        /* ESC releases pointer-lock */
         document.addEventListener('keydown', e => {
             if (e.code === 'Escape' && document.pointerLockElement === document.body) {
                 document.exitPointerLock();
             }
         });
 
-        // Handle window resize
         window.addEventListener('resize', () => {
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();
@@ -84,7 +75,7 @@ class PointCloud {
         });
     }
 
-    /* ===== point-cloud generation ===== */
+    /* ===== build the geometry ===== */
     generatePoints() {
         if (this.points) {
             this.scene.remove(this.points);
@@ -95,16 +86,31 @@ class PointCloud {
         const geometry = new THREE.BufferGeometry();
         const positions = [];
         const colors = [];
-        const range = 1000;
 
-        for (let i = 0; i < this.settings.pointCount; ++i) {
-            positions.push(
-                (Math.random() - 0.5) * range,
-                (Math.random() - 0.5) * range,
-                (Math.random() - 0.5) * range
-            );
-            const clr = new THREE.Color().setHSL(Math.random(), 0.7, 0.6);
-            colors.push(clr.r, clr.g, clr.b);
+        /* ---- use real PCA rows if we have a DataModel ---- */
+        if (this.model) {
+            const rows = Math.min(this.settings.pointCount, this.model.rowCount);
+            for (let i = 0; i < rows; ++i) {
+                positions.push(
+                    this.model.getCoord(i, 0),   // x
+                    this.model.getCoord(i, 1),   // y
+                    this.model.getCoord(i, 2)    // z
+                );
+                // flat grey placeholder; SelectionManager will recolour later
+                colors.push(0.6, 0.6, 0.6);
+            }
+        } else {
+            /* fallback demo cloud --------------------------- */
+            const range = 1000;
+            for (let i = 0; i < this.settings.pointCount; ++i) {
+                positions.push(
+                    (Math.random() - 0.5) * range,
+                    (Math.random() - 0.5) * range,
+                    (Math.random() - 0.5) * range
+                );
+                const clr = new THREE.Color().setHSL(Math.random(), 0.7, 0.6);
+                colors.push(clr.r, clr.g, clr.b);
+            }
         }
 
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -121,17 +127,14 @@ class PointCloud {
         this.points = new THREE.Points(geometry, material);
         this.scene.add(this.points);
 
-        // Notify UI manager if it exists
-        if (this.uiManager) {
-            this.uiManager.onPointsRegenerated();
-        }
+        if (this.uiManager) this.uiManager.onPointsRegenerated();
     }
 
     handleSettingChange(prop, _value) {
         if (prop === 'pointCount') {
             this.generatePoints();
         } else if (prop === 'pointSize' || prop === 'opacity') {
-            if (this.points && this.points.material) {
+            if (this.points?.material) {
                 this.points.material.size = this.settings.pointSize;
                 this.points.material.opacity = this.settings.opacity;
                 this.points.material.transparent = this.settings.opacity < 1;
@@ -142,39 +145,31 @@ class PointCloud {
 
     /* ===== per-frame update (movement + look) ===== */
     updateMovement() {
-        /* --- local yaw / pitch from mouse deltas --- */
         const sens = 0.002;
         const yaw = -this.mouseDX * sens;
         const dPitch = -this.mouseDY * sens;
 
-        if (yaw !== 0) this.camera.rotateY(yaw);          // local-Y axis
-        if (dPitch !== 0) {
-            const newPitch = Math.max(
-                -Math.PI / 2,
-                Math.min(Math.PI / 2, this.pitch + dPitch)
-            );
-            this.camera.rotateX(newPitch - this.pitch);   // local-X axis
+        if (yaw) this.camera.rotateY(yaw);
+        if (dPitch) {
+            const newPitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.pitch + dPitch));
+            this.camera.rotateX(newPitch - this.pitch);
             this.pitch = newPitch;
         }
-        this.mouseDX = this.mouseDY = 0;                  // reset per frame
+        this.mouseDX = this.mouseDY = 0;
 
-        /* --- roll keys (local-Z axis) --- */
         if (this.keys['KeyQ']) this.camera.rotateZ(this.rollSpeed);
         if (this.keys['KeyE']) this.camera.rotateZ(-this.rollSpeed);
 
-        /* --- translation (WASD, Shift for sprint) --- */
         this.velocity.set(0, 0, 0);
         if (this.keys['KeyW']) this.velocity.z -= 1;
         if (this.keys['KeyS']) this.velocity.z += 1;
         if (this.keys['KeyA']) this.velocity.x -= 1;
         if (this.keys['KeyD']) this.velocity.x += 1;
 
-        if (this.velocity.lengthSq() !== 0) {
-            const speed = this.settings.speed *
-                (this.keys['ShiftLeft'] ? 3 : 1) *
-                0.016;                 // ~16 ms/frame scalar
+        if (this.velocity.lengthSq()) {
+            const speed = this.settings.speed * (this.keys['ShiftLeft'] ? 3 : 1) * 0.016;
             this.velocity.normalize().multiplyScalar(speed);
-            this.velocity.applyQuaternion(this.camera.quaternion);   // to world space
+            this.velocity.applyQuaternion(this.camera.quaternion);
             this.camera.position.add(this.velocity);
         }
     }
@@ -183,17 +178,10 @@ class PointCloud {
     animate() {
         requestAnimationFrame(() => this.animate());
         this.updateMovement();
-
-        // Update UI if manager exists
-        if (this.uiManager) {
-            this.uiManager.updateUI();
-        }
-
+        if (this.uiManager) this.uiManager.updateUI();
         this.renderer.render(this.scene, this.camera);
     }
 
-    // Allow UI manager to be attached
-    setUIManager(uiManager) {
-        this.uiManager = uiManager;
-    }
+    /* attach UI after construction */
+    setUIManager(uiManager) { this.uiManager = uiManager; }
 }
