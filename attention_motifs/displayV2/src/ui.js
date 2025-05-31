@@ -1,7 +1,7 @@
 class UIManager {
     constructor(pointCloud) {
         this.pointCloud = pointCloud;
-        
+
         // UI configuration - single source of truth for all menus
         this.uiConfig = {
             help: {
@@ -46,10 +46,10 @@ class UIManager {
 
     generateShortcutsHTML() {
         const shortcutsContainer = document.getElementById('shortcuts');
-        
+
         // Clear existing content except for movement text
         shortcutsContainer.innerHTML = '<div>wasd+mouse to move</div>';
-        
+
         // Add shortcuts based on config
         Object.entries(this.uiConfig).forEach(([action, config]) => {
             const shortcutDiv = document.createElement('div');
@@ -127,21 +127,47 @@ class UIManager {
         element.style.display = config.visible ? 'block' : 'none';
     }
 
+    // Replace the updateUI method in UIManager class:
     updateUI() {
         // Update navbar
         if (this.uiConfig.navbar.visible) {
             const pos = this.pointCloud.camera.position;
-            document.getElementById('position').textContent = 
-                `${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}`;
-            
+            const camera = this.pointCloud.camera;
+
+            // Get forward direction vector
+            const forward = new THREE.Vector3(0, 0, -1);
+            forward.applyQuaternion(camera.quaternion);
+
+            // Calculate yaw and pitch from forward vector
+            const yaw = Math.atan2(forward.x, -forward.z) * 180 / Math.PI;
+            const pitch = Math.asin(forward.y) * 180 / Math.PI;
+
+            // Update position
+            document.getElementById('posX').textContent = pos.x.toFixed(1);
+            document.getElementById('posY').textContent = pos.y.toFixed(1);
+            document.getElementById('posZ').textContent = pos.z.toFixed(1);
+
+            // Update orientation
+            document.getElementById('yaw').textContent = yaw.toFixed(1) + '°';
+            document.getElementById('pitch').textContent = pitch.toFixed(1) + '°';
+            document.getElementById('forwardX').textContent = forward.x.toFixed(2);
+            document.getElementById('forwardY').textContent = forward.y.toFixed(2);
+            document.getElementById('forwardZ').textContent = forward.z.toFixed(2);
+
             // Update FPS for navbar
             this.updateFPS();
             const navbarFPS = document.querySelector('#navbar #fps');
             if (navbarFPS) {
                 navbarFPS.textContent = this.fps;
             }
+
+            // Update point count
+            const navbarCount = document.querySelector('#navbar #renderedCount');
+            if (navbarCount) {
+                navbarCount.textContent = this.pointCloud.settings.pointCount;
+            }
         }
-        
+
         // Update stats display
         if (this.uiConfig.stats.visible) {
             this.updateStatsDisplay();
@@ -160,9 +186,9 @@ class UIManager {
 
     updateStatsDisplay() {
         this.updateFPS();
-        
+
         const frameTime = this.frameCount > 0 ? (performance.now() - this.lastTime) / this.frameCount : 16.7;
-        
+
         // Update all stats elements
         const statsElements = {
             fps: document.querySelector('#statsMenu #fps'),
@@ -182,7 +208,7 @@ class UIManager {
         if (statsElements.renderedCount) {
             statsElements.renderedCount.textContent = this.pointCloud.settings.pointCount;
         }
-        
+
         // Update position
         const pos = this.pointCloud.camera.position;
         if (statsElements.posX) statsElements.posX.textContent = pos.x.toFixed(1);
@@ -199,7 +225,7 @@ class UIManager {
                 navbarCount.textContent = this.pointCloud.settings.pointCount;
             }
         }
-        
+
         // Update stats if visible
         if (this.uiConfig.stats.visible) {
             const statsCount = document.querySelector('#statsMenu #renderedCount');

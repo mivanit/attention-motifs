@@ -1494,7 +1494,7 @@ am-assemble-display:
 	$(PYTHON) -m attention_motifs.display.assemble_display --input-path attention_motifs/display/src/embeddings.html --output-path attention_motifs/display/embeddings.html
 	cp attention_motifs/display/embeddings.html data/features/index.html
 	cp attention_motifs/display/embeddings.html data/head_embed/index.html
-	$(PYTHON) -m attention_motifs.display.assemble_display --input-path attention_motifs/displayV2/src/index.html --output-path attention_motifs/displayV2/index.html
+	$(PYTHON) -m attention_motifs.display.assemble_display --no-prettify --input-path attention_motifs/displayV2/src/index.html --output-path attention_motifs/displayV2/index.html
 
 .PHONY: am-server-embed
 am-server-embed: am-assemble-display
