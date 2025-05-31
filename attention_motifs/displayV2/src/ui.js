@@ -147,14 +147,17 @@ class UIManager {
             const yaw = Math.atan2(forward.x, -forward.z) * 180 / Math.PI;
             const pitch = Math.asin(forward.y) * 180 / Math.PI;
 
+            // Get roll from camera's current rotation state
+            const roll = this.pointCloud.pitch; // This tracks the accumulated roll from Q/E
+
             // Update position
             document.getElementById('posX').textContent = pos.x.toFixed(1);
             document.getElementById('posY').textContent = pos.y.toFixed(1);
             document.getElementById('posZ').textContent = pos.z.toFixed(1);
 
-            // Sync navball with camera
+            // Pass camera quaternion directly to navball (includes all rotations)
             if (this.navball) {
-                this.navball.syncWithCamera(this.pointCloud.camera);
+                this.navball.syncWithCameraQuaternion(camera.quaternion);
             }
         }
 

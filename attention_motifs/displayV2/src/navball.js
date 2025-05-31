@@ -5,7 +5,6 @@ class Navball {
 
 		this.yaw = 0;
 		this.pitch = 0;
-		this.roll = 0;  // Add roll tracking
 		this.isDragging = false;
 		this.lastMouseX = 0;
 		this.lastMouseY = 0;
@@ -155,16 +154,13 @@ class Navball {
 	}
 
 	updateRotation() {
-		// Apply all three rotations: yaw (Y), pitch (X), roll (Z)
 		this.navballMesh.rotation.set(0, 0, 0);
 		this.navballMesh.rotateY(this.yaw);
 		this.navballMesh.rotateX(this.pitch);
-		this.navballMesh.rotateZ(this.roll);
 
 		this.axisGroup.rotation.set(0, 0, 0);
 		this.axisGroup.rotateY(this.yaw);
 		this.axisGroup.rotateX(this.pitch);
-		this.axisGroup.rotateZ(this.roll);
 	}
 
 	animate() {
@@ -173,23 +169,28 @@ class Navball {
 	}
 
 	// API methods for external control
-	setRotation(yaw, pitch, roll = 0) {
+	setRotation(yaw, pitch) {
 		this.yaw = yaw;
 		this.pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
-		this.roll = roll;
 		this.updateRotation();
 	}
 
 	getRotation() {
-		return { yaw: this.yaw, pitch: this.pitch, roll: this.roll };
+		return { yaw: this.yaw, pitch: this.pitch };
 	}
 
-	// Sync with camera orientation - extract full rotation from quaternion
-	syncWithCamera(camera) {
-		// Extract Euler angles from camera quaternion
-		const euler = new THREE.Euler();
-		euler.setFromQuaternion(camera.quaternion, 'YXZ'); // YXZ order matches camera rotation order
+	// Apply inverted camera quaternion to show world orientation from camera perspective
+	syncWithCameraQuaternion(quaternion) {
+		// Invert the quaternion: q* = (w, -x, -y, -z) for unit quaternions
+		const invertedQuaternion = new THREE.Quaternion(
+			-quaternion.x,
+			-quaternion.y,
+			-quaternion.z,
+			quaternion.w
+		);
 
-		this.setRotation(euler.y, euler.x, euler.z);
+		// Apply inverted quaternion to show world axes as seen from camera
+		this.navballMesh.quaternion.copy(invertedQuaternion);
+		this.axisGroup.quaternion.copy(invertedQuaternion);
 	}
 }
