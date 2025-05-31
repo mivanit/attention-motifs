@@ -5,6 +5,7 @@
 	"defaultSelectionColumn": "activation.model",
 	"hoverColumns": [
 		"activation.cls",
-		"activation.prompt"
+		"activation.prompt",
+		"activation.n_ctx"
 	]
 }
