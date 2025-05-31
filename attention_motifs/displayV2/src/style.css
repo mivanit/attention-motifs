@@ -12,16 +12,56 @@ body {
 	height: 100vh;
 }
 
-#controls {
+#shortcuts {
 	position: absolute;
 	top: 20px;
-	left: 20px;
+	right: 20px;
+	background: rgba(0, 0, 0, 0.7);
+	padding: 10px;
+	border-radius: 8px;
+	color: #00ff00;
+	z-index: 100;
+	font-size: 12px;
+	line-height: 1.4;
+}
+
+#shortcuts div {
+	margin-bottom: 2px;
+}
+
+#shortcuts div:last-child {
+	margin-bottom: 0;
+}
+
+.menu {
+	position: absolute;
 	background: rgba(0, 0, 0, 0.8);
 	padding: 15px;
 	border-radius: 8px;
 	color: #00ff00;
 	z-index: 100;
+	display: none;
+}
+
+#helpMenu {
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	min-width: 350px;
+}
+
+#controlsMenu {
+	top: 20px;
+	left: 20px;
 	min-width: 250px;
+}
+
+#navbar {
+	bottom: 20px;
+	left: 50%;
+	transform: translateX(-50%);
+	padding: 8px 15px;
+	font-size: 12px;
 }
 
 .control-group {
@@ -49,13 +89,23 @@ input[type="range"] {
 	font-weight: bold;
 }
 
-#info {
-	position: absolute;
-	bottom: 20px;
-	left: 20px;
-	background: rgba(0, 0, 0, 0.8);
-	padding: 10px;
-	border-radius: 8px;
-	color: #00ff00;
+.help-section {
+	margin-bottom: 15px;
+}
+
+.help-section h3 {
+	margin: 0 0 8px 0;
+	color: #00ccff;
+}
+
+.help-section p {
+	margin: 0 0 5px 0;
 	font-size: 12px;
+}
+
+.close-hint {
+	text-align: center;
+	margin-top: 15px;
+	font-size: 11px;
+	color: #888;
 }

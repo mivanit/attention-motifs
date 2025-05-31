@@ -26,6 +26,18 @@ class PointCloud {
         this.rollSpeed = 0.02;         // radians per frame when Q/E held
         this.velocity = new THREE.Vector3();
 
+        /* ---------- UI state ---------- */
+        this.uiState = {
+            helpVisible: false,
+            menuVisible: false,
+            navbarVisible: false
+        };
+
+        /* ---------- FPS tracking ---------- */
+        this.frameCount = 0;
+        this.lastTime = performance.now();
+        this.fps = 60;
+
         this.init();
     }
 
@@ -34,6 +46,7 @@ class PointCloud {
         this.setupRenderer();
         this.setupControls();
         this.setupMovement();
+        this.setupUI();
         this.generatePoints();
         this.animate();
     }
@@ -83,10 +96,49 @@ class PointCloud {
         });
     }
 
+    setupUI() {
+        // UI toggle functionality
+        document.addEventListener('keydown', (e) => {
+            // Only handle UI keys when not in pointer lock or when specifically releasing it
+            if (document.pointerLockElement !== document.body || e.code === 'Escape') {
+                switch (e.code) {
+                    case 'KeyH':
+                        e.preventDefault();
+                        this.toggleUI('help');
+                        break;
+                    case 'KeyM':
+                        e.preventDefault();
+                        this.toggleUI('menu');
+                        break;
+                    case 'KeyN':
+                        e.preventDefault();
+                        this.toggleUI('navbar');
+                        break;
+                }
+            }
+        });
+    }
+
+    toggleUI(type) {
+        const elements = {
+            help: document.getElementById('helpMenu'),
+            menu: document.getElementById('controlsMenu'),
+            navbar: document.getElementById('navbar')
+        };
+
+        const stateKey = type + 'Visible';
+        this.uiState[stateKey] = !this.uiState[stateKey];
+        elements[type].style.display = this.uiState[stateKey] ? 'block' : 'none';
+    }
+
     /* ===== input / pointer-lock ===== */
     setupMovement() {
-        document.addEventListener('keydown', e => { this.keys[e.code] = true; });
-        document.addEventListener('keyup', e => { this.keys[e.code] = false; });
+        document.addEventListener('keydown', e => {
+            this.keys[e.code] = true;
+        });
+        document.addEventListener('keyup', e => {
+            this.keys[e.code] = false;
+        });
 
         /* accumulate raw mouse deltas only while in pointer-lock */
         document.addEventListener('mousemove', e => {
@@ -102,10 +154,12 @@ class PointCloud {
                 ? document.exitPointerLock()
                 : document.body.requestPointerLock();
         });
+
         /* ESC releases pointer-lock */
         document.addEventListener('keydown', e => {
-            if (e.code === 'Escape' && document.pointerLockElement === document.body)
+            if (e.code === 'Escape' && document.pointerLockElement === document.body) {
                 document.exitPointerLock();
+            }
         });
     }
 
@@ -146,7 +200,10 @@ class PointCloud {
         this.points = new THREE.Points(geometry, material);
         this.scene.add(this.points);
 
-        document.getElementById('renderedCount').textContent = this.settings.pointCount;
+        // Update navbar if visible
+        if (this.uiState.navbarVisible) {
+            document.getElementById('renderedCount').textContent = this.settings.pointCount;
+        }
     }
 
     handleSettingChange(prop, _value) {
@@ -201,10 +258,30 @@ class PointCloud {
         }
     }
 
+    updateUI() {
+        if (this.uiState.navbarVisible) {
+            // Update position
+            const pos = this.camera.position;
+            document.getElementById('position').textContent =
+                `${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}`;
+
+            // Update FPS
+            this.frameCount++;
+            const currentTime = performance.now();
+            if (currentTime - this.lastTime >= 1000) {
+                this.fps = Math.round((this.frameCount * 1000) / (currentTime - this.lastTime));
+                document.getElementById('fps').textContent = this.fps;
+                this.frameCount = 0;
+                this.lastTime = currentTime;
+            }
+        }
+    }
+
     /* ===== render loop ===== */
     animate() {
         requestAnimationFrame(() => this.animate());
         this.updateMovement();
+        this.updateUI();
         this.renderer.render(this.scene, this.camera);
     }
 }

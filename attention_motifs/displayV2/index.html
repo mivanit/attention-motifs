@@ -24,16 +24,56 @@
 			height: 100vh;
 		}
 		
-		#controls {
+		#shortcuts {
 			position: absolute;
 			top: 20px;
-			left: 20px;
+			right: 20px;
+			background: rgba(0, 0, 0, 0.7);
+			padding: 10px;
+			border-radius: 8px;
+			color: #00ff00;
+			z-index: 100;
+			font-size: 12px;
+			line-height: 1.4;
+		}
+		
+		#shortcuts div {
+			margin-bottom: 2px;
+		}
+		
+		#shortcuts div:last-child {
+			margin-bottom: 0;
+		}
+		
+		.menu {
+			position: absolute;
 			background: rgba(0, 0, 0, 0.8);
 			padding: 15px;
 			border-radius: 8px;
 			color: #00ff00;
 			z-index: 100;
+			display: none;
+		}
+		
+		#helpMenu {
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			min-width: 350px;
+		}
+		
+		#controlsMenu {
+			top: 20px;
+			left: 20px;
 			min-width: 250px;
+		}
+		
+		#navbar {
+			bottom: 20px;
+			left: 50%;
+			transform: translateX(-50%);
+			padding: 8px 15px;
+			font-size: 12px;
 		}
 		
 		.control-group {
@@ -61,15 +101,25 @@
 			font-weight: bold;
 		}
 		
-		#info {
-			position: absolute;
-			bottom: 20px;
-			left: 20px;
-			background: rgba(0, 0, 0, 0.8);
-			padding: 10px;
-			border-radius: 8px;
-			color: #00ff00;
+		.help-section {
+			margin-bottom: 15px;
+		}
+		
+		.help-section h3 {
+			margin: 0 0 8px 0;
+			color: #00ccff;
+		}
+		
+		.help-section p {
+			margin: 0 0 5px 0;
 			font-size: 12px;
+		}
+		
+		.close-hint {
+			text-align: center;
+			margin-top: 15px;
+			font-size: 11px;
+			color: #888;
 		}
   </style>
   <!-- end 'style.css' -->
@@ -103,6 +153,18 @@
 		        this.rollSpeed = 0.02;         // radians per frame when Q/E held
 		        this.velocity = new THREE.Vector3();
 		
+		        /* ---------- UI state ---------- */
+		        this.uiState = {
+		            helpVisible: false,
+		            menuVisible: false,
+		            navbarVisible: false
+		        };
+		
+		        /* ---------- FPS tracking ---------- */
+		        this.frameCount = 0;
+		        this.lastTime = performance.now();
+		        this.fps = 60;
+		
 		        this.init();
 		    }
 		
@@ -111,6 +173,7 @@
 		        this.setupRenderer();
 		        this.setupControls();
 		        this.setupMovement();
+		        this.setupUI();
 		        this.generatePoints();
 		        this.animate();
 		    }
@@ -160,10 +223,49 @@
 		        });
 		    }
 		
+		    setupUI() {
+		        // UI toggle functionality
+		        document.addEventListener('keydown', (e) => {
+		            // Only handle UI keys when not in pointer lock or when specifically releasing it
+		            if (document.pointerLockElement !== document.body || e.code === 'Escape') {
+		                switch (e.code) {
+		                    case 'KeyH':
+		                        e.preventDefault();
+		                        this.toggleUI('help');
+		                        break;
+		                    case 'KeyM':
+		                        e.preventDefault();
+		                        this.toggleUI('menu');
+		                        break;
+		                    case 'KeyN':
+		                        e.preventDefault();
+		                        this.toggleUI('navbar');
+		                        break;
+		                }
+		            }
+		        });
+		    }
+		
+		    toggleUI(type) {
+		        const elements = {
+		            help: document.getElementById('helpMenu'),
+		            menu: document.getElementById('controlsMenu'),
+		            navbar: document.getElementById('navbar')
+		        };
+		
+		        const stateKey = type + 'Visible';
+		        this.uiState[stateKey] = !this.uiState[stateKey];
+		        elements[type].style.display = this.uiState[stateKey] ? 'block' : 'none';
+		    }
+		
 		    /* ===== input / pointer-lock ===== */
 		    setupMovement() {
-		        document.addEventListener('keydown', e => { this.keys[e.code] = true; });
-		        document.addEventListener('keyup', e => { this.keys[e.code] = false; });
+		        document.addEventListener('keydown', e => {
+		            this.keys[e.code] = true;
+		        });
+		        document.addEventListener('keyup', e => {
+		            this.keys[e.code] = false;
+		        });
 		
 		        /* accumulate raw mouse deltas only while in pointer-lock */
 		        document.addEventListener('mousemove', e => {
@@ -179,10 +281,12 @@
 		                ? document.exitPointerLock()
 		                : document.body.requestPointerLock();
 		        });
+		
 		        /* ESC releases pointer-lock */
 		        document.addEventListener('keydown', e => {
-		            if (e.code === 'Escape' && document.pointerLockElement === document.body)
+		            if (e.code === 'Escape' && document.pointerLockElement === document.body) {
 		                document.exitPointerLock();
+		            }
 		        });
 		    }
 		
@@ -223,7 +327,10 @@
 		        this.points = new THREE.Points(geometry, material);
 		        this.scene.add(this.points);
 		
-		        document.getElementById('renderedCount').textContent = this.settings.pointCount;
+		        // Update navbar if visible
+		        if (this.uiState.navbarVisible) {
+		            document.getElementById('renderedCount').textContent = this.settings.pointCount;
+		        }
 		    }
 		
 		    handleSettingChange(prop, _value) {
@@ -278,10 +385,30 @@
 		        }
 		    }
 		
+		    updateUI() {
+		        if (this.uiState.navbarVisible) {
+		            // Update position
+		            const pos = this.camera.position;
+		            document.getElementById('position').textContent =
+		                `${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}`;
+		
+		            // Update FPS
+		            this.frameCount++;
+		            const currentTime = performance.now();
+		            if (currentTime - this.lastTime >= 1000) {
+		                this.fps = Math.round((this.frameCount * 1000) / (currentTime - this.lastTime));
+		                document.getElementById('fps').textContent = this.fps;
+		                this.frameCount = 0;
+		                this.lastTime = currentTime;
+		            }
+		        }
+		    }
+		
 		    /* ===== render loop ===== */
 		    animate() {
 		        requestAnimationFrame(() => this.animate());
 		        this.updateMovement();
+		        this.updateUI();
 		        this.renderer.render(this.scene, this.camera);
 		    }
 		}
@@ -290,7 +417,63 @@
  </head>
  <body>
   <div id="container">
-   <div id="controls">
+   <!-- Keyboard shortcuts display (always visible) -->
+   <div id="shortcuts">
+    <div>
+     wasd+mouse to move
+    </div>
+    <div>
+     h - help
+    </div>
+    <div>
+     m - menu
+    </div>
+    <div>
+     n - navbar
+    </div>
+   </div>
+   <!-- Help Menu (hidden by default) -->
+   <div class="menu" id="helpMenu">
+    <div class="help-section">
+     <h3>
+      Movement
+     </h3>
+     <p>
+      WASD - Move forward/back/left/right
+     </p>
+     <p>
+      Mouse - Look around (double-click to lock)
+     </p>
+     <p>
+      Q/E - Roll left/right
+     </p>
+     <p>
+      Shift - Sprint (hold with WASD)
+     </p>
+     <p>
+      ESC - Exit mouse look
+     </p>
+    </div>
+    <div class="help-section">
+     <h3>
+      Interface
+     </h3>
+     <p>
+      H - Toggle this help
+     </p>
+     <p>
+      M - Toggle controls menu
+     </p>
+     <p>
+      N - Toggle navigation bar
+     </p>
+    </div>
+    <div class="close-hint">
+     Press H to close
+    </div>
+   </div>
+   <!-- Controls Menu (hidden by default) -->
+   <div class="menu" id="controlsMenu">
     <div class="control-group">
      <label>
       Point Size:
@@ -327,20 +510,30 @@
      </label>
      <input id="pointCount" max="500000" min="5000" step="5000" type="range" value="25000"/>
     </div>
+    <div class="close-hint">
+     Press M to close
+    </div>
    </div>
-   <div id="info">
-    WASD: Move | Q/E: Roll | Shift: Sprint | Double-click: Mouse look | ESC: Exit mouse look
-    <br/>
+   <!-- Navigation Bar (hidden by default) -->
+   <div class="menu" id="navbar">
     Points:
     <span id="renderedCount">
      0
     </span>
+    | Pos:
+    <span id="position">
+     0, 0, 0
+    </span>
+    | FPS:
+    <span id="fps">
+     60
+    </span>
    </div>
   </div>
+  <script>
+   document.addEventListener('DOMContentLoaded', () => {
+			new PointCloud();
+		});
+  </script>
  </body>
- <script>
-  document.addEventListener('DOMContentLoaded', () => {
-		new PointCloud();
-	});
- </script>
 </html>
