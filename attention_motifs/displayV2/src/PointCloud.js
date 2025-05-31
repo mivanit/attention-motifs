@@ -114,7 +114,7 @@ class PointCloud {
                     e.preventDefault();
                     this.toggleUI('navbar');
                     break;
-                case 'KeyS':
+                case 'KeyJ':
                     e.preventDefault();
                     this.toggleUI('stats');
                     break;
