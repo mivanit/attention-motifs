@@ -1,24 +1,28 @@
 class PointCloud {
-    /**
-     * @param {DataModel|null} model  –  DataModel with PCA rows,
-     *                                  or null to fall back to a random demo cloud.
-     */
+    /** @param {DataModel|null} model */
     constructor(model) {
-        this.model = model;                     // <-- keep the model reference
+        this.model = model;
+
+        /* ── core THREE items ───────── */
         this.scene = new THREE.Scene();
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+        this.camera = new THREE.PerspectiveCamera(75,
+            window.innerWidth / window.innerHeight, 0.1, 2000);
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
 
-        /* ---------- point-cloud settings ---------- */
-        this.points = null;
-        this.settings = {
-            pointSize: 3.0,
-            opacity: 0.8,
-            speed: 10,
-            pointCount: 25000          // max points to render
-        };
+        /* ── run-time helpers ───────── */
+        this.raycaster = new THREE.Raycaster();
+        this.pointerNDC = new THREE.Vector2();
+        this.pointerScreen = { x: 0, y: 0 };   // for tooltip
+        this.hoverId = null;
 
-        /* ---------- movement state ---------- */
+        /* ── colouring & selection ──── */
+        this.state = new VisState(model);
+        this.selMgr = new SelectionManager(model, this.state);
+
+        /* ── tunables ───────────────── */
+        this.settings = { pointSize: 3.0, opacity: 0.8, speed: 10 };
+
+        /* movement state */
         this.keys = {};
         this.pitch = 0;
         this.mouseDX = 0;
@@ -29,10 +33,10 @@ class PointCloud {
         this.init();
     }
 
-    /* ===== initialisation ===== */
+    /* ─────────────────────────────────────────── */
     init() {
         this.setupRenderer();
-        this.setupMovement();
+        this.setupInput();
         this.generatePoints();
         this.animate();
     }
@@ -41,33 +45,47 @@ class PointCloud {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setClearColor(0x000011);
         document.getElementById('container').appendChild(this.renderer.domElement);
-        this.camera.position.set(0, 0, 0);   // start inside the cloud
+        this.camera.position.set(0, 0, 0);
     }
 
-    /* ===== input / pointer-lock ===== */
-    setupMovement() {
-        document.addEventListener('keydown', e => { this.keys[e.code] = true; });
-        document.addEventListener('keyup', e => { this.keys[e.code] = false; });
+    setupInput() {
+        /* key state */
+        document.addEventListener('keydown', e => this.keys[e.code] = true);
+        document.addEventListener('keyup', e => this.keys[e.code] = false);
 
+        /* capture relative mouse when locked */
         document.addEventListener('mousemove', e => {
             if (document.pointerLockElement === document.body) {
                 this.mouseDX += e.movementX;
                 this.mouseDY += e.movementY;
             }
+            /* always store absolute pos for tooltip */
+            this.pointerScreen.x = e.clientX;
+            this.pointerScreen.y = e.clientY;
+            this.pointerNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
+            this.pointerNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
         });
 
-        document.addEventListener('dblclick', () => {
-            (document.pointerLockElement === document.body)
-                ? document.exitPointerLock()
-                : document.body.requestPointerLock();
-        });
-
-        document.addEventListener('keydown', e => {
-            if (e.code === 'Escape' && document.pointerLockElement === document.body) {
-                document.exitPointerLock();
+        /* click toggles selection on hovered point */
+        window.addEventListener('click', () => {
+            if (this.hoverId != null) {
+                this.state.toggle(this.hoverId);
+                this._updateColors();
             }
         });
 
+        /* pointer-lock toggles */
+        document.addEventListener('dblclick', () =>
+            (document.pointerLockElement === document.body)
+                ? document.exitPointerLock()
+                : document.body.requestPointerLock());
+
+        document.addEventListener('keydown', e => {
+            if (e.code === 'Escape' && document.pointerLockElement === document.body)
+                document.exitPointerLock();
+        });
+
+        /* resize */
         window.addEventListener('resize', () => {
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();
@@ -75,7 +93,7 @@ class PointCloud {
         });
     }
 
-    /* ===== build the geometry ===== */
+    /* ───────── geometry build ───────── */
     generatePoints() {
         if (this.points) {
             this.scene.remove(this.points);
@@ -83,40 +101,32 @@ class PointCloud {
             this.points.material.dispose();
         }
 
-        const geometry = new THREE.BufferGeometry();
-        const positions = [];
-        const colors = [];
+        const pos = [];
+        const col = [];
 
-        /* ---- use real PCA rows if we have a DataModel ---- */
         if (this.model) {
-            const rows = Math.min(this.settings.pointCount, this.model.rowCount);
+            const rows = this.model.rowCount;
             for (let i = 0; i < rows; ++i) {
-                positions.push(
-                    this.model.getCoord(i, 0),   // x
-                    this.model.getCoord(i, 1),   // y
-                    this.model.getCoord(i, 2)    // z
-                );
-                // flat grey placeholder; SelectionManager will recolour later
-                colors.push(0.6, 0.6, 0.6);
+                pos.push(this.model.getCoord(i, 0),
+                    this.model.getCoord(i, 1),
+                    this.model.getCoord(i, 2));
+                col.push(0.6, 0.6, 0.6);                // base grey, recoloured per frame
             }
         } else {
-            /* fallback demo cloud --------------------------- */
-            const range = 1000;
-            for (let i = 0; i < this.settings.pointCount; ++i) {
-                positions.push(
-                    (Math.random() - 0.5) * range,
-                    (Math.random() - 0.5) * range,
-                    (Math.random() - 0.5) * range
-                );
-                const clr = new THREE.Color().setHSL(Math.random(), 0.7, 0.6);
-                colors.push(clr.r, clr.g, clr.b);
+            /* fallback random cloud */
+            const N = 50000, R = 1000;
+            for (let i = 0; i < N; ++i) {
+                pos.push((Math.random() - 0.5) * R, (Math.random() - 0.5) * R, (Math.random() - 0.5) * R);
+                const c = new THREE.Color().setHSL(Math.random(), 0.7, 0.6);
+                col.push(c.r, c.g, c.b);
             }
         }
 
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        const geom = new THREE.BufferGeometry();
+        geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        geom.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
 
-        const material = new THREE.PointsMaterial({
+        const mat = new THREE.PointsMaterial({
             size: this.settings.pointSize,
             opacity: this.settings.opacity,
             transparent: this.settings.opacity < 1,
@@ -124,36 +134,40 @@ class PointCloud {
             sizeAttenuation: true
         });
 
-        this.points = new THREE.Points(geometry, material);
+        this.points = new THREE.Points(geom, mat);
+        this.colorAttr = geom.getAttribute('color');
         this.scene.add(this.points);
 
         if (this.uiManager) this.uiManager.onPointsRegenerated();
+        this._updateColors();
     }
 
-    handleSettingChange(prop, _value) {
-        if (prop === 'pointCount') {
-            this.generatePoints();
-        } else if (prop === 'pointSize' || prop === 'opacity') {
-            if (this.points?.material) {
-                this.points.material.size = this.settings.pointSize;
-                this.points.material.opacity = this.settings.opacity;
-                this.points.material.transparent = this.settings.opacity < 1;
-                this.points.material.needsUpdate = true;
-            }
+    handleSettingChange(prop, val) {
+        if (prop === 'pointSize' || prop === 'opacity') {
+            this.points.material.size = this.settings.pointSize;
+            this.points.material.opacity = this.settings.opacity;
+            this.points.material.transparent = this.settings.opacity < 1;
+            this.points.material.needsUpdate = true;
         }
     }
 
-    /* ===== per-frame update (movement + look) ===== */
-    updateMovement() {
-        const sens = 0.002;
-        const yaw = -this.mouseDX * sens;
-        const dPitch = -this.mouseDY * sens;
+    /* recolour every frame / on selection change */
+    _updateColors() {
+        const arr = this.colorAttr.array;
+        for (let i = 0; i < this.colorAttr.count; ++i) {
+            const { r, g, b } = this.selMgr.attrs(i);
+            arr[i * 3] = r; arr[i * 3 + 1] = g; arr[i * 3 + 2] = b;
+        }
+        this.colorAttr.needsUpdate = true;
+    }
 
+    /* ───────── per-frame update ───────── */
+    updateMovement() {
+        const sens = 0.002, yaw = -this.mouseDX * sens, dp = -this.mouseDY * sens;
         if (yaw) this.camera.rotateY(yaw);
-        if (dPitch) {
-            const newPitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.pitch + dPitch));
-            this.camera.rotateX(newPitch - this.pitch);
-            this.pitch = newPitch;
+        if (dp) {
+            const np = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.pitch + dp));
+            this.camera.rotateX(np - this.pitch); this.pitch = np;
         }
         this.mouseDX = this.mouseDY = 0;
 
@@ -174,14 +188,22 @@ class PointCloud {
         }
     }
 
-    /* ===== render loop ===== */
+    /* ───────── render loop ───────── */
     animate() {
         requestAnimationFrame(() => this.animate());
+
         this.updateMovement();
+
+        /* hover ray-cast */
+        this.raycaster.setFromCamera(this.pointerNDC, this.camera);
+        const hit = this.raycaster.intersectObject(this.points, false)[0];
+        this.hoverId = hit ? hit.index : null;
+
+        this._updateColors();
         if (this.uiManager) this.uiManager.updateUI();
         this.renderer.render(this.scene, this.camera);
     }
 
-    /* attach UI after construction */
-    setUIManager(uiManager) { this.uiManager = uiManager; }
+    /* allow UIManager to attach after construction */
+    setUIManager(ui) { this.uiManager = ui; }
 }

@@ -3,8 +3,9 @@
 
 <head>
 	<meta charset="utf-8" />
-	<meta content="width=device-width, initial-scale=1.0" name="viewport" />
+	<meta name="viewport" content="width=device-width,initial-scale=1.0" />
 	<title>Simple Point Cloud Explorer</title>
+	<!-- ── libraries / styles ───────────────────── -->
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 			<!-- begin 'navball.css' -->
 		<style>
@@ -287,6 +288,7 @@
 		}
 		</style>
 		<!-- end 'style.css' -->
+	<!-- ── app code (kept in separate files) ─────── -->
 			<!-- begin 'config.js' -->
 		<script>
 		/* global, mutable CONFIG + helper to merge an optional config.json */
@@ -689,35 +691,15 @@
 		    constructor(pointCloud) {
 		        this.pointCloud = pointCloud;
 		
-		        // UI configuration - single source of truth for all menus
+		        /* ── central UI config ── */
 		        this.uiConfig = {
-		            help: {
-		                key: 'KeyH',
-		                elementId: 'helpMenu',
-		                shortcutText: 'h - help',
-		                visible: false
-		            },
-		            menu: {
-		                key: 'KeyM',
-		                elementId: 'controlsMenu',
-		                shortcutText: 'm - menu',
-		                visible: false
-		            },
-		            navbar: {
-		                key: 'KeyN',
-		                elementId: 'navbar',
-		                shortcutText: 'n - navbar',
-		                visible: false
-		            },
-		            stats: {
-		                key: 'KeyJ',
-		                elementId: 'statsMenu',
-		                shortcutText: 'j - stats',
-		                visible: false
-		            }
+		            help: { key: 'KeyH', elementId: 'helpMenu', shortcutText: 'h - help', visible: false },
+		            menu: { key: 'KeyM', elementId: 'controlsMenu', shortcutText: 'm - menu', visible: false },
+		            navbar: { key: 'KeyN', elementId: 'navbar', shortcutText: 'n - navbar', visible: false },
+		            stats: { key: 'KeyJ', elementId: 'statsMenu', shortcutText: 'j - stats', visible: false }
 		        };
 		
-		        /* ---------- FPS tracking ---------- */
+		        /* ── FPS tracking ── */
 		        this.frameCount = 0;
 		        this.lastTime = performance.now();
 		        this.fps = 60;
@@ -725,61 +707,52 @@
 		        this.init();
 		    }
 		
+		    /* ─────────────────────────────────────────── */
+		
 		    init() {
 		        this.generateShortcutsHTML();
 		        this.setupControls();
 		        this.setupUI();
 		        this.setupNavball();
+		
+		        /* hover panel */
+		        this.hoverPanel = document.createElement('div');
+		        this.hoverPanel.className = 'hover-panel';
+		        document.body.appendChild(this.hoverPanel);
 		    }
 		
-		    setupNavball() {
-		        // Create navball instance
-		        this.navball = new Navball('navball-container');
-		    }
+		    setupNavball() { this.navball = new Navball('navball-container'); }
 		
 		    generateShortcutsHTML() {
-		        const shortcutsContainer = document.getElementById('shortcuts');
+		        const sc = document.getElementById('shortcuts');
+		        sc.innerHTML =
+		            '<div>wasd to move</div><div>mouse&nbsp;+&nbsp;Q/E&nbsp;to roll view</div>';
 		
-		        // Clear existing content except for movement text
-		        shortcutsContainer.innerHTML = '<div>wasd to move</div><div>mouse+Q/E to change view</div>';
-		
-		        // Add shortcuts based on config
-		        Object.entries(this.uiConfig).forEach(([action, config]) => {
-		            const shortcutDiv = document.createElement('div');
-		            shortcutDiv.className = 'shortcut-link';
-		            shortcutDiv.setAttribute('data-action', action);
-		            shortcutDiv.textContent = config.shortcutText;
-		            shortcutsContainer.appendChild(shortcutDiv);
+		        Object.entries(this.uiConfig).forEach(([action, cfg]) => {
+		            const div = document.createElement('div');
+		            div.className = 'shortcut-link';
+		            div.dataset.action = action;
+		            div.textContent = cfg.shortcutText;
+		            sc.appendChild(div);
 		        });
 		    }
 		
+		    /* only pointSize / opacity / speed controls now */
 		    setupControls() {
 		        const controls = {
-		            pointSize: {
-		                element: document.getElementById('pointSize'),
-		                display: document.getElementById('pointSizeValue')
-		            },
-		            opacity: {
-		                element: document.getElementById('opacity'),
-		                display: document.getElementById('opacityValue')
-		            },
-		            speed: {
-		                element: document.getElementById('speed'),
-		                display: document.getElementById('speedValue')
-		            },
-		            pointCount: {
-		                element: document.getElementById('pointCount'),
-		                display: document.getElementById('pointCountValue')
-		            }
+		            pointSize: { el: 'pointSize', disp: 'pointSizeValue' },
+		            opacity: { el: 'opacity', disp: 'opacityValue' },
+		            speed: { el: 'speed', disp: 'speedValue' }
 		        };
 		
-		        Object.keys(controls).forEach(key => {
-		            const c = controls[key];
-		            c.element.addEventListener('input', () => {
-		                const v = parseFloat(c.element.value);
-		                this.pointCloud.settings[key] = v;
-		                c.display.textContent = v;
-		                this.pointCloud.handleSettingChange(key, v);
+		        Object.values(controls).forEach(cfg => {
+		            const slider = document.getElementById(cfg.el);
+		            const display = document.getElementById(cfg.disp);
+		            slider.addEventListener('input', () => {
+		                const v = parseFloat(slider.value);
+		                display.textContent = v;
+		                this.pointCloud.settings[cfg.el] = v;
+		                this.pointCloud.handleSettingChange(cfg.el, v);
 		            });
 		        });
 		
@@ -791,147 +764,121 @@
 		    }
 		
 		    setupUI() {
-		        // UI toggle functionality - keyboard
-		        document.addEventListener('keydown', (e) => {
-		            // Handle UI keys regardless of pointer lock state
-		            Object.entries(this.uiConfig).forEach(([action, config]) => {
-		                if (e.code === config.key) {
-		                    e.preventDefault();
-		                    this.toggleUI(action);
-		                }
-		            });
-		        });
-		
-		        // UI toggle functionality - mouse clicks on shortcuts
-		        document.getElementById('shortcuts').addEventListener('click', (e) => {
-		            const action = e.target.getAttribute('data-action');
-		            if (action && this.uiConfig[action]) {
-		                this.toggleUI(action);
+		        document.addEventListener('keydown', e => {
+		            for (const [action, cfg] of Object.entries(this.uiConfig)) {
+		                if (e.code === cfg.key) { e.preventDefault(); this.toggleUI(action); }
 		            }
 		        });
+		
+		        document.getElementById('shortcuts')
+		            .addEventListener('click', e => {
+		                const action = e.target.dataset.action;
+		                if (action) this.toggleUI(action);
+		            });
 		    }
 		
 		    toggleUI(type) {
-		        const config = this.uiConfig[type];
-		        if (!config) return;
-		
-		        config.visible = !config.visible;
-		        const element = document.getElementById(config.elementId);
-		        element.style.display = config.visible ? 'block' : 'none';
+		        const cfg = this.uiConfig[type];
+		        cfg.visible = !cfg.visible;
+		        document.getElementById(cfg.elementId).style.display =
+		            cfg.visible ? 'block' : 'none';
 		    }
 		
+		    /* ───────── per-frame update ───────── */
 		    updateUI() {
-		        // Update navbar
+		        /* navbar position & navball */
 		        if (this.uiConfig.navbar.visible) {
-		            const pos = this.pointCloud.camera.position;
-		            const camera = this.pointCloud.camera;
+		            const p = this.pointCloud.camera.position;
+		            ['posX', 'posY', 'posZ'].forEach((id, i) =>
+		                document.getElementById(id).textContent = p[['x', 'y', 'z'][i]].toFixed(1));
 		
-		            // Get forward direction vector
-		            const forward = new THREE.Vector3(0, 0, -1);
-		            forward.applyQuaternion(camera.quaternion);
-		
-		            // Calculate yaw and pitch from forward vector
-		            const yaw = Math.atan2(forward.x, -forward.z) * 180 / Math.PI;
-		            const pitch = Math.asin(forward.y) * 180 / Math.PI;
-		
-		            // Get roll from camera's current rotation state
-		            const roll = this.pointCloud.pitch; // This tracks the accumulated roll from Q/E
-		
-		            // Update position
-		            document.getElementById('posX').textContent = pos.x.toFixed(1);
-		            document.getElementById('posY').textContent = pos.y.toFixed(1);
-		            document.getElementById('posZ').textContent = pos.z.toFixed(1);
-		
-		            // Pass camera quaternion directly to navball (includes all rotations)
-		            if (this.navball) {
-		                this.navball.syncWithCameraQuaternion(camera.quaternion);
-		            }
+		            if (this.navball)
+		                this.navball.syncWithCameraQuaternion(this.pointCloud.camera.quaternion);
 		        }
 		
-		        // Update stats display
-		        if (this.uiConfig.stats.visible) {
-		            this.updateStatsDisplay();
-		        }
+		        /* stats box */
+		        if (this.uiConfig.stats.visible) this.updateStatsDisplay();
+		
+		        /* hover tooltip */
+		        this.showHover(this.pointCloud.hoverId);
 		    }
 		
+		    /* FPS + counts */
 		    updateFPS() {
 		        this.frameCount++;
-		        const currentTime = performance.now();
-		        if (currentTime - this.lastTime >= 1000) {
-		            this.fps = Math.round((this.frameCount * 1000) / (currentTime - this.lastTime));
+		        const now = performance.now();
+		        if (now - this.lastTime >= 1000) {
+		            this.fps = Math.round((this.frameCount * 1000) / (now - this.lastTime));
 		            this.frameCount = 0;
-		            this.lastTime = currentTime;
+		            this.lastTime = now;
 		        }
 		    }
 		
 		    updateStatsDisplay() {
 		        this.updateFPS();
+		        const frameTime = (1000 / Math.max(this.fps, 1)).toFixed(1) + ' ms';
 		
-		        const frameTime = this.frameCount > 0 ? (performance.now() - this.lastTime) / this.frameCount : 16.7;
+		        document.getElementById('fps').textContent = this.fps;
+		        document.getElementById('frameTime').textContent = frameTime;
+		        document.getElementById('renderedCount').textContent =
+		            this.pointCloud.points.geometry.getAttribute('position').count;
 		
-		        // Update all stats elements
-		        const statsElements = {
-		            fps: document.querySelector('#statsMenu #fps'),
-		            frameTime: document.getElementById('frameTime'),
-		            renderedCount: document.querySelector('#statsMenu #renderedCount'),
-		            posX: document.getElementById('posX'),
-		            posY: document.getElementById('posY'),
-		            posZ: document.getElementById('posZ')
-		        };
-		
-		        if (statsElements.fps) {
-		            statsElements.fps.textContent = this.fps;
-		        }
-		        if (statsElements.frameTime) {
-		            statsElements.frameTime.textContent = frameTime.toFixed(1) + 'ms';
-		        }
-		        if (statsElements.renderedCount) {
-		            statsElements.renderedCount.textContent = this.pointCloud.settings.pointCount;
-		        }
-		
-		        // Update position
-		        const pos = this.pointCloud.camera.position;
-		        if (statsElements.posX) statsElements.posX.textContent = pos.x.toFixed(1);
-		        if (statsElements.posY) statsElements.posY.textContent = pos.y.toFixed(1);
-		        if (statsElements.posZ) statsElements.posZ.textContent = pos.z.toFixed(1);
+		        document.getElementById('statsPosX').textContent = p.x.toFixed(1);
+		        document.getElementById('statsPosY').textContent = p.y.toFixed(1);
+		        document.getElementById('statsPosZ').textContent = p.z.toFixed(1);
 		    }
 		
-		    // Called when point cloud regenerates
+		    /* called by PointCloud when geometry is rebuilt */
 		    onPointsRegenerated() {
-		        // Update stats if visible
-		        if (this.uiConfig.stats.visible) {
-		            const statsCount = document.querySelector('#statsMenu #renderedCount');
-		            if (statsCount) {
-		                statsCount.textContent = this.pointCloud.settings.pointCount;
-		            }
-		        }
+		        if (this.uiConfig.stats.visible)
+		            document.getElementById('renderedCount').textContent =
+		                this.pointCloud.points.geometry.getAttribute('position').count;
+		    }
+		
+		    /* ───────── hover panel ───────── */
+		    showHover(rowId) {
+		        if (rowId == null) { this.hoverPanel.style.display = 'none'; return; }
+		
+		        const row = this.pointCloud.model.row(rowId);
+		        this.hoverPanel.innerHTML =
+		            CONFIG.hoverColumns.map(c => `<b>${c}</b>: ${row[c]}`).join('<br>');
+		
+		        const { x, y } = this.pointCloud.pointerScreen;
+		        this.hoverPanel.style.left = (x + 12) + 'px';
+		        this.hoverPanel.style.top = (y + 12) + 'px';
+		        this.hoverPanel.style.display = 'block';
 		    }
 		}
+		
 		</script>
 		<!-- end 'ui.js' -->
 			<!-- begin 'PointCloud.js' -->
 		<script>
 		class PointCloud {
-		    /**
-		     * @param {DataModel|null} model  –  DataModel with PCA rows,
-		     *                                  or null to fall back to a random demo cloud.
-		     */
+		    /** @param {DataModel|null} model */
 		    constructor(model) {
-		        this.model = model;                     // <-- keep the model reference
+		        this.model = model;
+		
+		        /* ── core THREE items ───────── */
 		        this.scene = new THREE.Scene();
-		        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+		        this.camera = new THREE.PerspectiveCamera(75,
+		            window.innerWidth / window.innerHeight, 0.1, 2000);
 		        this.renderer = new THREE.WebGLRenderer({ antialias: true });
 		
-		        /* ---------- point-cloud settings ---------- */
-		        this.points = null;
-		        this.settings = {
-		            pointSize: 3.0,
-		            opacity: 0.8,
-		            speed: 10,
-		            pointCount: 25000          // max points to render
-		        };
+		        /* ── run-time helpers ───────── */
+		        this.raycaster = new THREE.Raycaster();
+		        this.pointerNDC = new THREE.Vector2();
+		        this.pointerScreen = { x: 0, y: 0 };   // for tooltip
+		        this.hoverId = null;
 		
-		        /* ---------- movement state ---------- */
+		        /* ── colouring & selection ──── */
+		        this.state = new VisState(model);
+		        this.selMgr = new SelectionManager(model, this.state);
+		
+		        /* ── tunables ───────────────── */
+		        this.settings = { pointSize: 3.0, opacity: 0.8, speed: 10 };
+		
+		        /* movement state */
 		        this.keys = {};
 		        this.pitch = 0;
 		        this.mouseDX = 0;
@@ -942,10 +889,10 @@
 		        this.init();
 		    }
 		
-		    /* ===== initialisation ===== */
+		    /* ─────────────────────────────────────────── */
 		    init() {
 		        this.setupRenderer();
-		        this.setupMovement();
+		        this.setupInput();
 		        this.generatePoints();
 		        this.animate();
 		    }
@@ -954,33 +901,47 @@
 		        this.renderer.setSize(window.innerWidth, window.innerHeight);
 		        this.renderer.setClearColor(0x000011);
 		        document.getElementById('container').appendChild(this.renderer.domElement);
-		        this.camera.position.set(0, 0, 0);   // start inside the cloud
+		        this.camera.position.set(0, 0, 0);
 		    }
 		
-		    /* ===== input / pointer-lock ===== */
-		    setupMovement() {
-		        document.addEventListener('keydown', e => { this.keys[e.code] = true; });
-		        document.addEventListener('keyup', e => { this.keys[e.code] = false; });
+		    setupInput() {
+		        /* key state */
+		        document.addEventListener('keydown', e => this.keys[e.code] = true);
+		        document.addEventListener('keyup', e => this.keys[e.code] = false);
 		
+		        /* capture relative mouse when locked */
 		        document.addEventListener('mousemove', e => {
 		            if (document.pointerLockElement === document.body) {
 		                this.mouseDX += e.movementX;
 		                this.mouseDY += e.movementY;
 		            }
+		            /* always store absolute pos for tooltip */
+		            this.pointerScreen.x = e.clientX;
+		            this.pointerScreen.y = e.clientY;
+		            this.pointerNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
+		            this.pointerNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
 		        });
 		
-		        document.addEventListener('dblclick', () => {
-		            (document.pointerLockElement === document.body)
-		                ? document.exitPointerLock()
-		                : document.body.requestPointerLock();
-		        });
-		
-		        document.addEventListener('keydown', e => {
-		            if (e.code === 'Escape' && document.pointerLockElement === document.body) {
-		                document.exitPointerLock();
+		        /* click toggles selection on hovered point */
+		        window.addEventListener('click', () => {
+		            if (this.hoverId != null) {
+		                this.state.toggle(this.hoverId);
+		                this._updateColors();
 		            }
 		        });
 		
+		        /* pointer-lock toggles */
+		        document.addEventListener('dblclick', () =>
+		            (document.pointerLockElement === document.body)
+		                ? document.exitPointerLock()
+		                : document.body.requestPointerLock());
+		
+		        document.addEventListener('keydown', e => {
+		            if (e.code === 'Escape' && document.pointerLockElement === document.body)
+		                document.exitPointerLock();
+		        });
+		
+		        /* resize */
 		        window.addEventListener('resize', () => {
 		            this.camera.aspect = window.innerWidth / window.innerHeight;
 		            this.camera.updateProjectionMatrix();
@@ -988,7 +949,7 @@
 		        });
 		    }
 		
-		    /* ===== build the geometry ===== */
+		    /* ───────── geometry build ───────── */
 		    generatePoints() {
 		        if (this.points) {
 		            this.scene.remove(this.points);
@@ -996,40 +957,32 @@
 		            this.points.material.dispose();
 		        }
 		
-		        const geometry = new THREE.BufferGeometry();
-		        const positions = [];
-		        const colors = [];
+		        const pos = [];
+		        const col = [];
 		
-		        /* ---- use real PCA rows if we have a DataModel ---- */
 		        if (this.model) {
-		            const rows = Math.min(this.settings.pointCount, this.model.rowCount);
+		            const rows = this.model.rowCount;
 		            for (let i = 0; i < rows; ++i) {
-		                positions.push(
-		                    this.model.getCoord(i, 0),   // x
-		                    this.model.getCoord(i, 1),   // y
-		                    this.model.getCoord(i, 2)    // z
-		                );
-		                // flat grey placeholder; SelectionManager will recolour later
-		                colors.push(0.6, 0.6, 0.6);
+		                pos.push(this.model.getCoord(i, 0),
+		                    this.model.getCoord(i, 1),
+		                    this.model.getCoord(i, 2));
+		                col.push(0.6, 0.6, 0.6);                // base grey, recoloured per frame
 		            }
 		        } else {
-		            /* fallback demo cloud --------------------------- */
-		            const range = 1000;
-		            for (let i = 0; i < this.settings.pointCount; ++i) {
-		                positions.push(
-		                    (Math.random() - 0.5) * range,
-		                    (Math.random() - 0.5) * range,
-		                    (Math.random() - 0.5) * range
-		                );
-		                const clr = new THREE.Color().setHSL(Math.random(), 0.7, 0.6);
-		                colors.push(clr.r, clr.g, clr.b);
+		            /* fallback random cloud */
+		            const N = 50000, R = 1000;
+		            for (let i = 0; i < N; ++i) {
+		                pos.push((Math.random() - 0.5) * R, (Math.random() - 0.5) * R, (Math.random() - 0.5) * R);
+		                const c = new THREE.Color().setHSL(Math.random(), 0.7, 0.6);
+		                col.push(c.r, c.g, c.b);
 		            }
 		        }
 		
-		        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-		        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+		        const geom = new THREE.BufferGeometry();
+		        geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+		        geom.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
 		
-		        const material = new THREE.PointsMaterial({
+		        const mat = new THREE.PointsMaterial({
 		            size: this.settings.pointSize,
 		            opacity: this.settings.opacity,
 		            transparent: this.settings.opacity < 1,
@@ -1037,36 +990,40 @@
 		            sizeAttenuation: true
 		        });
 		
-		        this.points = new THREE.Points(geometry, material);
+		        this.points = new THREE.Points(geom, mat);
+		        this.colorAttr = geom.getAttribute('color');
 		        this.scene.add(this.points);
 		
 		        if (this.uiManager) this.uiManager.onPointsRegenerated();
+		        this._updateColors();
 		    }
 		
-		    handleSettingChange(prop, _value) {
-		        if (prop === 'pointCount') {
-		            this.generatePoints();
-		        } else if (prop === 'pointSize' || prop === 'opacity') {
-		            if (this.points?.material) {
-		                this.points.material.size = this.settings.pointSize;
-		                this.points.material.opacity = this.settings.opacity;
-		                this.points.material.transparent = this.settings.opacity < 1;
-		                this.points.material.needsUpdate = true;
-		            }
+		    handleSettingChange(prop, val) {
+		        if (prop === 'pointSize' || prop === 'opacity') {
+		            this.points.material.size = this.settings.pointSize;
+		            this.points.material.opacity = this.settings.opacity;
+		            this.points.material.transparent = this.settings.opacity < 1;
+		            this.points.material.needsUpdate = true;
 		        }
 		    }
 		
-		    /* ===== per-frame update (movement + look) ===== */
-		    updateMovement() {
-		        const sens = 0.002;
-		        const yaw = -this.mouseDX * sens;
-		        const dPitch = -this.mouseDY * sens;
+		    /* recolour every frame / on selection change */
+		    _updateColors() {
+		        const arr = this.colorAttr.array;
+		        for (let i = 0; i < this.colorAttr.count; ++i) {
+		            const { r, g, b } = this.selMgr.attrs(i);
+		            arr[i * 3] = r; arr[i * 3 + 1] = g; arr[i * 3 + 2] = b;
+		        }
+		        this.colorAttr.needsUpdate = true;
+		    }
 		
+		    /* ───────── per-frame update ───────── */
+		    updateMovement() {
+		        const sens = 0.002, yaw = -this.mouseDX * sens, dp = -this.mouseDY * sens;
 		        if (yaw) this.camera.rotateY(yaw);
-		        if (dPitch) {
-		            const newPitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.pitch + dPitch));
-		            this.camera.rotateX(newPitch - this.pitch);
-		            this.pitch = newPitch;
+		        if (dp) {
+		            const np = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.pitch + dp));
+		            this.camera.rotateX(np - this.pitch); this.pitch = np;
 		        }
 		        this.mouseDX = this.mouseDY = 0;
 		
@@ -1087,16 +1044,24 @@
 		        }
 		    }
 		
-		    /* ===== render loop ===== */
+		    /* ───────── render loop ───────── */
 		    animate() {
 		        requestAnimationFrame(() => this.animate());
+		
 		        this.updateMovement();
+		
+		        /* hover ray-cast */
+		        this.raycaster.setFromCamera(this.pointerNDC, this.camera);
+		        const hit = this.raycaster.intersectObject(this.points, false)[0];
+		        this.hoverId = hit ? hit.index : null;
+		
+		        this._updateColors();
 		        if (this.uiManager) this.uiManager.updateUI();
 		        this.renderer.render(this.scene, this.camera);
 		    }
 		
-		    /* attach UI after construction */
-		    setUIManager(uiManager) { this.uiManager = uiManager; }
+		    /* allow UIManager to attach after construction */
+		    setUIManager(ui) { this.uiManager = ui; }
 		}
 		
 		</script>
@@ -1304,55 +1269,45 @@
 </head>
 
 <body>
-	<div id="container">
-		<!-- Keyboard shortcuts display (always visible) -->
-		<div id="shortcuts">
-			<!-- Generated dynamically by UIManager -->
-		</div>
-		<!-- Help Menu (hidden by default) -->
+	<div id="container"><!-- single outer container -->
+		<!-- ────────── always-visible shortcuts ────────── -->
+		<div id="shortcuts"></div>
+		<!-- ────────── Help menu ────────── -->
 		<div id="helpMenu" class="menu">
 			<div class="help-section">
 				<h3>Movement</h3>
-				<p>WASD - Move forward/back/left/right</p>
-				<p>Mouse - Look around (double-click to lock)</p>
-				<p>Q/E - Roll left/right</p>
-				<p>Shift - Sprint (hold with WASD)</p>
-				<p>ESC - Exit mouse look</p>
+				<p>WASD – Move</p>
+				<p>Mouse – Look (dbl-click to lock)</p>
+				<p>Q / E – Roll</p>
+				<p>Shift – Sprint</p>
+				<p>ESC – Exit mouse-look</p>
 			</div>
 			<div class="help-section">
 				<h3>Interface</h3>
-				<p>H - Toggle this help</p>
-				<p>M - Toggle controls menu</p>
-				<p>N - Toggle navigation bar</p>
-				<p>J - Toggle stats</p>
+				<p>H – Toggle help</p>
+				<p>M – Toggle menu</p>
+				<p>N – Toggle navbar</p>
+				<p>J – Toggle stats</p>
 			</div>
 			<div class="close-hint">Press H to close</div>
 		</div>
-		<!-- Controls Menu (hidden by default) -->
+		<!-- ────────── Controls menu (point-count removed) ────────── -->
 		<div id="controlsMenu" class="menu">
 			<div class="control-group">
-				<label> Point Size: <span class="value-display" id="pointSizeValue">3.0</span>
-				</label>
-				<input id="pointSize" max="50" min="0.1" step="0.1" type="range" value="3.0" />
+				<label>Point Size: <span class="value-display" id="pointSizeValue">3.0</span></label>
+				<input id="pointSize" type="range" min="0.00" max="1" step="0.01" value="0.05">
+			</div>	
+			<div class="control-group">
+				<label>Opacity: <span class="value-display" id="opacityValue">0.8</span></label>
+				<input id="opacity" type="range" min="0.00" max="1" step="0.001" value="0.8">
 			</div>
 			<div class="control-group">
-				<label> Opacity: <span class="value-display" id="opacityValue">0.8</span>
-				</label>
-				<input id="opacity" max="1" min="0.01" step="0.01" type="range" value="0.8" />
-			</div>
-			<div class="control-group">
-				<label> Speed: <span class="value-display" id="speedValue">10</span>
-				</label>
-				<input id="speed" max="200" min="1" step="1" type="range" value="50" />
-			</div>
-			<div class="control-group">
-				<label> Point Count: <span class="value-display" id="pointCountValue">25000</span>
-				</label>
-				<input id="pointCount" max="1000000" min="5000" step="5000" type="range" value="100000" />
+				<label>Speed: <span class="value-display" id="speedValue">10</span></label>
+				<input id="speed" type="range" min="1" max="200" step="1" value="50">
 			</div>
 			<div class="close-hint">Press M to close</div>
 		</div>
-		<!-- Stats Menu (hidden by default) -->
+		<!-- ────────── Stats menu ────────── -->
 		<div id="statsMenu" class="menu">
 			<div class="stats-group">
 				<h3>Rendering Stats</h3>
@@ -1362,14 +1317,14 @@
 			</div>
 			<div class="stats-group">
 				<h3>Camera Position</h3>
-				<p>X: <span id="posX">na</span></p>
-				<p>Y: <span id="posY">na</span></p>
-				<p>Z: <span id="posZ">na</span></p>
+				<p>X: <span id="statsPosX">na</span></p>
+				<p>Y: <span id="statsPosY">na</span></p>
+				<p>Z: <span id="statsPosZ">na</span></p>
 			</div>
 			<div class="close-hint">Press J to close</div>
 		</div>
-		<!-- Modified Navigation Bar with Navball -->
-		<div class="menu" id="navbar">
+		<!-- ────────── Navigation bar with navball ────────── -->
+		<div id="navbar" class="menu">
 			<div id="navball-container">
 				<div class="navball-crosshair"></div>
 			</div>
@@ -1382,16 +1337,16 @@
 				</div>
 			</div>
 		</div>
-	</div>
+	</div><!-- /#container -->
+	<!-- ────────── bootstrap script ────────── -->
 	<script>
 		document.addEventListener('DOMContentLoaded', async () => {
-			// load config (merges config.json if it exists) 
-			await getConfig();
-			// load the dataset described in CONFIG 
-			const model = await DataModel.load(CONFIG.dataFile, CONFIG.numericalPrefix);
-			// create the viewer 
-			const pointCloud = new PointCloud(model);
-			const uiManager = new UIManager(pointCloud);
+			await getConfig();                                       // merge in config.json if present
+			const model = await DataModel.load(CONFIG.dataFile,      // load dataset
+				CONFIG.numericalPrefix);
+
+			const pointCloud = new PointCloud(model);                // create viewer
+			const uiManager = new UIManager(pointCloud);            // create UI
 			pointCloud.setUIManager(uiManager);
 		});
 	</script>

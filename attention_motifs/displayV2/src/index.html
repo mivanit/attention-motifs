@@ -3,11 +3,13 @@
 
 <head>
 	<meta charset="utf-8" />
-	<meta content="width=device-width, initial-scale=1.0" name="viewport" />
+	<meta name="viewport" content="width=device-width,initial-scale=1.0" />
 	<title>Simple Point Cloud Explorer</title>
+	<!-- ── libraries / styles ───────────────────── -->
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 	<link rel="stylesheet" href="navball.css">
 	<link rel="stylesheet" href="style.css">
+	<!-- ── app code (kept in separate files) ─────── -->
 	<script src="config.js"></script>
 	<script src="ColorUtil.js"></script>
 	<script src="DataFrame.js"></script>
@@ -20,55 +22,45 @@
 </head>
 
 <body>
-	<div id="container">
-		<!-- Keyboard shortcuts display (always visible) -->
-		<div id="shortcuts">
-			<!-- Generated dynamically by UIManager -->
-		</div>
-		<!-- Help Menu (hidden by default) -->
+	<div id="container"><!-- single outer container -->
+		<!-- ────────── always-visible shortcuts ────────── -->
+		<div id="shortcuts"></div>
+		<!-- ────────── Help menu ────────── -->
 		<div id="helpMenu" class="menu">
 			<div class="help-section">
 				<h3>Movement</h3>
-				<p>WASD - Move forward/back/left/right</p>
-				<p>Mouse - Look around (double-click to lock)</p>
-				<p>Q/E - Roll left/right</p>
-				<p>Shift - Sprint (hold with WASD)</p>
-				<p>ESC - Exit mouse look</p>
+				<p>WASD – Move</p>
+				<p>Mouse – Look (dbl-click to lock)</p>
+				<p>Q / E – Roll</p>
+				<p>Shift – Sprint</p>
+				<p>ESC – Exit mouse-look</p>
 			</div>
 			<div class="help-section">
 				<h3>Interface</h3>
-				<p>H - Toggle this help</p>
-				<p>M - Toggle controls menu</p>
-				<p>N - Toggle navigation bar</p>
-				<p>J - Toggle stats</p>
+				<p>H – Toggle help</p>
+				<p>M – Toggle menu</p>
+				<p>N – Toggle navbar</p>
+				<p>J – Toggle stats</p>
 			</div>
 			<div class="close-hint">Press H to close</div>
 		</div>
-		<!-- Controls Menu (hidden by default) -->
+		<!-- ────────── Controls menu (point-count removed) ────────── -->
 		<div id="controlsMenu" class="menu">
 			<div class="control-group">
-				<label> Point Size: <span class="value-display" id="pointSizeValue">3.0</span>
-				</label>
-				<input id="pointSize" max="50" min="0.1" step="0.1" type="range" value="3.0" />
+				<label>Point Size: <span class="value-display" id="pointSizeValue">3.0</span></label>
+				<input id="pointSize" type="range" min="0.00" max="1" step="0.01" value="0.05">
+			</div>	
+			<div class="control-group">
+				<label>Opacity: <span class="value-display" id="opacityValue">0.8</span></label>
+				<input id="opacity" type="range" min="0.00" max="1" step="0.001" value="0.8">
 			</div>
 			<div class="control-group">
-				<label> Opacity: <span class="value-display" id="opacityValue">0.8</span>
-				</label>
-				<input id="opacity" max="1" min="0.01" step="0.01" type="range" value="0.8" />
-			</div>
-			<div class="control-group">
-				<label> Speed: <span class="value-display" id="speedValue">10</span>
-				</label>
-				<input id="speed" max="200" min="1" step="1" type="range" value="50" />
-			</div>
-			<div class="control-group">
-				<label> Point Count: <span class="value-display" id="pointCountValue">25000</span>
-				</label>
-				<input id="pointCount" max="1000000" min="5000" step="5000" type="range" value="100000" />
+				<label>Speed: <span class="value-display" id="speedValue">10</span></label>
+				<input id="speed" type="range" min="1" max="200" step="1" value="50">
 			</div>
 			<div class="close-hint">Press M to close</div>
 		</div>
-		<!-- Stats Menu (hidden by default) -->
+		<!-- ────────── Stats menu ────────── -->
 		<div id="statsMenu" class="menu">
 			<div class="stats-group">
 				<h3>Rendering Stats</h3>
@@ -78,14 +70,14 @@
 			</div>
 			<div class="stats-group">
 				<h3>Camera Position</h3>
-				<p>X: <span id="posX">na</span></p>
-				<p>Y: <span id="posY">na</span></p>
-				<p>Z: <span id="posZ">na</span></p>
+				<p>X: <span id="statsPosX">na</span></p>
+				<p>Y: <span id="statsPosY">na</span></p>
+				<p>Z: <span id="statsPosZ">na</span></p>
 			</div>
 			<div class="close-hint">Press J to close</div>
 		</div>
-		<!-- Modified Navigation Bar with Navball -->
-		<div class="menu" id="navbar">
+		<!-- ────────── Navigation bar with navball ────────── -->
+		<div id="navbar" class="menu">
 			<div id="navball-container">
 				<div class="navball-crosshair"></div>
 			</div>
@@ -98,16 +90,16 @@
 				</div>
 			</div>
 		</div>
-	</div>
+	</div><!-- /#container -->
+	<!-- ────────── bootstrap script ────────── -->
 	<script>
 		document.addEventListener('DOMContentLoaded', async () => {
-			// load config (merges config.json if it exists) 
-			await getConfig();
-			// load the dataset described in CONFIG 
-			const model = await DataModel.load(CONFIG.dataFile, CONFIG.numericalPrefix);
-			// create the viewer 
-			const pointCloud = new PointCloud(model);
-			const uiManager = new UIManager(pointCloud);
+			await getConfig();                                       // merge in config.json if present
+			const model = await DataModel.load(CONFIG.dataFile,      // load dataset
+				CONFIG.numericalPrefix);
+
+			const pointCloud = new PointCloud(model);                // create viewer
+			const uiManager = new UIManager(pointCloud);            // create UI
 			pointCloud.setUIManager(uiManager);
 		});
 	</script>
