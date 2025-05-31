@@ -6,9 +6,11 @@
 	<meta content="width=device-width, initial-scale=1.0" name="viewport" />
 	<title>Simple Point Cloud Explorer</title>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+	<link rel="stylesheet" href="navball.css">
 	<link rel="stylesheet" href="style.css">
 	<script src="ui.js"></script>
 	<script src="PointCloud.js"></script>
+	<script src="navball.js"></script>
 </head>
 
 <body>
@@ -76,30 +78,17 @@
 			</div>
 			<div class="close-hint">Press J to close</div>
 		</div>
-		<!-- Navigation Bar (hidden by default) -->
+		<!-- Modified Navigation Bar with Navball -->
 		<div class="menu" id="navbar">
+			<div id="navball-container">
+				<div class="navball-crosshair"></div>
+			</div>
 			<div class="nav-section">
 				<h4>Position</h4>
 				<div class="nav-row">
 					<span>X: <span id="posX">0.0</span></span>
 					<span>Y: <span id="posY">0.0</span></span>
 					<span>Z: <span id="posZ">0.0</span></span>
-				</div>
-			</div>
-			<div class="nav-section">
-				<h4>Orientation</h4>
-				<div class="nav-row">
-					<span>Yaw: <span id="yaw">0.0°</span></span>
-					<span>Pitch: <span id="pitch">0.0°</span></span>
-				</div>
-				<div class="nav-row">
-					<span>Forward: (<span id="forwardX">0.00</span>, <span id="forwardY">0.00</span>, <span id="forwardZ">-1.00</span>)</span>
-				</div>
-			</div>
-			<div class="nav-section">
-				<div class="nav-row">
-					<span>Points: <span id="renderedCount">0</span></span>
-					<span>FPS: <span id="fps">60</span></span>
 				</div>
 			</div>
 		</div>

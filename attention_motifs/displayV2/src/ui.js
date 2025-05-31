@@ -42,6 +42,12 @@ class UIManager {
         this.generateShortcutsHTML();
         this.setupControls();
         this.setupUI();
+        this.setupNavball();
+    }
+
+    setupNavball() {
+        // Create navball instance
+        this.navball = new Navball('navball-container');
     }
 
     generateShortcutsHTML() {
@@ -127,7 +133,6 @@ class UIManager {
         element.style.display = config.visible ? 'block' : 'none';
     }
 
-    // Replace the updateUI method in UIManager class:
     updateUI() {
         // Update navbar
         if (this.uiConfig.navbar.visible) {
@@ -147,24 +152,9 @@ class UIManager {
             document.getElementById('posY').textContent = pos.y.toFixed(1);
             document.getElementById('posZ').textContent = pos.z.toFixed(1);
 
-            // Update orientation
-            document.getElementById('yaw').textContent = yaw.toFixed(1) + '°';
-            document.getElementById('pitch').textContent = pitch.toFixed(1) + '°';
-            document.getElementById('forwardX').textContent = forward.x.toFixed(2);
-            document.getElementById('forwardY').textContent = forward.y.toFixed(2);
-            document.getElementById('forwardZ').textContent = forward.z.toFixed(2);
-
-            // Update FPS for navbar
-            this.updateFPS();
-            const navbarFPS = document.querySelector('#navbar #fps');
-            if (navbarFPS) {
-                navbarFPS.textContent = this.fps;
-            }
-
-            // Update point count
-            const navbarCount = document.querySelector('#navbar #renderedCount');
-            if (navbarCount) {
-                navbarCount.textContent = this.pointCloud.settings.pointCount;
+            // Sync navball with camera
+            if (this.navball) {
+                this.navball.syncWithCamera(this.pointCloud.camera);
             }
         }
 
@@ -218,14 +208,6 @@ class UIManager {
 
     // Called when point cloud regenerates
     onPointsRegenerated() {
-        // Update navbar if visible
-        if (this.uiConfig.navbar.visible) {
-            const navbarCount = document.querySelector('#navbar #renderedCount');
-            if (navbarCount) {
-                navbarCount.textContent = this.pointCloud.settings.pointCount;
-            }
-        }
-
         // Update stats if visible
         if (this.uiConfig.stats.visible) {
             const statsCount = document.querySelector('#statsMenu #renderedCount');
