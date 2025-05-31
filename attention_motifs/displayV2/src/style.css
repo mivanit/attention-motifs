@@ -103,9 +103,41 @@ input[type="range"] {
 	font-size: 12px;
 }
 
+#statsMenu {
+	top: 20px;
+	right: 20px;
+	min-width: 200px;
+	margin-top: 120px;
+	/* Below shortcuts */
+}
+
+.stats-group {
+	margin-bottom: 15px;
+}
+
+.stats-group h3 {
+	margin: 0 0 8px 0;
+	color: #00ccff;
+	font-size: 12px;
+}
+
+.stats-group p {
+	margin: 0 0 3px 0;
+	font-size: 11px;
+}
+
 .close-hint {
 	text-align: center;
 	margin-top: 15px;
 	font-size: 11px;
 	color: #888;
+}
+
+.shortcut-link {
+	cursor: pointer;
+	transition: color 0.2s;
+}
+
+.shortcut-link:hover {
+	color: #00ccff;
 }

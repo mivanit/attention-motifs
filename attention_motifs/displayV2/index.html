@@ -115,14 +115,220 @@
 			font-size: 12px;
 		}
 		
+		#statsMenu {
+			top: 20px;
+			right: 20px;
+			min-width: 200px;
+			margin-top: 120px;
+			/* Below shortcuts */
+		}
+		
+		.stats-group {
+			margin-bottom: 15px;
+		}
+		
+		.stats-group h3 {
+			margin: 0 0 8px 0;
+			color: #00ccff;
+			font-size: 12px;
+		}
+		
+		.stats-group p {
+			margin: 0 0 3px 0;
+			font-size: 11px;
+		}
+		
 		.close-hint {
 			text-align: center;
 			margin-top: 15px;
 			font-size: 11px;
 			color: #888;
 		}
+		
+		.shortcut-link {
+			cursor: pointer;
+			transition: color 0.2s;
+		}
+		
+		.shortcut-link:hover {
+			color: #00ccff;
+		}
   </style>
   <!-- end 'style.css' -->
+ </head>
+ <body>
+  <div id="container">
+   <!-- Keyboard shortcuts display (always visible) -->
+   <div id="shortcuts">
+    <div>
+     wasd+mouse to move
+    </div>
+    <div class="shortcut-link" data-action="help">
+     h - help
+    </div>
+    <div class="shortcut-link" data-action="menu">
+     m - menu
+    </div>
+    <div class="shortcut-link" data-action="navbar">
+     n - navbar
+    </div>
+    <div class="shortcut-link" data-action="stats">
+     s - stats
+    </div>
+   </div>
+   <!-- Help Menu (hidden by default) -->
+   <div class="menu" id="helpMenu">
+    <div class="help-section">
+     <h3>
+      Movement
+     </h3>
+     <p>
+      WASD - Move forward/back/left/right
+     </p>
+     <p>
+      Mouse - Look around (double-click to lock)
+     </p>
+     <p>
+      Q/E - Roll left/right
+     </p>
+     <p>
+      Shift - Sprint (hold with WASD)
+     </p>
+     <p>
+      ESC - Exit mouse look
+     </p>
+    </div>
+    <div class="help-section">
+     <h3>
+      Interface
+     </h3>
+     <p>
+      H - Toggle this help
+     </p>
+     <p>
+      M - Toggle controls menu
+     </p>
+     <p>
+      N - Toggle navigation bar
+     </p>
+     <p>
+      S - Toggle stats
+     </p>
+    </div>
+    <div class="close-hint">
+     Press H to close
+    </div>
+   </div>
+   <!-- Controls Menu (hidden by default) -->
+   <div class="menu" id="controlsMenu">
+    <div class="control-group">
+     <label>
+      Point Size:
+      <span class="value-display" id="pointSizeValue">
+       3.0
+      </span>
+     </label>
+     <input id="pointSize" max="10" min="0.5" step="0.1" type="range" value="3.0"/>
+    </div>
+    <div class="control-group">
+     <label>
+      Opacity:
+      <span class="value-display" id="opacityValue">
+       0.8
+      </span>
+     </label>
+     <input id="opacity" max="1" min="0.1" step="0.05" type="range" value="0.8"/>
+    </div>
+    <div class="control-group">
+     <label>
+      Speed:
+      <span class="value-display" id="speedValue">
+       10
+      </span>
+     </label>
+     <input id="speed" max="100" min="1" step="1" type="range" value="10"/>
+    </div>
+    <div class="control-group">
+     <label>
+      Point Count:
+      <span class="value-display" id="pointCountValue">
+       25000
+      </span>
+     </label>
+     <input id="pointCount" max="500000" min="5000" step="5000" type="range" value="25000"/>
+    </div>
+    <div class="close-hint">
+     Press M to close
+    </div>
+   </div>
+   <!-- Stats Menu (hidden by default) -->
+   <div class="menu" id="statsMenu">
+    <div class="stats-group">
+     <h3>
+      Rendering Stats
+     </h3>
+     <p>
+      Points Rendered:
+      <span id="renderedCount">
+       0
+      </span>
+     </p>
+     <p>
+      FPS:
+      <span id="fps">
+       60
+      </span>
+     </p>
+     <p>
+      Frame Time:
+      <span id="frameTime">
+       16.7ms
+      </span>
+     </p>
+    </div>
+    <div class="stats-group">
+     <h3>
+      Camera Position
+     </h3>
+     <p>
+      X:
+      <span id="posX">
+       0.0
+      </span>
+     </p>
+     <p>
+      Y:
+      <span id="posY">
+       0.0
+      </span>
+     </p>
+     <p>
+      Z:
+      <span id="posZ">
+       0.0
+      </span>
+     </p>
+    </div>
+    <div class="close-hint">
+     Press S to close
+    </div>
+   </div>
+   <!-- Navigation Bar (hidden by default) -->
+   <div class="menu" id="navbar">
+    Points:
+    <span id="renderedCount">
+     0
+    </span>
+    | Pos:
+    <span id="position">
+     0, 0, 0
+    </span>
+    | FPS:
+    <span id="fps">
+     60
+    </span>
+   </div>
+  </div>
   <!-- begin 'PointCloud.js' -->
   <script>
    class PointCloud {
@@ -157,7 +363,8 @@
 		        this.uiState = {
 		            helpVisible: false,
 		            menuVisible: false,
-		            navbarVisible: false
+		            navbarVisible: false,
+		            statsVisible: false
 		        };
 		
 		        /* ---------- FPS tracking ---------- */
@@ -224,24 +431,34 @@
 		    }
 		
 		    setupUI() {
-		        // UI toggle functionality
+		        // UI toggle functionality - keyboard
 		        document.addEventListener('keydown', (e) => {
-		            // Only handle UI keys when not in pointer lock or when specifically releasing it
-		            if (document.pointerLockElement !== document.body || e.code === 'Escape') {
-		                switch (e.code) {
-		                    case 'KeyH':
-		                        e.preventDefault();
-		                        this.toggleUI('help');
-		                        break;
-		                    case 'KeyM':
-		                        e.preventDefault();
-		                        this.toggleUI('menu');
-		                        break;
-		                    case 'KeyN':
-		                        e.preventDefault();
-		                        this.toggleUI('navbar');
-		                        break;
-		                }
+		            // Handle UI keys regardless of pointer lock state
+		            switch (e.code) {
+		                case 'KeyH':
+		                    e.preventDefault();
+		                    this.toggleUI('help');
+		                    break;
+		                case 'KeyM':
+		                    e.preventDefault();
+		                    this.toggleUI('menu');
+		                    break;
+		                case 'KeyN':
+		                    e.preventDefault();
+		                    this.toggleUI('navbar');
+		                    break;
+		                case 'KeyS':
+		                    e.preventDefault();
+		                    this.toggleUI('stats');
+		                    break;
+		            }
+		        });
+		
+		        // UI toggle functionality - mouse clicks on shortcuts
+		        document.getElementById('shortcuts').addEventListener('click', (e) => {
+		            const action = e.target.getAttribute('data-action');
+		            if (action) {
+		                this.toggleUI(action);
 		            }
 		        });
 		    }
@@ -250,7 +467,8 @@
 		        const elements = {
 		            help: document.getElementById('helpMenu'),
 		            menu: document.getElementById('controlsMenu'),
-		            navbar: document.getElementById('navbar')
+		            navbar: document.getElementById('navbar'),
+		            stats: document.getElementById('statsMenu')
 		        };
 		
 		        const stateKey = type + 'Visible';
@@ -331,6 +549,11 @@
 		        if (this.uiState.navbarVisible) {
 		            document.getElementById('renderedCount').textContent = this.settings.pointCount;
 		        }
+		
+		        // Update stats if visible
+		        if (this.uiState.statsVisible) {
+		            this.updateStatsDisplay();
+		        }
 		    }
 		
 		    handleSettingChange(prop, _value) {
@@ -386,8 +609,8 @@
 		    }
 		
 		    updateUI() {
+		        // Update navbar
 		        if (this.uiState.navbarVisible) {
-		            // Update position
 		            const pos = this.camera.position;
 		            document.getElementById('position').textContent =
 		                `${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}`;
@@ -402,6 +625,34 @@
 		                this.lastTime = currentTime;
 		            }
 		        }
+		
+		        // Update stats display
+		        if (this.uiState.statsVisible) {
+		            this.updateStatsDisplay();
+		        }
+		    }
+		
+		    updateStatsDisplay() {
+		        // Update FPS calculation
+		        this.frameCount++;
+		        const currentTime = performance.now();
+		        if (currentTime - this.lastTime >= 1000) {
+		            this.fps = Math.round((this.frameCount * 1000) / (currentTime - this.lastTime));
+		            const frameTime = (currentTime - this.lastTime) / this.frameCount;
+		
+		            document.getElementById('fps').textContent = this.fps;
+		            document.getElementById('frameTime').textContent = frameTime.toFixed(1) + 'ms';
+		            document.getElementById('renderedCount').textContent = this.settings.pointCount;
+		
+		            this.frameCount = 0;
+		            this.lastTime = currentTime;
+		        }
+		
+		        // Update position
+		        const pos = this.camera.position;
+		        document.getElementById('posX').textContent = pos.x.toFixed(1);
+		        document.getElementById('posY').textContent = pos.y.toFixed(1);
+		        document.getElementById('posZ').textContent = pos.z.toFixed(1);
 		    }
 		
 		    /* ===== render loop ===== */
@@ -414,122 +665,6 @@
 		}
   </script>
   <!-- end 'PointCloud.js' -->
- </head>
- <body>
-  <div id="container">
-   <!-- Keyboard shortcuts display (always visible) -->
-   <div id="shortcuts">
-    <div>
-     wasd+mouse to move
-    </div>
-    <div>
-     h - help
-    </div>
-    <div>
-     m - menu
-    </div>
-    <div>
-     n - navbar
-    </div>
-   </div>
-   <!-- Help Menu (hidden by default) -->
-   <div class="menu" id="helpMenu">
-    <div class="help-section">
-     <h3>
-      Movement
-     </h3>
-     <p>
-      WASD - Move forward/back/left/right
-     </p>
-     <p>
-      Mouse - Look around (double-click to lock)
-     </p>
-     <p>
-      Q/E - Roll left/right
-     </p>
-     <p>
-      Shift - Sprint (hold with WASD)
-     </p>
-     <p>
-      ESC - Exit mouse look
-     </p>
-    </div>
-    <div class="help-section">
-     <h3>
-      Interface
-     </h3>
-     <p>
-      H - Toggle this help
-     </p>
-     <p>
-      M - Toggle controls menu
-     </p>
-     <p>
-      N - Toggle navigation bar
-     </p>
-    </div>
-    <div class="close-hint">
-     Press H to close
-    </div>
-   </div>
-   <!-- Controls Menu (hidden by default) -->
-   <div class="menu" id="controlsMenu">
-    <div class="control-group">
-     <label>
-      Point Size:
-      <span class="value-display" id="pointSizeValue">
-       3.0
-      </span>
-     </label>
-     <input id="pointSize" max="10" min="0.5" step="0.1" type="range" value="3.0"/>
-    </div>
-    <div class="control-group">
-     <label>
-      Opacity:
-      <span class="value-display" id="opacityValue">
-       0.8
-      </span>
-     </label>
-     <input id="opacity" max="1" min="0.1" step="0.05" type="range" value="0.8"/>
-    </div>
-    <div class="control-group">
-     <label>
-      Speed:
-      <span class="value-display" id="speedValue">
-       10
-      </span>
-     </label>
-     <input id="speed" max="100" min="1" step="1" type="range" value="10"/>
-    </div>
-    <div class="control-group">
-     <label>
-      Point Count:
-      <span class="value-display" id="pointCountValue">
-       25000
-      </span>
-     </label>
-     <input id="pointCount" max="500000" min="5000" step="5000" type="range" value="25000"/>
-    </div>
-    <div class="close-hint">
-     Press M to close
-    </div>
-   </div>
-   <!-- Navigation Bar (hidden by default) -->
-   <div class="menu" id="navbar">
-    Points:
-    <span id="renderedCount">
-     0
-    </span>
-    | Pos:
-    <span id="position">
-     0, 0, 0
-    </span>
-    | FPS:
-    <span id="fps">
-     60
-    </span>
-   </div>
-  </div>
   <script>
    document.addEventListener('DOMContentLoaded', () => {
 			new PointCloud();

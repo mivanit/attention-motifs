@@ -30,7 +30,8 @@ class PointCloud {
         this.uiState = {
             helpVisible: false,
             menuVisible: false,
-            navbarVisible: false
+            navbarVisible: false,
+            statsVisible: false
         };
 
         /* ---------- FPS tracking ---------- */
@@ -97,24 +98,34 @@ class PointCloud {
     }
 
     setupUI() {
-        // UI toggle functionality
+        // UI toggle functionality - keyboard
         document.addEventListener('keydown', (e) => {
-            // Only handle UI keys when not in pointer lock or when specifically releasing it
-            if (document.pointerLockElement !== document.body || e.code === 'Escape') {
-                switch (e.code) {
-                    case 'KeyH':
-                        e.preventDefault();
-                        this.toggleUI('help');
-                        break;
-                    case 'KeyM':
-                        e.preventDefault();
-                        this.toggleUI('menu');
-                        break;
-                    case 'KeyN':
-                        e.preventDefault();
-                        this.toggleUI('navbar');
-                        break;
-                }
+            // Handle UI keys regardless of pointer lock state
+            switch (e.code) {
+                case 'KeyH':
+                    e.preventDefault();
+                    this.toggleUI('help');
+                    break;
+                case 'KeyM':
+                    e.preventDefault();
+                    this.toggleUI('menu');
+                    break;
+                case 'KeyN':
+                    e.preventDefault();
+                    this.toggleUI('navbar');
+                    break;
+                case 'KeyS':
+                    e.preventDefault();
+                    this.toggleUI('stats');
+                    break;
+            }
+        });
+
+        // UI toggle functionality - mouse clicks on shortcuts
+        document.getElementById('shortcuts').addEventListener('click', (e) => {
+            const action = e.target.getAttribute('data-action');
+            if (action) {
+                this.toggleUI(action);
             }
         });
     }
@@ -123,7 +134,8 @@ class PointCloud {
         const elements = {
             help: document.getElementById('helpMenu'),
             menu: document.getElementById('controlsMenu'),
-            navbar: document.getElementById('navbar')
+            navbar: document.getElementById('navbar'),
+            stats: document.getElementById('statsMenu')
         };
 
         const stateKey = type + 'Visible';
@@ -204,6 +216,11 @@ class PointCloud {
         if (this.uiState.navbarVisible) {
             document.getElementById('renderedCount').textContent = this.settings.pointCount;
         }
+
+        // Update stats if visible
+        if (this.uiState.statsVisible) {
+            this.updateStatsDisplay();
+        }
     }
 
     handleSettingChange(prop, _value) {
@@ -259,8 +276,8 @@ class PointCloud {
     }
 
     updateUI() {
+        // Update navbar
         if (this.uiState.navbarVisible) {
-            // Update position
             const pos = this.camera.position;
             document.getElementById('position').textContent =
                 `${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}`;
@@ -275,6 +292,34 @@ class PointCloud {
                 this.lastTime = currentTime;
             }
         }
+
+        // Update stats display
+        if (this.uiState.statsVisible) {
+            this.updateStatsDisplay();
+        }
+    }
+
+    updateStatsDisplay() {
+        // Update FPS calculation
+        this.frameCount++;
+        const currentTime = performance.now();
+        if (currentTime - this.lastTime >= 1000) {
+            this.fps = Math.round((this.frameCount * 1000) / (currentTime - this.lastTime));
+            const frameTime = (currentTime - this.lastTime) / this.frameCount;
+
+            document.getElementById('fps').textContent = this.fps;
+            document.getElementById('frameTime').textContent = frameTime.toFixed(1) + 'ms';
+            document.getElementById('renderedCount').textContent = this.settings.pointCount;
+
+            this.frameCount = 0;
+            this.lastTime = currentTime;
+        }
+
+        // Update position
+        const pos = this.camera.position;
+        document.getElementById('posX').textContent = pos.x.toFixed(1);
+        document.getElementById('posY').textContent = pos.y.toFixed(1);
+        document.getElementById('posZ').textContent = pos.z.toFixed(1);
     }
 
     /* ===== render loop ===== */
