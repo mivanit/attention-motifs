@@ -7,26 +7,24 @@
 	<title>Simple Point Cloud Explorer</title>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 	<link rel="stylesheet" href="style.css">
+	<script src="ui.js"></script>
+	<script src="PointCloud.js"></script>
 </head>
 
 <body>
 	<div id="container">
 		<!-- Keyboard shortcuts display (always visible) -->
 		<div id="shortcuts">
-			<div>wasd+mouse to move</div>
-			<div class="shortcut-link" data-action="help">h - help</div>
-			<div class="shortcut-link" data-action="menu">m - menu</div>
-			<div class="shortcut-link" data-action="navbar">n - navbar</div>
-			<div class="shortcut-link" data-action="stats">s - stats</div>
+			<!-- Generated dynamically by UIManager -->
 		</div>
 		<!-- Help Menu (hidden by default) -->
 		<div id="helpMenu" class="menu">
 			<div class="help-section">
 				<h3>Movement</h3>
 				<p>WASD - Move forward/back/left/right</p>
-				<p>Mouse - Look around (double left click to lock/unlock)</p>
+				<p>Mouse - Look around (double-click to lock)</p>
 				<p>Q/E - Roll left/right</p>
-				<p>Shift - increase speed (hold with WASD)</p>
+				<p>Shift - Sprint (hold with WASD)</p>
 				<p>ESC - Exit mouse look</p>
 			</div>
 			<div class="help-section">
@@ -76,16 +74,17 @@
 				<p>Y: <span id="posY">0.0</span></p>
 				<p>Z: <span id="posZ">0.0</span></p>
 			</div>
-			<div class="close-hint">Press S to close</div>
+			<div class="close-hint">Press J to close</div>
 		</div>
 		<!-- Navigation Bar (hidden by default) -->
 		<div id="navbar" class="menu"> Points: <span id="renderedCount">0</span> | Pos: <span id="position">0, 0, 0</span> | FPS: <span id="fps">60</span>
 		</div>
 	</div>
-	<script src="PointCloud.js"></script>
 	<script>
 		document.addEventListener('DOMContentLoaded', () => {
-			new PointCloud();
+			const pointCloud = new PointCloud();
+			const uiManager = new UIManager(pointCloud);
+			pointCloud.setUIManager(uiManager);
 		});
 	</script>
 </body>
