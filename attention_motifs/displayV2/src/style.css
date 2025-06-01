@@ -27,6 +27,9 @@ body {
 
 #shortcuts div {
 	margin-bottom: 2px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 }
 
 #shortcuts div:last-child {
@@ -96,11 +99,10 @@ input[type="range"] {
 }
 
 #statsMenu {
-	top: 20px;
+	top: 50%;
 	right: 20px;
+	transform: translateY(-50%);
 	min-width: 200px;
-	margin-top: 120px;
-	/* Below shortcuts */
 }
 
 .stats-group {
@@ -134,12 +136,25 @@ input[type="range"] {
 	color: #00ccff;
 }
 
+.status-indicator {
+	font-size: 10px;
+	margin-left: 8px;
+}
+
+.status-enabled {
+	color: #00ff00;
+}
+
+.status-disabled {
+	color: #ff4444;
+}
+
 #navbar {
 	bottom: 20px;
 	right: 20px;
 	padding: 12px 15px;
 	font-size: 11px;
-	min-width: 200px;
+	min-width: 160px;
 	line-height: 1.3;
 }
 

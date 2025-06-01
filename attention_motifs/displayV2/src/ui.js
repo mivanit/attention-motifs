@@ -1,5 +1,5 @@
-/* UIManager – adds “k” to toggle hover UI / cross-hair
-   and “b” to toggle click-to-select. */
+/* UIManager – adds "k" to toggle hover UI / cross-hair
+   and "b" to toggle click-to-select. */
 
 class UIManager {
     constructor(pointCloud) {
@@ -9,7 +9,7 @@ class UIManager {
         this.uiConfig = {
             help: { key: 'KeyH', elementId: 'helpMenu', shortcutText: 'h – help', visible: false },
             menu: { key: 'KeyM', elementId: 'controlsMenu', shortcutText: 'm – menu', visible: false },
-            navbar: { key: 'KeyN', elementId: 'navbar', shortcutText: 'n – navbar', visible: false },
+            navbar: { key: 'KeyN', elementId: 'navbar', shortcutText: 'n – navball', visible: true },
             stats: { key: 'KeyJ', elementId: 'statsMenu', shortcutText: 'j – stats', visible: false }
         };
 
@@ -41,7 +41,11 @@ class UIManager {
         document.body.appendChild(this.hoverPanel);
     }
 
-    _setupNavball() { this.navball = new Navball('navball-container'); }
+    _setupNavball() {
+        this.navball = new Navball('navball-container');
+        // Show navball by default
+        document.getElementById('navbar').style.display = 'block';
+    }
 
     /* ---------- shortcuts legend (top-right) ------------------ */
     _buildShortcutsLegend() {
@@ -52,22 +56,49 @@ class UIManager {
             const d = document.createElement('div');
             d.className = 'shortcut-link';
             d.dataset.action = cfg.elementId;
-            d.textContent = cfg.shortcutText;
+            d.innerHTML = `${cfg.shortcutText} <span class="status-indicator ${cfg.visible ? 'status-enabled' : 'status-disabled'}">(${cfg.visible ? 'enabled' : 'disabled'})</span>`;
             sc.appendChild(d);
         });
 
+        // Add hover and click-select shortcuts with status indicators
         sc.insertAdjacentHTML('beforeend', `
-            <div>c / v – cycle colour / select col</div>
-            <div>k – hover UI</div>
-            <div>b – click-select</div>`);
+            <div class="shortcut-link" data-action="hover-toggle">k – hover UI <span class="status-indicator status-enabled" id="hover-status">(enabled)</span></div>
+            <div class="shortcut-link" data-action="click-select-toggle">b – click-select <span class="status-indicator status-enabled" id="click-select-status">(enabled)</span></div>`);
 
         sc.addEventListener('click', e => {
-            const id = e.target.dataset.action;
-            if (!id) return;
-            const entry = Object.entries(this.uiConfig)
-                .find(([, cfg]) => cfg.elementId === id);
-            if (entry) this._togglePanel(entry[0]);
+            const target = e.target.closest('[data-action]');
+            if (!target) return;
+
+            const action = target.dataset.action;
+
+            if (action === 'hover-toggle') {
+                this.pointCloud.hoverActive = !this.pointCloud.hoverActive;
+                this._updateStatusIndicator('hover-status', this.pointCloud.hoverActive);
+                if (!this.pointCloud.hoverActive) this.hoverPanel.style.display = 'none';
+            } else if (action === 'click-select-toggle') {
+                this.pointCloud.selectOnClick = !this.pointCloud.selectOnClick;
+                this._updateStatusIndicator('click-select-status', this.pointCloud.selectOnClick);
+            } else {
+                const entry = Object.entries(this.uiConfig)
+                    .find(([, cfg]) => cfg.elementId === action);
+                if (entry) {
+                    this._togglePanel(entry[0]);
+                    this._updatePanelStatusIndicator(target, this.uiConfig[entry[0]].visible);
+                }
+            }
         });
+    }
+
+    _updateStatusIndicator(elementId, enabled) {
+        const statusEl = document.getElementById(elementId);
+        statusEl.textContent = enabled ? '(enabled)' : '(disabled)';
+        statusEl.className = `status-indicator ${enabled ? 'status-enabled' : 'status-disabled'}`;
+    }
+
+    _updatePanelStatusIndicator(element, visible) {
+        const statusEl = element.querySelector('.status-indicator');
+        statusEl.textContent = visible ? '(enabled)' : '(disabled)';
+        statusEl.className = `status-indicator ${visible ? 'status-enabled' : 'status-disabled'}`;
     }
 
     /* ---------- sliders for size / opacity / speed ------------ */
@@ -102,7 +133,15 @@ class UIManager {
         document.addEventListener('keydown', e => {
             /* panel toggles */
             for (const [name, cfg] of Object.entries(this.uiConfig)) {
-                if (e.code === cfg.key) { e.preventDefault(); this._togglePanel(name); }
+                if (e.code === cfg.key) {
+                    e.preventDefault();
+                    this._togglePanel(name);
+                    // Update the corresponding shortcut status
+                    const shortcutEl = document.querySelector(`[data-action="${cfg.elementId}"]`);
+                    if (shortcutEl) {
+                        this._updatePanelStatusIndicator(shortcutEl, cfg.visible);
+                    }
+                }
             }
 
             /* colour / selection cycling */
@@ -115,15 +154,17 @@ class UIManager {
                 this.pointCloud.state.setSelectBy(this.cats[this.selectIdx]);
             }
 
-            /* new: hover UI toggle */
+            /* hover UI toggle */
             if (e.code === 'KeyK') {
                 this.pointCloud.hoverActive = !this.pointCloud.hoverActive;
+                this._updateStatusIndicator('hover-status', this.pointCloud.hoverActive);
                 if (!this.pointCloud.hoverActive) this.hoverPanel.style.display = 'none';
             }
 
-            /* new: click-select toggle */
+            /* click-select toggle */
             if (e.code === 'KeyB') {
                 this.pointCloud.selectOnClick = !this.pointCloud.selectOnClick;
+                this._updateStatusIndicator('click-select-status', this.pointCloud.selectOnClick);
             }
         });
     }
