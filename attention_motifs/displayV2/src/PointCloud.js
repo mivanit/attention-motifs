@@ -1,34 +1,40 @@
-/* PointCloud.js – adds in-scene cross-hair that snaps to the hovered
-   point (no colour change on hover). */
+/* PointCloud.js – snap-to-point cross-hair, optional hover UI (“k”),
+   optional click-to-select (“b”), and better picking accuracy. */
 
 class PointCloud {
     /** @param {DataModel} model */
     constructor(model) {
         this.model = model;
 
-        /* ── THREE essentials ─────────────────────────────────── */
+        /* ── THREE basics ─────────────────────────────────────── */
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(
             75, window.innerWidth / window.innerHeight, 0.1, 2_000);
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
 
-        /* ── helpers ──────────────────────────────────────────── */
+        /* ── picking helpers ──────────────────────────────────── */
         this.raycaster = new THREE.Raycaster();
+        this.raycaster.params.Points = { threshold: 0.15 };   // world-unit tolerance
         this.pointerNDC = new THREE.Vector2();
         this.pointerScreen = { x: 0, y: 0 };
+
         this.hoverId = null;
         this.prevHoverId = null;
 
-        /* ── state / colour management -------------------------- */
+        /* ── behaviour flags (toggled by UIManager) ───────────── */
+        this.hoverActive = true;   // “k”
+        this.selectOnClick = true;   // “b”
+
+        /* ── colour / selection state ─────────────────────────── */
         this.state = new VisState(model);
         this.selMgr = new SelectionManager(model, this.state);
         this.state.addEventListener('selection', () => this._updateColors());
         this.state.addEventListener('vis', () => this._updateColors());
 
-        /* ── viewer tunables ------------------------------------ */
+        /* ── viewer settings ------------------------------------ */
         this.settings = { pointSize: 0.1, opacity: 0.8, speed: 10 };
 
-        /* ── movement bookkeeping ------------------------------- */
+        /* ── movement bookkeeping -------------------------------- */
         this.keys = {};
         this.pitch = 0;
         this.mouseDX = 0;
@@ -36,10 +42,10 @@ class PointCloud {
         this.rollSpeed = 0.02;
         this.velocity = new THREE.Vector3();
 
-        /* ── cross-hair lines (in-scene) ------------------------ */
-        this.crosshairH = null;
-        this.crosshairV = null;
-        this._initCrosshairs();
+        /* ── cross-hair objects ───────────────────────────────── */
+        this.crossH = null;
+        this.crossV = null;
+        this._createCrosshairs();
 
         /* bootstrap */
         this._init();
@@ -49,7 +55,7 @@ class PointCloud {
     _init() {
         this._setupRenderer();
         this._setupInput();
-        this._generatePoints();
+        this._buildGeometry();
         this._animate();
     }
 
@@ -60,61 +66,53 @@ class PointCloud {
         this.camera.position.set(0, 0, 0);
     }
 
-    /* ---------- cross-hair helpers --------------------------- */
-    _initCrosshairs() {
+    /* ---------- in-scene cross-hair --------------------------- */
+    _createCrosshairs() {
         const mat = new THREE.LineBasicMaterial({
-            color: 0xffff00,
-            transparent: true,
-            opacity: 0.35,
-            depthTest: false
+            color: 0xffff00, transparent: true, opacity: 0.4, depthTest: false
         });
 
-        /* horizontal line */
-        const hGeom = new THREE.BufferGeometry().setFromPoints([
+        /* horizontal (X-axis) */
+        const gH = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(-1_000, 0, 0),
             new THREE.Vector3(1_000, 0, 0)
         ]);
-        this.crosshairH = new THREE.Line(hGeom, mat);
-        this.crosshairH.visible = false;
-        this.scene.add(this.crosshairH);
+        this.crossH = new THREE.Line(gH, mat);
+        this.crossH.visible = false;
+        this.scene.add(this.crossH);
 
-        /* vertical line */
-        const vGeom = new THREE.BufferGeometry().setFromPoints([
+        /* vertical (Y-axis) */
+        const gV = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(0, -1_000, 0),
             new THREE.Vector3(0, 1_000, 0)
         ]);
-        this.crosshairV = new THREE.Line(vGeom, mat);
-        this.crosshairV.visible = false;
-        this.scene.add(this.crosshairV);
+        this.crossV = new THREE.Line(gV, mat);
+        this.crossV.visible = false;
+        this.scene.add(this.crossV);
     }
 
-    _updateCrosshairs(rowId) {
-        if (rowId == null) {
-            this.crosshairH.visible = false;
-            this.crosshairV.visible = false;
+    _updateCrosshairs(id) {
+        if (!this.hoverActive || id == null) {
+            this.crossH.visible = this.crossV.visible = false;
             return;
         }
-
         const a = this.state.axis;
-        const x = this.model.getCoord(rowId, a.x);
-        const y = this.model.getCoord(rowId, a.y);
-        const z = this.model.getCoord(rowId, a.z);
+        const x = this.model.getCoord(id, a.x);
+        const y = this.model.getCoord(id, a.y);
+        const z = this.model.getCoord(id, a.z);
 
-        /* position cross-hair planes so they intersect at the point */
-        this.crosshairH.position.set(0, y, z);  // spans X-axis
-        this.crosshairV.position.set(x, 0, z);  // spans Y-axis
-
-        this.crosshairH.visible = true;
-        this.crosshairV.visible = true;
+        this.crossH.position.set(0, y, z);
+        this.crossV.position.set(x, 0, z);
+        this.crossH.visible = this.crossV.visible = true;
     }
 
     /* ---------- input & interaction -------------------------- */
     _setupInput() {
-        /* keyboard */
+        /* keyboard state */
         document.addEventListener('keydown', e => this.keys[e.code] = true);
         document.addEventListener('keyup', e => this.keys[e.code] = false);
 
-        /* mouse */
+        /* mouse movement */
         document.addEventListener('mousemove', e => {
             if (document.pointerLockElement === document.body) {
                 this.mouseDX += e.movementX;
@@ -126,9 +124,9 @@ class PointCloud {
             this.pointerNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
         });
 
-        /* click selects category */
+        /* click-to-select (can be disabled) */
         window.addEventListener('click', () => {
-            if (this.hoverId == null) return;
+            if (!this.selectOnClick || this.hoverId == null) return;
             const v = this.model.row(this.hoverId)[this.state.selectBy];
             this.state.toggleValue(v);
         });
@@ -152,8 +150,8 @@ class PointCloud {
         });
     }
 
-    /* ---------- geometry ------------------------------------- */
-    _generatePoints() {
+    /* ---------- build / rebuild point geometry --------------- */
+    _buildGeometry() {
         if (this.points) {
             this.scene.remove(this.points);
             this.points.geometry.dispose();
@@ -163,18 +161,13 @@ class PointCloud {
         const pos = [];
         const col = [];
 
-        if (this.model) {
-            const rows = this.model.rowCount;
-            for (let i = 0; i < rows; ++i) {
-                pos.push(
-                    this.model.getCoord(i, 0),
-                    this.model.getCoord(i, 1),
-                    this.model.getCoord(i, 2)
-                );
-                col.push(0.6, 0.6, 0.6);      // will be recoloured below
-            }
-        } else {
-            console.warn('No data loaded');
+        for (let i = 0; i < this.model.rowCount; ++i) {
+            pos.push(
+                this.model.getCoord(i, 0),
+                this.model.getCoord(i, 1),
+                this.model.getCoord(i, 2)
+            );
+            col.push(0.6, 0.6, 0.6);
         }
 
         const geom = new THREE.BufferGeometry();
@@ -197,32 +190,30 @@ class PointCloud {
         this._updateColors();
     }
 
-    handleSettingChange(prop, _val) {
+    handleSettingChange(prop) {
         if (prop === 'pointSize' || prop === 'opacity') {
             this.points.material.size = this.settings.pointSize;
             this.points.material.opacity = this.settings.opacity;
             this.points.material.transparent = this.settings.opacity < 1;
             this.points.material.needsUpdate = true;
+
+            /* update picking tolerance to roughly match size */
+            this.raycaster.params.Points.threshold = this.settings.pointSize * 3;
         }
     }
 
-    /* ---------- recolour points (no hover tint) --------------- */
+    /* ---------- recolour all points --------------------------- */
     _updateColors() {
-        if (!this.colorAttr) return;
-        const arr = this.colorAttr.array;
-
+        const A = this.colorAttr.array;
         for (let i = 0; i < this.colorAttr.count; ++i) {
             const { r, g, b } = this.selMgr.attrs(i);
-            arr[i * 3] = r;
-            arr[i * 3 + 1] = g;
-            arr[i * 3 + 2] = b;
+            A[i * 3] = r; A[i * 3 + 1] = g; A[i * 3 + 2] = b;
         }
-
         this.colorAttr.needsUpdate = true;
     }
 
-    /* ---------- camera movement ------------------------------- */
-    _updateMovement() {
+    /* ---------- camera motion --------------------------------- */
+    _moveCamera() {
         const sens = 0.002;
         const yaw = -this.mouseDX * sens;
         const dp = -this.mouseDY * sens;
@@ -253,26 +244,26 @@ class PointCloud {
         }
     }
 
-    /* ---------- main render loop ------------------------------ */
+    /* ---------- render loop ----------------------------------- */
     _animate() {
         requestAnimationFrame(() => this._animate());
 
-        this._updateMovement();
+        this._moveCamera();
 
-        /* hover picking */
+        /* picking */
         this.raycaster.setFromCamera(this.pointerNDC, this.camera);
         const hit = this.raycaster.intersectObject(this.points, false)[0];
         this.hoverId = hit ? hit.index : null;
 
         if (this.hoverId !== this.prevHoverId) {
             this.prevHoverId = this.hoverId;
-            this._updateCrosshairs(this.hoverId);   // move / hide lines
+            this._updateCrosshairs(this.hoverId);
         }
 
         if (this.uiManager) this.uiManager.updateUI();
         this.renderer.render(this.scene, this.camera);
     }
 
-    /* ---------- hook for UI ----------------------------------- */
+    /* ---------- allow UIManager to attach --------------------- */
     setUIManager(ui) { this.uiManager = ui; }
 }

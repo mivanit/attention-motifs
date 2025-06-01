@@ -701,11 +701,14 @@
 		<!-- end 'VisState.js' -->
 			<!-- begin 'ui.js' -->
 		<script>
+		/* UIManager – adds “k” to toggle hover UI / cross-hair
+		   and “b” to toggle click-to-select. */
+		
 		class UIManager {
 		    constructor(pointCloud) {
 		        this.pointCloud = pointCloud;
 		
-		        /* -- UI panels & hot-keys ------------------------------- */
+		        /* panel metadata ------------------------------------------------ */
 		        this.uiConfig = {
 		            help: { key: 'KeyH', elementId: 'helpMenu', shortcutText: 'h – help', visible: false },
 		            menu: { key: 'KeyM', elementId: 'controlsMenu', shortcutText: 'm – menu', visible: false },
@@ -713,77 +716,83 @@
 		            stats: { key: 'KeyJ', elementId: 'statsMenu', shortcutText: 'j – stats', visible: false }
 		        };
 		
-		        /* -- column cycling helpers (C / V) --------------------- */
-		        this.categoricalColumns = this.pointCloud.model.df.columns
+		        /* categorical columns for c / v cycling ------------------------ */
+		        this.cats = this.pointCloud.model.df.columns
 		            .filter(c => !c.startsWith(CONFIG.numericalPrefix));
-		        this.colorIdx = Math.max(0,
-		            this.categoricalColumns.indexOf(this.pointCloud.state.colorBy));
-		        this.selectIdx = Math.max(0,
-		            this.categoricalColumns.indexOf(this.pointCloud.state.selectBy));
+		        this.colorIdx = Math.max(0, this.cats.indexOf(this.pointCloud.state.colorBy));
+		        this.selectIdx = Math.max(0, this.cats.indexOf(this.pointCloud.state.selectBy));
 		
-		        /* -- FPS tracking --------------------------------------- */
+		        /* FPS counters -------------------------------------------------- */
 		        this.frameCount = 0;
 		        this.lastTime = performance.now();
 		        this.fps = 60;
 		
-		        /* build static UI elements & handlers */
-		        this.init();
+		        /* build static UI */
+		        this._init();
 		    }
 		
-		    /* --------------------------------------------------------- */
-		    init() {
-		        this.generateShortcutsHTML();
-		        this.setupControls();
-		        this.setupUI();
-		        this.setupNavball();
+		    /* ========================================================= */
+		    _init() {
+		        this._buildShortcutsLegend();
+		        this._setupControlSliders();
+		        this._bindKeys();
+		        this._setupNavball();
 		
-		        /* floating hover tooltip */
+		        /* hover tooltip */
 		        this.hoverPanel = document.createElement('div');
 		        this.hoverPanel.className = 'hover-panel';
 		        document.body.appendChild(this.hoverPanel);
 		    }
 		
-		    setupNavball() { this.navball = new Navball('navball-container'); }
+		    _setupNavball() { this.navball = new Navball('navball-container'); }
 		
-		    /* ---------- static shortcut legend top-right ------------- */
-		    generateShortcutsHTML() {
+		    /* ---------- shortcuts legend (top-right) ------------------ */
+		    _buildShortcutsLegend() {
 		        const sc = document.getElementById('shortcuts');
-		        sc.innerHTML =
-		            '<div>wasd – move</div><div>mouse + Q/E – roll</div>';
+		        sc.innerHTML = '<div>wasd – move</div><div>mouse + Q/E – roll</div>';
 		
-		        Object.entries(this.uiConfig).forEach(([action, cfg]) => {
-		            const div = document.createElement('div');
-		            div.className = 'shortcut-link';
-		            div.dataset.action = action;
-		            div.textContent = cfg.shortcutText;
-		            sc.appendChild(div);
+		        Object.values(this.uiConfig).forEach(cfg => {
+		            const d = document.createElement('div');
+		            d.className = 'shortcut-link';
+		            d.dataset.action = cfg.elementId;
+		            d.textContent = cfg.shortcutText;
+		            sc.appendChild(d);
 		        });
 		
-		        /* new column-cycle helpers */
-		        sc.insertAdjacentHTML('beforeend',
-		            '<div>c / v – cycle colour / selection column</div>');
+		        sc.insertAdjacentHTML('beforeend', `
+		            <div>c / v – cycle colour / select col</div>
+		            <div>k – hover UI</div>
+		            <div>b – click-select</div>`);
+		
+		        sc.addEventListener('click', e => {
+		            const id = e.target.dataset.action;
+		            if (!id) return;
+		            const entry = Object.entries(this.uiConfig)
+		                .find(([, cfg]) => cfg.elementId === id);
+		            if (entry) this._togglePanel(entry[0]);
+		        });
 		    }
 		
-		    /* ---------- sliders for point-size / opacity / speed ------ */
-		    setupControls() {
-		        const controls = {
+		    /* ---------- sliders for size / opacity / speed ------------ */
+		    _setupControlSliders() {
+		        const map = {
 		            pointSize: { el: 'pointSize', disp: 'pointSizeValue' },
 		            opacity: { el: 'opacity', disp: 'opacityValue' },
 		            speed: { el: 'speed', disp: 'speedValue' }
 		        };
 		
-		        Object.values(controls).forEach(cfg => {
-		            const slider = document.getElementById(cfg.el);
-		            const display = document.getElementById(cfg.disp);
-		
-		            slider.addEventListener('input', () => {
-		                const v = parseFloat(slider.value);
-		                display.textContent = v;
+		        Object.values(map).forEach(cfg => {
+		            const s = document.getElementById(cfg.el);
+		            const d = document.getElementById(cfg.disp);
+		            s.addEventListener('input', () => {
+		                const v = parseFloat(s.value);
+		                d.textContent = v;
 		                this.pointCloud.settings[cfg.el] = v;
 		                this.pointCloud.handleSettingChange(cfg.el, v);
 		            });
 		        });
 		
+		        /* keep renderer sized */
 		        window.addEventListener('resize', () => {
 		            this.pointCloud.camera.aspect = window.innerWidth / window.innerHeight;
 		            this.pointCloud.camera.updateProjectionMatrix();
@@ -791,42 +800,41 @@
 		        });
 		    }
 		
-		    /* ---------- key-bindings and panel toggles ---------------- */
-		    setupUI() {
+		    /* ---------- key bindings ---------------------------------- */
+		    _bindKeys() {
 		        document.addEventListener('keydown', e => {
-		            /* show / hide panels */
-		            for (const [action, cfg] of Object.entries(this.uiConfig)) {
-		                if (e.code === cfg.key) {
-		                    e.preventDefault();
-		                    this.toggleUI(action);
-		                }
+		            /* panel toggles */
+		            for (const [name, cfg] of Object.entries(this.uiConfig)) {
+		                if (e.code === cfg.key) { e.preventDefault(); this._togglePanel(name); }
 		            }
 		
-		            /* cycle default colour column */
+		            /* colour / selection cycling */
 		            if (e.code === 'KeyC') {
-		                this.colorIdx = (this.colorIdx + 1) % this.categoricalColumns.length;
-		                this.pointCloud.state.setColorBy(this.categoricalColumns[this.colorIdx]);
+		                this.colorIdx = (this.colorIdx + 1) % this.cats.length;
+		                this.pointCloud.state.setColorBy(this.cats[this.colorIdx]);
+		            }
+		            if (e.code === 'KeyV') {
+		                this.selectIdx = (this.selectIdx + 1) % this.cats.length;
+		                this.pointCloud.state.setSelectBy(this.cats[this.selectIdx]);
 		            }
 		
-		            /* cycle selection column */
-		            if (e.code === 'KeyV') {
-		                this.selectIdx = (this.selectIdx + 1) % this.categoricalColumns.length;
-		                this.pointCloud.state.setSelectBy(this.categoricalColumns[this.selectIdx]);
+		            /* new: hover UI toggle */
+		            if (e.code === 'KeyK') {
+		                this.pointCloud.hoverActive = !this.pointCloud.hoverActive;
+		                if (!this.pointCloud.hoverActive) this.hoverPanel.style.display = 'none';
+		            }
+		
+		            /* new: click-select toggle */
+		            if (e.code === 'KeyB') {
+		                this.pointCloud.selectOnClick = !this.pointCloud.selectOnClick;
 		            }
 		        });
-		
-		        document.getElementById('shortcuts')
-		            .addEventListener('click', e => {
-		                const action = e.target.dataset.action;
-		                if (action) this.toggleUI(action);
-		            });
 		    }
 		
-		    toggleUI(type) {
-		        const cfg = this.uiConfig[type];
+		    _togglePanel(name) {
+		        const cfg = this.uiConfig[name];
 		        cfg.visible = !cfg.visible;
-		        document.getElementById(cfg.elementId).style.display =
-		            cfg.visible ? 'block' : 'none';
+		        document.getElementById(cfg.elementId).style.display = cfg.visible ? 'block' : 'none';
 		    }
 		
 		    /* ---------- per-frame UI refresh -------------------------- */
@@ -835,37 +843,24 @@
 		        if (this.uiConfig.navbar.visible) {
 		            const p = this.pointCloud.camera.position;
 		            ['posX', 'posY', 'posZ'].forEach((id, i) =>
-		                document.getElementById(id).textContent =
-		                p[['x', 'y', 'z'][i]].toFixed(1));
-		
-		            if (this.navball)
-		                this.navball.syncWithCameraQuaternion(this.pointCloud.camera.quaternion);
+		                document.getElementById(id).textContent = p[['x', 'y', 'z'][i]].toFixed(1));
+		            this.navball.syncWithCameraQuaternion(this.pointCloud.camera.quaternion);
 		        }
 		
 		        /* stats */
-		        if (this.uiConfig.stats.visible) this.updateStatsDisplay();
+		        if (this.uiConfig.stats.visible) this._updateStats();
 		
-		        /* tooltip */
-		        this.showHover(this.pointCloud.hoverId);
+		        /* hover tooltip */
+		        this._showHover(this.pointCloud.hoverId);
 		    }
 		
-		    /* ---------- FPS and counters ------------------------------ */
-		    updateFPS() {
-		        this.frameCount++;
-		        const now = performance.now();
-		        if (now - this.lastTime >= 1000) {
-		            this.fps = Math.round((this.frameCount * 1000) / (now - this.lastTime));
-		            this.frameCount = 0;
-		            this.lastTime = now;
-		        }
-		    }
-		
-		    updateStatsDisplay() {
-		        this.updateFPS();
-		        const frameMs = (1000 / Math.max(this.fps, 1)).toFixed(1) + ' ms';
+		    /* ---------- FPS / stats ----------------------------------- */
+		    _updateStats() {
+		        this._tickFPS();
+		        const ms = (1000 / Math.max(this.fps, 1)).toFixed(1) + ' ms';
 		
 		        document.getElementById('fps').textContent = this.fps;
-		        document.getElementById('frameTime').textContent = frameMs;
+		        document.getElementById('frameTime').textContent = ms;
 		        document.getElementById('renderedCount').textContent =
 		            this.pointCloud.points.geometry.getAttribute('position').count;
 		
@@ -874,8 +869,16 @@
 		        document.getElementById('statsPosY').textContent = p.y.toFixed(3);
 		        document.getElementById('statsPosZ').textContent = p.z.toFixed(3);
 		    }
+		    _tickFPS() {
+		        this.frameCount++;
+		        const now = performance.now();
+		        if (now - this.lastTime >= 1000) {
+		            this.fps = Math.round(this.frameCount * 1000 / (now - this.lastTime));
+		            this.frameCount = 0;
+		            this.lastTime = now;
+		        }
+		    }
 		
-		    /* called by PointCloud after geometry rebuild */
 		    onPointsRegenerated() {
 		        if (this.uiConfig.stats.visible)
 		            document.getElementById('renderedCount').textContent =
@@ -883,25 +886,25 @@
 		    }
 		
 		    /* ---------- hover tooltip --------------------------------- */
-		    showHover(rowId) {
-		        if (rowId == null) { this.hoverPanel.style.display = 'none'; return; }
+		    _showHover(id) {
+		        if (!this.pointCloud.hoverActive || id == null) {
+		            this.hoverPanel.style.display = 'none';
+		            return;
+		        }
 		
-		        const row = this.pointCloud.model.row(rowId);
+		        const row = this.pointCloud.model.row(id);
 		        const a = this.pointCloud.state.axis;
 		        const xyz = [
-		            this.pointCloud.model.getCoord(rowId, a.x).toFixed(2),
-		            this.pointCloud.model.getCoord(rowId, a.y).toFixed(2),
-		            this.pointCloud.model.getCoord(rowId, a.z).toFixed(2)
+		            this.pointCloud.model.getCoord(id, a.x).toFixed(2),
+		            this.pointCloud.model.getCoord(id, a.y).toFixed(2),
+		            this.pointCloud.model.getCoord(id, a.z).toFixed(2)
 		        ];
-		
-		        /* build text */
-		        const lines = CONFIG.hoverColumns
+		        const html = CONFIG.hoverColumns
 		            .map(c => `<b>${c}</b>: ${row[c]}`)
-		            .concat([`<b>coord</b>: [${xyz.join(', ')}]`]);
+		            .concat([`<b>coord</b>: [${xyz.join(', ')}]`])
+		            .join('<br>');
 		
-		        this.hoverPanel.innerHTML = lines.join('<br>');
-		
-		        /* position */
+		        this.hoverPanel.innerHTML = html;
 		        const { x, y } = this.pointCloud.pointerScreen;
 		        this.hoverPanel.style.left = (x + 15) + 'px';
 		        this.hoverPanel.style.top = (y + 15) + 'px';
@@ -913,37 +916,43 @@
 		<!-- end 'ui.js' -->
 			<!-- begin 'PointCloud.js' -->
 		<script>
-		/* PointCloud.js – adds in-scene cross-hair that snaps to the hovered
-		   point (no colour change on hover). */
+		/* PointCloud.js – snap-to-point cross-hair, optional hover UI (“k”),
+		   optional click-to-select (“b”), and better picking accuracy. */
 		
 		class PointCloud {
 		    /** @param {DataModel} model */
 		    constructor(model) {
 		        this.model = model;
 		
-		        /* ── THREE essentials ─────────────────────────────────── */
+		        /* ── THREE basics ─────────────────────────────────────── */
 		        this.scene = new THREE.Scene();
 		        this.camera = new THREE.PerspectiveCamera(
 		            75, window.innerWidth / window.innerHeight, 0.1, 2_000);
 		        this.renderer = new THREE.WebGLRenderer({ antialias: true });
 		
-		        /* ── helpers ──────────────────────────────────────────── */
+		        /* ── picking helpers ──────────────────────────────────── */
 		        this.raycaster = new THREE.Raycaster();
+		        this.raycaster.params.Points = { threshold: 0.15 };   // world-unit tolerance
 		        this.pointerNDC = new THREE.Vector2();
 		        this.pointerScreen = { x: 0, y: 0 };
+		
 		        this.hoverId = null;
 		        this.prevHoverId = null;
 		
-		        /* ── state / colour management -------------------------- */
+		        /* ── behaviour flags (toggled by UIManager) ───────────── */
+		        this.hoverActive = true;   // “k”
+		        this.selectOnClick = true;   // “b”
+		
+		        /* ── colour / selection state ─────────────────────────── */
 		        this.state = new VisState(model);
 		        this.selMgr = new SelectionManager(model, this.state);
 		        this.state.addEventListener('selection', () => this._updateColors());
 		        this.state.addEventListener('vis', () => this._updateColors());
 		
-		        /* ── viewer tunables ------------------------------------ */
+		        /* ── viewer settings ------------------------------------ */
 		        this.settings = { pointSize: 0.1, opacity: 0.8, speed: 10 };
 		
-		        /* ── movement bookkeeping ------------------------------- */
+		        /* ── movement bookkeeping -------------------------------- */
 		        this.keys = {};
 		        this.pitch = 0;
 		        this.mouseDX = 0;
@@ -951,10 +960,10 @@
 		        this.rollSpeed = 0.02;
 		        this.velocity = new THREE.Vector3();
 		
-		        /* ── cross-hair lines (in-scene) ------------------------ */
-		        this.crosshairH = null;
-		        this.crosshairV = null;
-		        this._initCrosshairs();
+		        /* ── cross-hair objects ───────────────────────────────── */
+		        this.crossH = null;
+		        this.crossV = null;
+		        this._createCrosshairs();
 		
 		        /* bootstrap */
 		        this._init();
@@ -964,7 +973,7 @@
 		    _init() {
 		        this._setupRenderer();
 		        this._setupInput();
-		        this._generatePoints();
+		        this._buildGeometry();
 		        this._animate();
 		    }
 		
@@ -975,61 +984,53 @@
 		        this.camera.position.set(0, 0, 0);
 		    }
 		
-		    /* ---------- cross-hair helpers --------------------------- */
-		    _initCrosshairs() {
+		    /* ---------- in-scene cross-hair --------------------------- */
+		    _createCrosshairs() {
 		        const mat = new THREE.LineBasicMaterial({
-		            color: 0xffff00,
-		            transparent: true,
-		            opacity: 0.35,
-		            depthTest: false
+		            color: 0xffff00, transparent: true, opacity: 0.4, depthTest: false
 		        });
 		
-		        /* horizontal line */
-		        const hGeom = new THREE.BufferGeometry().setFromPoints([
+		        /* horizontal (X-axis) */
+		        const gH = new THREE.BufferGeometry().setFromPoints([
 		            new THREE.Vector3(-1_000, 0, 0),
 		            new THREE.Vector3(1_000, 0, 0)
 		        ]);
-		        this.crosshairH = new THREE.Line(hGeom, mat);
-		        this.crosshairH.visible = false;
-		        this.scene.add(this.crosshairH);
+		        this.crossH = new THREE.Line(gH, mat);
+		        this.crossH.visible = false;
+		        this.scene.add(this.crossH);
 		
-		        /* vertical line */
-		        const vGeom = new THREE.BufferGeometry().setFromPoints([
+		        /* vertical (Y-axis) */
+		        const gV = new THREE.BufferGeometry().setFromPoints([
 		            new THREE.Vector3(0, -1_000, 0),
 		            new THREE.Vector3(0, 1_000, 0)
 		        ]);
-		        this.crosshairV = new THREE.Line(vGeom, mat);
-		        this.crosshairV.visible = false;
-		        this.scene.add(this.crosshairV);
+		        this.crossV = new THREE.Line(gV, mat);
+		        this.crossV.visible = false;
+		        this.scene.add(this.crossV);
 		    }
 		
-		    _updateCrosshairs(rowId) {
-		        if (rowId == null) {
-		            this.crosshairH.visible = false;
-		            this.crosshairV.visible = false;
+		    _updateCrosshairs(id) {
+		        if (!this.hoverActive || id == null) {
+		            this.crossH.visible = this.crossV.visible = false;
 		            return;
 		        }
-		
 		        const a = this.state.axis;
-		        const x = this.model.getCoord(rowId, a.x);
-		        const y = this.model.getCoord(rowId, a.y);
-		        const z = this.model.getCoord(rowId, a.z);
+		        const x = this.model.getCoord(id, a.x);
+		        const y = this.model.getCoord(id, a.y);
+		        const z = this.model.getCoord(id, a.z);
 		
-		        /* position cross-hair planes so they intersect at the point */
-		        this.crosshairH.position.set(0, y, z);  // spans X-axis
-		        this.crosshairV.position.set(x, 0, z);  // spans Y-axis
-		
-		        this.crosshairH.visible = true;
-		        this.crosshairV.visible = true;
+		        this.crossH.position.set(0, y, z);
+		        this.crossV.position.set(x, 0, z);
+		        this.crossH.visible = this.crossV.visible = true;
 		    }
 		
 		    /* ---------- input & interaction -------------------------- */
 		    _setupInput() {
-		        /* keyboard */
+		        /* keyboard state */
 		        document.addEventListener('keydown', e => this.keys[e.code] = true);
 		        document.addEventListener('keyup', e => this.keys[e.code] = false);
 		
-		        /* mouse */
+		        /* mouse movement */
 		        document.addEventListener('mousemove', e => {
 		            if (document.pointerLockElement === document.body) {
 		                this.mouseDX += e.movementX;
@@ -1041,9 +1042,9 @@
 		            this.pointerNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
 		        });
 		
-		        /* click selects category */
+		        /* click-to-select (can be disabled) */
 		        window.addEventListener('click', () => {
-		            if (this.hoverId == null) return;
+		            if (!this.selectOnClick || this.hoverId == null) return;
 		            const v = this.model.row(this.hoverId)[this.state.selectBy];
 		            this.state.toggleValue(v);
 		        });
@@ -1067,8 +1068,8 @@
 		        });
 		    }
 		
-		    /* ---------- geometry ------------------------------------- */
-		    _generatePoints() {
+		    /* ---------- build / rebuild point geometry --------------- */
+		    _buildGeometry() {
 		        if (this.points) {
 		            this.scene.remove(this.points);
 		            this.points.geometry.dispose();
@@ -1078,18 +1079,13 @@
 		        const pos = [];
 		        const col = [];
 		
-		        if (this.model) {
-		            const rows = this.model.rowCount;
-		            for (let i = 0; i < rows; ++i) {
-		                pos.push(
-		                    this.model.getCoord(i, 0),
-		                    this.model.getCoord(i, 1),
-		                    this.model.getCoord(i, 2)
-		                );
-		                col.push(0.6, 0.6, 0.6);      // will be recoloured below
-		            }
-		        } else {
-		            console.warn('No data loaded');
+		        for (let i = 0; i < this.model.rowCount; ++i) {
+		            pos.push(
+		                this.model.getCoord(i, 0),
+		                this.model.getCoord(i, 1),
+		                this.model.getCoord(i, 2)
+		            );
+		            col.push(0.6, 0.6, 0.6);
 		        }
 		
 		        const geom = new THREE.BufferGeometry();
@@ -1112,32 +1108,30 @@
 		        this._updateColors();
 		    }
 		
-		    handleSettingChange(prop, _val) {
+		    handleSettingChange(prop) {
 		        if (prop === 'pointSize' || prop === 'opacity') {
 		            this.points.material.size = this.settings.pointSize;
 		            this.points.material.opacity = this.settings.opacity;
 		            this.points.material.transparent = this.settings.opacity < 1;
 		            this.points.material.needsUpdate = true;
+		
+		            /* update picking tolerance to roughly match size */
+		            this.raycaster.params.Points.threshold = this.settings.pointSize * 3;
 		        }
 		    }
 		
-		    /* ---------- recolour points (no hover tint) --------------- */
+		    /* ---------- recolour all points --------------------------- */
 		    _updateColors() {
-		        if (!this.colorAttr) return;
-		        const arr = this.colorAttr.array;
-		
+		        const A = this.colorAttr.array;
 		        for (let i = 0; i < this.colorAttr.count; ++i) {
 		            const { r, g, b } = this.selMgr.attrs(i);
-		            arr[i * 3] = r;
-		            arr[i * 3 + 1] = g;
-		            arr[i * 3 + 2] = b;
+		            A[i * 3] = r; A[i * 3 + 1] = g; A[i * 3 + 2] = b;
 		        }
-		
 		        this.colorAttr.needsUpdate = true;
 		    }
 		
-		    /* ---------- camera movement ------------------------------- */
-		    _updateMovement() {
+		    /* ---------- camera motion --------------------------------- */
+		    _moveCamera() {
 		        const sens = 0.002;
 		        const yaw = -this.mouseDX * sens;
 		        const dp = -this.mouseDY * sens;
@@ -1168,27 +1162,27 @@
 		        }
 		    }
 		
-		    /* ---------- main render loop ------------------------------ */
+		    /* ---------- render loop ----------------------------------- */
 		    _animate() {
 		        requestAnimationFrame(() => this._animate());
 		
-		        this._updateMovement();
+		        this._moveCamera();
 		
-		        /* hover picking */
+		        /* picking */
 		        this.raycaster.setFromCamera(this.pointerNDC, this.camera);
 		        const hit = this.raycaster.intersectObject(this.points, false)[0];
 		        this.hoverId = hit ? hit.index : null;
 		
 		        if (this.hoverId !== this.prevHoverId) {
 		            this.prevHoverId = this.hoverId;
-		            this._updateCrosshairs(this.hoverId);   // move / hide lines
+		            this._updateCrosshairs(this.hoverId);
 		        }
 		
 		        if (this.uiManager) this.uiManager.updateUI();
 		        this.renderer.render(this.scene, this.camera);
 		    }
 		
-		    /* ---------- hook for UI ----------------------------------- */
+		    /* ---------- allow UIManager to attach --------------------- */
 		    setUIManager(ui) { this.uiManager = ui; }
 		}
 		
