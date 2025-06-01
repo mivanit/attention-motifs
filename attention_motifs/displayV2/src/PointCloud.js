@@ -160,6 +160,7 @@ class PointCloud {
 
         const pos = [];
         const col = [];
+        const sizes = [];
 
         for (let i = 0; i < this.model.rowCount; ++i) {
             pos.push(
@@ -168,16 +169,18 @@ class PointCloud {
                 this.model.getCoord(i, 2)
             );
             col.push(0.6, 0.6, 0.6);
+            sizes.push(this.state.selSize); // Default size
         }
 
         const geom = new THREE.BufferGeometry();
         geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
         geom.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+        geom.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
 
         const mat = new THREE.PointsMaterial({
             size: this.settings.pointSize,
             opacity: this.settings.opacity,
-            transparent: this.settings.opacity < 1,
+            transparent: true,
             vertexColors: true,
             sizeAttenuation: true
         });
@@ -205,11 +208,26 @@ class PointCloud {
     /* ---------- recolour all points --------------------------- */
     _updateColors() {
         const A = this.colorAttr.array;
+        const sizeAttr = this.points.geometry.getAttribute('size');
+
         for (let i = 0; i < this.colorAttr.count; ++i) {
-            const { r, g, b } = this.selMgr.attrs(i);
-            A[i * 3] = r; A[i * 3 + 1] = g; A[i * 3 + 2] = b;
+            const attrs = this.selMgr.attrs(i);
+            A[i * 3] = attrs.r;
+            A[i * 3 + 1] = attrs.g;
+            A[i * 3 + 2] = attrs.b;
+
+            // Update size if we have size attribute
+            if (sizeAttr) {
+                sizeAttr.array[i] = attrs.size;
+            }
         }
         this.colorAttr.needsUpdate = true;
+        if (sizeAttr) sizeAttr.needsUpdate = true;
+
+        // Update material opacity to match non-selected opacity for base transparency
+        this.points.material.opacity = Math.max(this.state.selOp, this.state.nonSelOp);
+        this.points.material.transparent = true;
+        this.points.material.needsUpdate = true;
     }
 
     /* ---------- camera motion --------------------------------- */

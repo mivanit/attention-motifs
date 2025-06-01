@@ -184,6 +184,14 @@ class UIManager {
             });
         }
 
+        // Clear selection button
+        const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+        if (clearSelectionBtn) {
+            clearSelectionBtn.addEventListener('click', () => {
+                this.pointCloud.state.clearSel();
+            });
+        }
+
         // Setup dropdowns
         this._setupDropdowns();
 
@@ -213,6 +221,7 @@ class UIManager {
 
             colorBySelect.value = this.pointCloud.state.colorBy;
             colorBySelect.addEventListener('change', () => {
+                this.pointCloud.selMgr.clearCaches();
                 this.pointCloud.state.setColorBy(colorBySelect.value);
                 this.colorIdx = Math.max(0, this.cats.indexOf(colorBySelect.value));
             });
@@ -232,6 +241,7 @@ class UIManager {
 
             selectBySelect.value = this.pointCloud.state.selectBy;
             selectBySelect.addEventListener('change', () => {
+                this.pointCloud.selMgr.clearCaches();
                 this.pointCloud.state.setSelectBy(selectBySelect.value);
                 this.selectIdx = Math.max(0, this.cats.indexOf(selectBySelect.value));
             });
