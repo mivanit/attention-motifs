@@ -26,4 +26,7 @@ class SelectionManager {
 			b: isSel ? 0.2 : col.b
 		};
 	}
+	randomizeColors() {
+		this.palette = generateDistinctColors(128);
+	}
 }

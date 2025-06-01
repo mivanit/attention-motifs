@@ -241,3 +241,110 @@ button:hover {
 	background: rgba(0, 0, 0, .8);
 	border: 1px solid #555
 }
+
+/* Info panel styles */
+#infoMenu {
+	bottom: 20px;
+	left: 20px;
+	min-width: 300px;
+	max-height: 60vh;
+	overflow-y: auto;
+}
+
+.dropdown-container {
+	position: relative;
+	margin-bottom: 10px;
+}
+
+.dropdown-container label {
+	display: block;
+	margin-bottom: 5px;
+	font-size: 12px;
+	color: #00ccff;
+}
+
+.dropdown-container select {
+	width: 100%;
+	background: #333;
+	color: #00ff00;
+	border: 1px solid #555;
+	padding: 5px;
+	border-radius: 3px;
+}
+
+.selected-values-display {
+	margin-top: 15px;
+}
+
+.selected-value-item {
+	display: inline-block;
+	margin: 2px 4px;
+	padding: 4px 8px;
+	border-radius: 3px;
+	font-size: 11px;
+	color: white;
+	position: relative;
+	cursor: pointer;
+}
+
+.selected-value-item:hover::after {
+	content: '×';
+	position: absolute;
+	top: -5px;
+	right: -5px;
+	background: #ff4444;
+	border-radius: 50%;
+	width: 16px;
+	height: 16px;
+	font-size: 12px;
+	line-height: 16px;
+	text-align: center;
+}
+
+/* Enhanced control styles */
+.control-row {
+	display: flex;
+	align-items: center;
+	margin-bottom: 8px;
+	gap: 10px;
+}
+
+.control-row label {
+	flex: 0 0 80px;
+	font-size: 11px;
+	margin: 0;
+}
+
+.control-row input[type="range"] {
+	flex: 1;
+	margin: 0 5px;
+}
+
+.control-row .value-display {
+	flex: 0 0 40px;
+	text-align: center;
+	font-size: 11px;
+}
+
+.control-row input[type="color"] {
+	width: 30px;
+	height: 20px;
+	padding: 0;
+	border: none;
+	border-radius: 3px;
+}
+
+.color-randomize-btn {
+	background: #9467bd;
+	border: 1px solid #7a4fa3;
+	color: white;
+	padding: 4px 8px;
+	border-radius: 3px;
+	font-size: 10px;
+	cursor: pointer;
+	margin-top: 5px;
+}
+
+.color-randomize-btn:hover {
+	background: #7a4fa3;
+}

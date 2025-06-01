@@ -9,6 +9,7 @@ class UIManager {
         this.uiConfig = {
             help: { key: 'KeyH', elementId: 'helpMenu', shortcutText: 'h – help', visible: false },
             menu: { key: 'KeyM', elementId: 'controlsMenu', shortcutText: 'm – menu', visible: false },
+            info: { key: 'KeyI', elementId: 'infoMenu', shortcutText: 'i – info', visible: false },
             navbar: { key: 'KeyN', elementId: 'navbar', shortcutText: 'n – navball', visible: true },
             stats: { key: 'KeyJ', elementId: 'statsMenu', shortcutText: 'j – stats', visible: false }
         };
@@ -103,28 +104,160 @@ class UIManager {
 
     /* ---------- sliders for size / opacity / speed ------------ */
     _setupControlSliders() {
-        const map = {
-            pointSize: { el: 'pointSize', disp: 'pointSizeValue' },
-            opacity: { el: 'opacity', disp: 'opacityValue' },
-            speed: { el: 'speed', disp: 'speedValue' }
-        };
+        // Point size controls
+        const pointSizeSlider = document.getElementById('pointSize');
+        const pointSizeValue = document.getElementById('pointSizeValue');
+        const nonSelPointSizeSlider = document.getElementById('nonSelPointSize');
+        const nonSelPointSizeValue = document.getElementById('nonSelPointSizeValue');
 
-        Object.values(map).forEach(cfg => {
-            const s = document.getElementById(cfg.el);
-            const d = document.getElementById(cfg.disp);
-            s.addEventListener('input', () => {
-                const v = parseFloat(s.value);
-                d.textContent = v;
-                this.pointCloud.settings[cfg.el] = v;
-                this.pointCloud.handleSettingChange(cfg.el, v);
+        // Opacity controls
+        const opacitySlider = document.getElementById('opacity');
+        const opacityValue = document.getElementById('opacityValue');
+        const nonSelOpacitySlider = document.getElementById('nonSelOpacity');
+        const nonSelOpacityValue = document.getElementById('nonSelOpacityValue');
+
+        // Speed control
+        const speedSlider = document.getElementById('speed');
+        const speedValue = document.getElementById('speedValue');
+
+        // Color controls
+        const nonSelColorPicker = document.getElementById('nonSelColor');
+        const randomizeColorsBtn = document.getElementById('randomizeColors');
+
+        // Selected point size
+        if (pointSizeSlider && pointSizeValue) {
+            pointSizeSlider.addEventListener('input', () => {
+                const v = parseFloat(pointSizeSlider.value);
+                pointSizeValue.textContent = v.toFixed(2);
+                this.pointCloud.state.setVisParam('selSize', v);
             });
-        });
+        }
+
+        // Non-selected point size
+        if (nonSelPointSizeSlider && nonSelPointSizeValue) {
+            nonSelPointSizeSlider.addEventListener('input', () => {
+                const v = parseFloat(nonSelPointSizeSlider.value);
+                nonSelPointSizeValue.textContent = v.toFixed(2);
+                this.pointCloud.state.setVisParam('nonSelSize', v);
+            });
+        }
+
+        // Selected opacity
+        if (opacitySlider && opacityValue) {
+            opacitySlider.addEventListener('input', () => {
+                const v = parseFloat(opacitySlider.value);
+                opacityValue.textContent = v.toFixed(2);
+                this.pointCloud.state.setVisParam('selOp', v);
+            });
+        }
+
+        // Non-selected opacity
+        if (nonSelOpacitySlider && nonSelOpacityValue) {
+            nonSelOpacitySlider.addEventListener('input', () => {
+                const v = parseFloat(nonSelOpacitySlider.value);
+                nonSelOpacityValue.textContent = v.toFixed(2);
+                this.pointCloud.state.setVisParam('nonSelOp', v);
+            });
+        }
+
+        // Speed
+        if (speedSlider && speedValue) {
+            speedSlider.addEventListener('input', () => {
+                const v = parseFloat(speedSlider.value);
+                speedValue.textContent = v;
+                this.pointCloud.settings.speed = v;
+            });
+        }
+
+        // Non-selected color
+        if (nonSelColorPicker) {
+            nonSelColorPicker.addEventListener('input', () => {
+                this.pointCloud.state.setVisParam('nonSelColor', nonSelColorPicker.value);
+            });
+        }
+
+        // Randomize colors button
+        if (randomizeColorsBtn) {
+            randomizeColorsBtn.addEventListener('click', () => {
+                this.pointCloud.selMgr.randomizeColors();
+                this.pointCloud.state._fire('vis');
+            });
+        }
+
+        // Setup dropdowns
+        this._setupDropdowns();
 
         /* keep renderer sized */
         window.addEventListener('resize', () => {
             this.pointCloud.camera.aspect = window.innerWidth / window.innerHeight;
             this.pointCloud.camera.updateProjectionMatrix();
             this.pointCloud.renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    }
+
+    _setupDropdowns() {
+        const colorBySelect = document.getElementById('colorBySelect');
+        const selectBySelect = document.getElementById('selectBySelect');
+
+        if (colorBySelect) {
+            // Clear existing options
+            colorBySelect.innerHTML = '';
+
+            // Populate color by dropdown
+            this.cats.forEach(col => {
+                const option = document.createElement('option');
+                option.value = col;
+                option.textContent = col;
+                colorBySelect.appendChild(option);
+            });
+
+            colorBySelect.value = this.pointCloud.state.colorBy;
+            colorBySelect.addEventListener('change', () => {
+                this.pointCloud.state.setColorBy(colorBySelect.value);
+                this.colorIdx = Math.max(0, this.cats.indexOf(colorBySelect.value));
+            });
+        }
+
+        if (selectBySelect) {
+            // Clear existing options
+            selectBySelect.innerHTML = '';
+
+            // Populate select by dropdown
+            this.cats.forEach(col => {
+                const option = document.createElement('option');
+                option.value = col;
+                option.textContent = col;
+                selectBySelect.appendChild(option);
+            });
+
+            selectBySelect.value = this.pointCloud.state.selectBy;
+            selectBySelect.addEventListener('change', () => {
+                this.pointCloud.state.setSelectBy(selectBySelect.value);
+                this.selectIdx = Math.max(0, this.cats.indexOf(selectBySelect.value));
+            });
+        }
+    }
+
+    _updateSelectedValuesDisplay() {
+        const container = document.getElementById('selectedValuesContainer');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (this.pointCloud.state.selection.size === 0) {
+            container.innerHTML = '<div style="color: #888; font-style: italic;">None selected</div>';
+            return;
+        }
+
+        Array.from(this.pointCloud.state.selection).forEach((value, index) => {
+            const div = document.createElement('div');
+            div.className = 'selected-value-item';
+            div.textContent = value;
+            div.style.backgroundColor = this.pointCloud.selMgr.palette[index % this.pointCloud.selMgr.palette.length];
+            div.addEventListener('click', () => {
+                this.pointCloud.state.toggleValue(value);
+            });
+            container.appendChild(div);
         });
     }
 
@@ -148,10 +281,16 @@ class UIManager {
             if (e.code === 'KeyC') {
                 this.colorIdx = (this.colorIdx + 1) % this.cats.length;
                 this.pointCloud.state.setColorBy(this.cats[this.colorIdx]);
+                // Update dropdown
+                const colorBySelect = document.getElementById('colorBySelect');
+                if (colorBySelect) colorBySelect.value = this.cats[this.colorIdx];
             }
             if (e.code === 'KeyV') {
                 this.selectIdx = (this.selectIdx + 1) % this.cats.length;
                 this.pointCloud.state.setSelectBy(this.cats[this.selectIdx]);
+                // Update dropdown
+                const selectBySelect = document.getElementById('selectBySelect');
+                if (selectBySelect) selectBySelect.value = this.cats[this.selectIdx];
             }
 
             /* hover UI toggle */
@@ -190,6 +329,9 @@ class UIManager {
 
         /* hover tooltip */
         this._showHover(this.pointCloud.hoverId);
+
+        /* update selected values display */
+        this._updateSelectedValuesDisplay();
     }
 
     /* ---------- FPS / stats ----------------------------------- */

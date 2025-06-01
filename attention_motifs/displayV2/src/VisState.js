@@ -14,9 +14,20 @@ class VisState extends EventTarget {
 		/* appearance */
 		this.nonSelSize = 4; this.selSize = 6;
 		this.nonSelOp = 0.25; this.selOp = 1.0;
+		this.nonSelColor = '#666666';
+
 
 		/* store *values* (categories) now, not row indices */
 		this.selection = new Set();
+	}
+
+	isNumericColumn(column) {
+		if (!this.model.df.columns.includes(column)) return false;
+
+		const values = this.model.df.col(column);
+		// Check if most values are numbers
+		const numericCount = values.filter(v => typeof v === 'number' && !isNaN(v)).length;
+		return numericCount > values.length * 0.8; // 80% threshold
 	}
 
 	/* ---------- helpers ---------- */
