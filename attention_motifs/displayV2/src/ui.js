@@ -342,6 +342,9 @@ class UIManager {
 
         /* update selected values display */
         this._updateSelectedValuesDisplay();
+
+        /* update legend display */
+        this._updateLegendDisplay();
     }
 
     /* ---------- FPS / stats ----------------------------------- */
@@ -399,5 +402,56 @@ class UIManager {
         this.hoverPanel.style.left = (x + 15) + 'px';
         this.hoverPanel.style.top = (y + 15) + 'px';
         this.hoverPanel.style.display = 'block';
+    }
+
+    _updateLegendDisplay() {
+        const container = document.getElementById('legendContent');
+        if (!container) return;
+    
+        container.innerHTML = '';
+    
+        const colorColumn = this.pointCloud.state.colorBy;
+        
+        if (this.pointCloud.state.isNumericColumn(colorColumn)) {
+            // Show colorbar for numeric columns
+            const values = this.pointCloud.model.df.col(colorColumn).filter(v => typeof v === 'number' && !isNaN(v));
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            
+            const colorbarDiv = document.createElement('div');
+            colorbarDiv.innerHTML = `
+                <div style="font-size: 11px; margin-bottom: 4px;">${colorColumn}</div>
+                <div class="colorbar"></div>
+                <div class="colorbar-labels">
+                    <span>${min.toFixed(2)}</span>
+                    <span>${max.toFixed(2)}</span>
+                </div>
+            `;
+            container.appendChild(colorbarDiv);
+        } else {
+            // Show categorical legend
+            const uniqueValues = [...this.pointCloud.model.df.col_unique(colorColumn)]
+                .filter(v => v !== null && v !== 'null' && v !== 'unknown')
+                .sort();
+            
+            if (uniqueValues.length > 20) {
+                container.innerHTML = `<div style="color: #888; font-style: italic;">${uniqueValues.length} categories</div>`;
+            } else {
+                uniqueValues.slice(0, 15).forEach(value => {
+                    const color = this.pointCloud.selMgr._getCategoricalColor(value);
+                    const div = document.createElement('div');
+                    div.className = 'legend-item';
+                    div.innerHTML = `
+                        <div class="legend-color" style="background-color: rgb(${Math.round(color.r*255)}, ${Math.round(color.g*255)}, ${Math.round(color.b*255)})"></div>
+                        <span>${value}</span>
+                    `;
+                    container.appendChild(div);
+                });
+                
+                if (uniqueValues.length > 15) {
+                    container.innerHTML += `<div style="color: #888; font-style: italic;">...and ${uniqueValues.length - 15} more</div>`;
+                }
+            }
+        }
     }
 }

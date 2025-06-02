@@ -160,7 +160,6 @@ class PointCloud {
 
         const pos = [];
         const col = [];
-        const sizes = [];
 
         for (let i = 0; i < this.model.rowCount; ++i) {
             pos.push(
@@ -169,17 +168,15 @@ class PointCloud {
                 this.model.getCoord(i, 2)
             );
             col.push(0.6, 0.6, 0.6);
-            sizes.push(this.state.selSize); // Default size
         }
 
         const geom = new THREE.BufferGeometry();
         geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
         geom.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-        geom.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
 
         const mat = new THREE.PointsMaterial({
-            size: this.settings.pointSize,
-            opacity: this.settings.opacity,
+            size: this.state.selSize, // Use selected size as base
+            opacity: 1.0, // Keep material fully opaque, handle opacity in colors
             transparent: true,
             vertexColors: true,
             sizeAttenuation: true
@@ -192,6 +189,8 @@ class PointCloud {
         if (this.uiManager) this.uiManager.onPointsRegenerated();
         this._updateColors();
     }
+
+
 
     handleSettingChange(prop) {
         if (prop === 'pointSize' || prop === 'opacity') {
@@ -208,28 +207,26 @@ class PointCloud {
     /* ---------- recolour all points --------------------------- */
     _updateColors() {
         const A = this.colorAttr.array;
-        const sizeAttr = this.points.geometry.getAttribute('size');
+
+        // Track if we have any selected points to determine size
+        let hasSelection = this.pointCloud ? this.pointCloud.state.selection.size > 0 : false;
 
         for (let i = 0; i < this.colorAttr.count; ++i) {
             const attrs = this.selMgr.attrs(i);
-            A[i * 3] = attrs.r;
-            A[i * 3 + 1] = attrs.g;
-            A[i * 3 + 2] = attrs.b;
-
-            // Update size if we have size attribute
-            if (sizeAttr) {
-                sizeAttr.array[i] = attrs.size;
-            }
+            // Apply opacity directly to RGB channels for transparency effect
+            A[i * 3] = attrs.r * attrs.opacity;
+            A[i * 3 + 1] = attrs.g * attrs.opacity;
+            A[i * 3 + 2] = attrs.b * attrs.opacity;
         }
         this.colorAttr.needsUpdate = true;
-        if (sizeAttr) sizeAttr.needsUpdate = true;
 
-        // Update material opacity to match non-selected opacity for base transparency
-        this.points.material.opacity = Math.max(this.state.selOp, this.state.nonSelOp);
-        this.points.material.transparent = true;
+        // Update material size - use larger size when we have selections to make them more visible
+        const baseSize = hasSelection ?
+            Math.max(this.state.selSize, this.state.nonSelSize) :
+            this.state.selSize;
+        this.points.material.size = baseSize * 0.1; // Scale down for reasonable screen size
         this.points.material.needsUpdate = true;
     }
-
     /* ---------- camera motion --------------------------------- */
     _moveCamera() {
         const sens = 0.002;
