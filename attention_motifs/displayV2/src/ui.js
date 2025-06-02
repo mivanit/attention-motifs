@@ -54,8 +54,15 @@ class UIManager {
 
         // for changes in columns, color, or selection
         this._updateLegendDisplay()
-        this.pointCloud.state.addEventListener('vis', () => this._updateLegendDisplay());
-        this.pointCloud.state.addEventListener('selection', () => this._updateLegendDisplay());
+        this._updateSelectedValuesDisplay();
+        this.pointCloud.state.addEventListener('vis', () => {
+            this._updateLegendDisplay();
+            this._updateSelectedValuesDisplay();
+        });
+        this.pointCloud.state.addEventListener('selection', () => {
+            this._updateLegendDisplay();
+            this._updateSelectedValuesDisplay();
+        });
 
     }
 
@@ -83,15 +90,12 @@ class UIManager {
         const legendGrid = document.getElementById('legendGrid');
         if (legendGrid) {
             legendGrid.addEventListener('click', (e) => {
-                console.log('[UIManager] legend grid clicked'); 
-                console.log(e)
                 // We look for a .legend-item-clickable
                 const item = e.target.closest('.legend-item-clickable');
                 if (!item) return;
                 e.stopPropagation();
 
                 const value = item.getAttribute('data-value');
-                console.log('[UIManager] legend item clicked ->', value);
                 this.pointCloud.state.toggleValue(value);
             });
         }
@@ -483,14 +487,16 @@ class UIManager {
         document.getElementById(cfg.elementId).style.display = cfg.visible ? 'block' : 'none';
     }
 
-    /* ---------- per-frame UI refresh -------------------------- */
+    /* ---------- per-frame UI refresh ------------------------------ */
     updateUI() {
         /* navbar + navball */
         if (this.uiConfig.navbar.visible) {
             const p = this.pointCloud.camera.position;
             ['posX', 'posY', 'posZ'].forEach((id, i) =>
-                document.getElementById(id).textContent = p[['x', 'y', 'z'][i]].toFixed(1));
-            this.navball.syncWithCameraQuaternion(this.pointCloud.camera.quaternion);
+                document.getElementById(id).textContent =
+                p[['x', 'y', 'z'][i]].toFixed(1));
+            this.navball.syncWithCameraQuaternion(
+                this.pointCloud.camera.quaternion);
         }
 
         /* stats */
@@ -499,18 +505,13 @@ class UIManager {
         /* hover tooltip */
         this._showHover(this.pointCloud.hoverId);
 
-        /* update column info */
+        /* current “Color by / Select by” labels */
         this._updateColumnInfo();
-
-        /* update displays */
-        this._updateSelectedValuesDisplay();
-        // if (this.uiConfig.legend.visible) {
-        //     this._updateLegendDisplay();
-        // }
 
         /* performance monitoring */
         this._checkPerformance();
     }
+
 
     /* ---------- FPS / stats ----------------------------------- */
     _updateStats() {
@@ -676,4 +677,3 @@ class UIManager {
         }
     }
 }
-    
