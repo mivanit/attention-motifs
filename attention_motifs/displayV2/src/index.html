@@ -40,6 +40,7 @@
 				<p>H - Toggle help</p>
 				<p>M - Toggle menu</p>
 				<p>I - Toggle info panel</p>
+				<p>L - Toggle legend</p>
 				<p>N - Toggle navball</p>
 				<p>J - Toggle stats</p>
 				<p>K - Toggle hover UI</p>
@@ -110,8 +111,18 @@
 			</div>
 			<div class="close-hint">Press M to close</div>
 		</div>
-		<!-- ---------- Info panel ---------- -->
+		<!-- ---------- Info panel (center bottom) - for selected values only ---------- -->
 		<div id="infoMenu" class="menu">
+			<div id="selectedValuesContainer">
+				<h4 style="margin: 0 0 8px 0; color: #00ccff;" id="selectedValuesHeader">Selected Values:</h4>
+				<div id="selectedValuesGrid" style="display: grid; grid-template-columns: 1fr; gap: 4px; max-height: 200px; overflow-y: auto;"></div>
+				<div id="selectedValuesMetadata" style="margin-top: 8px; font-size: 10px; color: #888;"></div>
+				<button id="clearSelectionBtn" class="color-randomize-btn" style="margin-top: 8px;">Clear All Selection</button>
+			</div>
+			<div class="close-hint">Press I to close</div>
+		</div>
+		<!-- ---------- Legend panel (bottom left) - for color scheme and settings ---------- -->
+		<div id="legendMenu" class="menu">
 			<div id="columnInfoContainer">
 				<h4 style="margin: 0 0 8px 0; color: #00ccff;">Current Settings:</h4>
 				<div style="font-size: 11px; margin-bottom: 10px;">
@@ -119,13 +130,12 @@
 					<div>Select by: <span id="currentSelectBy" style="color: #00ff00;"></span></div>
 				</div>
 			</div>
-			<div id="valuesContainer">
-				<h4 style="margin: 0 0 8px 0; color: #00ccff;" id="valuesHeader">Values:</h4>
-				<div id="valuesGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; max-height: 200px; overflow-y: auto;"></div>
-				<div id="valuesMetadata" style="margin-top: 8px; font-size: 10px; color: #888;"></div>
-				<button id="clearSelectionBtn" class="color-randomize-btn" style="margin-top: 8px;">Clear Selection</button>
+			<div id="legendContainer">
+				<h4 style="margin: 0 0 8px 0; color: #00ccff;" id="legendHeader">Legend:</h4>
+				<div id="legendGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; max-height: 200px; overflow-y: auto;"></div>
+				<div id="legendMetadata" style="margin-top: 8px; font-size: 10px; color: #888;"></div>
 			</div>
-			<div class="close-hint">Press I to close</div>
+			<div class="close-hint">Press L to close</div>
 		</div>
 		<!-- ---------- Stats menu ---------- -->
 		<div id="statsMenu" class="menu">
