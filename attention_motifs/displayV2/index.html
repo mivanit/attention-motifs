@@ -1648,6 +1648,7 @@
 		        const pos = [];
 		        const col = [];
 		        const sizes = [];
+		        const opacities = [];
 		
 		        for (let i = 0; i < this.model.rowCount; ++i) {
 		            pos.push(
@@ -1657,12 +1658,14 @@
 		            );
 		            col.push(0.6, 0.6, 0.6);
 		            sizes.push(1.0); // Default size, will be updated in _updateColors
+		            opacities.push(1.0); // Default opacity, will be updated in _updateColors
 		        }
 		
 		        const geom = new THREE.BufferGeometry();
 		        geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
 		        geom.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
 		        geom.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+		        geom.setAttribute('opacity', new THREE.Float32BufferAttribute(opacities, 1));
 		
 		        // Use shader material for per-point sizes
 		        const mat = new THREE.ShaderMaterial({
@@ -1672,11 +1675,14 @@
 		            vertexShader: `
 		                attribute float size;
 		                attribute vec3 color;
+		                attribute float opacity;
 		                uniform float baseSize;
 		                varying vec3 vColor;
+		                varying float vOpacity;
 		                
 		                void main() {
 		                    vColor = color;
+		                    vOpacity = opacity;
 		                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
 		                    gl_PointSize = size * baseSize * (300.0 / -mvPosition.z);
 		                    gl_Position = projectionMatrix * mvPosition;
@@ -1684,18 +1690,23 @@
 		            `,
 		            fragmentShader: `
 		                varying vec3 vColor;
+		                varying float vOpacity;
 		                
 		                void main() {
-		                    if (length(gl_PointCoord - 0.5) > 0.5) discard;
-		                    gl_FragColor = vec4(vColor, 1.0);
+		                    // Skip circle calculation for squares - much faster
+		                    // No discard needed, just render the full square
+		                    
+		                    gl_FragColor = vec4(vColor, vOpacity);
 		                }
 		            `,
-		            transparent: true
+		            transparent: false, // Will be dynamically set based on opacity values
+		            depthWrite: true   // Will be set to false when transparent
 		        });
 		
 		        this.points = new THREE.Points(geom, mat);
 		        this.colorAttr = geom.getAttribute('color');
 		        this.sizeAttr = geom.getAttribute('size');
+		        this.opacityAttr = geom.getAttribute('opacity');
 		        this.scene.add(this.points);
 		
 		        if (this.uiManager) this.uiManager.onPointsRegenerated();
@@ -1716,20 +1727,38 @@
 		    _updateColors() {
 		        const colorArray = this.colorAttr.array;
 		        const sizeArray = this.sizeAttr.array;
+		        const opacityArray = this.opacityAttr.array;
+		
+		        // Check if we need transparency for any points
+		        let needsTransparency = false;
 		
 		        for (let i = 0; i < this.colorAttr.count; ++i) {
 		            const attrs = this.selMgr.attrs(i);
-		            // Apply opacity directly to RGB channels for transparency effect
-		            colorArray[i * 3] = attrs.r * attrs.opacity;
-		            colorArray[i * 3 + 1] = attrs.g * attrs.opacity;
-		            colorArray[i * 3 + 2] = attrs.b * attrs.opacity;
+		            // Set RGB color values (don't multiply by opacity)
+		            colorArray[i * 3] = attrs.r;
+		            colorArray[i * 3 + 1] = attrs.g;
+		            colorArray[i * 3 + 2] = attrs.b;
 		
-		            // Set per-point size
+		            // Set per-point size and opacity
 		            sizeArray[i] = attrs.size;
+		            opacityArray[i] = attrs.opacity;
+		
+		            // Check if we need transparency
+		            if (attrs.opacity < 0.95) {
+		                needsTransparency = true;
+		            }
+		        }
+		
+		        // Update material transparency setting
+		        if (this.points.material.transparent !== needsTransparency) {
+		            this.points.material.transparent = needsTransparency;
+		            this.points.material.depthWrite = !needsTransparency; // Disable depth write for transparency
+		            this.points.material.needsUpdate = true;
 		        }
 		
 		        this.colorAttr.needsUpdate = true;
 		        this.sizeAttr.needsUpdate = true;
+		        this.opacityAttr.needsUpdate = true;
 		    }
 		
 		    /* ---------- camera motion --------------------------------- */

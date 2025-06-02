@@ -206,13 +206,14 @@ class PointCloud {
                 varying float vOpacity;
                 
                 void main() {
-                    if (length(gl_PointCoord - 0.5) > 0.5) discard;
+                    // Skip circle calculation for squares - much faster
+                    // No discard needed, just render the full square
+                    
                     gl_FragColor = vec4(vColor, vOpacity);
                 }
             `,
-            transparent: true,
-            blending: THREE.NormalBlending,
-            depthWrite: false
+            transparent: false, // Will be dynamically set based on opacity values
+            depthWrite: true   // Will be set to false when transparent
         });
 
         this.points = new THREE.Points(geom, mat);
@@ -241,9 +242,12 @@ class PointCloud {
         const sizeArray = this.sizeAttr.array;
         const opacityArray = this.opacityAttr.array;
 
+        // Check if we need transparency for any points
+        let needsTransparency = false;
+
         for (let i = 0; i < this.colorAttr.count; ++i) {
             const attrs = this.selMgr.attrs(i);
-            // Set RGB color values (no longer multiplying by opacity)
+            // Set RGB color values (don't multiply by opacity)
             colorArray[i * 3] = attrs.r;
             colorArray[i * 3 + 1] = attrs.g;
             colorArray[i * 3 + 2] = attrs.b;
@@ -251,6 +255,18 @@ class PointCloud {
             // Set per-point size and opacity
             sizeArray[i] = attrs.size;
             opacityArray[i] = attrs.opacity;
+
+            // Check if we need transparency
+            if (attrs.opacity < 0.95) {
+                needsTransparency = true;
+            }
+        }
+
+        // Update material transparency setting
+        if (this.points.material.transparent !== needsTransparency) {
+            this.points.material.transparent = needsTransparency;
+            this.points.material.depthWrite = !needsTransparency; // Disable depth write for transparency
+            this.points.material.needsUpdate = true;
         }
 
         this.colorAttr.needsUpdate = true;
@@ -312,4 +328,4 @@ class PointCloud {
 
     /* ---------- allow UIManager to attach --------------------- */
     setUIManager(ui) { this.uiManager = ui; }
-}   
+}
