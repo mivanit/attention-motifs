@@ -1347,6 +1347,55 @@
 		                this.selectIdx = Math.max(0, this.cats.indexOf(selectBySelect.value));
 		            });
 		        }
+		
+		        // Setup axis dropdowns
+		        const xAxisSelect = document.getElementById('xAxisSelect');
+		        const yAxisSelect = document.getElementById('yAxisSelect');
+		        const zAxisSelect = document.getElementById('zAxisSelect');
+		        const applyXAxis = document.getElementById('applyXAxis');
+		        const applyYAxis = document.getElementById('applyYAxis');
+		        const applyZAxis = document.getElementById('applyZAxis');
+		
+		        if (xAxisSelect && yAxisSelect && zAxisSelect) {
+		            // Populate axis dropdowns with available PCA components
+		            const numComponents = this.pointCloud.model.numericCols.length;
+		            [xAxisSelect, yAxisSelect, zAxisSelect].forEach(select => {
+		                select.innerHTML = '';
+		                for (let i = 0; i < numComponents; i++) {
+		                    const option = document.createElement('option');
+		                    option.value = i;
+		                    option.textContent = this.pointCloud.model.numericCols[i] || `PC${i}`;
+		                    select.appendChild(option);
+		                }
+		            });
+		
+		            // Set current values
+		            xAxisSelect.value = this.pointCloud.state.axis.x;
+		            yAxisSelect.value = this.pointCloud.state.axis.y;
+		            zAxisSelect.value = this.pointCloud.state.axis.z;
+		        }
+		
+		        // Apply button handlers for axes
+		        if (applyXAxis) {
+		            applyXAxis.addEventListener('click', () => {
+		                this.pointCloud.state.setAxis('x', parseInt(xAxisSelect.value));
+		                this.pointCloud._buildGeometry();
+		            });
+		        }
+		
+		        if (applyYAxis) {
+		            applyYAxis.addEventListener('click', () => {
+		                this.pointCloud.state.setAxis('y', parseInt(yAxisSelect.value));
+		                this.pointCloud._buildGeometry();
+		            });
+		        }
+		
+		        if (applyZAxis) {
+		            applyZAxis.addEventListener('click', () => {
+		                this.pointCloud.state.setAxis('z', parseInt(zAxisSelect.value));
+		                this.pointCloud._buildGeometry();
+		            });
+		        }
 		    }
 		
 		    _updateColumnInfo() {
@@ -1879,11 +1928,12 @@
 		        const sizes = [];
 		        const opacities = [];
 		
+		        const a = this.state.axis;
 		        for (let i = 0; i < this.model.rowCount; ++i) {
 		            pos.push(
-		                this.model.getCoord(i, 0),
-		                this.model.getCoord(i, 1),
-		                this.model.getCoord(i, 2)
+		                this.model.getCoord(i, a.x),
+		                this.model.getCoord(i, a.y),
+		                this.model.getCoord(i, a.z)
 		            );
 		            col.push(0.6, 0.6, 0.6);
 		            sizes.push(1.0); // Default size, will be updated in _updateColors
@@ -2337,6 +2387,24 @@
 					<label>Speed:</label>
 					<input id="speed" type="range" min="1" max="200" step="1" value="50">
 					<span class="value-display" id="speedValue">50</span>
+				</div>
+			</div>
+			<div class="control-group" style="margin-top: 15px;">
+				<h4 style="margin: 0 0 10px 0; color: #00ccff;">Axis Selection</h4>
+				<div class="dropdown-container">
+					<label>X-Axis:</label>
+					<select id="xAxisSelect"></select>
+					<button id="applyXAxis" class="color-randomize-btn" style="margin-top: 3px;">Apply</button>
+				</div>
+				<div class="dropdown-container">
+					<label>Y-Axis:</label>
+					<select id="yAxisSelect"></select>
+					<button id="applyYAxis" class="color-randomize-btn" style="margin-top: 3px;">Apply</button>
+				</div>
+				<div class="dropdown-container">
+					<label>Z-Axis:</label>
+					<select id="zAxisSelect"></select>
+					<button id="applyZAxis" class="color-randomize-btn" style="margin-top: 3px;">Apply</button>
 				</div>
 			</div>
 			<div class="close-hint">Press M to close</div>

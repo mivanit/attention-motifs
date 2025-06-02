@@ -315,6 +315,55 @@ class UIManager {
                 this.selectIdx = Math.max(0, this.cats.indexOf(selectBySelect.value));
             });
         }
+
+        // Setup axis dropdowns
+        const xAxisSelect = document.getElementById('xAxisSelect');
+        const yAxisSelect = document.getElementById('yAxisSelect');
+        const zAxisSelect = document.getElementById('zAxisSelect');
+        const applyXAxis = document.getElementById('applyXAxis');
+        const applyYAxis = document.getElementById('applyYAxis');
+        const applyZAxis = document.getElementById('applyZAxis');
+
+        if (xAxisSelect && yAxisSelect && zAxisSelect) {
+            // Populate axis dropdowns with available PCA components
+            const numComponents = this.pointCloud.model.numericCols.length;
+            [xAxisSelect, yAxisSelect, zAxisSelect].forEach(select => {
+                select.innerHTML = '';
+                for (let i = 0; i < numComponents; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = this.pointCloud.model.numericCols[i] || `PC${i}`;
+                    select.appendChild(option);
+                }
+            });
+
+            // Set current values
+            xAxisSelect.value = this.pointCloud.state.axis.x;
+            yAxisSelect.value = this.pointCloud.state.axis.y;
+            zAxisSelect.value = this.pointCloud.state.axis.z;
+        }
+
+        // Apply button handlers for axes
+        if (applyXAxis) {
+            applyXAxis.addEventListener('click', () => {
+                this.pointCloud.state.setAxis('x', parseInt(xAxisSelect.value));
+                this.pointCloud._buildGeometry();
+            });
+        }
+
+        if (applyYAxis) {
+            applyYAxis.addEventListener('click', () => {
+                this.pointCloud.state.setAxis('y', parseInt(yAxisSelect.value));
+                this.pointCloud._buildGeometry();
+            });
+        }
+
+        if (applyZAxis) {
+            applyZAxis.addEventListener('click', () => {
+                this.pointCloud.state.setAxis('z', parseInt(zAxisSelect.value));
+                this.pointCloud._buildGeometry();
+            });
+        }
     }
 
     _updateColumnInfo() {

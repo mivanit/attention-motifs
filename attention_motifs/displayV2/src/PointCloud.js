@@ -163,11 +163,12 @@ class PointCloud {
         const sizes = [];
         const opacities = [];
 
+        const a = this.state.axis;
         for (let i = 0; i < this.model.rowCount; ++i) {
             pos.push(
-                this.model.getCoord(i, 0),
-                this.model.getCoord(i, 1),
-                this.model.getCoord(i, 2)
+                this.model.getCoord(i, a.x),
+                this.model.getCoord(i, a.y),
+                this.model.getCoord(i, a.z)
             );
             col.push(0.6, 0.6, 0.6);
             sizes.push(1.0); // Default size, will be updated in _updateColors
