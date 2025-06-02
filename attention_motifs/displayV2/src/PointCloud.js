@@ -161,6 +161,7 @@ class PointCloud {
         const pos = [];
         const col = [];
         const sizes = [];
+        const opacities = [];
 
         for (let i = 0; i < this.model.rowCount; ++i) {
             pos.push(
@@ -170,12 +171,14 @@ class PointCloud {
             );
             col.push(0.6, 0.6, 0.6);
             sizes.push(1.0); // Default size, will be updated in _updateColors
+            opacities.push(1.0); // Default opacity, will be updated in _updateColors
         }
 
         const geom = new THREE.BufferGeometry();
         geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
         geom.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
         geom.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+        geom.setAttribute('opacity', new THREE.Float32BufferAttribute(opacities, 1));
 
         // Use shader material for per-point sizes
         const mat = new THREE.ShaderMaterial({
@@ -185,11 +188,14 @@ class PointCloud {
             vertexShader: `
                 attribute float size;
                 attribute vec3 color;
+                attribute float opacity;
                 uniform float baseSize;
                 varying vec3 vColor;
+                varying float vOpacity;
                 
                 void main() {
                     vColor = color;
+                    vOpacity = opacity;
                     vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
                     gl_PointSize = size * baseSize * (300.0 / -mvPosition.z);
                     gl_Position = projectionMatrix * mvPosition;
@@ -197,18 +203,22 @@ class PointCloud {
             `,
             fragmentShader: `
                 varying vec3 vColor;
+                varying float vOpacity;
                 
                 void main() {
                     if (length(gl_PointCoord - 0.5) > 0.5) discard;
-                    gl_FragColor = vec4(vColor, 1.0);
+                    gl_FragColor = vec4(vColor, vOpacity);
                 }
             `,
-            transparent: true
+            transparent: true,
+            blending: THREE.NormalBlending,
+            depthWrite: false
         });
 
         this.points = new THREE.Points(geom, mat);
         this.colorAttr = geom.getAttribute('color');
         this.sizeAttr = geom.getAttribute('size');
+        this.opacityAttr = geom.getAttribute('opacity');
         this.scene.add(this.points);
 
         if (this.uiManager) this.uiManager.onPointsRegenerated();
@@ -229,20 +239,23 @@ class PointCloud {
     _updateColors() {
         const colorArray = this.colorAttr.array;
         const sizeArray = this.sizeAttr.array;
+        const opacityArray = this.opacityAttr.array;
 
         for (let i = 0; i < this.colorAttr.count; ++i) {
             const attrs = this.selMgr.attrs(i);
-            // Apply opacity directly to RGB channels for transparency effect
-            colorArray[i * 3] = attrs.r * attrs.opacity;
-            colorArray[i * 3 + 1] = attrs.g * attrs.opacity;
-            colorArray[i * 3 + 2] = attrs.b * attrs.opacity;
+            // Set RGB color values (no longer multiplying by opacity)
+            colorArray[i * 3] = attrs.r;
+            colorArray[i * 3 + 1] = attrs.g;
+            colorArray[i * 3 + 2] = attrs.b;
 
-            // Set per-point size
+            // Set per-point size and opacity
             sizeArray[i] = attrs.size;
+            opacityArray[i] = attrs.opacity;
         }
 
         this.colorAttr.needsUpdate = true;
         this.sizeAttr.needsUpdate = true;
+        this.opacityAttr.needsUpdate = true;
     }
 
     /* ---------- camera motion --------------------------------- */
@@ -299,4 +312,4 @@ class PointCloud {
 
     /* ---------- allow UIManager to attach --------------------- */
     setUIManager(ui) { this.uiManager = ui; }
-}
+}   
