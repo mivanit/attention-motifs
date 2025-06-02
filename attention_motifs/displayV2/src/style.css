@@ -378,3 +378,31 @@ button:hover {
     font-size: 10px;
     margin-top: 2px;
 }
+
+.value-grid-item {
+    display: flex;
+    align-items: center;
+    padding: 2px 4px;
+    border-radius: 2px;
+    font-size: 10px;
+    color: white;
+    cursor: pointer;
+    margin: 1px 0;
+    transition: background-color 0.2s;
+}
+
+.value-grid-item:hover {
+    filter: brightness(1.2);
+}
+
+.value-grid-item.selected {
+    box-shadow: 0 0 3px #ffff00;
+}
+
+.value-grid-color {
+    width: 8px;
+    height: 8px;
+    border-radius: 1px;
+    margin-right: 4px;
+    flex-shrink: 0;
+}

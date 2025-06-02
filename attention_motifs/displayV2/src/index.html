@@ -61,10 +61,12 @@
 				<div class="dropdown-container">
 					<label>Color by:</label>
 					<select id="colorBySelect"></select>
+					<button id="applyColorBy" class="color-randomize-btn" style="margin-top: 3px;">Apply</button>
 				</div>
 				<div class="dropdown-container">
 					<label>Select by:</label>
 					<select id="selectBySelect"></select>
+					<button id="applySelectBy" class="color-randomize-btn" style="margin-top: 3px;">Apply</button>
 				</div>
 			</div>
 			<div class="control-group" style="margin-top: 15px;">
@@ -110,13 +112,17 @@
 		</div>
 		<!-- ---------- Info panel ---------- -->
 		<div id="infoMenu" class="menu">
-			<div id="legendContainer">
-				<h4 style="margin: 0 0 8px 0; color: #00ccff;">Legend:</h4>
-				<div id="legendContent"></div>
+			<div id="columnInfoContainer">
+				<h4 style="margin: 0 0 8px 0; color: #00ccff;">Current Settings:</h4>
+				<div style="font-size: 11px; margin-bottom: 10px;">
+					<div>Color by: <span id="currentColorBy" style="color: #00ff00;"></span></div>
+					<div>Select by: <span id="currentSelectBy" style="color: #00ff00;"></span></div>
+				</div>
 			</div>
-			<div class="selected-values-display" style="margin-top: 15px;">
-				<h4 style="margin: 0 0 8px 0; color: #00ccff;">Selected Values:</h4>
-				<div id="selectedValuesContainer"></div>
+			<div id="valuesContainer">
+				<h4 style="margin: 0 0 8px 0; color: #00ccff;" id="valuesHeader">Values:</h4>
+				<div id="valuesGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; max-height: 200px; overflow-y: auto;"></div>
+				<div id="valuesMetadata" style="margin-top: 8px; font-size: 10px; color: #888;"></div>
 				<button id="clearSelectionBtn" class="color-randomize-btn" style="margin-top: 8px;">Clear Selection</button>
 			</div>
 			<div class="close-hint">Press I to close</div>

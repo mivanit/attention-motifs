@@ -128,7 +128,7 @@ class UIManager {
         if (pointSizeSlider && pointSizeValue) {
             pointSizeSlider.addEventListener('input', () => {
                 const v = parseFloat(pointSizeSlider.value);
-                pointSizeValue.textContent = v.toFixed(2);
+                pointSizeValue.textContent = v.toFixed(0);
                 this.pointCloud.state.setVisParam('selSize', v);
             });
         }
@@ -137,7 +137,7 @@ class UIManager {
         if (nonSelPointSizeSlider && nonSelPointSizeValue) {
             nonSelPointSizeSlider.addEventListener('input', () => {
                 const v = parseFloat(nonSelPointSizeSlider.value);
-                nonSelPointSizeValue.textContent = v.toFixed(2);
+                nonSelPointSizeValue.textContent = v.toFixed(0);
                 this.pointCloud.state.setVisParam('nonSelSize', v);
             });
         }
@@ -206,6 +206,8 @@ class UIManager {
     _setupDropdowns() {
         const colorBySelect = document.getElementById('colorBySelect');
         const selectBySelect = document.getElementById('selectBySelect');
+        const applyColorBy = document.getElementById('applyColorBy');
+        const applySelectBy = document.getElementById('applySelectBy');
 
         if (colorBySelect) {
             // Clear existing options
@@ -220,11 +222,6 @@ class UIManager {
             });
 
             colorBySelect.value = this.pointCloud.state.colorBy;
-            colorBySelect.addEventListener('change', () => {
-                this.pointCloud.selMgr.clearCaches();
-                this.pointCloud.state.setColorBy(colorBySelect.value);
-                this.colorIdx = Math.max(0, this.cats.indexOf(colorBySelect.value));
-            });
         }
 
         if (selectBySelect) {
@@ -240,7 +237,19 @@ class UIManager {
             });
 
             selectBySelect.value = this.pointCloud.state.selectBy;
-            selectBySelect.addEventListener('change', () => {
+        }
+
+        // Apply button handlers
+        if (applyColorBy) {
+            applyColorBy.addEventListener('click', () => {
+                this.pointCloud.selMgr.clearCaches();
+                this.pointCloud.state.setColorBy(colorBySelect.value);
+                this.colorIdx = Math.max(0, this.cats.indexOf(colorBySelect.value));
+            });
+        }
+
+        if (applySelectBy) {
+            applySelectBy.addEventListener('click', () => {
                 this.pointCloud.selMgr.clearCaches();
                 this.pointCloud.state.setSelectBy(selectBySelect.value);
                 this.selectIdx = Math.max(0, this.cats.indexOf(selectBySelect.value));
@@ -248,27 +257,107 @@ class UIManager {
         }
     }
 
-    _updateSelectedValuesDisplay() {
-        const container = document.getElementById('selectedValuesContainer');
+    _updateColumnInfo() {
+        const colorByEl = document.getElementById('currentColorBy');
+        const selectByEl = document.getElementById('currentSelectBy');
+
+        if (colorByEl) colorByEl.textContent = this.pointCloud.state.colorBy;
+        if (selectByEl) selectByEl.textContent = this.pointCloud.state.selectBy;
+    }
+
+    _updateValuesDisplay() {
+        const container = document.getElementById('valuesGrid');
+        const header = document.getElementById('valuesHeader');
+        const metadata = document.getElementById('valuesMetadata');
+
         if (!container) return;
 
         container.innerHTML = '';
 
-        if (this.pointCloud.state.selection.size === 0) {
-            container.innerHTML = '<div style="color: #888; font-style: italic;">None selected</div>';
-            return;
-        }
+        const hasSelection = this.pointCloud.state.selection.size > 0;
 
-        Array.from(this.pointCloud.state.selection).forEach((value, index) => {
-            const div = document.createElement('div');
-            div.className = 'selected-value-item';
-            div.textContent = value;
-            div.style.backgroundColor = this.pointCloud.selMgr.palette[index % this.pointCloud.selMgr.palette.length];
-            div.addEventListener('click', () => {
-                this.pointCloud.state.toggleValue(value);
-            });
-            container.appendChild(div);
-        });
+        if (hasSelection) {
+            // Show selected values
+            header.textContent = 'Selected Values:';
+
+            const selectedValues = Array.from(this.pointCloud.state.selection);
+
+            if (selectedValues.length <= 10) {
+                selectedValues.forEach((value, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'value-grid-item selected';
+
+                    const color = this.pointCloud.selMgr.palette[index % this.pointCloud.selMgr.palette.length];
+                    div.innerHTML = `
+                        <div class="value-grid-color" style="background-color: ${color}"></div>
+                        <span>${value}</span>
+                    `;
+
+                    div.addEventListener('click', () => {
+                        this.pointCloud.state.toggleValue(value);
+                    });
+
+                    container.appendChild(div);
+                });
+
+                metadata.textContent = `${selectedValues.length} selected`;
+            } else {
+                metadata.innerHTML = `${selectedValues.length} values selected<br>Too many to display individually`;
+            }
+        } else {
+            // Show legend
+            header.textContent = 'Legend:';
+
+            const colorColumn = this.pointCloud.state.colorBy;
+
+            if (this.pointCloud.state.isNumericColumn(colorColumn)) {
+                // Show colorbar info
+                const values = this.pointCloud.model.df.col(colorColumn).filter(v => typeof v === 'number' && !isNaN(v));
+                const min = Math.min(...values);
+                const max = Math.max(...values);
+
+                container.innerHTML = `
+                    <div style="grid-column: 1 / -1;">
+                        <div style="font-size: 10px; margin-bottom: 4px;">${colorColumn}</div>
+                        <div class="colorbar"></div>
+                        <div class="colorbar-labels">
+                            <span>${min.toFixed(2)}</span>
+                            <span>${max.toFixed(2)}</span>
+                        </div>
+                    </div>
+                `;
+                metadata.textContent = `Continuous scale: ${min.toFixed(2)} to ${max.toFixed(2)}`;
+            } else {
+                // Show categorical legend
+                const uniqueValues = [...this.pointCloud.model.df.col_unique(colorColumn)]
+                    .filter(v => v !== null && v !== 'null' && v !== 'unknown')
+                    .sort();
+
+                if (uniqueValues.length <= 10) {
+                    uniqueValues.forEach(value => {
+                        const color = this.pointCloud.selMgr._getCategoricalColor(value);
+                        const div = document.createElement('div');
+                        div.className = 'value-grid-item';
+                        div.style.backgroundColor = `rgba(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)}, 0.3)`;
+
+                        div.innerHTML = `
+                            <div class="value-grid-color" style="background-color: rgb(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)})"></div>
+                            <span>${value}</span>
+                        `;
+
+                        div.addEventListener('click', () => {
+                            this.pointCloud.state.toggleValue(value);
+                        });
+
+                        container.appendChild(div);
+                    });
+
+                    metadata.textContent = `${uniqueValues.length} categories`;
+                } else {
+                    metadata.innerHTML = `${uniqueValues.length} categories<br>Too many to display individually`;
+                }
+            }
+        }
     }
 
     /* ---------- key bindings ---------------------------------- */
@@ -340,11 +429,11 @@ class UIManager {
         /* hover tooltip */
         this._showHover(this.pointCloud.hoverId);
 
-        /* update selected values display */
-        this._updateSelectedValuesDisplay();
+        /* update column info */
+        this._updateColumnInfo();
 
-        /* update legend display */
-        this._updateLegendDisplay();
+        /* update values display */
+        this._updateValuesDisplay();
     }
 
     /* ---------- FPS / stats ----------------------------------- */
@@ -402,56 +491,5 @@ class UIManager {
         this.hoverPanel.style.left = (x + 15) + 'px';
         this.hoverPanel.style.top = (y + 15) + 'px';
         this.hoverPanel.style.display = 'block';
-    }
-
-    _updateLegendDisplay() {
-        const container = document.getElementById('legendContent');
-        if (!container) return;
-    
-        container.innerHTML = '';
-    
-        const colorColumn = this.pointCloud.state.colorBy;
-        
-        if (this.pointCloud.state.isNumericColumn(colorColumn)) {
-            // Show colorbar for numeric columns
-            const values = this.pointCloud.model.df.col(colorColumn).filter(v => typeof v === 'number' && !isNaN(v));
-            const min = Math.min(...values);
-            const max = Math.max(...values);
-            
-            const colorbarDiv = document.createElement('div');
-            colorbarDiv.innerHTML = `
-                <div style="font-size: 11px; margin-bottom: 4px;">${colorColumn}</div>
-                <div class="colorbar"></div>
-                <div class="colorbar-labels">
-                    <span>${min.toFixed(2)}</span>
-                    <span>${max.toFixed(2)}</span>
-                </div>
-            `;
-            container.appendChild(colorbarDiv);
-        } else {
-            // Show categorical legend
-            const uniqueValues = [...this.pointCloud.model.df.col_unique(colorColumn)]
-                .filter(v => v !== null && v !== 'null' && v !== 'unknown')
-                .sort();
-            
-            if (uniqueValues.length > 20) {
-                container.innerHTML = `<div style="color: #888; font-style: italic;">${uniqueValues.length} categories</div>`;
-            } else {
-                uniqueValues.slice(0, 15).forEach(value => {
-                    const color = this.pointCloud.selMgr._getCategoricalColor(value);
-                    const div = document.createElement('div');
-                    div.className = 'legend-item';
-                    div.innerHTML = `
-                        <div class="legend-color" style="background-color: rgb(${Math.round(color.r*255)}, ${Math.round(color.g*255)}, ${Math.round(color.b*255)})"></div>
-                        <span>${value}</span>
-                    `;
-                    container.appendChild(div);
-                });
-                
-                if (uniqueValues.length > 15) {
-                    container.innerHTML += `<div style="color: #888; font-style: italic;">...and ${uniqueValues.length - 15} more</div>`;
-                }
-            }
-        }
     }
 }

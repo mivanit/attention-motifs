@@ -208,9 +208,6 @@ class PointCloud {
     _updateColors() {
         const A = this.colorAttr.array;
 
-        // Track if we have any selected points to determine size
-        let hasSelection = this.pointCloud ? this.pointCloud.state.selection.size > 0 : false;
-
         for (let i = 0; i < this.colorAttr.count; ++i) {
             const attrs = this.selMgr.attrs(i);
             // Apply opacity directly to RGB channels for transparency effect
@@ -220,11 +217,10 @@ class PointCloud {
         }
         this.colorAttr.needsUpdate = true;
 
-        // Update material size - use larger size when we have selections to make them more visible
-        const baseSize = hasSelection ?
-            Math.max(this.state.selSize, this.state.nonSelSize) :
-            this.state.selSize;
-        this.points.material.size = baseSize * 0.1; // Scale down for reasonable screen size
+        // Update material size - use average of selected and non-selected sizes
+        // This is a compromise since we can't do per-point sizes without shaders
+        const avgSize = (this.state.selSize + this.state.nonSelSize) / 2;
+        this.points.material.size = avgSize * 0.1; // Scale down for reasonable screen size
         this.points.material.needsUpdate = true;
     }
     /* ---------- camera motion --------------------------------- */
