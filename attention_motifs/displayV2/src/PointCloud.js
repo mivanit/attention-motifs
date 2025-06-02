@@ -206,8 +206,10 @@ class PointCloud {
                 varying float vOpacity;
                 
                 void main() {
-                    // Skip circle calculation for squares - much faster
-                    // No discard needed, just render the full square
+                    // Optimized circle calculation - avoid expensive sqrt
+                    vec2 center = gl_PointCoord - 0.5;
+                    float dist2 = dot(center, center);
+                    if (dist2 > 0.25) discard; // 0.25 = 0.5^2
                     
                     gl_FragColor = vec4(vColor, vOpacity);
                 }

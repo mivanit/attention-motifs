@@ -25,6 +25,12 @@ class UIManager {
         this.lastTime = performance.now();
         this.fps = 60;
 
+        /* Performance safeguard ----------------------------------------- */
+        this.performanceCheckInterval = 2000; // Check every 2 seconds
+        this.lastPerformanceCheck = performance.now();
+        this.fpsThreshold = 15;
+        this.performanceWarningShown = false;
+
         /* build static UI */
         this._init();
     }
@@ -40,6 +46,9 @@ class UIManager {
         this.hoverPanel = document.createElement('div');
         this.hoverPanel.className = 'hover-panel';
         document.body.appendChild(this.hoverPanel);
+
+        /* performance warning */
+        this._createPerformanceWarning();
     }
 
     _setupNavball() {
@@ -434,6 +443,9 @@ class UIManager {
 
         /* update values display */
         this._updateValuesDisplay();
+
+        /* performance monitoring */
+        this._checkPerformance();
     }
 
     /* ---------- FPS / stats ----------------------------------- */
@@ -491,5 +503,111 @@ class UIManager {
         this.hoverPanel.style.left = (x + 15) + 'px';
         this.hoverPanel.style.top = (y + 15) + 'px';
         this.hoverPanel.style.display = 'block';
+    }
+
+    /* ---------- performance warning --------------------------- */
+    _createPerformanceWarning() {
+        this.performanceWarning = document.createElement('div');
+        this.performanceWarning.style.cssText = `   
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 68, 68, 0.9);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 1000;
+            display: none;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        `;
+        document.body.appendChild(this.performanceWarning);
+    }
+
+    _showPerformanceWarning(message) {
+        this.performanceWarning.textContent = message;
+        this.performanceWarning.style.display = 'block';
+
+        // Hide after 4 seconds
+        setTimeout(() => {
+            this.performanceWarning.style.display = 'none';
+        }, 4000);
+    }
+
+    _checkPerformance() {
+        const now = performance.now();
+
+        // Only check every 2 seconds to avoid rapid adjustments
+        if (now - this.lastPerformanceCheck < this.performanceCheckInterval) {
+            return;
+        }
+
+        this.lastPerformanceCheck = now;
+
+        // Check if FPS is consistently low
+        if (this.fps < this.fpsThreshold && !this.performanceWarningShown) {
+            this.performanceWarningShown = true;
+            this._optimizeForPerformance();
+
+            // Reset the flag after some time to allow future warnings
+            setTimeout(() => {
+                this.performanceWarningShown = false;
+            }, 30000); // 30 seconds
+        }
+    }
+
+    _optimizeForPerformance() {
+        let changesApplied = [];
+
+        // Set both opacity sliders to 1.0
+        const opacitySlider = document.getElementById('opacity');
+        const nonSelOpacitySlider = document.getElementById('nonSelOpacity');
+        const opacityValue = document.getElementById('opacityValue');
+        const nonSelOpacityValue = document.getElementById('nonSelOpacityValue');
+
+        if (opacitySlider && parseFloat(opacitySlider.value) < 1.0) {
+            opacitySlider.value = '1.0';
+            opacityValue.textContent = '1.00';
+            this.pointCloud.state.setVisParam('selOp', 1.0);
+            changesApplied.push('selected opacity to 100%');
+        }
+
+        if (nonSelOpacitySlider && parseFloat(nonSelOpacitySlider.value) < 1.0) {
+            nonSelOpacitySlider.value = '1.0';
+            nonSelOpacityValue.textContent = '1.00';
+            this.pointCloud.state.setVisParam('nonSelOp', 1.0);
+            changesApplied.push('non-selected opacity to 100%');
+        }
+
+        // Limit point sizes to max 5
+        const pointSizeSlider = document.getElementById('pointSize');
+        const nonSelPointSizeSlider = document.getElementById('nonSelPointSize');
+        const pointSizeValue = document.getElementById('pointSizeValue');
+        const nonSelPointSizeValue = document.getElementById('nonSelPointSizeValue');
+
+        if (pointSizeSlider && parseFloat(pointSizeSlider.value) > 5) {
+            pointSizeSlider.value = '5';
+            pointSizeValue.textContent = '5';
+            this.pointCloud.state.setVisParam('selSize', 5);
+            changesApplied.push('selected point size to 5');
+        }
+
+        if (nonSelPointSizeSlider && parseFloat(nonSelPointSizeSlider.value) > 5) {
+            nonSelPointSizeSlider.value = '5';
+            nonSelPointSizeValue.textContent = '5';
+            this.pointCloud.state.setVisParam('nonSelSize', 5);
+            changesApplied.push('non-selected point size to 5');
+        }
+
+        // Show warning message
+        if (changesApplied.length > 0) {
+            const message = `Performance warning: Low FPS detected (${this.fps}). Automatically adjusted: ${changesApplied.join(', ')}.`;
+            this._showPerformanceWarning(message);
+        }
     }
 }
