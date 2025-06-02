@@ -1,5 +1,5 @@
-/* PointCloud.js – snap-to-point cross-hair, optional hover UI (“k”),
-   optional click-to-select (“b”), and better picking accuracy. */
+/* PointCloud.js – snap-to-point cross-hair, optional hover UI ("k"),
+   optional click-to-select ("b"), and better picking accuracy. */
 
 class PointCloud {
     /** @param {DataModel} model */
@@ -22,8 +22,8 @@ class PointCloud {
         this.prevHoverId = null;
 
         /* ── behaviour flags (toggled by UIManager) ───────────── */
-        this.hoverActive = true;   // “k”
-        this.selectOnClick = true;   // “b”
+        this.hoverActive = true;   // "k"
+        this.selectOnClick = true;   // "b"
 
         /* ── colour / selection state ─────────────────────────── */
         this.state = new VisState(model);
@@ -160,6 +160,7 @@ class PointCloud {
 
         const pos = [];
         const col = [];
+        const sizes = [];
 
         for (let i = 0; i < this.model.rowCount; ++i) {
             pos.push(
@@ -168,35 +169,55 @@ class PointCloud {
                 this.model.getCoord(i, 2)
             );
             col.push(0.6, 0.6, 0.6);
+            sizes.push(1.0); // Default size, will be updated in _updateColors
         }
 
         const geom = new THREE.BufferGeometry();
         geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
         geom.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+        geom.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
 
-        const mat = new THREE.PointsMaterial({
-            size: this.state.selSize, // Use selected size as base
-            opacity: 1.0, // Keep material fully opaque, handle opacity in colors
-            transparent: true,
-            vertexColors: true,
-            sizeAttenuation: true
+        // Use shader material for per-point sizes
+        const mat = new THREE.ShaderMaterial({
+            uniforms: {
+                baseSize: { value: 0.1 }
+            },
+            vertexShader: `
+                attribute float size;
+                attribute vec3 color;
+                uniform float baseSize;
+                varying vec3 vColor;
+                
+                void main() {
+                    vColor = color;
+                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                    gl_PointSize = size * baseSize * (300.0 / -mvPosition.z);
+                    gl_Position = projectionMatrix * mvPosition;
+                }
+            `,
+            fragmentShader: `
+                varying vec3 vColor;
+                
+                void main() {
+                    if (length(gl_PointCoord - 0.5) > 0.5) discard;
+                    gl_FragColor = vec4(vColor, 1.0);
+                }
+            `,
+            transparent: true
         });
 
         this.points = new THREE.Points(geom, mat);
         this.colorAttr = geom.getAttribute('color');
+        this.sizeAttr = geom.getAttribute('size');
         this.scene.add(this.points);
 
         if (this.uiManager) this.uiManager.onPointsRegenerated();
         this._updateColors();
     }
 
-
-
     handleSettingChange(prop) {
         if (prop === 'pointSize' || prop === 'opacity') {
-            this.points.material.size = this.settings.pointSize;
-            this.points.material.opacity = this.settings.opacity;
-            this.points.material.transparent = this.settings.opacity < 1;
+            this.points.material.uniforms.baseSize.value = this.settings.pointSize;
             this.points.material.needsUpdate = true;
 
             /* update picking tolerance to roughly match size */
@@ -206,23 +227,24 @@ class PointCloud {
 
     /* ---------- recolour all points --------------------------- */
     _updateColors() {
-        const A = this.colorAttr.array;
+        const colorArray = this.colorAttr.array;
+        const sizeArray = this.sizeAttr.array;
 
         for (let i = 0; i < this.colorAttr.count; ++i) {
             const attrs = this.selMgr.attrs(i);
             // Apply opacity directly to RGB channels for transparency effect
-            A[i * 3] = attrs.r * attrs.opacity;
-            A[i * 3 + 1] = attrs.g * attrs.opacity;
-            A[i * 3 + 2] = attrs.b * attrs.opacity;
-        }
-        this.colorAttr.needsUpdate = true;
+            colorArray[i * 3] = attrs.r * attrs.opacity;
+            colorArray[i * 3 + 1] = attrs.g * attrs.opacity;
+            colorArray[i * 3 + 2] = attrs.b * attrs.opacity;
 
-        // Update material size - use average of selected and non-selected sizes
-        // This is a compromise since we can't do per-point sizes without shaders
-        const avgSize = (this.state.selSize + this.state.nonSelSize) / 2;
-        this.points.material.size = avgSize * 0.1; // Scale down for reasonable screen size
-        this.points.material.needsUpdate = true;
+            // Set per-point size
+            sizeArray[i] = attrs.size;
+        }
+
+        this.colorAttr.needsUpdate = true;
+        this.sizeAttr.needsUpdate = true;
     }
+
     /* ---------- camera motion --------------------------------- */
     _moveCamera() {
         const sens = 0.002;
