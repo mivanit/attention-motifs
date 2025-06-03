@@ -9,8 +9,108 @@
 	<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 	<!-- styles -->
-			<!-- begin 'navball.css' -->
+			<!-- begin 'style.css' -->
 		<style>
+		/* Base styles */
+		body {
+			margin: 0;
+			padding: 0;
+			background: #000;
+			font-family: 'Courier New', monospace;
+			overflow: hidden;
+		}
+		
+		#container {
+			position: relative;
+			width: 100vw;
+			height: 100vh;
+		}
+		
+		/* Shortcuts panel (top-right) */
+		#shortcuts {
+			position: absolute;
+			top: 20px;
+			right: 20px;
+			background: rgba(0, 0, 0, 0.7);
+			padding: 10px;
+			border-radius: 8px;
+			color: #00ff00;
+			z-index: 100;
+			font-size: 12px;
+			line-height: 1.4;
+		}
+		
+		#shortcuts div {
+			margin-bottom: 2px;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+		
+		#shortcuts div:last-child {
+			margin-bottom: 0;
+		}
+		
+		/* Menu base styles */
+		.menu {
+			position: absolute;
+			background: rgba(0, 0, 0, 0.8);
+			padding: 15px;
+			border-radius: 8px;
+			color: #00ff00;
+			z-index: 100;
+			display: none;
+		}
+		
+		/* Specific menu positions */
+		#helpMenu {
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			min-width: 350px;
+		}
+		
+		#controlsMenu {
+			top: 20px;
+			left: 20px;
+			min-width: 250px;
+		}
+		
+		#statsMenu {
+			top: 50%;
+			right: 20px;
+			transform: translateY(-50%);
+			min-width: 200px;
+		}
+		
+		#infoMenu {
+			bottom: 20px;
+			left: 50%;
+			transform: translateX(-50%);
+			min-width: 300px;
+			max-width: 400px;
+			max-height: 40vh;
+			overflow-y: auto;
+		}
+		
+		#legendMenu {
+			bottom: 20px;
+			left: 20px;
+			min-width: 300px;
+			max-height: 60vh;
+			overflow-y: auto;
+		}
+		
+		#navbar {
+			bottom: 20px;
+			right: 20px;
+			padding: 12px 15px;
+			font-size: 11px;
+			min-width: 160px;
+			line-height: 1.3;
+		}
+		
+		/* Navball styles */
 		#navball-container {
 			width: 150px;
 			height: 150px;
@@ -57,326 +157,12 @@
 			background: #ffff00;
 			transform: translateX(-50%);
 		}
-		</style>
-		<!-- end 'navball.css' -->
-			<!-- begin 'style.css' -->
-		<style>
-		body {
-			margin: 0;
-			padding: 0;
-			background: #000;
-			font-family: 'Courier New', monospace;
-			overflow: hidden;
-		}
 		
-		#container {
-			position: relative;
-			width: 100vw;
-			height: 100vh;
-		}
-		
-		#shortcuts {
-			position: absolute;
-			top: 20px;
-			right: 20px;
-			background: rgba(0, 0, 0, 0.7);
-			padding: 10px;
-			border-radius: 8px;
-			color: #00ff00;
-			z-index: 100;
-			font-size: 12px;
-			line-height: 1.4;
-		}
-		
-		#shortcuts div {
-			margin-bottom: 2px;
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-		}
-		
-		#shortcuts div:last-child {
-			margin-bottom: 0;
-		}
-		
-		.menu {
-			position: absolute;
-			background: rgba(0, 0, 0, 0.8);
-			padding: 15px;
-			border-radius: 8px;
-			color: #00ff00;
-			z-index: 100;
-			display: none;
-		}
-		
-		#helpMenu {
-			top: 50%;
-			left: 50%;
-			transform: translate(-50%, -50%);
-			min-width: 350px;
-		}
-		
-		#controlsMenu {
-			top: 20px;
-			left: 20px;
-			min-width: 250px;
-		}
-		
+		/* Control groups and sections */
 		.control-group {
 			margin-bottom: 10px;
 		}
 		
-		label {
-			display: block;
-			margin-bottom: 5px;
-			font-size: 12px;
-		}
-		
-		input[type="range"] {
-			width: 100%;
-			background: #333;
-			color: #00ff00;
-			border: 1px solid #555;
-			padding: 5px;
-			height: 20px;
-		}
-		
-		.value-display {
-			display: inline-block;
-			float: right;
-			font-weight: bold;
-		}
-		
-		.help-section {
-			margin-bottom: 15px;
-		}
-		
-		.help-section h3 {
-			margin: 0 0 8px 0;
-			color: #00ccff;
-		}
-		
-		.help-section p {
-			margin: 0 0 5px 0;
-			font-size: 12px;
-		}
-		
-		#statsMenu {
-			top: 50%;
-			right: 20px;
-			transform: translateY(-50%);
-			min-width: 200px;
-		}
-		
-		.stats-group {
-			margin-bottom: 15px;
-		}
-		
-		.stats-group h3 {
-			margin: 0 0 8px 0;
-			color: #00ccff;
-			font-size: 12px;
-		}
-		
-		.stats-group p {
-			margin: 0 0 3px 0;
-			font-size: 11px;
-		}
-		
-		.close-hint {
-			text-align: center;
-			margin-top: 15px;
-			font-size: 11px;
-			color: #888;
-		}
-		
-		.shortcut-link {
-			cursor: pointer;
-			transition: color 0.2s;
-		}
-		
-		.shortcut-link:hover {
-			color: #00ccff;
-		}
-		
-		.status-indicator {
-			font-size: 10px;
-			margin-left: 8px;
-		}
-		
-		.status-enabled {
-			color: #00ff00;
-		}
-		
-		.status-disabled {
-			color: #ff4444;
-		}
-		
-		#navbar {
-			bottom: 20px;
-			right: 20px;
-			padding: 12px 15px;
-			font-size: 11px;
-			min-width: 160px;
-			line-height: 1.3;
-		}
-		
-		.nav-section {
-			margin-bottom: 8px;
-		}
-		
-		.nav-section:last-child {
-			margin-bottom: 0;
-		}
-		
-		.nav-section h4 {
-			margin: 0 0 3px 0;
-			color: #00ccff;
-			font-size: 10px;
-			font-weight: bold;
-		}
-		
-		.nav-row {
-			display: flex;
-			justify-content: space-between;
-			margin-bottom: 2px;
-		}
-		
-		.nav-row:last-child {
-			margin-bottom: 0;
-		}
-		
-		#canvas-container {
-			position: absolute;
-			top: 0;
-			left: 0;
-			width: 75vw;
-			height: 100vh;
-			background: #000
-		}
-		
-		.control-panel {
-			position: absolute;
-			top: 10px;
-			left: 76vw;
-			width: 22vw;
-			background: rgba(30, 30, 30, .9);
-			padding: 10px;
-			border: 1px solid #444;
-			font-size: 14px;
-			line-height: 1.4;
-			color: #ddd
-		}
-		
-		.control-panel label {
-			display: block;
-			margin-top: 6px
-		}
-		
-		.control-panel select,
-		input[type=range] {
-			width: 100%
-		}
-		
-		button {
-			margin-top: 8px;
-			padding: 5px 10px;
-			background: #333;
-			color: #eee;
-			border: 1px solid #555;
-			border-radius: 4px;
-			cursor: pointer
-		}
-		
-		button:hover {
-			background: #444
-		}
-		
-		.hover-panel {
-			position: absolute;
-			display: none;
-			min-width: 250px;
-			max-width: 350px;
-			font-size: 12px;
-			pointer-events: none;
-			padding: 6px;
-			color: #ffffff;
-			background: rgba(0, 0, 0, .8);
-			border: 1px solid #555
-		}
-		
-		/* Info panel styles - now center bottom for selected values only */
-		#infoMenu {
-			bottom: 20px;
-			left: 50%;
-			transform: translateX(-50%);
-			min-width: 300px;
-			max-width: 400px;
-			max-height: 40vh;
-			overflow-y: auto;
-		}
-		
-		/* Legend panel styles - bottom left, enabled by default */
-		#legendMenu {
-			bottom: 20px;
-			left: 20px;
-			min-width: 300px;
-			max-height: 60vh;
-			overflow-y: auto;
-		}
-		
-		.dropdown-container {
-			position: relative;
-			margin-bottom: 10px;
-		}
-		
-		.dropdown-container label {
-			display: block;
-			margin-bottom: 5px;
-			font-size: 12px;
-			color: #00ccff;
-		}
-		
-		.dropdown-container select {
-			width: 100%;
-			background: #333;
-			color: #00ff00;
-			border: 1px solid #555;
-			padding: 5px;
-			border-radius: 3px;
-		}
-		
-		.selected-values-display {
-			margin-top: 15px;
-		}
-		
-		.selected-value-item {
-			display: inline-block;
-			margin: 2px 4px;
-			padding: 4px 8px;
-			border-radius: 3px;
-			font-size: 11px;
-			color: white;
-			position: relative;
-			cursor: pointer;
-		}
-		
-		.selected-value-item:hover::after {
-			content: '×';
-			position: absolute;
-			top: -5px;
-			right: -5px;
-			background: #ff4444;
-			border-radius: 50%;
-			width: 16px;
-			height: 16px;
-			font-size: 12px;
-			line-height: 16px;
-			text-align: center;
-			pointer-events: none;
-		}
-		
-		/* Enhanced control styles */
 		.control-row {
 			display: flex;
 			align-items: center;
@@ -409,6 +195,98 @@
 			border-radius: 3px;
 		}
 		
+		.help-section, .stats-group, .nav-section {
+			margin-bottom: 15px;
+		}
+		
+		.help-section:last-child, .stats-group:last-child, .nav-section:last-child {
+			margin-bottom: 0;
+		}
+		
+		.help-section h3, .stats-group h3 {
+			margin: 0 0 8px 0;
+			color: #00ccff;
+			font-size: 12px;
+		}
+		
+		.nav-section h4 {
+			margin: 0 0 3px 0;
+			color: #00ccff;
+			font-size: 10px;
+			font-weight: bold;
+		}
+		
+		.help-section p, .stats-group p {
+			margin: 0 0 5px 0;
+			font-size: 12px;
+		}
+		
+		.stats-group p {
+			font-size: 11px;
+		}
+		
+		/* Navigation rows */
+		.nav-row {
+			display: flex;
+			justify-content: space-between;
+			margin-bottom: 2px;
+		}
+		
+		.nav-row:last-child {
+			margin-bottom: 0;
+		}
+		
+		/* Form elements */
+		label {
+			display: block;
+			margin-bottom: 5px;
+			font-size: 12px;
+		}
+		
+		input[type="range"] {
+			width: 100%;
+			background: #333;
+			color: #00ff00;
+			border: 1px solid #555;
+			padding: 5px;
+			height: 20px;
+		}
+		
+		.dropdown-container {
+			position: relative;
+			margin-bottom: 10px;
+		}
+		
+		.dropdown-container label {
+			display: block;
+			margin-bottom: 5px;
+			font-size: 12px;
+			color: #00ccff;
+		}
+		
+		.dropdown-container select {
+			width: 100%;
+			background: #333;
+			color: #00ff00;
+			border: 1px solid #555;
+			padding: 5px;
+			border-radius: 3px;
+		}
+		
+		button {
+			margin-top: 8px;
+			padding: 5px 10px;
+			background: #333;
+			color: #eee;
+			border: 1px solid #555;
+			border-radius: 4px;
+			cursor: pointer;
+		}
+		
+		button:hover {
+			background: #444;
+		}
+		
 		.color-randomize-btn {
 			background: #9467bd;
 			border: 1px solid #7a4fa3;
@@ -424,6 +302,58 @@
 			background: #7a4fa3;
 		}
 		
+		/* Display elements */
+		.value-display {
+			display: inline-block;
+			float: right;
+			font-weight: bold;
+		}
+		
+		.close-hint {
+			text-align: center;
+			margin-top: 15px;
+			font-size: 11px;
+			color: #888;
+		}
+		
+		/* Interactive elements */
+		.shortcut-link {
+			cursor: pointer;
+			transition: color 0.2s;
+		}
+		
+		.shortcut-link:hover {
+			color: #00ccff;
+		}
+		
+		.status-indicator {
+			font-size: 10px;
+			margin-left: 8px;
+		}
+		
+		.status-enabled {
+			color: #00ff00;
+		}
+		
+		.status-disabled {
+			color: #ff4444;
+		}
+		
+		/* Hover panel */
+		.hover-panel {
+			position: absolute;
+			display: none;
+			min-width: 250px;
+			max-width: 350px;
+			font-size: 12px;
+			pointer-events: none;
+			padding: 6px;
+			color: #ffffff;
+			background: rgba(0, 0, 0, .8);
+			border: 1px solid #555;
+		}
+		
+		/* Legend and value grid items */
 		.legend-item {
 			display: flex;
 			align-items: center;
@@ -437,21 +367,6 @@
 			border-radius: 2px;
 			margin-right: 6px;
 			flex-shrink: 0;
-		}
-		
-		.colorbar {
-			height: 20px;
-			width: 100%;
-			background: linear-gradient(to right, #440154, #31688e, #35b779, #fde725);
-			border-radius: 3px;
-			margin: 5px 0;
-		}
-		
-		.colorbar-labels {
-			display: flex;
-			justify-content: space-between;
-			font-size: 10px;
-			margin-top: 2px;
 		}
 		
 		.value-grid-item {
@@ -483,7 +398,6 @@
 			flex-shrink: 0;
 		}
 		
-		/* Legend item clickable styling */
 		.legend-item-clickable {
 			cursor: pointer;
 		}
@@ -492,7 +406,6 @@
 			filter: brightness(1.3);
 		}
 		
-		/* Remove button styling - larger and positioned better */
 		.remove-btn {
 			margin-left: auto;
 			color: #ff4444;
@@ -512,6 +425,22 @@
 			background-color: #ff4444;
 			color: white;
 			transform: scale(1.1);
+		}
+		
+		/* Colorbar styles */
+		.colorbar {
+			height: 20px;
+			width: 100%;
+			background: linear-gradient(to right, #440154, #31688e, #35b779, #fde725);
+			border-radius: 3px;
+			margin: 5px 0;
+		}
+		
+		.colorbar-labels {
+			display: flex;
+			justify-content: space-between;
+			font-size: 10px;
+			margin-top: 2px;
 		}
 		</style>
 		<!-- end 'style.css' -->
