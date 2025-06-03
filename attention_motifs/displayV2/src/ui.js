@@ -1,16 +1,16 @@
-/* ui.js */
+/* ui.js - Updated to use CONFIG values */
 class UIManager {
     constructor(pointCloud) {
         this.pointCloud = pointCloud;
 
-        /* panel metadata ------------------------------------------------ */
+        /* panel metadata - now uses CONFIG -------------------------------- */
         this.uiConfig = {
-            help: { key: 'KeyH', elementId: 'helpMenu', shortcutText: 'h – help', visible: false },
-            menu: { key: 'KeyM', elementId: 'controlsMenu', shortcutText: 'm – menu', visible: false },
-            info: { key: 'KeyI', elementId: 'infoMenu', shortcutText: 'i – info', visible: false },
-            legend: { key: 'KeyL', elementId: 'legendMenu', shortcutText: 'l – legend', visible: true },
-            navbar: { key: 'KeyN', elementId: 'navbar', shortcutText: 'n – navball', visible: true },
-            stats: { key: 'KeyJ', elementId: 'statsMenu', shortcutText: 'j – stats', visible: false }
+            help: { key: 'KeyH', elementId: 'helpMenu', shortcutText: 'h – help', visible: CONFIG.panels.help },
+            menu: { key: 'KeyM', elementId: 'controlsMenu', shortcutText: 'm – menu', visible: CONFIG.panels.menu },
+            info: { key: 'KeyI', elementId: 'infoMenu', shortcutText: 'i – info', visible: CONFIG.panels.info },
+            legend: { key: 'KeyL', elementId: 'legendMenu', shortcutText: 'l – legend', visible: CONFIG.panels.legend },
+            navbar: { key: 'KeyN', elementId: 'navbar', shortcutText: 'n – navball', visible: CONFIG.panels.navbar },
+            stats: { key: 'KeyJ', elementId: 'statsMenu', shortcutText: 'j – stats', visible: CONFIG.panels.stats }
         };
 
         /* categorical columns for c / v cycling ------------------------ */
@@ -24,10 +24,10 @@ class UIManager {
         this.lastTime = performance.now();
         this.fps = 60;
 
-        /* Performance safeguard ----------------------------------------- */
-        this.performanceCheckInterval = 2000; // Check every 2 seconds
+        /* Performance safeguard - now uses CONFIG ---------------------- */
+        this.performanceCheckInterval = CONFIG.performance.performanceCheckInterval;
         this.lastPerformanceCheck = performance.now();
-        this.fpsThreshold = 15;
+        this.fpsThreshold = CONFIG.performance.fpsThreshold;
         this.performanceWarningShown = false;
 
         /* build static UI */
@@ -52,6 +52,9 @@ class UIManager {
         /* performance warning banner */
         this._createPerformanceWarning();
 
+        // Apply initial panel visibility from CONFIG
+        this._applyInitialPanelVisibility();
+
         // for changes in columns, color, or selection
         this._updateLegendDisplay()
         this._updateSelectedValuesDisplay();
@@ -63,11 +66,15 @@ class UIManager {
             this._updateLegendDisplay();
             this._updateSelectedValuesDisplay();
         });
-
     }
 
-    /* ------------------------------------------------------------------ */
-    /* This is where we listen for clicks on the "X" and the legend items */
+    _applyInitialPanelVisibility() {
+        for (const [name, cfg] of Object.entries(this.uiConfig)) {
+            document.getElementById(cfg.elementId).style.display = cfg.visible ? 'block' : 'none';
+        }
+    }
+
+    /* ... (keeping _attachGridListeners unchanged) ... */
     _attachGridListeners() {
         /* Selected-values grid (the info panel) */
         const selGrid = document.getElementById('selectedValuesGrid');
@@ -75,7 +82,7 @@ class UIManager {
             selGrid.addEventListener('click', (e) => {
                 console.log('[UIManager] selected-values grid clicked');
                 console.log(e)
-                // We look for a .remove-btn in the event’s ancestry
+                // We look for a .remove-btn in the event's ancestry
                 const btn = e.target.closest('.remove-btn');
                 if (!btn) return;
                 e.stopPropagation();
@@ -102,13 +109,13 @@ class UIManager {
     }
 
     _setupNavball() {
-        this.navball = new Navball('navball-container');
-        // Show navball and legend by default
-        document.getElementById('navbar').style.display = 'block';
-        document.getElementById('legendMenu').style.display = 'block';
+        this.navball = new Navball('navball-container', CONFIG.navball.size);
+        // Apply initial visibility from CONFIG
+        document.getElementById('navbar').style.display = CONFIG.panels.navbar ? 'block' : 'none';
+        document.getElementById('legendMenu').style.display = CONFIG.panels.legend ? 'block' : 'none';
     }
 
-    /* ---------- shortcuts legend (top-right) ------------------ */
+    /* ---------- shortcuts legend (top-right) - using CONFIG ---------- */
     _buildShortcutsLegend() {
         const sc = document.getElementById('shortcuts');
         sc.innerHTML = '<div>wasd – move</div><div>mouse + Q/E – roll</div>';
@@ -121,10 +128,10 @@ class UIManager {
             sc.appendChild(d);
         });
 
-        // Add hover and click-select shortcuts with status indicators
+        // Add hover and click-select shortcuts with status indicators from CONFIG
         sc.insertAdjacentHTML('beforeend', `
-            <div class="shortcut-link" data-action="hover-toggle">k – hover UI <span class="status-indicator status-enabled" id="hover-status">(enabled)</span></div>
-            <div class="shortcut-link" data-action="click-select-toggle">b – click-select <span class="status-indicator status-enabled" id="click-select-status">(enabled)</span></div>`);
+            <div class="shortcut-link" data-action="hover-toggle">k – hover UI <span class="status-indicator ${CONFIG.interaction.hoverActive ? 'status-enabled' : 'status-disabled'}" id="hover-status">(${CONFIG.interaction.hoverActive ? 'enabled' : 'disabled'})</span></div>
+            <div class="shortcut-link" data-action="click-select-toggle">b – click-select <span class="status-indicator ${CONFIG.interaction.selectOnClick ? 'status-enabled' : 'status-disabled'}" id="click-select-status">(${CONFIG.interaction.selectOnClick ? 'enabled' : 'disabled'})</span></div>`);
 
         sc.addEventListener('click', e => {
             const target = e.target.closest('[data-action]');
@@ -133,12 +140,14 @@ class UIManager {
             const action = target.dataset.action;
 
             if (action === 'hover-toggle') {
-                this.pointCloud.hoverActive = !this.pointCloud.hoverActive;
-                this._updateStatusIndicator('hover-status', this.pointCloud.hoverActive);
-                if (!this.pointCloud.hoverActive) this.hoverPanel.style.display = 'none';
+                CONFIG.interaction.hoverActive = !CONFIG.interaction.hoverActive;
+                this.pointCloud.hoverActive = CONFIG.interaction.hoverActive;
+                this._updateStatusIndicator('hover-status', CONFIG.interaction.hoverActive);
+                if (!CONFIG.interaction.hoverActive) this.hoverPanel.style.display = 'none';
             } else if (action === 'click-select-toggle') {
-                this.pointCloud.selectOnClick = !this.pointCloud.selectOnClick;
-                this._updateStatusIndicator('click-select-status', this.pointCloud.selectOnClick);
+                CONFIG.interaction.selectOnClick = !CONFIG.interaction.selectOnClick;
+                this.pointCloud.selectOnClick = CONFIG.interaction.selectOnClick;
+                this._updateStatusIndicator('click-select-status', CONFIG.interaction.selectOnClick);
             } else {
                 const entry = Object.entries(this.uiConfig)
                     .find(([, cfg]) => cfg.elementId === action);
@@ -150,39 +159,72 @@ class UIManager {
         });
     }
 
-    _updateStatusIndicator(elementId, enabled) {
-        const statusEl = document.getElementById(elementId);
-        statusEl.textContent = enabled ? '(enabled)' : '(disabled)';
-        statusEl.className = `status-indicator ${enabled ? 'status-enabled' : 'status-disabled'}`;
-    }
-
-    _updatePanelStatusIndicator(element, visible) {
-        const statusEl = element.querySelector('.status-indicator');
-        statusEl.textContent = visible ? '(enabled)' : '(disabled)';
-        statusEl.className = `status-indicator ${visible ? 'status-enabled' : 'status-disabled'}`;
-    }
-
-    /* ---------- sliders for size / opacity / speed ------------ */
+    /* ---------- sliders for size / opacity / speed - using CONFIG ---------- */
     _setupControlSliders() {
-        // Point size controls
+        // Point size controls - using CONFIG bounds
         const pointSizeSlider = document.getElementById('pointSize');
         const pointSizeValue = document.getElementById('pointSizeValue');
         const nonSelPointSizeSlider = document.getElementById('nonSelPointSize');
         const nonSelPointSizeValue = document.getElementById('nonSelPointSizeValue');
 
-        // Opacity controls
+        // Opacity controls - using CONFIG bounds
         const opacitySlider = document.getElementById('opacity');
         const opacityValue = document.getElementById('opacityValue');
         const nonSelOpacitySlider = document.getElementById('nonSelOpacity');
         const nonSelOpacityValue = document.getElementById('nonSelOpacityValue');
 
-        // Speed control
+        // Speed control - using CONFIG bounds
         const speedSlider = document.getElementById('speed');
         const speedValue = document.getElementById('speedValue');
 
         // Color controls
         const nonSelColorPicker = document.getElementById('nonSelColor');
         const randomizeColorsBtn = document.getElementById('randomizeColors');
+
+        // Set up slider attributes from CONFIG
+        if (pointSizeSlider) {
+            pointSizeSlider.min = CONFIG.selectedPoints.sizeMin;
+            pointSizeSlider.max = CONFIG.selectedPoints.sizeMax;
+            pointSizeSlider.step = CONFIG.selectedPoints.sizeStep;
+            pointSizeSlider.value = CONFIG.selectedPoints.size;
+            if (pointSizeValue) pointSizeValue.textContent = CONFIG.selectedPoints.size;
+        }
+
+        if (nonSelPointSizeSlider) {
+            nonSelPointSizeSlider.min = CONFIG.nonSelectedPoints.sizeMin;
+            nonSelPointSizeSlider.max = CONFIG.nonSelectedPoints.sizeMax;
+            nonSelPointSizeSlider.step = CONFIG.nonSelectedPoints.sizeStep;
+            nonSelPointSizeSlider.value = CONFIG.nonSelectedPoints.size;
+            if (nonSelPointSizeValue) nonSelPointSizeValue.textContent = CONFIG.nonSelectedPoints.size;
+        }
+
+        if (opacitySlider) {
+            opacitySlider.min = CONFIG.selectedPoints.opacityMin;
+            opacitySlider.max = CONFIG.selectedPoints.opacityMax;
+            opacitySlider.step = CONFIG.selectedPoints.opacityStep;
+            opacitySlider.value = CONFIG.selectedPoints.opacity;
+            if (opacityValue) opacityValue.textContent = CONFIG.selectedPoints.opacity.toFixed(2);
+        }
+
+        if (nonSelOpacitySlider) {
+            nonSelOpacitySlider.min = CONFIG.nonSelectedPoints.opacityMin;
+            nonSelOpacitySlider.max = CONFIG.nonSelectedPoints.opacityMax;
+            nonSelOpacitySlider.step = CONFIG.nonSelectedPoints.opacityStep;
+            nonSelOpacitySlider.value = CONFIG.nonSelectedPoints.opacity;
+            if (nonSelOpacityValue) nonSelOpacityValue.textContent = CONFIG.nonSelectedPoints.opacity.toFixed(2);
+        }
+
+        if (speedSlider) {
+            speedSlider.min = CONFIG.movement.speedMin;
+            speedSlider.max = CONFIG.movement.speedMax;
+            speedSlider.step = CONFIG.movement.speedStep;
+            speedSlider.value = CONFIG.movement.speed;
+            if (speedValue) speedValue.textContent = CONFIG.movement.speed;
+        }
+
+        if (nonSelColorPicker) {
+            nonSelColorPicker.value = CONFIG.nonSelectedPoints.color;
+        }
 
         // Selected point size
         if (pointSizeSlider && pointSizeValue) {
@@ -225,6 +267,7 @@ class UIManager {
             speedSlider.addEventListener('input', () => {
                 const v = parseFloat(speedSlider.value);
                 speedValue.textContent = v;
+                CONFIG.movement.speed = v;
                 this.pointCloud.settings.speed = v;
             });
         }
@@ -337,10 +380,10 @@ class UIManager {
                 }
             });
 
-            // Set current values
-            xAxisSelect.value = this.pointCloud.state.axis.x;
-            yAxisSelect.value = this.pointCloud.state.axis.y;
-            zAxisSelect.value = this.pointCloud.state.axis.z;
+            // Set current values from CONFIG
+            xAxisSelect.value = CONFIG.axes.x;
+            yAxisSelect.value = CONFIG.axes.y;
+            zAxisSelect.value = CONFIG.axes.z;
         }
 
         // Apply button handlers for axes
@@ -391,7 +434,7 @@ class UIManager {
 
             const selectedValues = Array.from(this.pointCloud.state.selection);
 
-            if (selectedValues.length <= 20) {
+            if (selectedValues.length <= CONFIG.ui.maxSelectedDisplay) {
                 selectedValues.forEach((value, index) => {
                     const div = document.createElement('div');
                     div.className = 'value-grid-item selected';
@@ -454,7 +497,7 @@ class UIManager {
                 .filter(v => v !== null && v !== 'null' && v !== 'unknown')
                 .sort();
 
-            if (uniqueValues.length <= 15) {
+            if (uniqueValues.length <= CONFIG.ui.maxCategoricalDisplay) {
                 uniqueValues.forEach(value => {
                     const color = this.pointCloud.selMgr._getCategoricalColor(value);
                     const div = document.createElement('div');
@@ -517,15 +560,17 @@ class UIManager {
 
             /* hover UI toggle */
             if (e.code === 'KeyK') {
-                this.pointCloud.hoverActive = !this.pointCloud.hoverActive;
-                this._updateStatusIndicator('hover-status', this.pointCloud.hoverActive);
-                if (!this.pointCloud.hoverActive) this.hoverPanel.style.display = 'none';
+                CONFIG.interaction.hoverActive = !CONFIG.interaction.hoverActive;
+                this.pointCloud.hoverActive = CONFIG.interaction.hoverActive;
+                this._updateStatusIndicator('hover-status', CONFIG.interaction.hoverActive);
+                if (!CONFIG.interaction.hoverActive) this.hoverPanel.style.display = 'none';
             }
 
             /* click-select toggle */
             if (e.code === 'KeyB') {
-                this.pointCloud.selectOnClick = !this.pointCloud.selectOnClick;
-                this._updateStatusIndicator('click-select-status', this.pointCloud.selectOnClick);
+                CONFIG.interaction.selectOnClick = !CONFIG.interaction.selectOnClick;
+                this.pointCloud.selectOnClick = CONFIG.interaction.selectOnClick;
+                this._updateStatusIndicator('click-select-status', CONFIG.interaction.selectOnClick);
             }
         });
     }
@@ -533,7 +578,23 @@ class UIManager {
     _togglePanel(name) {
         const cfg = this.uiConfig[name];
         cfg.visible = !cfg.visible;
+
+        // Update CONFIG to keep it in sync
+        CONFIG.panels[name] = cfg.visible;
+
         document.getElementById(cfg.elementId).style.display = cfg.visible ? 'block' : 'none';
+    }
+
+    _updateStatusIndicator(elementId, enabled) {
+        const statusEl = document.getElementById(elementId);
+        statusEl.textContent = enabled ? '(enabled)' : '(disabled)';
+        statusEl.className = `status-indicator ${enabled ? 'status-enabled' : 'status-disabled'}`;
+    }
+
+    _updatePanelStatusIndicator(element, visible) {
+        const statusEl = element.querySelector('.status-indicator');
+        statusEl.textContent = visible ? '(enabled)' : '(disabled)';
+        statusEl.className = `status-indicator ${visible ? 'status-enabled' : 'status-disabled'}`;
     }
 
     /* ---------- per-frame UI refresh ------------------------------ */
@@ -554,13 +615,12 @@ class UIManager {
         /* hover tooltip */
         this._showHover(this.pointCloud.hoverId);
 
-        /* current “Color by / Select by” labels */
+        /* current "Color by / Select by" labels */
         this._updateColumnInfo();
 
         /* performance monitoring */
         this._checkPerformance();
     }
-
 
     /* ---------- FPS / stats ----------------------------------- */
     _updateStats() {
@@ -596,7 +656,7 @@ class UIManager {
 
     /* ---------- hover tooltip --------------------------------- */
     _showHover(id) {
-        if (!this.pointCloud.hoverActive || id == null) {
+        if (!CONFIG.interaction.hoverActive || id == null) {
             this.hoverPanel.style.display = 'none';
             return;
         }
@@ -615,8 +675,8 @@ class UIManager {
 
         this.hoverPanel.innerHTML = html;
         const { x, y } = this.pointCloud.pointerScreen;
-        this.hoverPanel.style.left = (x + 15) + 'px';
-        this.hoverPanel.style.top = (y + 15) + 'px';
+        this.hoverPanel.style.left = (x + CONFIG.ui.hoverOffset.x) + 'px';
+        this.hoverPanel.style.top = (y + CONFIG.ui.hoverOffset.y) + 'px';
         this.hoverPanel.style.display = 'block';
     }
 
@@ -648,16 +708,16 @@ class UIManager {
         this.performanceWarning.textContent = message;
         this.performanceWarning.style.display = 'block';
 
-        // Hide after 4 seconds
+        // Hide after duration from CONFIG
         setTimeout(() => {
             this.performanceWarning.style.display = 'none';
-        }, 4000);
+        }, CONFIG.performance.performanceWarningDuration);
     }
 
     _checkPerformance() {
         const now = performance.now();
 
-        // Only check every 2 seconds
+        // Only check every interval from CONFIG
         if (now - this.lastPerformanceCheck < this.performanceCheckInterval) {
             return;
         }
@@ -669,10 +729,10 @@ class UIManager {
             this.performanceWarningShown = true;
             this._optimizeForPerformance();
 
-            // Reset the flag after some time
+            // Reset the flag after cooldown from CONFIG
             setTimeout(() => {
                 this.performanceWarningShown = false;
-            }, 30000);
+            }, CONFIG.performance.performanceOptimizationCooldown);
         }
     }
 

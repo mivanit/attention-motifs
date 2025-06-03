@@ -4,18 +4,19 @@ class VisState extends EventTarget {
 		super();
 		this.model = model;
 
-		/* view / meta options */
-		this.axis = { x: 0, y: 1, z: 2 };
+		/* view / meta options - use CONFIG defaults */
+		this.axis = { ...CONFIG.axes };
 
 		/* run-time configurable keys */
 		this.colorBy = CONFIG.defaultColorColumn;
 		this.selectBy = CONFIG.defaultSelectionColumn;
 
-		/* appearance */
-		this.nonSelSize = 4; this.selSize = 6;
-		this.nonSelOp = 0.25; this.selOp = 1.0;
-		this.nonSelColor = '#666666';
-
+		/* appearance - use CONFIG defaults */
+		this.nonSelSize = CONFIG.nonSelectedPoints.size;
+		this.selSize = CONFIG.selectedPoints.size;
+		this.nonSelOp = CONFIG.nonSelectedPoints.opacity;
+		this.selOp = CONFIG.selectedPoints.opacity;
+		this.nonSelColor = CONFIG.nonSelectedPoints.color;
 
 		/* store *values* (categories) now, not row indices */
 		this.selection = new Set();
@@ -31,10 +32,50 @@ class VisState extends EventTarget {
 	}
 
 	/* ---------- helpers ---------- */
-	setAxis(dim, val) { this.axis[dim] = val; this._fire('axis'); }
-	setColorBy(col) { this.colorBy = col; this._fire('vis'); }
-	setSelectBy(col) { this.selectBy = col; this.clearSel(); this._fire('vis'); }
-	setVisParam(k, v) { this[k] = v; this._fire('vis'); }
+	setAxis(dim, val) {
+		this.axis[dim] = val;
+		// Update CONFIG to keep it in sync
+		CONFIG.axes[dim] = val;
+		this._fire('axis');
+	}
+
+	setColorBy(col) {
+		this.colorBy = col;
+		CONFIG.defaultColorColumn = col;
+		this._fire('vis');
+	}
+
+	setSelectBy(col) {
+		this.selectBy = col;
+		CONFIG.defaultSelectionColumn = col;
+		this.clearSel();
+		this._fire('vis');
+	}
+
+	setVisParam(k, v) {
+		this[k] = v;
+
+		// Update CONFIG to keep it in sync
+		switch (k) {
+			case 'selSize':
+				CONFIG.selectedPoints.size = v;
+				break;
+			case 'selOp':
+				CONFIG.selectedPoints.opacity = v;
+				break;
+			case 'nonSelSize':
+				CONFIG.nonSelectedPoints.size = v;
+				break;
+			case 'nonSelOp':
+				CONFIG.nonSelectedPoints.opacity = v;
+				break;
+			case 'nonSelColor':
+				CONFIG.nonSelectedPoints.color = v;
+				break;
+		}
+
+		this._fire('vis');
+	}
 
 	/** toggle category value */
 	toggleValue(v) {

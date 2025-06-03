@@ -1,14 +1,14 @@
 class Navball {
-	constructor(containerId, size = 150) {
+	constructor(containerId, size = null) {
 		this.container = document.getElementById(containerId);
-		this.size = size;
+		this.size = size || CONFIG.navball.size;
 
 		this.yaw = 0;
 		this.pitch = 0;
 		this.isDragging = false;
 		this.lastMouseX = 0;
 		this.lastMouseY = 0;
-		this.sensitivity = 0.01;
+		this.sensitivity = CONFIG.navball.sensitivity;
 
 		this.init();
 	}
@@ -36,8 +36,12 @@ class Navball {
 	}
 
 	createNavball() {
-		// Low-density wireframe sphere
-		const geometry = new THREE.SphereGeometry(1, 12, 8);
+		// Low-density wireframe sphere - using CONFIG values
+		const geometry = new THREE.SphereGeometry(
+			1,
+			CONFIG.navball.sphereDetail.widthSegments,
+			CONFIG.navball.sphereDetail.heightSegments
+		);
 		const material = new THREE.MeshBasicMaterial({
 			color: 0x004400,
 			wireframe: true,
@@ -56,9 +60,9 @@ class Navball {
 	}
 
 	createAxes() {
-		const axisLength = 1.3;
-		const arrowLength = 0.1;
-		const arrowRadius = 0.02;
+		const axisLength = CONFIG.navball.axisLength;
+		const arrowLength = CONFIG.navball.arrowLength;
+		const arrowRadius = CONFIG.navball.arrowRadius;
 
 		const axes = [
 			{ name: 'X', color: 0xff4444, direction: [1, 0, 0], rotation: [0, 0, -Math.PI / 2] },
@@ -100,7 +104,7 @@ class Navball {
 				})
 			);
 			label.position.set(x * midAxisPos, y * midAxisPos, z * midAxisPos);
-			label.scale.set(0.3, 0.3, 1);
+			label.scale.set(CONFIG.navball.labelScale, CONFIG.navball.labelScale, 1);
 			this.axisGroup.add(label);
 			this.axisLabels.push(label);
 		}

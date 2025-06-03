@@ -1,9 +1,9 @@
-/* SelectionManager.js  -- optimized version */
+/* SelectionManager.js  -- optimized version using CONFIG */
 class SelectionManager {
 	constructor(model, state) {
 		this.model = model;
 		this.state = state;
-		this.palette = generateDistinctColors(128);
+		this.palette = generateDistinctColors(CONFIG.colors.paletteSize);
 
 		// Cache for expensive computations
 		this._colorCache = new Map();
@@ -66,7 +66,7 @@ class SelectionManager {
 
 	_getViridisColor(value, column) {
 		if (value === null || value === undefined || isNaN(value)) {
-			return new THREE.Color(0.5, 0.5, 0.5); // Gray for invalid values
+			return new THREE.Color(CONFIG.colors.nullValueColor);
 		}
 
 		// Get cached min/max for the column
@@ -82,13 +82,13 @@ class SelectionManager {
 		// Normalize to 0-1
 		const t = max > min ? (value - min) / (max - min) : 0;
 
-		// Viridis colormap approximation
+		// Viridis colormap approximation using CONFIG coefficients
 		return this._viridis(t);
 	}
 
 	_getCategoricalColor(value) {
 		if (value === null || value === 'null' || value === 'unknown') {
-			return new THREE.Color(0.3, 0.3, 0.3); // Dark gray for null values
+			return new THREE.Color(CONFIG.colors.nullValueColor);
 		}
 
 		// Use a simple hash for categorical values to avoid expensive sorting
@@ -100,18 +100,20 @@ class SelectionManager {
 	}
 
 	_viridis(t) {
-		// Viridis colormap approximation
+		// Viridis colormap approximation using CONFIG coefficients
 		t = Math.max(0, Math.min(1, t));
 
-		const r = 0.267004 + t * (0.105010 + t * (0.330010 + t * (2.437600 + t * (-5.179800 + t * 2.066100))));
-		const g = 0.004874 + t * (0.406910 + t * (1.193600 + t * (-1.375200 + t * (0.813500 + t * (-0.073200)))));
-		const b = 0.329415 + t * (0.718080 + t * (-0.724400 + t * (0.063300 + t * 0.016700)));
+		const { r: rCoeff, g: gCoeff, b: bCoeff } = CONFIG.colors.viridisColors;
+
+		const r = rCoeff[0] + t * (rCoeff[1] + t * (rCoeff[2] + t * (rCoeff[3] + t * (rCoeff[4] + t * rCoeff[5]))));
+		const g = gCoeff[0] + t * (gCoeff[1] + t * (gCoeff[2] + t * (gCoeff[3] + t * (gCoeff[4] + t * gCoeff[5]))));
+		const b = bCoeff[0] + t * (bCoeff[1] + t * (bCoeff[2] + t * (bCoeff[3] + t * (bCoeff[4] + t * bCoeff[5]))));
 
 		return new THREE.Color(r, g, b);
 	}
 
 	randomizeColors() {
-		this.palette = generateDistinctColors(128);
+		this.palette = generateDistinctColors(CONFIG.colors.paletteSize);
 		// Clear color cache when palette changes
 		this._colorCache.clear();
 	}

@@ -1,29 +1,33 @@
 /* PointCloud.js – snap-to-point cross-hair, optional hover UI ("k"),
-   optional click-to-select ("b"), and better picking accuracy. */
+   optional click-to-select ("b"), and better picking accuracy using CONFIG. */
 
-class PointCloud {
+   class PointCloud {
     /** @param {DataModel} model */
     constructor(model) {
         this.model = model;
 
-        /* ── THREE basics ─────────────────────────────────────── */
+        /* ── THREE basics - using CONFIG values ──────────────────── */
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(
-            75, window.innerWidth / window.innerHeight, 0.1, 2_000);
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+            CONFIG.rendering.cameraFov, 
+            window.innerWidth / window.innerHeight, 
+            CONFIG.rendering.cameraNear, 
+            CONFIG.rendering.cameraFar
+        );
+        this.renderer = new THREE.WebGLRenderer({ antialias: CONFIG.rendering.antialiasing });
 
         /* ── picking helpers ──────────────────────────────────── */
         this.raycaster = new THREE.Raycaster();
-        this.raycaster.params.Points = { threshold: 0.15 };   // world-unit tolerance
+        this.raycaster.params.Points = { threshold: CONFIG.interaction.raycastThreshold };
         this.pointerNDC = new THREE.Vector2();
         this.pointerScreen = { x: 0, y: 0 };
 
         this.hoverId = null;
         this.prevHoverId = null;
 
-        /* ── behaviour flags (toggled by UIManager) ───────────── */
-        this.hoverActive = true;   // "k"
-        this.selectOnClick = true;   // "b"
+        /* ── behaviour flags (from CONFIG) ────────────────────── */
+        this.hoverActive = CONFIG.interaction.hoverActive;
+        this.selectOnClick = CONFIG.interaction.selectOnClick;
 
         /* ── colour / selection state ─────────────────────────── */
         this.state = new VisState(model);
@@ -31,15 +35,19 @@ class PointCloud {
         this.state.addEventListener('selection', () => this._updateColors());
         this.state.addEventListener('vis', () => this._updateColors());
 
-        /* ── viewer settings ------------------------------------ */
-        this.settings = { pointSize: 0.1, opacity: 0.8, speed: 10 };
+        /* ── viewer settings - using CONFIG ──────────────────── */
+        this.settings = { 
+            pointSize: 0.1, 
+            opacity: 0.8, 
+            speed: CONFIG.movement.speed 
+        };
 
-        /* ── movement bookkeeping -------------------------------- */
+        /* ── movement bookkeeping ──────────────────────────────── */
         this.keys = {};
         this.pitch = 0;
         this.mouseDX = 0;
         this.mouseDY = 0;
-        this.rollSpeed = 0.02;
+        this.rollSpeed = CONFIG.movement.rollSpeed;
         this.velocity = new THREE.Vector3();
 
         /* ── cross-hair objects ───────────────────────────────── */
@@ -61,21 +69,24 @@ class PointCloud {
 
     _setupRenderer() {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setClearColor(0x000011);
+        this.renderer.setClearColor(CONFIG.rendering.clearColor);
         document.getElementById('container').appendChild(this.renderer.domElement);
         this.camera.position.set(0, 0, 0);
     }
 
-    /* ---------- in-scene cross-hair --------------------------- */
+    /* ---------- in-scene cross-hair - using CONFIG ----------- */
     _createCrosshairs() {
         const mat = new THREE.LineBasicMaterial({
-            color: 0xffff00, transparent: true, opacity: 0.4, depthTest: false
+            color: CONFIG.crosshair.color, 
+            transparent: true, 
+            opacity: CONFIG.crosshair.opacity, 
+            depthTest: false
         });
 
         /* horizontal (X-axis) */
         const gH = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(-1_000, 0, 0),
-            new THREE.Vector3(1_000, 0, 0)
+            new THREE.Vector3(-CONFIG.crosshair.length, 0, 0),
+            new THREE.Vector3(CONFIG.crosshair.length, 0, 0)
         ]);
         this.crossH = new THREE.Line(gH, mat);
         this.crossH.visible = false;
@@ -83,8 +94,8 @@ class PointCloud {
 
         /* vertical (Y-axis) */
         const gV = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(0, -1_000, 0),
-            new THREE.Vector3(0, 1_000, 0)
+            new THREE.Vector3(0, -CONFIG.crosshair.length, 0),
+            new THREE.Vector3(0, CONFIG.crosshair.length, 0)
         ]);
         this.crossV = new THREE.Line(gV, mat);
         this.crossV.visible = false;
@@ -234,8 +245,8 @@ class PointCloud {
             this.points.material.uniforms.baseSize.value = this.settings.pointSize;
             this.points.material.needsUpdate = true;
 
-            /* update picking tolerance to roughly match size */
-            this.raycaster.params.Points.threshold = this.settings.pointSize * 3;
+            /* update picking tolerance to roughly match size - using CONFIG */
+            this.raycaster.params.Points.threshold = this.settings.pointSize * CONFIG.interaction.raycastThresholdMultiplier;
         }
     }
 
@@ -277,9 +288,9 @@ class PointCloud {
         this.opacityAttr.needsUpdate = true;
     }
 
-    /* ---------- camera motion --------------------------------- */
+    /* ---------- camera motion - using CONFIG values ---------- */
     _moveCamera() {
-        const sens = 0.002;
+        const sens = CONFIG.movement.mouseSensitivity;
         const yaw = -this.mouseDX * sens;
         const dp = -this.mouseDY * sens;
 
@@ -302,7 +313,7 @@ class PointCloud {
 
         if (this.velocity.lengthSq()) {
             const speed = this.settings.speed *
-                (this.keys['ShiftLeft'] ? 3 : 1) * 0.016;
+                (this.keys['ShiftLeft'] ? CONFIG.movement.sprintMultiplier : 1) * 0.016;
             this.velocity.normalize().multiplyScalar(speed)
                 .applyQuaternion(this.camera.quaternion);
             this.camera.position.add(this.velocity);

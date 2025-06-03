@@ -449,45 +449,297 @@
 		<script>
 		/* global, mutable CONFIG + helper to merge an optional config.json */
 		let CONFIG = {
+			// Data loading
 			dataFile: "pca.jsonl",
 			numericalPrefix: "pc.",
 			defaultColorColumn: "activation.model",
 			defaultSelectionColumn: "activation.model",
-			hoverColumns: ["activation.cls", "activation.prompt"]
+			hoverColumns: ["activation.cls", "activation.prompt"],
+		
+			// UI panel visibility
+			panels: {
+				help: false,
+				menu: false,
+				info: false,
+				legend: true,
+				navbar: true,
+				stats: false
+			},
+		
+			// Default axis configuration
+			axes: {
+				x: 0,
+				y: 1,
+				z: 2
+			},
+		
+			// Point appearance - selected points
+			selectedPoints: {
+				size: 6,
+				sizeMin: 1,
+				sizeMax: 20,
+				sizeStep: 1,
+				opacity: 1.0,
+				opacityMin: 0.1,
+				opacityMax: 1.0,
+				opacityStep: 0.1
+			},
+		
+			// Point appearance - non-selected points
+			nonSelectedPoints: {
+				size: 4,
+				sizeMin: 1,
+				sizeMax: 20,
+				sizeStep: 1,
+				opacity: 0.25,
+				opacityMin: 0.01,
+				opacityMax: 1.0,
+				opacityStep: 0.01,
+				color: "#666666"
+			},
+		
+			// Movement settings
+			movement: {
+				speed: 50,
+				speedMin: 1,
+				speedMax: 200,
+				speedStep: 1,
+				rollSpeed: 0.02,
+				mouseSensitivity: 0.002,
+				sprintMultiplier: 3
+			},
+		
+			// Interaction settings
+			interaction: {
+				hoverActive: true,
+				selectOnClick: true,
+				raycastThreshold: 0.15,
+				raycastThresholdMultiplier: 3
+			},
+		
+			// Performance settings
+			performance: {
+				fpsThreshold: 15,
+				performanceCheckInterval: 2000,
+				performanceWarningDuration: 4000,
+				performanceOptimizationCooldown: 30000
+			},
+		
+			// Rendering settings
+			rendering: {
+				clearColor: 0x000011,
+				cameraFov: 75,
+				cameraNear: 0.1,
+				cameraFar: 2000,
+				antialiasing: true
+			},
+		
+			// Cross-hair settings
+			crosshair: {
+				color: 0xffff00,
+				opacity: 0.4,
+				length: 1000
+			},
+		
+			// Navball settings
+			navball: {
+				size: 150,
+				sensitivity: 0.01,
+				sphereDetail: { widthSegments: 12, heightSegments: 8 },
+				axisLength: 1.3,
+				arrowLength: 0.1,
+				arrowRadius: 0.02,
+				labelScale: 0.3
+			},
+		
+			// Color palette settings
+			colors: {
+				paletteSize: 128,
+				nullValueColor: "#4d4d4d", // Dark gray for null values
+				viridisColors: {
+					// Viridis colormap coefficients for better performance
+					r: [0.267004, 0.105010, 0.330010, 2.437600, -5.179800, 2.066100],
+					g: [0.004874, 0.406910, 1.193600, -1.375200, 0.813500, -0.073200],
+					b: [0.329415, 0.718080, -0.724400, 0.063300, 0.016700, 0.000000]
+				}
+			},
+		
+			// Legend and info panel settings
+			ui: {
+				maxCategoricalDisplay: 15,
+				maxSelectedDisplay: 20,
+				hoverOffset: { x: 15, y: 15 },
+				shortcutStatusUpdateDelay: 100
+			}
 		};
 		
 		/**
 		 * Load config.json (if present) and merge into CONFIG.
+		 * Also parse URL parameters and apply them to CONFIG.
 		 * Missing keys fall back to the defaults above.
 		 * @returns {Promise<object>} resolved CONFIG object
 		 */
 		async function getConfig() {
 			try {
+				// First, try to load config.json
 				const r = await fetch("config.json");
-				if (!r.ok) {
+				if (r.ok) {
+					const loaded = await r.json();
+					// Deep merge loaded config into CONFIG
+					deepMerge(CONFIG, loaded);
+				} else {
 					console.warn("config.json not found, using defaults");
-					return CONFIG;
 				}
-		
-				const loaded = await r.json();
-		
-				/* copy defaults for any missing keys */
-				for (const k of Object.keys(CONFIG)) {
-					if (!(k in loaded)) {
-						console.warn(`Config key '${k}' missing – using default`);
-						loaded[k] = CONFIG[k];
-					}
-				}
-		
-				/* mutate, don’t replace – so live bindings stay valid */
-				Object.assign(CONFIG, loaded);
 			} catch (e) {
 				console.error("Config load error:", e);
 			}
 		
+			// Parse URL parameters and override CONFIG values
+			parseURLParams();
+		
 			return CONFIG;
 		}
 		
+		/**
+		 * Deep merge source object into target object
+		 */
+		function deepMerge(target, source) {
+			for (const key in source) {
+				if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+					if (!target[key]) target[key] = {};
+					deepMerge(target[key], source[key]);
+				} else {
+					target[key] = source[key];
+				}
+			}
+		}
+		
+		/**
+		 * Parse URL parameters and update CONFIG
+		 * Supports nested paths like: ?axes.x=2&selectedPoints.size=8&panels.menu=true
+		 */
+		function parseURLParams() {
+			const params = new URLSearchParams(window.location.search);
+		
+			for (const [key, value] of params) {
+				setNestedConfigValue(CONFIG, key, parseConfigValue(value));
+			}
+		}
+		
+		/**
+		 * Set a nested configuration value using dot notation
+		 * Example: setNestedConfigValue(CONFIG, "axes.x", 2)
+		 */
+		function setNestedConfigValue(obj, path, value) {
+			const keys = path.split('.');
+			let current = obj;
+		
+			for (let i = 0; i < keys.length - 1; i++) {
+				const key = keys[i];
+				if (!(key in current) || typeof current[key] !== 'object') {
+					current[key] = {};
+				}
+				current = current[key];
+			}
+		
+			const finalKey = keys[keys.length - 1];
+			current[finalKey] = value;
+			console.log(`URL param override: ${path} = ${value}`);
+		}
+		
+		/**
+		 * Parse a string value from URL params into appropriate type
+		 */
+		function parseConfigValue(value) {
+			// Boolean
+			if (value === 'true') return true;
+			if (value === 'false') return false;
+		
+			// Number
+			if (!isNaN(value) && !isNaN(parseFloat(value))) {
+				return parseFloat(value);
+			}
+		
+			// String (including hex colors)
+			return value;
+		}
+		
+		/**
+		 * Generate URL search params from current CONFIG state
+		 * Only includes values that differ from defaults
+		 */
+		function generateURLParams(baseConfig = null) {
+			if (!baseConfig) {
+				// Create a fresh default config for comparison
+				baseConfig = createDefaultConfig();
+			}
+		
+			const params = new URLSearchParams();
+			const differences = findConfigDifferences(CONFIG, baseConfig);
+		
+			for (const [path, value] of differences) {
+				params.set(path, value.toString());
+			}
+		
+			return params;
+		}
+		
+		/**
+		 * Create a fresh default CONFIG object for comparison
+		 */
+		function createDefaultConfig() {
+			// Return the same structure as the initial CONFIG
+			// This is a bit redundant but ensures we can compare against true defaults
+			return {
+				dataFile: "pca.jsonl",
+				numericalPrefix: "pc.",
+				defaultColorColumn: "activation.model",
+				defaultSelectionColumn: "activation.model",
+				hoverColumns: ["activation.cls", "activation.prompt"],
+				panels: { help: false, menu: false, info: false, legend: true, navbar: true, stats: false },
+				axes: { x: 0, y: 1, z: 2 },
+				selectedPoints: { size: 6, sizeMin: 1, sizeMax: 20, sizeStep: 1, opacity: 1.0, opacityMin: 0.1, opacityMax: 1.0, opacityStep: 0.1 },
+				nonSelectedPoints: { size: 4, sizeMin: 1, sizeMax: 20, sizeStep: 1, opacity: 0.25, opacityMin: 0.01, opacityMax: 1.0, opacityStep: 0.01, color: "#666666" },
+				movement: { speed: 50, speedMin: 1, speedMax: 200, speedStep: 1, rollSpeed: 0.02, mouseSensitivity: 0.002, sprintMultiplier: 3 },
+				interaction: { hoverActive: true, selectOnClick: true, raycastThreshold: 0.15, raycastThresholdMultiplier: 3 },
+				performance: { fpsThreshold: 15, performanceCheckInterval: 2000, performanceWarningDuration: 4000, performanceOptimizationCooldown: 30000 },
+				rendering: { clearColor: 0x000011, cameraFov: 75, cameraNear: 0.1, cameraFar: 2000, antialiasing: true },
+				crosshair: { color: 0xffff00, opacity: 0.4, length: 1000 },
+				navball: { size: 150, sensitivity: 0.01, sphereDetail: { widthSegments: 12, heightSegments: 8 }, axisLength: 1.3, arrowLength: 0.1, arrowRadius: 0.02, labelScale: 0.3 },
+				colors: { paletteSize: 128, nullValueColor: "#4d4d4d", viridisColors: { r: [0.267004, 0.105010, 0.330010, 2.437600, -5.179800, 2.066100], g: [0.004874, 0.406910, 1.193600, -1.375200, 0.813500, -0.073200], b: [0.329415, 0.718080, -0.724400, 0.063300, 0.016700, 0.000000] } },
+				ui: { maxCategoricalDisplay: 15, maxSelectedDisplay: 20, hoverOffset: { x: 15, y: 15 }, shortcutStatusUpdateDelay: 100 }
+			};
+		}
+		
+		/**
+		 * Find differences between current config and base config
+		 * Returns array of [path, value] tuples
+		 */
+		function findConfigDifferences(current, base, prefix = '') {
+			const differences = [];
+		
+			for (const key in current) {
+				const currentPath = prefix ? `${prefix}.${key}` : key;
+				const currentValue = current[key];
+				const baseValue = base[key];
+		
+				if (typeof currentValue === 'object' && !Array.isArray(currentValue) && currentValue !== null) {
+					if (typeof baseValue === 'object' && !Array.isArray(baseValue) && baseValue !== null) {
+						differences.push(...findConfigDifferences(currentValue, baseValue, currentPath));
+					} else {
+						// Base doesn't have this object, include all of current
+						differences.push([currentPath, JSON.stringify(currentValue)]);
+					}
+				} else {
+					// Compare primitive values
+					if (currentValue !== baseValue) {
+						differences.push([currentPath, currentValue]);
+					}
+				}
+			}
+		
+			return differences;
+		}
 		</script>
 		<!-- end 'config.js' -->
 			<!-- begin 'ColorUtil.js' -->
@@ -778,12 +1030,12 @@
 		<!-- end 'DataModel.js' -->
 			<!-- begin 'SelectionManager.js' -->
 		<script>
-		/* SelectionManager.js  -- optimized version */
+		/* SelectionManager.js  -- optimized version using CONFIG */
 		class SelectionManager {
 			constructor(model, state) {
 				this.model = model;
 				this.state = state;
-				this.palette = generateDistinctColors(128);
+				this.palette = generateDistinctColors(CONFIG.colors.paletteSize);
 		
 				// Cache for expensive computations
 				this._colorCache = new Map();
@@ -846,7 +1098,7 @@
 		
 			_getViridisColor(value, column) {
 				if (value === null || value === undefined || isNaN(value)) {
-					return new THREE.Color(0.5, 0.5, 0.5); // Gray for invalid values
+					return new THREE.Color(CONFIG.colors.nullValueColor);
 				}
 		
 				// Get cached min/max for the column
@@ -862,13 +1114,13 @@
 				// Normalize to 0-1
 				const t = max > min ? (value - min) / (max - min) : 0;
 		
-				// Viridis colormap approximation
+				// Viridis colormap approximation using CONFIG coefficients
 				return this._viridis(t);
 			}
 		
 			_getCategoricalColor(value) {
 				if (value === null || value === 'null' || value === 'unknown') {
-					return new THREE.Color(0.3, 0.3, 0.3); // Dark gray for null values
+					return new THREE.Color(CONFIG.colors.nullValueColor);
 				}
 		
 				// Use a simple hash for categorical values to avoid expensive sorting
@@ -880,18 +1132,20 @@
 			}
 		
 			_viridis(t) {
-				// Viridis colormap approximation
+				// Viridis colormap approximation using CONFIG coefficients
 				t = Math.max(0, Math.min(1, t));
 		
-				const r = 0.267004 + t * (0.105010 + t * (0.330010 + t * (2.437600 + t * (-5.179800 + t * 2.066100))));
-				const g = 0.004874 + t * (0.406910 + t * (1.193600 + t * (-1.375200 + t * (0.813500 + t * (-0.073200)))));
-				const b = 0.329415 + t * (0.718080 + t * (-0.724400 + t * (0.063300 + t * 0.016700)));
+				const { r: rCoeff, g: gCoeff, b: bCoeff } = CONFIG.colors.viridisColors;
+		
+				const r = rCoeff[0] + t * (rCoeff[1] + t * (rCoeff[2] + t * (rCoeff[3] + t * (rCoeff[4] + t * rCoeff[5]))));
+				const g = gCoeff[0] + t * (gCoeff[1] + t * (gCoeff[2] + t * (gCoeff[3] + t * (gCoeff[4] + t * gCoeff[5]))));
+				const b = bCoeff[0] + t * (bCoeff[1] + t * (bCoeff[2] + t * (bCoeff[3] + t * (bCoeff[4] + t * bCoeff[5]))));
 		
 				return new THREE.Color(r, g, b);
 			}
 		
 			randomizeColors() {
-				this.palette = generateDistinctColors(128);
+				this.palette = generateDistinctColors(CONFIG.colors.paletteSize);
 				// Clear color cache when palette changes
 				this._colorCache.clear();
 			}
@@ -912,18 +1166,19 @@
 				super();
 				this.model = model;
 		
-				/* view / meta options */
-				this.axis = { x: 0, y: 1, z: 2 };
+				/* view / meta options - use CONFIG defaults */
+				this.axis = { ...CONFIG.axes };
 		
 				/* run-time configurable keys */
 				this.colorBy = CONFIG.defaultColorColumn;
 				this.selectBy = CONFIG.defaultSelectionColumn;
 		
-				/* appearance */
-				this.nonSelSize = 4; this.selSize = 6;
-				this.nonSelOp = 0.25; this.selOp = 1.0;
-				this.nonSelColor = '#666666';
-		
+				/* appearance - use CONFIG defaults */
+				this.nonSelSize = CONFIG.nonSelectedPoints.size;
+				this.selSize = CONFIG.selectedPoints.size;
+				this.nonSelOp = CONFIG.nonSelectedPoints.opacity;
+				this.selOp = CONFIG.selectedPoints.opacity;
+				this.nonSelColor = CONFIG.nonSelectedPoints.color;
 		
 				/* store *values* (categories) now, not row indices */
 				this.selection = new Set();
@@ -939,10 +1194,50 @@
 			}
 		
 			/* ---------- helpers ---------- */
-			setAxis(dim, val) { this.axis[dim] = val; this._fire('axis'); }
-			setColorBy(col) { this.colorBy = col; this._fire('vis'); }
-			setSelectBy(col) { this.selectBy = col; this.clearSel(); this._fire('vis'); }
-			setVisParam(k, v) { this[k] = v; this._fire('vis'); }
+			setAxis(dim, val) {
+				this.axis[dim] = val;
+				// Update CONFIG to keep it in sync
+				CONFIG.axes[dim] = val;
+				this._fire('axis');
+			}
+		
+			setColorBy(col) {
+				this.colorBy = col;
+				CONFIG.defaultColorColumn = col;
+				this._fire('vis');
+			}
+		
+			setSelectBy(col) {
+				this.selectBy = col;
+				CONFIG.defaultSelectionColumn = col;
+				this.clearSel();
+				this._fire('vis');
+			}
+		
+			setVisParam(k, v) {
+				this[k] = v;
+		
+				// Update CONFIG to keep it in sync
+				switch (k) {
+					case 'selSize':
+						CONFIG.selectedPoints.size = v;
+						break;
+					case 'selOp':
+						CONFIG.selectedPoints.opacity = v;
+						break;
+					case 'nonSelSize':
+						CONFIG.nonSelectedPoints.size = v;
+						break;
+					case 'nonSelOp':
+						CONFIG.nonSelectedPoints.opacity = v;
+						break;
+					case 'nonSelColor':
+						CONFIG.nonSelectedPoints.color = v;
+						break;
+				}
+		
+				this._fire('vis');
+			}
 		
 			/** toggle category value */
 			toggleValue(v) {
@@ -956,24 +1251,23 @@
 		
 			_fire(type) { this.dispatchEvent(new Event(type)); }
 		}
-		
 		</script>
 		<!-- end 'VisState.js' -->
 			<!-- begin 'ui.js' -->
 		<script>
-		/* ui.js */
+		/* ui.js - Updated to use CONFIG values */
 		class UIManager {
 		    constructor(pointCloud) {
 		        this.pointCloud = pointCloud;
 		
-		        /* panel metadata ------------------------------------------------ */
+		        /* panel metadata - now uses CONFIG -------------------------------- */
 		        this.uiConfig = {
-		            help: { key: 'KeyH', elementId: 'helpMenu', shortcutText: 'h – help', visible: false },
-		            menu: { key: 'KeyM', elementId: 'controlsMenu', shortcutText: 'm – menu', visible: false },
-		            info: { key: 'KeyI', elementId: 'infoMenu', shortcutText: 'i – info', visible: false },
-		            legend: { key: 'KeyL', elementId: 'legendMenu', shortcutText: 'l – legend', visible: true },
-		            navbar: { key: 'KeyN', elementId: 'navbar', shortcutText: 'n – navball', visible: true },
-		            stats: { key: 'KeyJ', elementId: 'statsMenu', shortcutText: 'j – stats', visible: false }
+		            help: { key: 'KeyH', elementId: 'helpMenu', shortcutText: 'h – help', visible: CONFIG.panels.help },
+		            menu: { key: 'KeyM', elementId: 'controlsMenu', shortcutText: 'm – menu', visible: CONFIG.panels.menu },
+		            info: { key: 'KeyI', elementId: 'infoMenu', shortcutText: 'i – info', visible: CONFIG.panels.info },
+		            legend: { key: 'KeyL', elementId: 'legendMenu', shortcutText: 'l – legend', visible: CONFIG.panels.legend },
+		            navbar: { key: 'KeyN', elementId: 'navbar', shortcutText: 'n – navball', visible: CONFIG.panels.navbar },
+		            stats: { key: 'KeyJ', elementId: 'statsMenu', shortcutText: 'j – stats', visible: CONFIG.panels.stats }
 		        };
 		
 		        /* categorical columns for c / v cycling ------------------------ */
@@ -987,10 +1281,10 @@
 		        this.lastTime = performance.now();
 		        this.fps = 60;
 		
-		        /* Performance safeguard ----------------------------------------- */
-		        this.performanceCheckInterval = 2000; // Check every 2 seconds
+		        /* Performance safeguard - now uses CONFIG ---------------------- */
+		        this.performanceCheckInterval = CONFIG.performance.performanceCheckInterval;
 		        this.lastPerformanceCheck = performance.now();
-		        this.fpsThreshold = 15;
+		        this.fpsThreshold = CONFIG.performance.fpsThreshold;
 		        this.performanceWarningShown = false;
 		
 		        /* build static UI */
@@ -1015,6 +1309,9 @@
 		        /* performance warning banner */
 		        this._createPerformanceWarning();
 		
+		        // Apply initial panel visibility from CONFIG
+		        this._applyInitialPanelVisibility();
+		
 		        // for changes in columns, color, or selection
 		        this._updateLegendDisplay()
 		        this._updateSelectedValuesDisplay();
@@ -1026,11 +1323,15 @@
 		            this._updateLegendDisplay();
 		            this._updateSelectedValuesDisplay();
 		        });
-		
 		    }
 		
-		    /* ------------------------------------------------------------------ */
-		    /* This is where we listen for clicks on the "X" and the legend items */
+		    _applyInitialPanelVisibility() {
+		        for (const [name, cfg] of Object.entries(this.uiConfig)) {
+		            document.getElementById(cfg.elementId).style.display = cfg.visible ? 'block' : 'none';
+		        }
+		    }
+		
+		    /* ... (keeping _attachGridListeners unchanged) ... */
 		    _attachGridListeners() {
 		        /* Selected-values grid (the info panel) */
 		        const selGrid = document.getElementById('selectedValuesGrid');
@@ -1038,7 +1339,7 @@
 		            selGrid.addEventListener('click', (e) => {
 		                console.log('[UIManager] selected-values grid clicked');
 		                console.log(e)
-		                // We look for a .remove-btn in the event’s ancestry
+		                // We look for a .remove-btn in the event's ancestry
 		                const btn = e.target.closest('.remove-btn');
 		                if (!btn) return;
 		                e.stopPropagation();
@@ -1065,13 +1366,13 @@
 		    }
 		
 		    _setupNavball() {
-		        this.navball = new Navball('navball-container');
-		        // Show navball and legend by default
-		        document.getElementById('navbar').style.display = 'block';
-		        document.getElementById('legendMenu').style.display = 'block';
+		        this.navball = new Navball('navball-container', CONFIG.navball.size);
+		        // Apply initial visibility from CONFIG
+		        document.getElementById('navbar').style.display = CONFIG.panels.navbar ? 'block' : 'none';
+		        document.getElementById('legendMenu').style.display = CONFIG.panels.legend ? 'block' : 'none';
 		    }
 		
-		    /* ---------- shortcuts legend (top-right) ------------------ */
+		    /* ---------- shortcuts legend (top-right) - using CONFIG ---------- */
 		    _buildShortcutsLegend() {
 		        const sc = document.getElementById('shortcuts');
 		        sc.innerHTML = '<div>wasd – move</div><div>mouse + Q/E – roll</div>';
@@ -1084,10 +1385,10 @@
 		            sc.appendChild(d);
 		        });
 		
-		        // Add hover and click-select shortcuts with status indicators
+		        // Add hover and click-select shortcuts with status indicators from CONFIG
 		        sc.insertAdjacentHTML('beforeend', `
-		            <div class="shortcut-link" data-action="hover-toggle">k – hover UI <span class="status-indicator status-enabled" id="hover-status">(enabled)</span></div>
-		            <div class="shortcut-link" data-action="click-select-toggle">b – click-select <span class="status-indicator status-enabled" id="click-select-status">(enabled)</span></div>`);
+		            <div class="shortcut-link" data-action="hover-toggle">k – hover UI <span class="status-indicator ${CONFIG.interaction.hoverActive ? 'status-enabled' : 'status-disabled'}" id="hover-status">(${CONFIG.interaction.hoverActive ? 'enabled' : 'disabled'})</span></div>
+		            <div class="shortcut-link" data-action="click-select-toggle">b – click-select <span class="status-indicator ${CONFIG.interaction.selectOnClick ? 'status-enabled' : 'status-disabled'}" id="click-select-status">(${CONFIG.interaction.selectOnClick ? 'enabled' : 'disabled'})</span></div>`);
 		
 		        sc.addEventListener('click', e => {
 		            const target = e.target.closest('[data-action]');
@@ -1096,12 +1397,14 @@
 		            const action = target.dataset.action;
 		
 		            if (action === 'hover-toggle') {
-		                this.pointCloud.hoverActive = !this.pointCloud.hoverActive;
-		                this._updateStatusIndicator('hover-status', this.pointCloud.hoverActive);
-		                if (!this.pointCloud.hoverActive) this.hoverPanel.style.display = 'none';
+		                CONFIG.interaction.hoverActive = !CONFIG.interaction.hoverActive;
+		                this.pointCloud.hoverActive = CONFIG.interaction.hoverActive;
+		                this._updateStatusIndicator('hover-status', CONFIG.interaction.hoverActive);
+		                if (!CONFIG.interaction.hoverActive) this.hoverPanel.style.display = 'none';
 		            } else if (action === 'click-select-toggle') {
-		                this.pointCloud.selectOnClick = !this.pointCloud.selectOnClick;
-		                this._updateStatusIndicator('click-select-status', this.pointCloud.selectOnClick);
+		                CONFIG.interaction.selectOnClick = !CONFIG.interaction.selectOnClick;
+		                this.pointCloud.selectOnClick = CONFIG.interaction.selectOnClick;
+		                this._updateStatusIndicator('click-select-status', CONFIG.interaction.selectOnClick);
 		            } else {
 		                const entry = Object.entries(this.uiConfig)
 		                    .find(([, cfg]) => cfg.elementId === action);
@@ -1113,39 +1416,72 @@
 		        });
 		    }
 		
-		    _updateStatusIndicator(elementId, enabled) {
-		        const statusEl = document.getElementById(elementId);
-		        statusEl.textContent = enabled ? '(enabled)' : '(disabled)';
-		        statusEl.className = `status-indicator ${enabled ? 'status-enabled' : 'status-disabled'}`;
-		    }
-		
-		    _updatePanelStatusIndicator(element, visible) {
-		        const statusEl = element.querySelector('.status-indicator');
-		        statusEl.textContent = visible ? '(enabled)' : '(disabled)';
-		        statusEl.className = `status-indicator ${visible ? 'status-enabled' : 'status-disabled'}`;
-		    }
-		
-		    /* ---------- sliders for size / opacity / speed ------------ */
+		    /* ---------- sliders for size / opacity / speed - using CONFIG ---------- */
 		    _setupControlSliders() {
-		        // Point size controls
+		        // Point size controls - using CONFIG bounds
 		        const pointSizeSlider = document.getElementById('pointSize');
 		        const pointSizeValue = document.getElementById('pointSizeValue');
 		        const nonSelPointSizeSlider = document.getElementById('nonSelPointSize');
 		        const nonSelPointSizeValue = document.getElementById('nonSelPointSizeValue');
 		
-		        // Opacity controls
+		        // Opacity controls - using CONFIG bounds
 		        const opacitySlider = document.getElementById('opacity');
 		        const opacityValue = document.getElementById('opacityValue');
 		        const nonSelOpacitySlider = document.getElementById('nonSelOpacity');
 		        const nonSelOpacityValue = document.getElementById('nonSelOpacityValue');
 		
-		        // Speed control
+		        // Speed control - using CONFIG bounds
 		        const speedSlider = document.getElementById('speed');
 		        const speedValue = document.getElementById('speedValue');
 		
 		        // Color controls
 		        const nonSelColorPicker = document.getElementById('nonSelColor');
 		        const randomizeColorsBtn = document.getElementById('randomizeColors');
+		
+		        // Set up slider attributes from CONFIG
+		        if (pointSizeSlider) {
+		            pointSizeSlider.min = CONFIG.selectedPoints.sizeMin;
+		            pointSizeSlider.max = CONFIG.selectedPoints.sizeMax;
+		            pointSizeSlider.step = CONFIG.selectedPoints.sizeStep;
+		            pointSizeSlider.value = CONFIG.selectedPoints.size;
+		            if (pointSizeValue) pointSizeValue.textContent = CONFIG.selectedPoints.size;
+		        }
+		
+		        if (nonSelPointSizeSlider) {
+		            nonSelPointSizeSlider.min = CONFIG.nonSelectedPoints.sizeMin;
+		            nonSelPointSizeSlider.max = CONFIG.nonSelectedPoints.sizeMax;
+		            nonSelPointSizeSlider.step = CONFIG.nonSelectedPoints.sizeStep;
+		            nonSelPointSizeSlider.value = CONFIG.nonSelectedPoints.size;
+		            if (nonSelPointSizeValue) nonSelPointSizeValue.textContent = CONFIG.nonSelectedPoints.size;
+		        }
+		
+		        if (opacitySlider) {
+		            opacitySlider.min = CONFIG.selectedPoints.opacityMin;
+		            opacitySlider.max = CONFIG.selectedPoints.opacityMax;
+		            opacitySlider.step = CONFIG.selectedPoints.opacityStep;
+		            opacitySlider.value = CONFIG.selectedPoints.opacity;
+		            if (opacityValue) opacityValue.textContent = CONFIG.selectedPoints.opacity.toFixed(2);
+		        }
+		
+		        if (nonSelOpacitySlider) {
+		            nonSelOpacitySlider.min = CONFIG.nonSelectedPoints.opacityMin;
+		            nonSelOpacitySlider.max = CONFIG.nonSelectedPoints.opacityMax;
+		            nonSelOpacitySlider.step = CONFIG.nonSelectedPoints.opacityStep;
+		            nonSelOpacitySlider.value = CONFIG.nonSelectedPoints.opacity;
+		            if (nonSelOpacityValue) nonSelOpacityValue.textContent = CONFIG.nonSelectedPoints.opacity.toFixed(2);
+		        }
+		
+		        if (speedSlider) {
+		            speedSlider.min = CONFIG.movement.speedMin;
+		            speedSlider.max = CONFIG.movement.speedMax;
+		            speedSlider.step = CONFIG.movement.speedStep;
+		            speedSlider.value = CONFIG.movement.speed;
+		            if (speedValue) speedValue.textContent = CONFIG.movement.speed;
+		        }
+		
+		        if (nonSelColorPicker) {
+		            nonSelColorPicker.value = CONFIG.nonSelectedPoints.color;
+		        }
 		
 		        // Selected point size
 		        if (pointSizeSlider && pointSizeValue) {
@@ -1188,6 +1524,7 @@
 		            speedSlider.addEventListener('input', () => {
 		                const v = parseFloat(speedSlider.value);
 		                speedValue.textContent = v;
+		                CONFIG.movement.speed = v;
 		                this.pointCloud.settings.speed = v;
 		            });
 		        }
@@ -1300,10 +1637,10 @@
 		                }
 		            });
 		
-		            // Set current values
-		            xAxisSelect.value = this.pointCloud.state.axis.x;
-		            yAxisSelect.value = this.pointCloud.state.axis.y;
-		            zAxisSelect.value = this.pointCloud.state.axis.z;
+		            // Set current values from CONFIG
+		            xAxisSelect.value = CONFIG.axes.x;
+		            yAxisSelect.value = CONFIG.axes.y;
+		            zAxisSelect.value = CONFIG.axes.z;
 		        }
 		
 		        // Apply button handlers for axes
@@ -1354,7 +1691,7 @@
 		
 		            const selectedValues = Array.from(this.pointCloud.state.selection);
 		
-		            if (selectedValues.length <= 20) {
+		            if (selectedValues.length <= CONFIG.ui.maxSelectedDisplay) {
 		                selectedValues.forEach((value, index) => {
 		                    const div = document.createElement('div');
 		                    div.className = 'value-grid-item selected';
@@ -1417,7 +1754,7 @@
 		                .filter(v => v !== null && v !== 'null' && v !== 'unknown')
 		                .sort();
 		
-		            if (uniqueValues.length <= 15) {
+		            if (uniqueValues.length <= CONFIG.ui.maxCategoricalDisplay) {
 		                uniqueValues.forEach(value => {
 		                    const color = this.pointCloud.selMgr._getCategoricalColor(value);
 		                    const div = document.createElement('div');
@@ -1480,15 +1817,17 @@
 		
 		            /* hover UI toggle */
 		            if (e.code === 'KeyK') {
-		                this.pointCloud.hoverActive = !this.pointCloud.hoverActive;
-		                this._updateStatusIndicator('hover-status', this.pointCloud.hoverActive);
-		                if (!this.pointCloud.hoverActive) this.hoverPanel.style.display = 'none';
+		                CONFIG.interaction.hoverActive = !CONFIG.interaction.hoverActive;
+		                this.pointCloud.hoverActive = CONFIG.interaction.hoverActive;
+		                this._updateStatusIndicator('hover-status', CONFIG.interaction.hoverActive);
+		                if (!CONFIG.interaction.hoverActive) this.hoverPanel.style.display = 'none';
 		            }
 		
 		            /* click-select toggle */
 		            if (e.code === 'KeyB') {
-		                this.pointCloud.selectOnClick = !this.pointCloud.selectOnClick;
-		                this._updateStatusIndicator('click-select-status', this.pointCloud.selectOnClick);
+		                CONFIG.interaction.selectOnClick = !CONFIG.interaction.selectOnClick;
+		                this.pointCloud.selectOnClick = CONFIG.interaction.selectOnClick;
+		                this._updateStatusIndicator('click-select-status', CONFIG.interaction.selectOnClick);
 		            }
 		        });
 		    }
@@ -1496,7 +1835,23 @@
 		    _togglePanel(name) {
 		        const cfg = this.uiConfig[name];
 		        cfg.visible = !cfg.visible;
+		
+		        // Update CONFIG to keep it in sync
+		        CONFIG.panels[name] = cfg.visible;
+		
 		        document.getElementById(cfg.elementId).style.display = cfg.visible ? 'block' : 'none';
+		    }
+		
+		    _updateStatusIndicator(elementId, enabled) {
+		        const statusEl = document.getElementById(elementId);
+		        statusEl.textContent = enabled ? '(enabled)' : '(disabled)';
+		        statusEl.className = `status-indicator ${enabled ? 'status-enabled' : 'status-disabled'}`;
+		    }
+		
+		    _updatePanelStatusIndicator(element, visible) {
+		        const statusEl = element.querySelector('.status-indicator');
+		        statusEl.textContent = visible ? '(enabled)' : '(disabled)';
+		        statusEl.className = `status-indicator ${visible ? 'status-enabled' : 'status-disabled'}`;
 		    }
 		
 		    /* ---------- per-frame UI refresh ------------------------------ */
@@ -1517,13 +1872,12 @@
 		        /* hover tooltip */
 		        this._showHover(this.pointCloud.hoverId);
 		
-		        /* current “Color by / Select by” labels */
+		        /* current "Color by / Select by" labels */
 		        this._updateColumnInfo();
 		
 		        /* performance monitoring */
 		        this._checkPerformance();
 		    }
-		
 		
 		    /* ---------- FPS / stats ----------------------------------- */
 		    _updateStats() {
@@ -1559,7 +1913,7 @@
 		
 		    /* ---------- hover tooltip --------------------------------- */
 		    _showHover(id) {
-		        if (!this.pointCloud.hoverActive || id == null) {
+		        if (!CONFIG.interaction.hoverActive || id == null) {
 		            this.hoverPanel.style.display = 'none';
 		            return;
 		        }
@@ -1578,8 +1932,8 @@
 		
 		        this.hoverPanel.innerHTML = html;
 		        const { x, y } = this.pointCloud.pointerScreen;
-		        this.hoverPanel.style.left = (x + 15) + 'px';
-		        this.hoverPanel.style.top = (y + 15) + 'px';
+		        this.hoverPanel.style.left = (x + CONFIG.ui.hoverOffset.x) + 'px';
+		        this.hoverPanel.style.top = (y + CONFIG.ui.hoverOffset.y) + 'px';
 		        this.hoverPanel.style.display = 'block';
 		    }
 		
@@ -1611,16 +1965,16 @@
 		        this.performanceWarning.textContent = message;
 		        this.performanceWarning.style.display = 'block';
 		
-		        // Hide after 4 seconds
+		        // Hide after duration from CONFIG
 		        setTimeout(() => {
 		            this.performanceWarning.style.display = 'none';
-		        }, 4000);
+		        }, CONFIG.performance.performanceWarningDuration);
 		    }
 		
 		    _checkPerformance() {
 		        const now = performance.now();
 		
-		        // Only check every 2 seconds
+		        // Only check every interval from CONFIG
 		        if (now - this.lastPerformanceCheck < this.performanceCheckInterval) {
 		            return;
 		        }
@@ -1632,10 +1986,10 @@
 		            this.performanceWarningShown = true;
 		            this._optimizeForPerformance();
 		
-		            // Reset the flag after some time
+		            // Reset the flag after cooldown from CONFIG
 		            setTimeout(() => {
 		                this.performanceWarningShown = false;
-		            }, 30000);
+		            }, CONFIG.performance.performanceOptimizationCooldown);
 		        }
 		    }
 		
@@ -1689,37 +2043,40 @@
 		        }
 		    }
 		}
-		
 		</script>
 		<!-- end 'ui.js' -->
 			<!-- begin 'PointCloud.js' -->
 		<script>
 		/* PointCloud.js – snap-to-point cross-hair, optional hover UI ("k"),
-		   optional click-to-select ("b"), and better picking accuracy. */
+		   optional click-to-select ("b"), and better picking accuracy using CONFIG. */
 		
-		class PointCloud {
+		   class PointCloud {
 		    /** @param {DataModel} model */
 		    constructor(model) {
 		        this.model = model;
 		
-		        /* ── THREE basics ─────────────────────────────────────── */
+		        /* ── THREE basics - using CONFIG values ──────────────────── */
 		        this.scene = new THREE.Scene();
 		        this.camera = new THREE.PerspectiveCamera(
-		            75, window.innerWidth / window.innerHeight, 0.1, 2_000);
-		        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+		            CONFIG.rendering.cameraFov, 
+		            window.innerWidth / window.innerHeight, 
+		            CONFIG.rendering.cameraNear, 
+		            CONFIG.rendering.cameraFar
+		        );
+		        this.renderer = new THREE.WebGLRenderer({ antialias: CONFIG.rendering.antialiasing });
 		
 		        /* ── picking helpers ──────────────────────────────────── */
 		        this.raycaster = new THREE.Raycaster();
-		        this.raycaster.params.Points = { threshold: 0.15 };   // world-unit tolerance
+		        this.raycaster.params.Points = { threshold: CONFIG.interaction.raycastThreshold };
 		        this.pointerNDC = new THREE.Vector2();
 		        this.pointerScreen = { x: 0, y: 0 };
 		
 		        this.hoverId = null;
 		        this.prevHoverId = null;
 		
-		        /* ── behaviour flags (toggled by UIManager) ───────────── */
-		        this.hoverActive = true;   // "k"
-		        this.selectOnClick = true;   // "b"
+		        /* ── behaviour flags (from CONFIG) ────────────────────── */
+		        this.hoverActive = CONFIG.interaction.hoverActive;
+		        this.selectOnClick = CONFIG.interaction.selectOnClick;
 		
 		        /* ── colour / selection state ─────────────────────────── */
 		        this.state = new VisState(model);
@@ -1727,15 +2084,19 @@
 		        this.state.addEventListener('selection', () => this._updateColors());
 		        this.state.addEventListener('vis', () => this._updateColors());
 		
-		        /* ── viewer settings ------------------------------------ */
-		        this.settings = { pointSize: 0.1, opacity: 0.8, speed: 10 };
+		        /* ── viewer settings - using CONFIG ──────────────────── */
+		        this.settings = { 
+		            pointSize: 0.1, 
+		            opacity: 0.8, 
+		            speed: CONFIG.movement.speed 
+		        };
 		
-		        /* ── movement bookkeeping -------------------------------- */
+		        /* ── movement bookkeeping ──────────────────────────────── */
 		        this.keys = {};
 		        this.pitch = 0;
 		        this.mouseDX = 0;
 		        this.mouseDY = 0;
-		        this.rollSpeed = 0.02;
+		        this.rollSpeed = CONFIG.movement.rollSpeed;
 		        this.velocity = new THREE.Vector3();
 		
 		        /* ── cross-hair objects ───────────────────────────────── */
@@ -1757,21 +2118,24 @@
 		
 		    _setupRenderer() {
 		        this.renderer.setSize(window.innerWidth, window.innerHeight);
-		        this.renderer.setClearColor(0x000011);
+		        this.renderer.setClearColor(CONFIG.rendering.clearColor);
 		        document.getElementById('container').appendChild(this.renderer.domElement);
 		        this.camera.position.set(0, 0, 0);
 		    }
 		
-		    /* ---------- in-scene cross-hair --------------------------- */
+		    /* ---------- in-scene cross-hair - using CONFIG ----------- */
 		    _createCrosshairs() {
 		        const mat = new THREE.LineBasicMaterial({
-		            color: 0xffff00, transparent: true, opacity: 0.4, depthTest: false
+		            color: CONFIG.crosshair.color, 
+		            transparent: true, 
+		            opacity: CONFIG.crosshair.opacity, 
+		            depthTest: false
 		        });
 		
 		        /* horizontal (X-axis) */
 		        const gH = new THREE.BufferGeometry().setFromPoints([
-		            new THREE.Vector3(-1_000, 0, 0),
-		            new THREE.Vector3(1_000, 0, 0)
+		            new THREE.Vector3(-CONFIG.crosshair.length, 0, 0),
+		            new THREE.Vector3(CONFIG.crosshair.length, 0, 0)
 		        ]);
 		        this.crossH = new THREE.Line(gH, mat);
 		        this.crossH.visible = false;
@@ -1779,8 +2143,8 @@
 		
 		        /* vertical (Y-axis) */
 		        const gV = new THREE.BufferGeometry().setFromPoints([
-		            new THREE.Vector3(0, -1_000, 0),
-		            new THREE.Vector3(0, 1_000, 0)
+		            new THREE.Vector3(0, -CONFIG.crosshair.length, 0),
+		            new THREE.Vector3(0, CONFIG.crosshair.length, 0)
 		        ]);
 		        this.crossV = new THREE.Line(gV, mat);
 		        this.crossV.visible = false;
@@ -1930,8 +2294,8 @@
 		            this.points.material.uniforms.baseSize.value = this.settings.pointSize;
 		            this.points.material.needsUpdate = true;
 		
-		            /* update picking tolerance to roughly match size */
-		            this.raycaster.params.Points.threshold = this.settings.pointSize * 3;
+		            /* update picking tolerance to roughly match size - using CONFIG */
+		            this.raycaster.params.Points.threshold = this.settings.pointSize * CONFIG.interaction.raycastThresholdMultiplier;
 		        }
 		    }
 		
@@ -1973,9 +2337,9 @@
 		        this.opacityAttr.needsUpdate = true;
 		    }
 		
-		    /* ---------- camera motion --------------------------------- */
+		    /* ---------- camera motion - using CONFIG values ---------- */
 		    _moveCamera() {
-		        const sens = 0.002;
+		        const sens = CONFIG.movement.mouseSensitivity;
 		        const yaw = -this.mouseDX * sens;
 		        const dp = -this.mouseDY * sens;
 		
@@ -1998,7 +2362,7 @@
 		
 		        if (this.velocity.lengthSq()) {
 		            const speed = this.settings.speed *
-		                (this.keys['ShiftLeft'] ? 3 : 1) * 0.016;
+		                (this.keys['ShiftLeft'] ? CONFIG.movement.sprintMultiplier : 1) * 0.016;
 		            this.velocity.normalize().multiplyScalar(speed)
 		                .applyQuaternion(this.camera.quaternion);
 		            this.camera.position.add(this.velocity);
@@ -2033,16 +2397,16 @@
 			<!-- begin 'navball.js' -->
 		<script>
 		class Navball {
-			constructor(containerId, size = 150) {
+			constructor(containerId, size = null) {
 				this.container = document.getElementById(containerId);
-				this.size = size;
+				this.size = size || CONFIG.navball.size;
 		
 				this.yaw = 0;
 				this.pitch = 0;
 				this.isDragging = false;
 				this.lastMouseX = 0;
 				this.lastMouseY = 0;
-				this.sensitivity = 0.01;
+				this.sensitivity = CONFIG.navball.sensitivity;
 		
 				this.init();
 			}
@@ -2070,8 +2434,12 @@
 			}
 		
 			createNavball() {
-				// Low-density wireframe sphere
-				const geometry = new THREE.SphereGeometry(1, 12, 8);
+				// Low-density wireframe sphere - using CONFIG values
+				const geometry = new THREE.SphereGeometry(
+					1,
+					CONFIG.navball.sphereDetail.widthSegments,
+					CONFIG.navball.sphereDetail.heightSegments
+				);
 				const material = new THREE.MeshBasicMaterial({
 					color: 0x004400,
 					wireframe: true,
@@ -2090,9 +2458,9 @@
 			}
 		
 			createAxes() {
-				const axisLength = 1.3;
-				const arrowLength = 0.1;
-				const arrowRadius = 0.02;
+				const axisLength = CONFIG.navball.axisLength;
+				const arrowLength = CONFIG.navball.arrowLength;
+				const arrowRadius = CONFIG.navball.arrowRadius;
 		
 				const axes = [
 					{ name: 'X', color: 0xff4444, direction: [1, 0, 0], rotation: [0, 0, -Math.PI / 2] },
@@ -2134,7 +2502,7 @@
 						})
 					);
 					label.position.set(x * midAxisPos, y * midAxisPos, z * midAxisPos);
-					label.scale.set(0.3, 0.3, 1);
+					label.scale.set(CONFIG.navball.labelScale, CONFIG.navball.labelScale, 1);
 					this.axisGroup.add(label);
 					this.axisLabels.push(label);
 				}
