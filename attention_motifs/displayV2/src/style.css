@@ -60,7 +60,8 @@ body {
 #controlsMenu {
 	top: 20px;
 	left: 20px;
-	min-width: 250px;
+	min-width: 400px;
+	/* Updated from 250px */
 }
 
 #statsMenu {
@@ -145,6 +146,103 @@ body {
 	transform: translateX(-50%);
 }
 
+/* New layout helpers for side-by-side sections */
+.control-section {
+	margin-bottom: 15px;
+}
+
+.control-section h4 {
+	margin: 0 0 10px 0;
+	color: #00ccff;
+	font-size: 12px;
+	font-weight: bold;
+}
+
+.side-by-side {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 15px;
+}
+
+.side-by-side-triple {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	gap: 12px;
+}
+
+/* Column selection side-by-side layout */
+.column-selection {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 15px;
+}
+
+.column-item {
+	display: flex;
+	flex-direction: column;
+}
+
+.column-item label {
+	margin-bottom: 5px;
+	font-size: 12px;
+	color: #00ccff;
+}
+
+.column-item select {
+	width: 100%;
+	background: #333;
+	color: #00ff00;
+	border: 1px solid #555;
+	padding: 5px;
+	border-radius: 3px;
+	margin-bottom: 5px;
+}
+
+/* Point configuration sections */
+.point-config {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.point-config h5 {
+	margin: 0 0 8px 0;
+	color: #00ccff;
+	font-size: 11px;
+	font-weight: bold;
+	text-align: center;
+}
+
+/* Axis selection layout */
+.axis-selection {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	gap: 12px;
+}
+
+.axis-item {
+	display: flex;
+	flex-direction: column;
+}
+
+.axis-item label {
+	margin-bottom: 5px;
+	font-size: 11px;
+	color: #00ccff;
+	text-align: center;
+}
+
+.axis-item select {
+	width: 100%;
+	background: #333;
+	color: #00ff00;
+	border: 1px solid #555;
+	padding: 4px;
+	border-radius: 3px;
+	margin-bottom: 5px;
+	font-size: 11px;
+}
+
 /* Control groups and sections */
 .control-group {
 	margin-bottom: 10px;
@@ -182,15 +280,20 @@ body {
 	border-radius: 3px;
 }
 
-.help-section, .stats-group, .nav-section {
+.help-section,
+.stats-group,
+.nav-section {
 	margin-bottom: 15px;
 }
 
-.help-section:last-child, .stats-group:last-child, .nav-section:last-child {
+.help-section:last-child,
+.stats-group:last-child,
+.nav-section:last-child {
 	margin-bottom: 0;
 }
 
-.help-section h3, .stats-group h3 {
+.help-section h3,
+.stats-group h3 {
 	margin: 0 0 8px 0;
 	color: #00ccff;
 	font-size: 12px;
@@ -203,7 +306,8 @@ body {
 	font-weight: bold;
 }
 
-.help-section p, .stats-group p {
+.help-section p,
+.stats-group p {
 	margin: 0 0 5px 0;
 	font-size: 12px;
 }
@@ -260,33 +364,68 @@ input[type="range"] {
 	border-radius: 3px;
 }
 
+/* Updated button styling to match theme better */
 button {
-	margin-top: 8px;
-	padding: 5px 10px;
-	background: #333;
-	color: #eee;
-	border: 1px solid #555;
+	margin-top: 5px;
+	padding: 6px 12px;
+	background: #2a4a2a;
+	color: #00ff00;
+	border: 1px solid #00ff00;
 	border-radius: 4px;
 	cursor: pointer;
+	font-family: 'Courier New', monospace;
+	font-size: 11px;
+	transition: all 0.2s;
 }
 
 button:hover {
-	background: #444;
+	background: #00ff00;
+	color: #000;
 }
 
+/* Special button for randomize colors */
+.randomize-btn {
+	background: #2a2a4a;
+	border-color: #4444ff;
+	color: #4444ff;
+}
+
+.randomize-btn:hover {
+	background: #4444ff;
+	color: #fff;
+}
+
+/* Export config button styling */
+.export-btn {
+	background: #4a2a4a;
+	border-color: #ff4444;
+	color: #ff4444;
+	width: 100%;
+	padding: 8px;
+}
+
+.export-btn:hover {
+	background: #ff4444;
+	color: #fff;
+}
+
+/* Legacy button class for compatibility */
 .color-randomize-btn {
-	background: #9467bd;
-	border: 1px solid #7a4fa3;
-	color: white;
-	padding: 4px 8px;
-	border-radius: 3px;
-	font-size: 10px;
+	background: #2a4a2a;
+	border: 1px solid #00ff00;
+	color: #00ff00;
+	padding: 6px 12px;
+	border-radius: 4px;
+	font-size: 11px;
 	cursor: pointer;
 	margin-top: 5px;
+	font-family: 'Courier New', monospace;
+	transition: all 0.2s;
 }
 
 .color-randomize-btn:hover {
-	background: #7a4fa3;
+	background: #00ff00;
+	color: #000;
 }
 
 /* Display elements */

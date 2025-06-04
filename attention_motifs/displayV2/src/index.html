@@ -64,75 +64,92 @@
 		</div>
 		<!-- ---------- Enhanced Controls menu ---------- -->
 		<div id="controlsMenu" class="menu">
-			<div class="control-group">
-				<h4 style="margin: 0 0 10px 0; color: #00ccff;">Column Selection</h4>
-				<div class="dropdown-container">
-					<label>Color by:</label>
-					<select id="colorBySelect"></select>
-					<button id="applyColorBy" class="color-randomize-btn" style="margin-top: 3px;">Apply</button>
-				</div>
-				<div class="dropdown-container">
-					<label>Select by:</label>
-					<select id="selectBySelect"></select>
-					<button id="applySelectBy" class="color-randomize-btn" style="margin-top: 3px;">Apply</button>
-				</div>
-			</div>
-			<div class="control-group" style="margin-top: 15px;">
-				<h4 style="margin: 0 0 10px 0; color: #00ccff;">Selected Points</h4>
-				<div class="control-row">
-					<label>Size:</label>
-					<input id="pointSize" type="range" min="1" max="20" step="1" value="6">
-					<span class="value-display" id="pointSizeValue">6</span>
-				</div>
-				<div class="control-row">
-					<label>Opacity:</label>
-					<input id="opacity" type="range" min="0.1" max="1" step="0.1" value="1.0">
-					<span class="value-display" id="opacityValue">1.0</span>
-				</div>
-				<button id="randomizeColors" class="color-randomize-btn">Randomize Colors</button>
-			</div>
-			<div class="control-group" style="margin-top: 15px;">
-				<h4 style="margin: 0 0 10px 0; color: #00ccff;">Non-Selected Points</h4>
-				<div class="control-row">
-					<label>Size:</label>
-					<input id="nonSelPointSize" type="range" min="1" max="20" step="1" value="4">
-					<span class="value-display" id="nonSelPointSizeValue">4</span>
-				</div>
-				<div class="control-row">
-					<label>Opacity:</label>
-					<input id="nonSelOpacity" type="range" min="0.01" max="1" step="0.01" value="0.25">
-					<span class="value-display" id="nonSelOpacityValue">0.25</span>
-				</div>
-				<div class="control-row">
-					<label>Color:</label>
-					<input id="nonSelColor" type="color" value="#666666">
+			<!-- Column Selection - Side by Side -->
+			<div class="control-section">
+				<h4>Column Selection</h4>
+				<div class="column-selection">
+					<div class="column-item">
+						<label>Color by:</label>
+						<select id="colorBySelect"></select>
+						<button id="applyColorBy">Apply</button>
+					</div>
+					<div class="column-item">
+						<label>Select by:</label>
+						<select id="selectBySelect"></select>
+						<button id="applySelectBy">Apply</button>
+					</div>
 				</div>
 			</div>
-			<div class="control-group" style="margin-top: 15px;">
-				<h4 style="margin: 0 0 10px 0; color: #00ccff;">Movement</h4>
+			<!-- Point Configuration - Side by Side -->
+			<div class="control-section">
+				<h4>Point Configuration</h4>
+				<div class="side-by-side">
+					<div class="point-config">
+						<h5>Selected Points</h5>
+						<div class="control-row">
+							<label>Size:</label>
+							<input id="pointSize" type="range" min="1" max="20" step="1" value="6">
+							<span class="value-display" id="pointSizeValue">6</span>
+						</div>
+						<div class="control-row">
+							<label>Opacity:</label>
+							<input id="opacity" type="range" min="0.1" max="1" step="0.1" value="1.0">
+							<span class="value-display" id="opacityValue">1.0</span>
+						</div>
+						<button id="randomizeColors" class="randomize-btn">Randomize Colors</button>
+					</div>
+					<div class="point-config">
+						<h5>Non-Selected Points</h5>
+						<div class="control-row">
+							<label>Size:</label>
+							<input id="nonSelPointSize" type="range" min="1" max="20" step="1" value="4">
+							<span class="value-display" id="nonSelPointSizeValue">4</span>
+						</div>
+						<div class="control-row">
+							<label>Opacity:</label>
+							<input id="nonSelOpacity" type="range" min="0.01" max="1" step="0.01" value="0.25">
+							<span class="value-display" id="nonSelOpacityValue">0.25</span>
+						</div>
+						<div class="control-row">
+							<label>Color:</label>
+							<input id="nonSelColor" type="color" value="#666666">
+						</div>
+					</div>
+				</div>
+			</div>
+			<!-- Movement -->
+			<div class="control-section">
+				<h4>Movement</h4>
 				<div class="control-row">
 					<label>Speed:</label>
 					<input id="speed" type="range" min="1" max="200" step="1" value="50">
 					<span class="value-display" id="speedValue">50</span>
 				</div>
 			</div>
-			<div class="control-group" style="margin-top: 15px;">
-				<h4 style="margin: 0 0 10px 0; color: #00ccff;">Axis Selection</h4>
-				<div class="dropdown-container">
-					<label>X-Axis:</label>
-					<select id="xAxisSelect"></select>
-					<button id="applyXAxis" class="color-randomize-btn" style="margin-top: 3px;">Apply</button>
+			<!-- Axis Selection - Three Columns -->
+			<div class="control-section">
+				<h4>Axis Selection</h4>
+				<div class="axis-selection">
+					<div class="axis-item">
+						<label>X-Axis:</label>
+						<select id="xAxisSelect"></select>
+						<button id="applyXAxis">Apply</button>
+					</div>
+					<div class="axis-item">
+						<label>Y-Axis:</label>
+						<select id="yAxisSelect"></select>
+						<button id="applyYAxis">Apply</button>
+					</div>
+					<div class="axis-item">
+						<label>Z-Axis:</label>
+						<select id="zAxisSelect"></select>
+						<button id="applyZAxis">Apply</button>
+					</div>
 				</div>
-				<div class="dropdown-container">
-					<label>Y-Axis:</label>
-					<select id="yAxisSelect"></select>
-					<button id="applyYAxis" class="color-randomize-btn" style="margin-top: 3px;">Apply</button>
-				</div>
-				<div class="dropdown-container">
-					<label>Z-Axis:</label>
-					<select id="zAxisSelect"></select>
-					<button id="applyZAxis" class="color-randomize-btn" style="margin-top: 3px;">Apply</button>
-				</div>
+			</div>
+			<!-- Clear Selection -->
+			<div class="control-section">
+				<button id="clearSelectionBtn" style="width: 100%;">Clear All Selection</button>
 			</div>
 			<!-- Export Config Button will be added here by JavaScript -->
 			<div class="close-hint">Press M to close</div>

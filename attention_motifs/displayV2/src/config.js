@@ -124,7 +124,8 @@ function getDefaultConfig() {
 			maxCategoricalDisplay: 15,
 			maxSelectedDisplay: 20,
 			hoverOffset: { x: 15, y: 15 },
-			shortcutStatusUpdateDelay: 100
+			shortcutStatusUpdateDelay: 100,
+			menuWidth: 50
 		}
 	}
 }

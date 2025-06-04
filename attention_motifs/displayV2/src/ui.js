@@ -310,15 +310,21 @@ class UIManager {
     }
 
     _setupDropdowns() {
+        // Apply menu width from CONFIG
+        const controlsMenu = document.getElementById('controlsMenu');
+        if (controlsMenu) {
+            controlsMenu.style.minWidth = `${CONFIG.ui.menuWidth}px`;
+        }
+    
         const colorBySelect = document.getElementById('colorBySelect');
         const selectBySelect = document.getElementById('selectBySelect');
         const applyColorBy = document.getElementById('applyColorBy');
         const applySelectBy = document.getElementById('applySelectBy');
-
+    
         if (colorBySelect) {
             // Clear existing options
             colorBySelect.innerHTML = '';
-
+    
             // Populate color by dropdown
             this.cats.forEach(col => {
                 const option = document.createElement('option');
@@ -326,14 +332,14 @@ class UIManager {
                 option.textContent = col;
                 colorBySelect.appendChild(option);
             });
-
+    
             colorBySelect.value = this.pointCloud.state.colorBy;
         }
-
+    
         if (selectBySelect) {
             // Clear existing options
             selectBySelect.innerHTML = '';
-
+    
             // Populate select by dropdown
             this.cats.forEach(col => {
                 const option = document.createElement('option');
@@ -341,10 +347,10 @@ class UIManager {
                 option.textContent = col;
                 selectBySelect.appendChild(option);
             });
-
+    
             selectBySelect.value = this.pointCloud.state.selectBy;
         }
-
+    
         // Apply button handlers
         if (applyColorBy) {
             applyColorBy.addEventListener('click', () => {
@@ -353,7 +359,7 @@ class UIManager {
                 this.colorIdx = Math.max(0, this.cats.indexOf(colorBySelect.value));
             });
         }
-
+    
         if (applySelectBy) {
             applySelectBy.addEventListener('click', () => {
                 this.pointCloud.selMgr.clearCaches();
@@ -361,7 +367,7 @@ class UIManager {
                 this.selectIdx = Math.max(0, this.cats.indexOf(selectBySelect.value));
             });
         }
-
+    
         // Setup axis dropdowns
         const xAxisSelect = document.getElementById('xAxisSelect');
         const yAxisSelect = document.getElementById('yAxisSelect');
@@ -369,7 +375,7 @@ class UIManager {
         const applyXAxis = document.getElementById('applyXAxis');
         const applyYAxis = document.getElementById('applyYAxis');
         const applyZAxis = document.getElementById('applyZAxis');
-
+    
         if (xAxisSelect && yAxisSelect && zAxisSelect) {
             // Populate axis dropdowns with available PCA components
             const numComponents = this.pointCloud.model.numericCols.length;
@@ -382,13 +388,13 @@ class UIManager {
                     select.appendChild(option);
                 }
             });
-
+    
             // Set current values from CONFIG
             xAxisSelect.value = CONFIG.axes.x;
             yAxisSelect.value = CONFIG.axes.y;
             zAxisSelect.value = CONFIG.axes.z;
         }
-
+    
         // Apply button handlers for axes
         if (applyXAxis) {
             applyXAxis.addEventListener('click', () => {
@@ -396,21 +402,21 @@ class UIManager {
                 this.pointCloud._buildGeometry();
             });
         }
-
+    
         if (applyYAxis) {
             applyYAxis.addEventListener('click', () => {
                 this.pointCloud.state.setAxis('y', parseInt(yAxisSelect.value));
                 this.pointCloud._buildGeometry();
             });
         }
-
+    
         if (applyZAxis) {
             applyZAxis.addEventListener('click', () => {
                 this.pointCloud.state.setAxis('z', parseInt(zAxisSelect.value));
                 this.pointCloud._buildGeometry();
             });
         }
-
+    
         // Add export config button to controls menu
         this._addExportConfigButton();
     }
@@ -420,17 +426,16 @@ class UIManager {
         if (controlsMenu) {
             // Add export button at the end of the controls menu
             const exportSection = document.createElement('div');
-            exportSection.className = 'control-group';
-            exportSection.style.marginTop = '15px';
+            exportSection.className = 'control-section';
             exportSection.innerHTML = `
-                <h4 style="margin: 0 0 10px 0; color: #00ccff;">Configuration</h4>
-                <button id="exportConfigBtn" class="color-randomize-btn" style="width: 100%; padding: 8px;">Export Current Config</button>
+                <h4>Configuration</h4>
+                <button id="exportConfigBtn" class="export-btn">Export Current Config</button>
             `;
-
+    
             // Insert before the close hint
             const closeHint = controlsMenu.querySelector('.close-hint');
             controlsMenu.insertBefore(exportSection, closeHint);
-
+    
             // Add event listener
             const exportBtn = document.getElementById('exportConfigBtn');
             if (exportBtn) {
