@@ -1,4 +1,4 @@
-/* VisState.js  -- replaces previous version */
+/* VisState.js  -- replaces previous version with URL sync */
 class VisState extends EventTarget {
 	constructor(model) {
 		super();
@@ -20,6 +20,19 @@ class VisState extends EventTarget {
 
 		/* store *values* (categories) now, not row indices */
 		this.selection = new Set();
+
+		// Initialize selection from CONFIG if specified
+		// Handle both array and single value cases from URL parsing
+		if (CONFIG.selectedValues) {
+			if (Array.isArray(CONFIG.selectedValues)) {
+				CONFIG.selectedValues.forEach(value => this.selection.add(value));
+			} else if (typeof CONFIG.selectedValues === 'string') {
+				// Single value from URL (not comma-separated)
+				this.selection.add(CONFIG.selectedValues);
+				// Update CONFIG to be consistent array format
+				CONFIG.selectedValues = [CONFIG.selectedValues];
+			}
+		}
 	}
 
 	isNumericColumn(column) {
@@ -36,12 +49,14 @@ class VisState extends EventTarget {
 		this.axis[dim] = val;
 		// Update CONFIG to keep it in sync
 		CONFIG.axes[dim] = val;
+		this._syncToURL();
 		this._fire('axis');
 	}
 
 	setColorBy(col) {
 		this.colorBy = col;
 		CONFIG.defaultColorColumn = col;
+		this._syncToURL();
 		this._fire('vis');
 	}
 
@@ -49,6 +64,7 @@ class VisState extends EventTarget {
 		this.selectBy = col;
 		CONFIG.defaultSelectionColumn = col;
 		this.clearSel();
+		this._syncToURL();
 		this._fire('vis');
 	}
 
@@ -74,6 +90,7 @@ class VisState extends EventTarget {
 				break;
 		}
 
+		this._syncToURL();
 		this._fire('vis');
 	}
 
@@ -82,10 +99,26 @@ class VisState extends EventTarget {
 		if (v == null) return;
 		this.selection.has(v) ? this.selection.delete(v)
 			: this.selection.add(v);
+
+		// Update CONFIG with current selection
+		CONFIG.selectedValues = Array.from(this.selection);
+		this._syncToURL();
 		this._fire('selection');
 	}
 
-	clearSel() { this.selection.clear(); this._fire('selection'); }
+	clearSel() {
+		this.selection.clear();
+		CONFIG.selectedValues = [];
+		this._syncToURL();
+		this._fire('selection');
+	}
+
+	/**
+	 * Sync current state to URL parameters
+	 */
+	_syncToURL() {
+		updateURL();
+	}
 
 	_fire(type) { this.dispatchEvent(new Event(type)); }
 }

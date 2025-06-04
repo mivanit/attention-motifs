@@ -1,4 +1,4 @@
-/* ui.js - Updated to use CONFIG values */
+/* ui.js - Updated to use CONFIG values and add export button */
 class UIManager {
     constructor(pointCloud) {
         this.pointCloud = pointCloud;
@@ -144,10 +144,12 @@ class UIManager {
                 this.pointCloud.hoverActive = CONFIG.interaction.hoverActive;
                 this._updateStatusIndicator('hover-status', CONFIG.interaction.hoverActive);
                 if (!CONFIG.interaction.hoverActive) this.hoverPanel.style.display = 'none';
+                updateURL(); // Sync to URL
             } else if (action === 'click-select-toggle') {
                 CONFIG.interaction.selectOnClick = !CONFIG.interaction.selectOnClick;
                 this.pointCloud.selectOnClick = CONFIG.interaction.selectOnClick;
                 this._updateStatusIndicator('click-select-status', CONFIG.interaction.selectOnClick);
+                updateURL(); // Sync to URL
             } else {
                 const entry = Object.entries(this.uiConfig)
                     .find(([, cfg]) => cfg.elementId === action);
@@ -269,6 +271,7 @@ class UIManager {
                 speedValue.textContent = v;
                 CONFIG.movement.speed = v;
                 this.pointCloud.settings.speed = v;
+                updateURL(); // Sync to URL
             });
         }
 
@@ -406,6 +409,35 @@ class UIManager {
                 this.pointCloud.state.setAxis('z', parseInt(zAxisSelect.value));
                 this.pointCloud._buildGeometry();
             });
+        }
+
+        // Add export config button to controls menu
+        this._addExportConfigButton();
+    }
+
+    _addExportConfigButton() {
+        const controlsMenu = document.getElementById('controlsMenu');
+        if (controlsMenu) {
+            // Add export button at the end of the controls menu
+            const exportSection = document.createElement('div');
+            exportSection.className = 'control-group';
+            exportSection.style.marginTop = '15px';
+            exportSection.innerHTML = `
+                <h4 style="margin: 0 0 10px 0; color: #00ccff;">Configuration</h4>
+                <button id="exportConfigBtn" class="color-randomize-btn" style="width: 100%; padding: 8px;">Export Current Config</button>
+            `;
+
+            // Insert before the close hint
+            const closeHint = controlsMenu.querySelector('.close-hint');
+            controlsMenu.insertBefore(exportSection, closeHint);
+
+            // Add event listener
+            const exportBtn = document.getElementById('exportConfigBtn');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', () => {
+                    exportConfigToNewTab();
+                });
+            }
         }
     }
 
@@ -564,6 +596,7 @@ class UIManager {
                 this.pointCloud.hoverActive = CONFIG.interaction.hoverActive;
                 this._updateStatusIndicator('hover-status', CONFIG.interaction.hoverActive);
                 if (!CONFIG.interaction.hoverActive) this.hoverPanel.style.display = 'none';
+                updateURL(); // Sync to URL
             }
 
             /* click-select toggle */
@@ -571,6 +604,7 @@ class UIManager {
                 CONFIG.interaction.selectOnClick = !CONFIG.interaction.selectOnClick;
                 this.pointCloud.selectOnClick = CONFIG.interaction.selectOnClick;
                 this._updateStatusIndicator('click-select-status', CONFIG.interaction.selectOnClick);
+                updateURL(); // Sync to URL
             }
         });
     }
@@ -581,6 +615,7 @@ class UIManager {
 
         // Update CONFIG to keep it in sync
         CONFIG.panels[name] = cfg.visible;
+        updateURL(); // Sync to URL
 
         document.getElementById(cfg.elementId).style.display = cfg.visible ? 'block' : 'none';
     }

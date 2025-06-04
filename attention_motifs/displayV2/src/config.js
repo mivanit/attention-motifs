@@ -8,6 +8,9 @@ function getDefaultConfig() {
 		defaultSelectionColumn: "activation.model",
 		hoverColumns: ["activation.cls", "activation.prompt"],
 
+		// Selected values - new addition
+		selectedValues: [],
+
 		// UI panel visibility
 		panels: {
 			help: false,
@@ -127,11 +130,13 @@ function getDefaultConfig() {
 }
 
 let CONFIG = getDefaultConfig();
+let LOADED_CONFIG = null; // Store the config as loaded from file for comparison
+let URL_UPDATE_TIMEOUT = null;
 
 /**
  * Load config.json (if present) and merge into CONFIG.
  * Also parse URL parameters and apply them to CONFIG.
- * Missing keys fall back to the defaults above.
+ * Priority: URL params > config.json > defaults
  * @returns {Promise<object>} resolved CONFIG object
  */
 async function getConfig() {
@@ -142,14 +147,21 @@ async function getConfig() {
 			const loaded = await r.json();
 			// Deep merge loaded config into CONFIG
 			deepMerge(CONFIG, loaded);
+			// Store a deep copy of the loaded config for URL comparison
+			LOADED_CONFIG = JSON.parse(JSON.stringify(CONFIG));
+			console.log("Loaded config.json");
 		} else {
 			console.warn("config.json not found, using defaults");
+			// If no config.json, use defaults for comparison
+			LOADED_CONFIG = JSON.parse(JSON.stringify(CONFIG));
 		}
 	} catch (e) {
 		console.error("Config load error:", e);
+		// On error, use defaults for comparison
+		LOADED_CONFIG = JSON.parse(JSON.stringify(CONFIG));
 	}
 
-	// Parse URL parameters and override CONFIG values
+	// Parse URL parameters and override CONFIG values (highest priority)
 	parseURLParams();
 
 	return CONFIG;
@@ -172,6 +184,7 @@ function deepMerge(target, source) {
 /**
  * Parse URL parameters and update CONFIG
  * Supports nested paths like: ?axes.x=2&selectedPoints.size=8&panels.menu=true
+ * Also supports arrays like: ?selectedValues=value1,value2,value3
  */
 function parseURLParams() {
 	const params = new URLSearchParams(window.location.search);
@@ -204,54 +217,91 @@ function setNestedConfigValue(obj, path, value) {
 
 /**
  * Parse a string value from URL params into appropriate type
+ * Handles arrays (comma-separated values)
  */
 function parseConfigValue(value) {
 	// Boolean
 	if (value === 'true') return true;
 	if (value === 'false') return false;
 
+	// Array (comma-separated) - but handle single values too
+	if (value.includes(',')) {
+		return value.split(',').map(v => v.trim()).filter(v => v.length > 0);
+	}
+
 	// Number
 	if (!isNaN(value) && !isNaN(parseFloat(value))) {
 		return parseFloat(value);
 	}
 
-	// String (including hex colors)
+	// String (including hex colors) - treat single values as arrays for selectedValues
 	return value;
 }
 
 /**
- * Generate URL search params from current CONFIG state
- * Only includes values that differ from defaults
+ * Update the URL with current CONFIG state
+ * Debounced to avoid excessive URL updates
  */
-function generateURLParams(baseConfig = null) {
-	if (!baseConfig) {
-		// Create a fresh default config for comparison
-		baseConfig = getDefaultConfig();
+function updateURL() {
+	if (URL_UPDATE_TIMEOUT) {
+		clearTimeout(URL_UPDATE_TIMEOUT);
+	}
+
+	URL_UPDATE_TIMEOUT = setTimeout(() => {
+		const params = generateURLParams();
+		const newURL = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+		window.history.replaceState({}, '', newURL);
+		URL_UPDATE_TIMEOUT = null;
+	}, 500); // 500ms debounce
+}
+
+/**
+ * Generate URL search params from current CONFIG state
+ * Only includes values that differ from the loaded config (not defaults)
+ */
+function generateURLParams() {
+	if (!LOADED_CONFIG) {
+		// Fallback to default config if loaded config not available
+		return new URLSearchParams();
 	}
 
 	const params = new URLSearchParams();
-	const differences = findConfigDifferences(CONFIG, baseConfig);
+	const differences = findConfigDifferences(CONFIG, LOADED_CONFIG);
 
 	for (const [path, value] of differences) {
-		params.set(path, value.toString());
+		// Special handling for arrays
+		if (Array.isArray(value)) {
+			if (value.length > 0) {
+				params.set(path, value.join(','));
+			}
+		} else {
+			params.set(path, value.toString());
+		}
 	}
 
 	return params;
 }
 
 /**
- * Find differences between current config and base config
+ * Find differences between current config and loaded config
  * Returns array of [path, value] tuples
+ * Uses epsilon comparison for floats
  */
 function findConfigDifferences(current, base, prefix = '') {
 	const differences = [];
+	const EPSILON = 0.001;
 
 	for (const key in current) {
 		const currentPath = prefix ? `${prefix}.${key}` : key;
 		const currentValue = current[key];
 		const baseValue = base[key];
 
-		if (typeof currentValue === 'object' && !Array.isArray(currentValue) && currentValue !== null) {
+		if (Array.isArray(currentValue)) {
+			// Special handling for arrays
+			if (!Array.isArray(baseValue) || !arraysEqual(currentValue, baseValue)) {
+				differences.push([currentPath, currentValue]);
+			}
+		} else if (typeof currentValue === 'object' && currentValue !== null) {
 			if (typeof baseValue === 'object' && !Array.isArray(baseValue) && baseValue !== null) {
 				differences.push(...findConfigDifferences(currentValue, baseValue, currentPath));
 			} else {
@@ -259,12 +309,55 @@ function findConfigDifferences(current, base, prefix = '') {
 				differences.push([currentPath, JSON.stringify(currentValue)]);
 			}
 		} else {
-			// Compare primitive values
-			if (currentValue !== baseValue) {
+			// Compare primitive values with epsilon for floats
+			let valuesEqual = false;
+
+			if (typeof currentValue === 'number' && typeof baseValue === 'number') {
+				// Use epsilon comparison for floats
+				valuesEqual = Math.abs(currentValue - baseValue) < EPSILON;
+			} else {
+				// Direct comparison for other types
+				valuesEqual = currentValue === baseValue;
+			}
+
+			if (!valuesEqual) {
 				differences.push([currentPath, currentValue]);
 			}
 		}
 	}
 
 	return differences;
+}
+
+/**
+ * Helper function to compare arrays
+ */
+function arraysEqual(arr1, arr2) {
+	if (arr1.length !== arr2.length) return false;
+	for (let i = 0; i < arr1.length; i++) {
+		if (arr1[i] !== arr2[i]) return false;
+	}
+	return true;
+}
+
+/**
+ * Get the current configuration as a formatted JSON string
+ */
+function getConfigAsJSON() {
+	return JSON.stringify(CONFIG, null, 2);
+}
+
+/**
+ * Open a new tab with the current configuration
+ */
+function exportConfigToNewTab() {
+	const configText = getConfigAsJSON();
+	const blob = new Blob([configText], { type: 'application/json' });
+	const url = URL.createObjectURL(blob);
+	const newWindow = window.open(url, '_blank');
+
+	// Clean up the object URL after a delay
+	setTimeout(() => {
+		URL.revokeObjectURL(url);
+	}, 1000);
 }
