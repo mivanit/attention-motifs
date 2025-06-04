@@ -125,7 +125,7 @@ function getDefaultConfig() {
 			maxSelectedDisplay: 20,
 			hoverOffset: { x: 15, y: 15 },
 			shortcutStatusUpdateDelay: 100,
-			menuWidth: 400
+			menuWidth: 350
 		}
 	}
 }
