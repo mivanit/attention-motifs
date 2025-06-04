@@ -73,8 +73,6 @@
 		#controlsMenu {
 			top: 20px;
 			left: 20px;
-			min-width: 400px;
-			/* Updated from 250px */
 		}
 		
 		#statsMenu {
@@ -581,6 +579,39 @@
 			font-size: 10px;
 			margin-top: 2px;
 		}
+		
+		/* New control row layout for sliders */
+		.control-row-new {
+			display: flex;
+			flex-direction: column;
+			margin-bottom: 8px;
+			gap: 5px;
+		}
+		
+		.control-row-new label {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			font-size: 11px;
+			margin: 0;
+		}
+		
+		.value-display-right {
+			font-weight: bold;
+			color: #00ff00;
+			min-width: 40px;
+			text-align: right;
+		}
+		
+		.slider-container {
+			width: 40%;
+			margin: 0 auto;
+		}
+		
+		.slider-container input[type="range"] {
+			width: 100%;
+			margin: 0;
+		}
 		</style>
 		<!-- end 'style.css' -->
 	<!-- code -->
@@ -713,7 +744,7 @@
 					maxSelectedDisplay: 20,
 					hoverOffset: { x: 15, y: 15 },
 					shortcutStatusUpdateDelay: 100,
-					menuWidth: 50
+					menuWidth: 400
 				}
 			}
 		}
@@ -1231,11 +1262,27 @@
 				const df = DataFrame.from_jsonl(text);
 				const numeric = df.columns
 					.filter(c => c.startsWith(numericalPrefix))
-					.sort();
+					.sort((a, b) => {
+						// Extract the part after the prefix
+						const aSuffix = a.substring(numericalPrefix.length);
+						const bSuffix = b.substring(numericalPrefix.length);
+		
+						// Check if both suffixes are integers
+						const aNum = parseInt(aSuffix, 10);
+						const bNum = parseInt(bSuffix, 10);
+		
+						// If both are valid integers, sort numerically
+						if (!isNaN(aNum) && !isNaN(bNum) &&
+							aNum.toString() === aSuffix && bNum.toString() === bSuffix) {
+							return aNum - bNum;
+						}
+		
+						// Otherwise, sort lexicographically
+						return a.localeCompare(b);
+					});
 				return new DataModel(df, numeric);
 			}
 		}
-		
 		</script>
 		<!-- end 'DataModel.js' -->
 			<!-- begin 'SelectionManager.js' -->
@@ -1814,17 +1861,17 @@
 		        const controlsMenu = document.getElementById('controlsMenu');
 		        if (controlsMenu) {
 		            controlsMenu.style.minWidth = `${CONFIG.ui.menuWidth}px`;
+		            controlsMenu.style.width = `${CONFIG.ui.menuWidth}px`;
 		        }
-		    
+		
 		        const colorBySelect = document.getElementById('colorBySelect');
 		        const selectBySelect = document.getElementById('selectBySelect');
-		        const applyColorBy = document.getElementById('applyColorBy');
-		        const applySelectBy = document.getElementById('applySelectBy');
-		    
+		        const applyColumns = document.getElementById('applyColumns');
+		
 		        if (colorBySelect) {
 		            // Clear existing options
 		            colorBySelect.innerHTML = '';
-		    
+		
 		            // Populate color by dropdown
 		            this.cats.forEach(col => {
 		                const option = document.createElement('option');
@@ -1832,14 +1879,14 @@
 		                option.textContent = col;
 		                colorBySelect.appendChild(option);
 		            });
-		    
+		
 		            colorBySelect.value = this.pointCloud.state.colorBy;
 		        }
-		    
+		
 		        if (selectBySelect) {
 		            // Clear existing options
 		            selectBySelect.innerHTML = '';
-		    
+		
 		            // Populate select by dropdown
 		            this.cats.forEach(col => {
 		                const option = document.createElement('option');
@@ -1847,35 +1894,27 @@
 		                option.textContent = col;
 		                selectBySelect.appendChild(option);
 		            });
-		    
+		
 		            selectBySelect.value = this.pointCloud.state.selectBy;
 		        }
-		    
-		        // Apply button handlers
-		        if (applyColorBy) {
-		            applyColorBy.addEventListener('click', () => {
+		
+		        // Single Apply button for columns
+		        if (applyColumns) {
+		            applyColumns.addEventListener('click', () => {
 		                this.pointCloud.selMgr.clearCaches();
 		                this.pointCloud.state.setColorBy(colorBySelect.value);
-		                this.colorIdx = Math.max(0, this.cats.indexOf(colorBySelect.value));
-		            });
-		        }
-		    
-		        if (applySelectBy) {
-		            applySelectBy.addEventListener('click', () => {
-		                this.pointCloud.selMgr.clearCaches();
 		                this.pointCloud.state.setSelectBy(selectBySelect.value);
+		                this.colorIdx = Math.max(0, this.cats.indexOf(colorBySelect.value));
 		                this.selectIdx = Math.max(0, this.cats.indexOf(selectBySelect.value));
 		            });
 		        }
-		    
+		
 		        // Setup axis dropdowns
 		        const xAxisSelect = document.getElementById('xAxisSelect');
 		        const yAxisSelect = document.getElementById('yAxisSelect');
 		        const zAxisSelect = document.getElementById('zAxisSelect');
-		        const applyXAxis = document.getElementById('applyXAxis');
-		        const applyYAxis = document.getElementById('applyYAxis');
-		        const applyZAxis = document.getElementById('applyZAxis');
-		    
+		        const applyAxes = document.getElementById('applyAxes');
+		
 		        if (xAxisSelect && yAxisSelect && zAxisSelect) {
 		            // Populate axis dropdowns with available PCA components
 		            const numComponents = this.pointCloud.model.numericCols.length;
@@ -1888,63 +1927,32 @@
 		                    select.appendChild(option);
 		                }
 		            });
-		    
+		
 		            // Set current values from CONFIG
 		            xAxisSelect.value = CONFIG.axes.x;
 		            yAxisSelect.value = CONFIG.axes.y;
 		            zAxisSelect.value = CONFIG.axes.z;
 		        }
-		    
-		        // Apply button handlers for axes
-		        if (applyXAxis) {
-		            applyXAxis.addEventListener('click', () => {
+		
+		        // Single Apply button for axes
+		        if (applyAxes) {
+		            applyAxes.addEventListener('click', () => {
 		                this.pointCloud.state.setAxis('x', parseInt(xAxisSelect.value));
-		                this.pointCloud._buildGeometry();
-		            });
-		        }
-		    
-		        if (applyYAxis) {
-		            applyYAxis.addEventListener('click', () => {
 		                this.pointCloud.state.setAxis('y', parseInt(yAxisSelect.value));
-		                this.pointCloud._buildGeometry();
-		            });
-		        }
-		    
-		        if (applyZAxis) {
-		            applyZAxis.addEventListener('click', () => {
 		                this.pointCloud.state.setAxis('z', parseInt(zAxisSelect.value));
 		                this.pointCloud._buildGeometry();
 		            });
 		        }
-		    
-		        // Add export config button to controls menu
-		        this._addExportConfigButton();
-		    }
 		
-		    _addExportConfigButton() {
-		        const controlsMenu = document.getElementById('controlsMenu');
-		        if (controlsMenu) {
-		            // Add export button at the end of the controls menu
-		            const exportSection = document.createElement('div');
-		            exportSection.className = 'control-section';
-		            exportSection.innerHTML = `
-		                <h4>Configuration</h4>
-		                <button id="exportConfigBtn" class="export-btn">Export Current Config</button>
-		            `;
-		    
-		            // Insert before the close hint
-		            const closeHint = controlsMenu.querySelector('.close-hint');
-		            controlsMenu.insertBefore(exportSection, closeHint);
-		    
-		            // Add event listener
-		            const exportBtn = document.getElementById('exportConfigBtn');
-		            if (exportBtn) {
-		                exportBtn.addEventListener('click', () => {
-		                    exportConfigToNewTab();
-		                });
-		            }
+		        // Setup export config button (now in HTML)
+		        const exportBtn = document.getElementById('exportConfigBtn');
+		        if (exportBtn) {
+		            exportBtn.addEventListener('click', () => {
+		                exportConfigToNewTab();
+		            });
 		        }
 		    }
+		
 		
 		    _updateColumnInfo() {
 		        const colorByEl = document.getElementById('currentColorBy');
@@ -2932,14 +2940,13 @@
 					<div class="column-item">
 						<label>Color by:</label>
 						<select id="colorBySelect"></select>
-						<button id="applyColorBy">Apply</button>
 					</div>
 					<div class="column-item">
 						<label>Select by:</label>
 						<select id="selectBySelect"></select>
-						<button id="applySelectBy">Apply</button>
 					</div>
 				</div>
+				<button id="applyColumns" style="width: 100%; margin-top: 10px;">Apply Column Choice</button>
 			</div>
 			<!-- Point Configuration - Side by Side -->
 			<div class="control-section">
@@ -2947,29 +2954,33 @@
 				<div class="side-by-side">
 					<div class="point-config">
 						<h5>Selected Points</h5>
-						<div class="control-row">
-							<label>Size:</label>
-							<input id="pointSize" type="range" min="1" max="20" step="1" value="6">
-							<span class="value-display" id="pointSizeValue">6</span>
+						<div class="control-row-new">
+							<label>Size: <span class="value-display-right" id="pointSizeValue">6</span></label>
+							<div class="slider-container">
+								<input id="pointSize" type="range" min="1" max="20" step="1" value="6">
+							</div>
 						</div>
-						<div class="control-row">
-							<label>Opacity:</label>
-							<input id="opacity" type="range" min="0.1" max="1" step="0.1" value="1.0">
-							<span class="value-display" id="opacityValue">1.0</span>
+						<div class="control-row-new">
+							<label>Opacity: <span class="value-display-right" id="opacityValue">1.0</span></label>
+							<div class="slider-container">
+								<input id="opacity" type="range" min="0.1" max="1" step="0.1" value="1.0">
+							</div>
 						</div>
 						<button id="randomizeColors" class="randomize-btn">Randomize Colors</button>
 					</div>
 					<div class="point-config">
 						<h5>Non-Selected Points</h5>
-						<div class="control-row">
-							<label>Size:</label>
-							<input id="nonSelPointSize" type="range" min="1" max="20" step="1" value="4">
-							<span class="value-display" id="nonSelPointSizeValue">4</span>
+						<div class="control-row-new">
+							<label>Size: <span class="value-display-right" id="nonSelPointSizeValue">4</span></label>
+							<div class="slider-container">
+								<input id="nonSelPointSize" type="range" min="1" max="20" step="1" value="4">
+							</div>
 						</div>
-						<div class="control-row">
-							<label>Opacity:</label>
-							<input id="nonSelOpacity" type="range" min="0.01" max="1" step="0.01" value="0.25">
-							<span class="value-display" id="nonSelOpacityValue">0.25</span>
+						<div class="control-row-new">
+							<label>Opacity: <span class="value-display-right" id="nonSelOpacityValue">0.25</span></label>
+							<div class="slider-container">
+								<input id="nonSelOpacity" type="range" min="0.01" max="1" step="0.01" value="0.25">
+							</div>
 						</div>
 						<div class="control-row">
 							<label>Color:</label>
@@ -2981,10 +2992,11 @@
 			<!-- Movement -->
 			<div class="control-section">
 				<h4>Movement</h4>
-				<div class="control-row">
-					<label>Speed:</label>
-					<input id="speed" type="range" min="1" max="200" step="1" value="50">
-					<span class="value-display" id="speedValue">50</span>
+				<div class="control-row-new">
+					<label>Speed: <span class="value-display-right" id="speedValue">50</span></label>
+					<div class="slider-container">
+						<input id="speed" type="range" min="1" max="200" step="1" value="50">
+					</div>
 				</div>
 			</div>
 			<!-- Axis Selection - Three Columns -->
@@ -2994,25 +3006,27 @@
 					<div class="axis-item">
 						<label>X-Axis:</label>
 						<select id="xAxisSelect"></select>
-						<button id="applyXAxis">Apply</button>
 					</div>
 					<div class="axis-item">
 						<label>Y-Axis:</label>
 						<select id="yAxisSelect"></select>
-						<button id="applyYAxis">Apply</button>
 					</div>
 					<div class="axis-item">
 						<label>Z-Axis:</label>
 						<select id="zAxisSelect"></select>
-						<button id="applyZAxis">Apply</button>
 					</div>
 				</div>
+				<button id="applyAxes" style="width: 100%; margin-top: 10px;">Apply Axes</button>
 			</div>
 			<!-- Clear Selection -->
 			<div class="control-section">
 				<button id="clearSelectionBtn" style="width: 100%;">Clear All Selection</button>
 			</div>
-			<!-- Export Config Button will be added here by JavaScript -->
+			<!-- Configuration -->
+			<div class="control-section">
+				<h4>Configuration</h4>
+				<button id="exportConfigBtn" class="export-btn">Export Current Config</button>
+			</div>
 			<div class="close-hint">Press M to close</div>
 		</div>
 		<!-- ---------- Info panel (center bottom) - for selected values only ---------- -->

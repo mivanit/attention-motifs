@@ -30,7 +30,24 @@ class DataModel {
 		const df = DataFrame.from_jsonl(text);
 		const numeric = df.columns
 			.filter(c => c.startsWith(numericalPrefix))
-			.sort();
+			.sort((a, b) => {
+				// Extract the part after the prefix
+				const aSuffix = a.substring(numericalPrefix.length);
+				const bSuffix = b.substring(numericalPrefix.length);
+
+				// Check if both suffixes are integers
+				const aNum = parseInt(aSuffix, 10);
+				const bNum = parseInt(bSuffix, 10);
+
+				// If both are valid integers, sort numerically
+				if (!isNaN(aNum) && !isNaN(bNum) &&
+					aNum.toString() === aSuffix && bNum.toString() === bSuffix) {
+					return aNum - bNum;
+				}
+
+				// Otherwise, sort lexicographically
+				return a.localeCompare(b);
+			});
 		return new DataModel(df, numeric);
 	}
 }

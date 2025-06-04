@@ -60,8 +60,6 @@ body {
 #controlsMenu {
 	top: 20px;
 	left: 20px;
-	min-width: 400px;
-	/* Updated from 250px */
 }
 
 #statsMenu {
@@ -567,4 +565,37 @@ button:hover {
 	justify-content: space-between;
 	font-size: 10px;
 	margin-top: 2px;
+}
+
+/* New control row layout for sliders */
+.control-row-new {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 8px;
+	gap: 5px;
+}
+
+.control-row-new label {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 11px;
+	margin: 0;
+}
+
+.value-display-right {
+	font-weight: bold;
+	color: #00ff00;
+	min-width: 40px;
+	text-align: right;
+}
+
+.slider-container {
+	width: 40%;
+	margin: 0 auto;
+}
+
+.slider-container input[type="range"] {
+	width: 100%;
+	margin: 0;
 }
