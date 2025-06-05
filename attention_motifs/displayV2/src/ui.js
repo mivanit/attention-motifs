@@ -128,10 +128,11 @@ class UIManager {
             sc.appendChild(d);
         });
 
-        // Add hover and click-select shortcuts with status indicators from CONFIG
+        // Add hover, click-select, and right-click shortcuts with status indicators from CONFIG
         sc.insertAdjacentHTML('beforeend', `
-            <div class="shortcut-link" data-action="hover-toggle">k – hover UI <span class="status-indicator ${CONFIG.interaction.hoverActive ? 'status-enabled' : 'status-disabled'}" id="hover-status">(${CONFIG.interaction.hoverActive ? 'enabled' : 'disabled'})</span></div>
-            <div class="shortcut-link" data-action="click-select-toggle">b – click-select <span class="status-indicator ${CONFIG.interaction.selectOnClick ? 'status-enabled' : 'status-disabled'}" id="click-select-status">(${CONFIG.interaction.selectOnClick ? 'enabled' : 'disabled'})</span></div>`);
+        <div class="shortcut-link" data-action="hover-toggle">k – hover UI <span class="status-indicator ${CONFIG.interaction.hoverActive ? 'status-enabled' : 'status-disabled'}" id="hover-status">(${CONFIG.interaction.hoverActive ? 'enabled' : 'disabled'})</span></div>
+        <div class="shortcut-link" data-action="click-select-toggle">b – click-select <span class="status-indicator ${CONFIG.interaction.selectOnClick ? 'status-enabled' : 'status-disabled'}" id="click-select-status">(${CONFIG.interaction.selectOnClick ? 'enabled' : 'disabled'})</span></div>
+        <div class="shortcut-link" data-action="right-click-toggle">o – right-click <span class="status-indicator ${CONFIG.interaction.rightClickActive ? 'status-enabled' : 'status-disabled'}" id="right-click-status">(${CONFIG.interaction.rightClickActive ? 'enabled' : 'disabled'})</span></div>`);
 
         sc.addEventListener('click', e => {
             const target = e.target.closest('[data-action]');
@@ -149,6 +150,11 @@ class UIManager {
                 CONFIG.interaction.selectOnClick = !CONFIG.interaction.selectOnClick;
                 this.pointCloud.selectOnClick = CONFIG.interaction.selectOnClick;
                 this._updateStatusIndicator('click-select-status', CONFIG.interaction.selectOnClick);
+                updateURL(); // Sync to URL
+            } else if (action === 'right-click-toggle') {
+                CONFIG.interaction.rightClickActive = !CONFIG.interaction.rightClickActive;
+                this.pointCloud.rightClickActive = CONFIG.interaction.rightClickActive;
+                this._updateStatusIndicator('right-click-status', CONFIG.interaction.rightClickActive);
                 updateURL(); // Sync to URL
             } else {
                 const entry = Object.entries(this.uiConfig)
@@ -652,6 +658,14 @@ class UIManager {
                 CONFIG.interaction.selectOnClick = !CONFIG.interaction.selectOnClick;
                 this.pointCloud.selectOnClick = CONFIG.interaction.selectOnClick;
                 this._updateStatusIndicator('click-select-status', CONFIG.interaction.selectOnClick);
+                updateURL(); // Sync to URL
+            }
+
+            /* right-click toggle */
+            if (e.code === 'KeyO') {
+                CONFIG.interaction.rightClickActive = !CONFIG.interaction.rightClickActive;
+                this.pointCloud.rightClickActive = CONFIG.interaction.rightClickActive;
+                this._updateStatusIndicator('right-click-status', CONFIG.interaction.rightClickActive);
                 updateURL(); // Sync to URL
             }
         });

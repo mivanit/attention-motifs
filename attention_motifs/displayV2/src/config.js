@@ -68,6 +68,7 @@ function getDefaultConfig() {
 		interaction: {
 			hoverActive: true,
 			selectOnClick: true,
+			rightClickActive: true,
 			raycastThreshold: 0.15,
 			raycastThresholdMultiplier: 3
 		},
@@ -126,7 +127,21 @@ function getDefaultConfig() {
 			hoverOffset: { x: 15, y: 15 },
 			shortcutStatusUpdateDelay: 100,
 			menuWidth: 350
-		}
+		},
+		// Right-click behavior configuration
+		rightClick: {
+			mode: "content", // "content" or "url"
+
+			// For content mode - creates a new tab with plain text content
+			content: {
+				title: "Point Data: {activation.cls}",	
+				template: "Point Information\n===================\n\nClass: {activation.cls}\nModel: {activation.model}\nPrompt: {activation.prompt}\nCoordinates:\n  X ({axis.x.name}): {coord.x}\n  Y ({axis.y.name}): {coord.y}\n  Z ({axis.z.name}): {coord.z}\nConfiguration:\n  Data File: {config.dataFile}\n  Color By: {config.defaultColorColumn}\n  Select By: {config.defaultSelectionColumn}"
+			},
+			// For URL mode - opens a URL constructed from template
+			url: {
+				template: "https://example.com/{activation.cls}/{activation.model}?prompt={activation.prompt}&x={coord.x}&y={coord.y}&z={coord.z}"
+			}
+		},
 	}
 }
 
