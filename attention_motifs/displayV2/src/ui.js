@@ -296,14 +296,6 @@ class UIManager {
             });
         }
 
-        // Clear selection button
-        const clearSelectionBtn = document.getElementById('clearSelectionBtn');
-        if (clearSelectionBtn) {
-            clearSelectionBtn.addEventListener('click', () => {
-                this.pointCloud.state.clearSel();
-            });
-        }
-
         // Setup dropdowns
         this._setupDropdowns();
 
@@ -490,6 +482,30 @@ class UIManager {
             exportBtn.addEventListener('click', () => {
                 exportConfigToNewTab();
                 NOTIF.success('Configuration exported to new tab');
+            });
+        }
+
+        // Setup reset config button
+        const resetBtn = document.getElementById('resetConfigBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', async () => {
+                const spinner = NOTIF.spinner('Resetting configuration...');
+
+                try {
+                    // Give UI time to show spinner
+                    await new Promise(resolve => setTimeout(resolve, 50));
+
+                    // Reset config to loaded state and clear URL
+                    resetConfigToLoaded();
+
+                    // Trigger a page reload to apply the reset config
+                    // This is the cleanest way to ensure all state is properly reset
+                    window.location.reload();
+
+                } catch (error) {
+                    spinner.complete();
+                    NOTIF.error('Failed to reset configuration', error);
+                }
             });
         }
     }

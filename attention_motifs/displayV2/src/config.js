@@ -377,3 +377,29 @@ function exportConfigToNewTab() {
 		URL.revokeObjectURL(url);
 	}, 1000);
 }
+
+
+/**
+ * Reset CONFIG to the loaded config.json state and clear URL parameters
+ */
+function resetConfigToLoaded() {
+    if (!LOADED_CONFIG) {
+        console.warn("No loaded config available, resetting to defaults");
+        CONFIG = getDefaultConfig();
+    } else {
+        // Deep copy the loaded config back to CONFIG
+        CONFIG = JSON.parse(JSON.stringify(LOADED_CONFIG));
+    }
+    
+    // Clear URL parameters by navigating to clean URL
+    const cleanURL = window.location.pathname;
+    window.history.replaceState({}, '', cleanURL);
+    
+    // Clear the URL update timeout if it exists
+    if (URL_UPDATE_TIMEOUT) {
+        clearTimeout(URL_UPDATE_TIMEOUT);
+        URL_UPDATE_TIMEOUT = null;
+    }
+    
+    console.log("Config reset to loaded state and URL cleared");
+}

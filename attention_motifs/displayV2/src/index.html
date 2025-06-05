@@ -128,11 +128,11 @@
 			<div class="control-section">
 				<h4>Movement</h4>
 				<div class="control-row-new">
-					<label>Speed: <span class="value-display-right" id="speedValue">50</span></label>
-					<div class="slider-container">
-						<input id="speed" type="range" min="1" max="200" step="1" value="50">
-					</div>
-				</div>
+					<label>Speed: <div class="slider-container">
+							<input id="speed" type="range" min="1" max="200" step="1" value="50">
+						</div>
+						<span class="value-display-right" id="speedValue">50</span></label>
+				</di	v>
 			</div>
 			<!-- Axis Selection - Three Columns -->
 			<div class="control-section">
@@ -153,14 +153,13 @@
 				</div>
 				<button id="applyAxes" style="width: 100%; margin-top: 10px;">Apply Axes</button>
 			</div>
-			<!-- Clear Selection -->
-			<div class="control-section">
-				<button id="clearSelectionBtn" style="width: 100%;">Clear All Selection</button>
-			</div>
 			<!-- Configuration -->
 			<div class="control-section">
 				<h4>Configuration</h4>
-				<button id="exportConfigBtn" class="export-btn">Export Current Config</button>
+				<div class="side-by-side">
+					<button id="exportConfigBtn" class="export-btn">Export Current Config</button>
+					<button id="resetConfigBtn" class="export-btn">Reset Config</button>
+				</div>
 			</div>
 			<div class="close-hint">Press M to close</div>
 		</div>
@@ -170,7 +169,6 @@
 				<h4 style="margin: 0 0 8px 0; color: #00ccff;" id="selectedValuesHeader">Selected Values:</h4>
 				<div id="selectedValuesGrid" style="display: grid; grid-template-columns: 1fr; gap: 4px; max-height: 200px; overflow-y: auto;"></div>
 				<div id="selectedValuesMetadata" style="margin-top: 8px; font-size: 10px; color: #888;"></div>
-				<button id="clearSelectionBtn" class="color-randomize-btn" style="margin-top: 8px;">Clear All Selection</button>
 			</div>
 			<div class="close-hint">Press I to close</div>
 		</div>

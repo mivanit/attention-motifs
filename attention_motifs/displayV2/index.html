@@ -908,7 +908,7 @@
 		
 					// For content mode - creates a new tab with plain text content
 					content: {
-						title: "Point Data: {activation.cls}",
+						title: "Point Data: {activation.cls}",	
 						template: "Point Information\n===================\n\nClass: {activation.cls}\nModel: {activation.model}\nPrompt: {activation.prompt}\nCoordinates:\n  X ({axis.x.name}): {coord.x}\n  Y ({axis.y.name}): {coord.y}\n  Z ({axis.z.name}): {coord.z}\nConfiguration:\n  Data File: {config.dataFile}\n  Color By: {config.defaultColorColumn}\n  Select By: {config.defaultSelectionColumn}"
 					},
 					// For URL mode - opens a URL constructed from template
@@ -1150,6 +1150,32 @@
 			setTimeout(() => {
 				URL.revokeObjectURL(url);
 			}, 1000);
+		}
+		
+		
+		/**
+		 * Reset CONFIG to the loaded config.json state and clear URL parameters
+		 */
+		function resetConfigToLoaded() {
+		    if (!LOADED_CONFIG) {
+		        console.warn("No loaded config available, resetting to defaults");
+		        CONFIG = getDefaultConfig();
+		    } else {
+		        // Deep copy the loaded config back to CONFIG
+		        CONFIG = JSON.parse(JSON.stringify(LOADED_CONFIG));
+		    }
+		    
+		    // Clear URL parameters by navigating to clean URL
+		    const cleanURL = window.location.pathname;
+		    window.history.replaceState({}, '', cleanURL);
+		    
+		    // Clear the URL update timeout if it exists
+		    if (URL_UPDATE_TIMEOUT) {
+		        clearTimeout(URL_UPDATE_TIMEOUT);
+		        URL_UPDATE_TIMEOUT = null;
+		    }
+		    
+		    console.log("Config reset to loaded state and URL cleared");
 		}
 		</script>
 		<!-- end 'config.js' -->
@@ -2145,10 +2171,11 @@
 		            sc.appendChild(d);
 		        });
 		
-		        // Add hover and click-select shortcuts with status indicators from CONFIG
+		        // Add hover, click-select, and right-click shortcuts with status indicators from CONFIG
 		        sc.insertAdjacentHTML('beforeend', `
-		            <div class="shortcut-link" data-action="hover-toggle">k – hover UI <span class="status-indicator ${CONFIG.interaction.hoverActive ? 'status-enabled' : 'status-disabled'}" id="hover-status">(${CONFIG.interaction.hoverActive ? 'enabled' : 'disabled'})</span></div>
-		            <div class="shortcut-link" data-action="click-select-toggle">b – click-select <span class="status-indicator ${CONFIG.interaction.selectOnClick ? 'status-enabled' : 'status-disabled'}" id="click-select-status">(${CONFIG.interaction.selectOnClick ? 'enabled' : 'disabled'})</span></div>`);
+		        <div class="shortcut-link" data-action="hover-toggle">k – hover UI <span class="status-indicator ${CONFIG.interaction.hoverActive ? 'status-enabled' : 'status-disabled'}" id="hover-status">(${CONFIG.interaction.hoverActive ? 'enabled' : 'disabled'})</span></div>
+		        <div class="shortcut-link" data-action="click-select-toggle">b – click-select <span class="status-indicator ${CONFIG.interaction.selectOnClick ? 'status-enabled' : 'status-disabled'}" id="click-select-status">(${CONFIG.interaction.selectOnClick ? 'enabled' : 'disabled'})</span></div>
+		        <div class="shortcut-link" data-action="right-click-toggle">o – right-click <span class="status-indicator ${CONFIG.interaction.rightClickActive ? 'status-enabled' : 'status-disabled'}" id="right-click-status">(${CONFIG.interaction.rightClickActive ? 'enabled' : 'disabled'})</span></div>`);
 		
 		        sc.addEventListener('click', e => {
 		            const target = e.target.closest('[data-action]');
@@ -2166,6 +2193,11 @@
 		                CONFIG.interaction.selectOnClick = !CONFIG.interaction.selectOnClick;
 		                this.pointCloud.selectOnClick = CONFIG.interaction.selectOnClick;
 		                this._updateStatusIndicator('click-select-status', CONFIG.interaction.selectOnClick);
+		                updateURL(); // Sync to URL
+		            } else if (action === 'right-click-toggle') {
+		                CONFIG.interaction.rightClickActive = !CONFIG.interaction.rightClickActive;
+		                this.pointCloud.rightClickActive = CONFIG.interaction.rightClickActive;
+		                this._updateStatusIndicator('right-click-status', CONFIG.interaction.rightClickActive);
 		                updateURL(); // Sync to URL
 		            } else {
 		                const entry = Object.entries(this.uiConfig)
@@ -2304,14 +2336,6 @@
 		            randomizeColorsBtn.addEventListener('click', () => {
 		                this.pointCloud.selMgr.randomizeColors();
 		                this.pointCloud.state._fire('vis');
-		            });
-		        }
-		
-		        // Clear selection button
-		        const clearSelectionBtn = document.getElementById('clearSelectionBtn');
-		        if (clearSelectionBtn) {
-		            clearSelectionBtn.addEventListener('click', () => {
-		                this.pointCloud.state.clearSel();
 		            });
 		        }
 		
@@ -2503,6 +2527,30 @@
 		                NOTIF.success('Configuration exported to new tab');
 		            });
 		        }
+		
+		        // Setup reset config button
+		        const resetBtn = document.getElementById('resetConfigBtn');
+		        if (resetBtn) {
+		            resetBtn.addEventListener('click', async () => {
+		                const spinner = NOTIF.spinner('Resetting configuration...');
+		
+		                try {
+		                    // Give UI time to show spinner
+		                    await new Promise(resolve => setTimeout(resolve, 50));
+		
+		                    // Reset config to loaded state and clear URL
+		                    resetConfigToLoaded();
+		
+		                    // Trigger a page reload to apply the reset config
+		                    // This is the cleanest way to ensure all state is properly reset
+		                    window.location.reload();
+		
+		                } catch (error) {
+		                    spinner.complete();
+		                    NOTIF.error('Failed to reset configuration', error);
+		                }
+		            });
+		        }
 		    }
 		
 		
@@ -2669,6 +2717,14 @@
 		                CONFIG.interaction.selectOnClick = !CONFIG.interaction.selectOnClick;
 		                this.pointCloud.selectOnClick = CONFIG.interaction.selectOnClick;
 		                this._updateStatusIndicator('click-select-status', CONFIG.interaction.selectOnClick);
+		                updateURL(); // Sync to URL
+		            }
+		
+		            /* right-click toggle */
+		            if (e.code === 'KeyO') {
+		                CONFIG.interaction.rightClickActive = !CONFIG.interaction.rightClickActive;
+		                this.pointCloud.rightClickActive = CONFIG.interaction.rightClickActive;
+		                this._updateStatusIndicator('right-click-status', CONFIG.interaction.rightClickActive);
 		                updateURL(); // Sync to URL
 		            }
 		        });
@@ -2891,9 +2947,9 @@
 			<!-- begin 'PointCloud.js' -->
 		<script>
 		/* PointCloud.js – snap-to-point cross-hair, optional hover UI ("k"),
-		   optional click-to-select ("b"), and better picking accuracy using CONFIG. */
+		   optional click-to-select ("b"), optional right-click action ("o"), and better picking accuracy using CONFIG. */
 		
-		   class PointCloud {
+		class PointCloud {
 		    /** @param {DataModel} model */
 		    constructor(model) {
 		        this.model = model;
@@ -2901,9 +2957,9 @@
 		        /* ── THREE basics - using CONFIG values ──────────────────── */
 		        this.scene = new THREE.Scene();
 		        this.camera = new THREE.PerspectiveCamera(
-		            CONFIG.rendering.cameraFov, 
-		            window.innerWidth / window.innerHeight, 
-		            CONFIG.rendering.cameraNear, 
+		            CONFIG.rendering.cameraFov,
+		            window.innerWidth / window.innerHeight,
+		            CONFIG.rendering.cameraNear,
 		            CONFIG.rendering.cameraFar
 		        );
 		        this.renderer = new THREE.WebGLRenderer({ antialias: CONFIG.rendering.antialiasing });
@@ -2920,6 +2976,7 @@
 		        /* ── behaviour flags (from CONFIG) ────────────────────── */
 		        this.hoverActive = CONFIG.interaction.hoverActive;
 		        this.selectOnClick = CONFIG.interaction.selectOnClick;
+		        this.rightClickActive = CONFIG.interaction.rightClickActive;
 		
 		        /* ── colour / selection state ─────────────────────────── */
 		        this.state = new VisState(model);
@@ -2928,10 +2985,10 @@
 		        this.state.addEventListener('vis', () => this._updateColors());
 		
 		        /* ── viewer settings - using CONFIG ──────────────────── */
-		        this.settings = { 
-		            pointSize: 0.1, 
-		            opacity: 0.8, 
-		            speed: CONFIG.movement.speed 
+		        this.settings = {
+		            pointSize: 0.1,
+		            opacity: 0.8,
+		            speed: CONFIG.movement.speed
 		        };
 		
 		        /* ── movement bookkeeping ──────────────────────────────── */
@@ -2949,6 +3006,177 @@
 		
 		        /* bootstrap */
 		        this._init();
+		    }
+		
+		    /* ---------- input & interaction -------------------------- */
+		    _setupInput() {
+		        /* keyboard state */
+		        document.addEventListener('keydown', e => this.keys[e.code] = true);
+		        document.addEventListener('keyup', e => this.keys[e.code] = false);
+		
+		        /* mouse movement */
+		        document.addEventListener('mousemove', e => {
+		            if (document.pointerLockElement === document.body) {
+		                this.mouseDX += e.movementX;
+		                this.mouseDY += e.movementY;
+		            }
+		            this.pointerScreen.x = e.clientX;
+		            this.pointerScreen.y = e.clientY;
+		            this.pointerNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
+		            this.pointerNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
+		        });
+		
+		        /* click-to-select (can be disabled) */
+		        window.addEventListener('click', () => {
+		            if (!this.selectOnClick || this.hoverId == null) return;
+		            const v = this.model.row(this.hoverId)[this.state.selectBy];
+		            this.state.toggleValue(v);
+		        });
+		
+		        /* right-click handler */
+		        window.addEventListener('contextmenu', (e) => {
+		            if (!this.rightClickActive || this.hoverId == null) return;
+		            e.preventDefault(); // Prevent default context menu
+		
+		            const row = this.model.row(this.hoverId);
+		            this._handleRightClick(row, this.hoverId);
+		        });
+		
+		        /* pointer-lock helpers */
+		        document.addEventListener('dblclick', () => {
+		            (document.pointerLockElement === document.body)
+		                ? document.exitPointerLock()
+		                : document.body.requestPointerLock();
+		        });
+		        document.addEventListener('keydown', e => {
+		            if (e.code === 'Escape' && document.pointerLockElement === document.body)
+		                document.exitPointerLock();
+		        });
+		
+		        /* resize */
+		        window.addEventListener('resize', () => {
+		            this.camera.aspect = window.innerWidth / window.innerHeight;
+		            this.camera.updateProjectionMatrix();
+		            this.renderer.setSize(window.innerWidth, window.innerHeight);
+		        });
+		    }
+		
+		    /* ---------- right-click handling and template system ----- */
+		    _handleRightClick(row, pointId) {
+		        const templateData = this._buildTemplateData(row, pointId);
+		
+		        if (CONFIG.rightClick.mode === "content") {
+		            this._openContentTab(templateData);
+		        } else if (CONFIG.rightClick.mode === "url") {
+		            this._openUrlTab(templateData);
+		        }
+		    }
+		
+		    _buildTemplateData(row, pointId) {
+		        const a = this.state.axis;
+		        const coords = {
+		            x: this.model.getCoord(pointId, a.x).toFixed(3),
+		            y: this.model.getCoord(pointId, a.y).toFixed(3),
+		            z: this.model.getCoord(pointId, a.z).toFixed(3)
+		        };
+		
+		        return {
+		            // All row data (flattened with dot notation for nested objects)
+		            ...this._flattenObject(row),
+		
+		            // Coordinate data
+		            'coord.x': coords.x,
+		            'coord.y': coords.y,
+		            'coord.z': coords.z,
+		
+		            // Axis information
+		            'axis.x.name': this.model.numericCols[a.x],
+		            'axis.x.index': a.x,
+		            'axis.y.name': this.model.numericCols[a.y],
+		            'axis.y.index': a.y,
+		            'axis.z.name': this.model.numericCols[a.z],
+		            'axis.z.index': a.z,
+		
+		            // Config data (flattened)
+		            ...this._flattenObject(CONFIG, 'config.')
+		        };
+		    }
+		
+		    _flattenObject(obj, prefix = '') {
+		        const flattened = {};
+		
+		        for (const key in obj) {
+		            const value = obj[key];
+		            const newKey = prefix + key;
+		
+		            if (value && typeof value === 'object' && !Array.isArray(value)) {
+		                Object.assign(flattened, this._flattenObject(value, newKey + '.'));
+		            } else {
+		                flattened[newKey] = value;
+		            }
+		        }
+		
+		        return flattened;
+		    }
+		
+		    _replaceTemplate(template, data) {
+		        return template.replace(/\{([^}]+)\}/g, (match, key) => {
+		            const value = data[key];
+		            if (value !== undefined && value !== null) {
+		                return String(value);
+		            }
+		            return match; // Keep original if no replacement found
+		        });
+		    }
+		
+		    _openContentTab(templateData) {
+		        const title = this._replaceTemplate(CONFIG.rightClick.content.title, templateData);
+		        const content = this._replaceTemplate(CONFIG.rightClick.content.template, templateData);
+		
+		        // Create HTML content with monospace styling
+		        const htmlContent = `<!DOCTYPE html>
+		<html>
+		<head>
+			<title>${this._escapeHtml(title)}</title>
+			<style>
+				body {
+					font-family: 'Courier New', monospace;
+					background: #000;
+					color: #00ff00;
+					padding: 20px;
+					margin: 0;
+					white-space: pre-wrap;
+					line-height: 1.4;
+				}
+			</style>
+		</head>
+		<body>${this._escapeHtml(content)}</body>
+		</html>`;
+		
+		        const blob = new Blob([htmlContent], { type: 'text/html' });
+		        const url = URL.createObjectURL(blob);
+		        const newWindow = window.open(url, '_blank');
+		
+		        // Clean up after a delay
+		        setTimeout(() => URL.revokeObjectURL(url), 1000);
+		    }
+		
+		    _openUrlTab(templateData) {
+		        const url = this._replaceTemplate(CONFIG.rightClick.url.template, templateData);
+		
+		        // URL encode the final URL to handle special characters
+		        try {
+		            window.open(url, '_blank');
+		        } catch (error) {
+		            console.error('Failed to open URL:', url, error);
+		            NOTIF.error(`Failed to open URL: ${url}`);
+		        }
+		    }
+		
+		    _escapeHtml(text) {
+		        const div = document.createElement('div');
+		        div.textContent = text;
+		        return div.innerHTML;
 		    }
 		
 		    /* ========================================================= */
@@ -2969,9 +3197,9 @@
 		    /* ---------- in-scene cross-hair - using CONFIG ----------- */
 		    _createCrosshairs() {
 		        const mat = new THREE.LineBasicMaterial({
-		            color: CONFIG.crosshair.color, 
-		            transparent: true, 
-		            opacity: CONFIG.crosshair.opacity, 
+		            color: CONFIG.crosshair.color,
+		            transparent: true,
+		            opacity: CONFIG.crosshair.opacity,
 		            depthTest: false
 		        });
 		
@@ -3007,50 +3235,6 @@
 		        this.crossH.position.set(0, y, z);
 		        this.crossV.position.set(x, 0, z);
 		        this.crossH.visible = this.crossV.visible = true;
-		    }
-		
-		    /* ---------- input & interaction -------------------------- */
-		    _setupInput() {
-		        /* keyboard state */
-		        document.addEventListener('keydown', e => this.keys[e.code] = true);
-		        document.addEventListener('keyup', e => this.keys[e.code] = false);
-		
-		        /* mouse movement */
-		        document.addEventListener('mousemove', e => {
-		            if (document.pointerLockElement === document.body) {
-		                this.mouseDX += e.movementX;
-		                this.mouseDY += e.movementY;
-		            }
-		            this.pointerScreen.x = e.clientX;
-		            this.pointerScreen.y = e.clientY;
-		            this.pointerNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
-		            this.pointerNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
-		        });
-		
-		        /* click-to-select (can be disabled) */
-		        window.addEventListener('click', () => {
-		            if (!this.selectOnClick || this.hoverId == null) return;
-		            const v = this.model.row(this.hoverId)[this.state.selectBy];
-		            this.state.toggleValue(v);
-		        });
-		
-		        /* pointer-lock helpers */
-		        document.addEventListener('dblclick', () => {
-		            (document.pointerLockElement === document.body)
-		                ? document.exitPointerLock()
-		                : document.body.requestPointerLock();
-		        });
-		        document.addEventListener('keydown', e => {
-		            if (e.code === 'Escape' && document.pointerLockElement === document.body)
-		                document.exitPointerLock();
-		        });
-		
-		        /* resize */
-		        window.addEventListener('resize', () => {
-		            this.camera.aspect = window.innerWidth / window.innerHeight;
-		            this.camera.updateProjectionMatrix();
-		            this.renderer.setSize(window.innerWidth, window.innerHeight);
-		        });
 		    }
 		
 		    /* ---------- build / rebuild point geometry --------------- */
@@ -3547,11 +3731,11 @@
 			<div class="control-section">
 				<h4>Movement</h4>
 				<div class="control-row-new">
-					<label>Speed: <span class="value-display-right" id="speedValue">50</span></label>
-					<div class="slider-container">
-						<input id="speed" type="range" min="1" max="200" step="1" value="50">
-					</div>
-				</div>
+					<label>Speed: <div class="slider-container">
+							<input id="speed" type="range" min="1" max="200" step="1" value="50">
+						</div>
+						<span class="value-display-right" id="speedValue">50</span></label>
+				</di	v>
 			</div>
 			<!-- Axis Selection - Three Columns -->
 			<div class="control-section">
@@ -3572,14 +3756,13 @@
 				</div>
 				<button id="applyAxes" style="width: 100%; margin-top: 10px;">Apply Axes</button>
 			</div>
-			<!-- Clear Selection -->
-			<div class="control-section">
-				<button id="clearSelectionBtn" style="width: 100%;">Clear All Selection</button>
-			</div>
 			<!-- Configuration -->
 			<div class="control-section">
 				<h4>Configuration</h4>
-				<button id="exportConfigBtn" class="export-btn">Export Current Config</button>
+				<div class="side-by-side">
+					<button id="exportConfigBtn" class="export-btn">Export Current Config</button>
+					<button id="resetConfigBtn" class="export-btn">Reset Config</button>
+				</div>
 			</div>
 			<div class="close-hint">Press M to close</div>
 		</div>
@@ -3589,7 +3772,6 @@
 				<h4 style="margin: 0 0 8px 0; color: #00ccff;" id="selectedValuesHeader">Selected Values:</h4>
 				<div id="selectedValuesGrid" style="display: grid; grid-template-columns: 1fr; gap: 4px; max-height: 200px; overflow-y: auto;"></div>
 				<div id="selectedValuesMetadata" style="margin-top: 8px; font-size: 10px; color: #888;"></div>
-				<button id="clearSelectionBtn" class="color-randomize-btn" style="margin-top: 8px;">Clear All Selection</button>
 			</div>
 			<div class="close-hint">Press I to close</div>
 		</div>
