@@ -8,7 +8,7 @@ function getDefaultConfig() {
 		defaultSelectionColumn: "activation.model",
 		hoverColumns: ["activation.cls", "activation.prompt"],
 
-		// Selected values - new addition
+		// Selected values
 		selectedValues: [],
 
 		// UI panel visibility
@@ -141,6 +141,11 @@ function getDefaultConfig() {
 			url: {
 				template: "https://example.com/{activation.cls}/{activation.model}?prompt={activation.prompt}&x={coord.x}&y={coord.y}&z={coord.z}"
 			}
+		},
+
+		info: {
+			title: "Embedding Explorer",
+			help: "This tool lets you visualize high-dimensional data in 3D space."
 		},
 	}
 }

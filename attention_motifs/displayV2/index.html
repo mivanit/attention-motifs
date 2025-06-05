@@ -781,7 +781,7 @@
 				defaultSelectionColumn: "activation.model",
 				hoverColumns: ["activation.cls", "activation.prompt"],
 		
-				// Selected values - new addition
+				// Selected values
 				selectedValues: [],
 		
 				// UI panel visibility
@@ -914,6 +914,11 @@
 					url: {
 						template: "https://example.com/{activation.cls}/{activation.model}?prompt={activation.prompt}&x={coord.x}&y={coord.y}&z={coord.z}"
 					}
+				},
+		
+				info: {
+					title: "Embedding Explorer",
+					help: "This tool lets you visualize high-dimensional data in 3D space."
 				},
 			}
 		}
@@ -3592,43 +3597,48 @@
 
 <body>
 	<div id="container"><!-- single outer container -->
-		<!-- ---------- always-visible shortcuts ---------- -->
+		<!-- ---------- always-visible shortcuts, populated by js ---------- -->
 		<div id="shortcuts"></div>
 		<!-- ---------- Help menu ---------- -->
+		<!-- ---------- Help menu ---------- -->
 		<div id="helpMenu" class="menu">
-			<div class="help-section">
-				<h3>Movement</h3>
-				<p>WASD - Move</p>
-				<p>Mouse - Look (dbl-click to lock)</p>
-				<p>Q / E - Roll</p>
-				<p>Shift - Sprint</p>
-				<p>ESC - Exit mouse-look</p>
+			<div class="help-section" id="helpInfo">
+				<!-- This will be populated from CONFIG.info.help -->
 			</div>
 			<div class="help-section">
-				<h3>Interface</h3>
-				<p>H - Toggle help</p>
-				<p>M - Toggle menu</p>
-				<p>I - Toggle info panel</p>
-				<p>L - Toggle legend</p>
-				<p>N - Toggle navball</p>
-				<p>J - Toggle stats</p>
-				<p>K - Toggle hover UI</p>
-				<p>B - Toggle click-select</p>
-				<p>O - Toggle right-click action</p>
+				<h3>Movement</h3>
+				<p>WASD - Move around the 3D space</p>
+				<p>Mouse - Look around (double-click to lock cursor)</p>
+				<p>Q / E - Roll camera left/right</p>
+				<p>Shift - Sprint (faster movement)</p>
+				<p>ESC - Exit mouse-look mode</p>
+			</div>
+			<div class="help-section">
+				<h3>Panels (press key to toggle)</h3>
+				<p>H - This help menu with controls and tips</p>
+				<p>M - Main controls menu for adjusting visualization</p>
+				<p>I - Info panel showing currently selected data points</p>
+				<p>L - Legend panel with color scheme and categories</p>
+				<p>N - Navigation panel with 3D compass and position</p>
+				<p>J - Performance stats (FPS, render info, camera position)</p>
+				<p>K - Toggle hover tooltips when pointing at data points</p>
+				<p>B - Toggle click-to-select functionality</p>
+				<p>O - Toggle right-click actions for point details</p>
 			</div>
 			<div class="help-section">
 				<h3>Data Interaction</h3>
-				<p>C - Cycle color column</p>
-				<p>V - Cycle selection column</p>
-				<p>Click - Select/deselect point (when enabled)</p>
-				<p>Right-click - Open point data/URL (when enabled)</p>
-				<p>Hover - Show point details (when enabled)</p>
+				<p>C - Cycle through available color-by columns</p>
+				<p>V - Cycle through available selection columns</p>
+				<p>Click - Select/deselect point (when click-select enabled)</p>
+				<p>Right-click - Open point data/URL (when right-click enabled)</p>
+				<p>Hover - Show point details tooltip (when hover enabled)</p>
 			</div>
 			<div class="help-section">
 				<h3>Configuration</h3>
-				<p>All settings are saved to URL automatically</p>
-				<p>Use "Export Current Config" button to get JSON</p>
+				<p>All settings are automatically saved to URL</p>
+				<p>Use "Export Current Config" button to get JSON file</p>
 				<p>URL parameters override config.json settings</p>
+				<p>Use "Reset Config" to return to loaded defaults</p>
 			</div>
 			<div class="close-hint">Press H to close</div>
 		</div>
@@ -3790,6 +3800,16 @@
 			document.addEventListener('DOMContentLoaded', async () => {
 				let sp = NOTIF.spinner('Starting up...');
 				await getConfig();
+
+				// Update page title from config
+				document.title = CONFIG.info.title;
+
+				// Update help info section
+				const helpInfoEl = document.getElementById('helpInfo');
+				if (helpInfoEl && CONFIG.info.help) {
+					helpInfoEl.innerHTML = `<p>${CONFIG.info.help}</p>`;
+				}
+
 				const model = await DataModel.load(CONFIG.dataFile, CONFIG.numericalPrefix);
 				const pointCloud = new PointCloud(model);
 				const uiManager = new UIManager(pointCloud);
