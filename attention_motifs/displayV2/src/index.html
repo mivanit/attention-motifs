@@ -222,11 +222,14 @@
 	<!-- ---------- bootstrap script ---------- -->
 	<script>
 		document.addEventListener('DOMContentLoaded', async () => {
+			let sp = NOTIF.spinner('Starting up...');
 			await getConfig();
 			const model = await DataModel.load(CONFIG.dataFile, CONFIG.numericalPrefix);
 			const pointCloud = new PointCloud(model);
 			const uiManager = new UIManager(pointCloud);
 			pointCloud.setUIManager(uiManager);
+			sp.complete();
+			NOTIF.success('Ready! Press H for help.');
 		});
 	</script>
 </body>

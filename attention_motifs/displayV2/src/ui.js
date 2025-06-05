@@ -351,14 +351,53 @@ class UIManager {
             selectBySelect.value = this.pointCloud.state.selectBy;
         }
 
-        // Single Apply button for columns
+        // Single Apply button for columns with loading notifications
         if (applyColumns) {
-            applyColumns.addEventListener('click', () => {
-                this.pointCloud.selMgr.clearCaches();
-                this.pointCloud.state.setColorBy(colorBySelect.value);
-                this.pointCloud.state.setSelectBy(selectBySelect.value);
-                this.colorIdx = Math.max(0, this.cats.indexOf(colorBySelect.value));
-                this.selectIdx = Math.max(0, this.cats.indexOf(selectBySelect.value));
+            applyColumns.addEventListener('click', async () => {
+                const newColorBy = colorBySelect.value;
+                const newSelectBy = selectBySelect.value;
+
+                // Check if changes are needed
+                const colorChanged = newColorBy !== this.pointCloud.state.colorBy;
+                const selectChanged = newSelectBy !== this.pointCloud.state.selectBy;
+
+                if (!colorChanged && !selectChanged) {
+                    NOTIF.show('No changes to apply', 2000);
+                    return;
+                }
+
+                const sp = NOTIF.spinner('Updating columns...');
+
+                try {
+                    // Clear caches first
+                    this.pointCloud.selMgr.clearCaches();
+
+                    // Apply color column change
+                    if (colorChanged) {
+                        this.pointCloud.state.setColorBy(newColorBy);
+                        this.colorIdx = Math.max(0, this.cats.indexOf(newColorBy));
+                    }
+
+                    // Apply selection column change
+                    if (selectChanged) {
+                        this.pointCloud.state.setSelectBy(newSelectBy);
+                        this.selectIdx = Math.max(0, this.cats.indexOf(newSelectBy));
+                    }
+
+                    // Finalize
+
+                    setTimeout(() => {
+                        sp.complete();
+                        const changes = [];
+                        if (colorChanged) changes.push(`color: ${newColorBy}`);
+                        if (selectChanged) changes.push(`selection: ${newSelectBy}`);
+                        NOTIF.success(`Updated ${changes.join(', ')}`);
+                    }, 200);
+
+                } catch (error) {
+                    sp.complete();
+                    NOTIF.error('Failed to update columns', error);
+                }
             });
         }
 
@@ -387,21 +426,57 @@ class UIManager {
             zAxisSelect.value = CONFIG.axes.z;
         }
 
-        // Single Apply button for axes
+        // Single Apply button for axes with notifications
         if (applyAxes) {
-            applyAxes.addEventListener('click', () => {
-                this.pointCloud.state.setAxis('x', parseInt(xAxisSelect.value));
-                this.pointCloud.state.setAxis('y', parseInt(yAxisSelect.value));
-                this.pointCloud.state.setAxis('z', parseInt(zAxisSelect.value));
-                this.pointCloud._buildGeometry();
+            applyAxes.addEventListener('click', async () => {
+                const newX = parseInt(xAxisSelect.value);
+                const newY = parseInt(yAxisSelect.value);
+                const newZ = parseInt(zAxisSelect.value);
+
+                // Check if changes are needed
+                const xChanged = newX !== CONFIG.axes.x;
+                const yChanged = newY !== CONFIG.axes.y;
+                const zChanged = newZ !== CONFIG.axes.z;
+
+                if (!xChanged && !yChanged && !zChanged) {
+                    NOTIF.show('No axis changes to apply', 2000);
+                    return;
+                }
+
+                const spinner = NOTIF.spinner('Updating visualization axes...');
+
+                try {
+                    // Small delay to show spinner
+                    await new Promise(resolve => setTimeout(resolve, 100));
+
+                    // Apply axis changes
+                    this.pointCloud.state.setAxis('x', newX);
+                    this.pointCloud.state.setAxis('y', newY);
+                    this.pointCloud.state.setAxis('z', newZ);
+                    this.pointCloud._buildGeometry();
+
+                    spinner.complete();
+
+                    const changes = [];
+                    if (xChanged) changes.push(`X: ${this.pointCloud.model.numericCols[newX]}`);
+                    if (yChanged) changes.push(`Y: ${this.pointCloud.model.numericCols[newY]}`);
+                    if (zChanged) changes.push(`Z: ${this.pointCloud.model.numericCols[newZ]}`);
+
+                    NOTIF.success(`Updated axes - ${changes.join(', ')}`);
+
+                } catch (error) {
+                    spinner.complete();
+                    NOTIF.error('Failed to update axes', error);
+                }
             });
         }
 
-        // Setup export config button (now in HTML)
+        // Setup export config button
         const exportBtn = document.getElementById('exportConfigBtn');
         if (exportBtn) {
             exportBtn.addEventListener('click', () => {
                 exportConfigToNewTab();
+                NOTIF.success('Configuration exported to new tab');
             });
         }
     }

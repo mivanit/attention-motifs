@@ -1675,44 +1675,69 @@
 				return out;
 			}
 		
+			/** fast accessor */
 			getCoord(rowIdx, axisIdx) {
 				return this._pcaFlat[rowIdx * this.numericCols.length + axisIdx];
 			}
 		
 			row(idx) { return this.df.data[idx]; }
 		
-			static async load(filename, numericalPrefix, progressCallback = (msg, err = null) => {}) {
-				progressCallback('Downloading data...');
+			static async load(filename, numericalPrefix) {
+				const spinner = NOTIF.spinner('Downloading data...');
 		
-				const resp = await fetch(filename);
-				if (!resp.ok) {
-					progressCallback(`Failed to load data: ${resp.status} ${resp.statusText}`, Error);
+				try {
+					const resp = await fetch(filename);
+					if (!resp.ok) {
+						const errorMsg = `Failed to load data: ${resp.status} ${resp.statusText}`;
+						spinner.complete();
+						NOTIF.error(errorMsg, new Error(errorMsg));
+						throw new Error(errorMsg);
+					}
+		
+					spinner.complete();
+					const pbar = NOTIF.pbar('Processing data...');
+		
+					pbar.progress(0.1);
+					const text = await resp.text();
+		
+					pbar.progress(0.3);
+					const df = DataFrame.from_jsonl(text);
+		
+					pbar.progress(0.6);
+					const numeric = df.columns
+						.filter(c => c.startsWith(numericalPrefix))
+						.sort((a, b) => {
+							// Extract the part after the prefix
+							const aSuffix = a.substring(numericalPrefix.length);
+							const bSuffix = b.substring(numericalPrefix.length);
+		
+							// Check if both suffixes are integers
+							const aNum = parseInt(aSuffix, 10);
+							const bNum = parseInt(bSuffix, 10);
+		
+							// If both are valid integers, sort numerically
+							if (!isNaN(aNum) && !isNaN(bNum) &&
+								aNum.toString() === aSuffix && bNum.toString() === bSuffix) {
+								return aNum - bNum;
+							}
+		
+							// Otherwise, sort lexicographically
+							return a.localeCompare(b);
+						});
+		
+					pbar.progress(0.9);
+					const result = new DataModel(df, numeric);
+		
+					pbar.progress(1.0);
+					pbar.complete();
+					NOTIF.success(`Loaded ${df.data.length} data points with ${numeric.length} dimensions`);
+		
+					return result;
+				} catch (error) {
+					spinner.complete();
+					NOTIF.error('Failed to load data', error);
+					throw error;
 				}
-		
-				progressCallback('Parsing data...');
-		
-				const text = await resp.text();
-				const df = DataFrame.from_jsonl(text);
-		
-				progressCallback('Processing columns...');
-		
-				const numeric = df.columns
-					.filter(c => c.startsWith(numericalPrefix))
-					.sort((a, b) => {
-						const aSuffix = a.substring(numericalPrefix.length);
-						const bSuffix = b.substring(numericalPrefix.length);
-						const aNum = parseInt(aSuffix, 10);
-						const bNum = parseInt(bSuffix, 10);
-						if (!isNaN(aNum) && !isNaN(bNum) &&
-							aNum.toString() === aSuffix && bNum.toString() === bSuffix) {
-							return aNum - bNum;
-						}
-						return a.localeCompare(b);
-					});
-		
-				progressCallback('Finalizing...');
-		
-				return new DataModel(df, numeric);
 			}
 		}
 		</script>
@@ -2330,14 +2355,53 @@
 		            selectBySelect.value = this.pointCloud.state.selectBy;
 		        }
 		
-		        // Single Apply button for columns
+		        // Single Apply button for columns with loading notifications
 		        if (applyColumns) {
-		            applyColumns.addEventListener('click', () => {
-		                this.pointCloud.selMgr.clearCaches();
-		                this.pointCloud.state.setColorBy(colorBySelect.value);
-		                this.pointCloud.state.setSelectBy(selectBySelect.value);
-		                this.colorIdx = Math.max(0, this.cats.indexOf(colorBySelect.value));
-		                this.selectIdx = Math.max(0, this.cats.indexOf(selectBySelect.value));
+		            applyColumns.addEventListener('click', async () => {
+		                const newColorBy = colorBySelect.value;
+		                const newSelectBy = selectBySelect.value;
+		
+		                // Check if changes are needed
+		                const colorChanged = newColorBy !== this.pointCloud.state.colorBy;
+		                const selectChanged = newSelectBy !== this.pointCloud.state.selectBy;
+		
+		                if (!colorChanged && !selectChanged) {
+		                    NOTIF.show('No changes to apply', 2000);
+		                    return;
+		                }
+		
+		                const sp = NOTIF.spinner('Updating columns...');
+		
+		                try {
+		                    // Clear caches first
+		                    this.pointCloud.selMgr.clearCaches();
+		
+		                    // Apply color column change
+		                    if (colorChanged) {
+		                        this.pointCloud.state.setColorBy(newColorBy);
+		                        this.colorIdx = Math.max(0, this.cats.indexOf(newColorBy));
+		                    }
+		
+		                    // Apply selection column change
+		                    if (selectChanged) {
+		                        this.pointCloud.state.setSelectBy(newSelectBy);
+		                        this.selectIdx = Math.max(0, this.cats.indexOf(newSelectBy));
+		                    }
+		
+		                    // Finalize
+		
+		                    setTimeout(() => {
+		                        sp.complete();
+		                        const changes = [];
+		                        if (colorChanged) changes.push(`color: ${newColorBy}`);
+		                        if (selectChanged) changes.push(`selection: ${newSelectBy}`);
+		                        NOTIF.success(`Updated ${changes.join(', ')}`);
+		                    }, 200);
+		
+		                } catch (error) {
+		                    sp.complete();
+		                    NOTIF.error('Failed to update columns', error);
+		                }
 		            });
 		        }
 		
@@ -2366,21 +2430,57 @@
 		            zAxisSelect.value = CONFIG.axes.z;
 		        }
 		
-		        // Single Apply button for axes
+		        // Single Apply button for axes with notifications
 		        if (applyAxes) {
-		            applyAxes.addEventListener('click', () => {
-		                this.pointCloud.state.setAxis('x', parseInt(xAxisSelect.value));
-		                this.pointCloud.state.setAxis('y', parseInt(yAxisSelect.value));
-		                this.pointCloud.state.setAxis('z', parseInt(zAxisSelect.value));
-		                this.pointCloud._buildGeometry();
+		            applyAxes.addEventListener('click', async () => {
+		                const newX = parseInt(xAxisSelect.value);
+		                const newY = parseInt(yAxisSelect.value);
+		                const newZ = parseInt(zAxisSelect.value);
+		
+		                // Check if changes are needed
+		                const xChanged = newX !== CONFIG.axes.x;
+		                const yChanged = newY !== CONFIG.axes.y;
+		                const zChanged = newZ !== CONFIG.axes.z;
+		
+		                if (!xChanged && !yChanged && !zChanged) {
+		                    NOTIF.show('No axis changes to apply', 2000);
+		                    return;
+		                }
+		
+		                const spinner = NOTIF.spinner('Updating visualization axes...');
+		
+		                try {
+		                    // Small delay to show spinner
+		                    await new Promise(resolve => setTimeout(resolve, 100));
+		
+		                    // Apply axis changes
+		                    this.pointCloud.state.setAxis('x', newX);
+		                    this.pointCloud.state.setAxis('y', newY);
+		                    this.pointCloud.state.setAxis('z', newZ);
+		                    this.pointCloud._buildGeometry();
+		
+		                    spinner.complete();
+		
+		                    const changes = [];
+		                    if (xChanged) changes.push(`X: ${this.pointCloud.model.numericCols[newX]}`);
+		                    if (yChanged) changes.push(`Y: ${this.pointCloud.model.numericCols[newY]}`);
+		                    if (zChanged) changes.push(`Z: ${this.pointCloud.model.numericCols[newZ]}`);
+		
+		                    NOTIF.success(`Updated axes - ${changes.join(', ')}`);
+		
+		                } catch (error) {
+		                    spinner.complete();
+		                    NOTIF.error('Failed to update axes', error);
+		                }
 		            });
 		        }
 		
-		        // Setup export config button (now in HTML)
+		        // Setup export config button
 		        const exportBtn = document.getElementById('exportConfigBtn');
 		        if (exportBtn) {
 		            exportBtn.addEventListener('click', () => {
 		                exportConfigToNewTab();
+		                NOTIF.success('Configuration exported to new tab');
 		            });
 		        }
 		    }
@@ -3521,11 +3621,14 @@
 	<!-- ---------- bootstrap script ---------- -->
 	<script>
 		document.addEventListener('DOMContentLoaded', async () => {
+			let sp = NOTIF.spinner('Starting up...');
 			await getConfig();
 			const model = await DataModel.load(CONFIG.dataFile, CONFIG.numericalPrefix);
 			const pointCloud = new PointCloud(model);
 			const uiManager = new UIManager(pointCloud);
 			pointCloud.setUIManager(uiManager);
+			sp.complete();
+			NOTIF.success('Ready! Press H for help.');
 		});
 	</script>
 </body>
