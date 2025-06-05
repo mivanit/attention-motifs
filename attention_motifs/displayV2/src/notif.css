@@ -43,11 +43,6 @@
     color: #ff4444;
 }
 
-/* Progress bar styling */
-.notification-indicator.pbar {
-    padding-bottom: 16px;
-}
-
 /* Loading spinner */
 .notification-spinner {
     display: inline-block;
@@ -67,7 +62,8 @@
 }
 
 .notification-indicator.error .notification-spinner {
-    display: none; /* No spinner for errors */
+    display: none;
+    /* No spinner for errors */
 }
 
 /* Progress bar components */
@@ -97,7 +93,9 @@
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Hide spinner when not in spinner mode */

@@ -5,17 +5,17 @@ class NotificationManager {
         this.defaultTimeout = options.defaultTimeout || 4000;
         this.successTimeout = options.successTimeout || 2000;
         this.fadeTimeout = options.fadeTimeout || 300;
-        
+
         // Layout settings
         this.topOffset = options.topOffset || 20;
-        this.spacing = options.spacing || 70;
+        this.spacing = options.spacing || 60;
         this.slideOffset = options.slideOffset || -20;
-        
+
         this.notifications = new Map(); // Map of id -> notification data
         this.nextId = 0;
         this.container = null;
         this.isReady = false;
-        
+
         // Initialize when DOM is ready
         this._initWhenReady();
     }
@@ -37,7 +37,7 @@ class NotificationManager {
 
     _createContainer() {
         if (this.container) return; // Already created
-        
+
         this.container = document.createElement('div');
         this.container.className = 'notification-container';
         document.body.appendChild(this.container);
@@ -53,11 +53,11 @@ class NotificationManager {
 
     _createNotificationElement(id, type, message) {
         this._ensureReady();
-        
+
         const element = document.createElement('div');
         element.className = `notification-indicator visible ${type}`;
         element.dataset.id = id;
-        
+
         if (type === 'spinner') {
             element.innerHTML = `
                 <span class="notification-spinner"></span>
@@ -75,7 +75,7 @@ class NotificationManager {
                 <span class="notification-text">${message}</span>
             `;
         }
-        
+
         this.container.appendChild(element);
         this._updatePositions();
         return element;
@@ -83,7 +83,7 @@ class NotificationManager {
 
     _updatePositions() {
         if (!this.container) return;
-        
+
         const notifications = Array.from(this.container.children);
         notifications.forEach((el, index) => {
             el.style.top = `${this.topOffset + index * this.spacing}px`;
@@ -102,7 +102,7 @@ class NotificationManager {
         // Remove element with fade animation
         notifData.element.style.opacity = '0';
         notifData.element.style.transform = `translateX(-50%) translateY(${this.slideOffset}px)`;
-        
+
         setTimeout(() => {
             if (notifData.element.parentNode) {
                 notifData.element.parentNode.removeChild(notifData.element);
@@ -119,7 +119,7 @@ class NotificationManager {
      */
     show(message, timeout = null) {
         console.log(message);
-        
+
         const id = this.nextId++;
         const element = this._createNotificationElement(id, 'show', message);
 
@@ -142,7 +142,7 @@ class NotificationManager {
      */
     spinner(message) {
         console.log(message);
-        
+
         const id = this.nextId++;
         const element = this._createNotificationElement(id, 'spinner', message);
 
@@ -166,7 +166,7 @@ class NotificationManager {
      */
     pbar(message) {
         console.log(message);
-        
+
         const id = this.nextId++;
         const element = this._createNotificationElement(id, 'pbar', message);
 
@@ -197,7 +197,7 @@ class NotificationManager {
      */
     success(message, timeout = null) {
         console.log(message);
-        
+
         const id = this.nextId++;
         const element = this._createNotificationElement(id, 'success', message);
 
@@ -225,7 +225,7 @@ class NotificationManager {
         } else {
             console.error(message);
         }
-        
+
         const id = this.nextId++;
         const element = this._createNotificationElement(id, 'error', message);
 

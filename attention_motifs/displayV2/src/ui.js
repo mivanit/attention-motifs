@@ -370,6 +370,9 @@ class UIManager {
                 }
 
                 try {
+                    // Give the UI time to render the spinner
+                    await new Promise(resolve => setTimeout(resolve, 50));
+
                     // Clear caches first
                     this.pointCloud.selMgr.clearCaches();
 
@@ -385,15 +388,14 @@ class UIManager {
                         this.selectIdx = Math.max(0, this.cats.indexOf(newSelectBy));
                     }
 
-                    // Finalize
+                    // Give the UI another frame to update if needed
+                    await new Promise(resolve => setTimeout(resolve, 100));
 
-                    setTimeout(() => {
-                        sp.complete();
-                        const changes = [];
-                        if (colorChanged) changes.push(`color: ${newColorBy}`);
-                        if (selectChanged) changes.push(`selection: ${newSelectBy}`);
-                        NOTIF.success(`Updated ${changes.join(', ')}`);
-                    }, 200);
+                    sp.complete();
+                    const changes = [];
+                    if (colorChanged) changes.push(`color: ${newColorBy}`);
+                    if (selectChanged) changes.push(`selection: ${newSelectBy}`);
+                    NOTIF.success(`Updated ${changes.join(', ')}`);
 
                 } catch (error) {
                     sp.complete();
@@ -447,13 +449,17 @@ class UIManager {
                 const spinner = NOTIF.spinner('Updating visualization axes...');
 
                 try {
-                    // Small delay to show spinner
-                    await new Promise(resolve => setTimeout(resolve, 100));
+                    // Give the UI time to render the spinner
+                    await new Promise(resolve => setTimeout(resolve, 50));
 
                     // Apply axis changes
                     this.pointCloud.state.setAxis('x', newX);
                     this.pointCloud.state.setAxis('y', newY);
                     this.pointCloud.state.setAxis('z', newZ);
+
+                    // Give UI another frame before the heavy _buildGeometry operation
+                    await new Promise(resolve => setTimeout(resolve, 10));
+
                     this.pointCloud._buildGeometry();
 
                     spinner.complete();
