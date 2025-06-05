@@ -1157,16 +1157,47 @@
 		        
 		        this.notifications = new Map(); // Map of id -> notification data
 		        this.nextId = 0;
-		        this._createContainer();
+		        this.container = null;
+		        this.isReady = false;
+		        
+		        // Initialize when DOM is ready
+		        this._initWhenReady();
+		    }
+		
+		    _initWhenReady() {
+		        if (document.body) {
+		            this._createContainer();
+		            this.isReady = true;
+		        } else if (document.readyState === 'loading') {
+		            document.addEventListener('DOMContentLoaded', () => {
+		                this._createContainer();
+		                this.isReady = true;
+		            });
+		        } else {
+		            // DOM is ready but body might not be parsed yet
+		            setTimeout(() => this._initWhenReady(), 10);
+		        }
 		    }
 		
 		    _createContainer() {
+		        if (this.container) return; // Already created
+		        
 		        this.container = document.createElement('div');
 		        this.container.className = 'notification-container';
 		        document.body.appendChild(this.container);
 		    }
 		
+		    _ensureReady() {
+		        if (!this.isReady) {
+		            console.warn('NotificationManager not ready yet, initializing synchronously');
+		            this._createContainer();
+		            this.isReady = true;
+		        }
+		    }
+		
 		    _createNotificationElement(id, type, message) {
+		        this._ensureReady();
+		        
 		        const element = document.createElement('div');
 		        element.className = `notification-indicator visible ${type}`;
 		        element.dataset.id = id;
@@ -1195,6 +1226,8 @@
 		    }
 		
 		    _updatePositions() {
+		        if (!this.container) return;
+		        
 		        const notifications = Array.from(this.container.children);
 		        notifications.forEach((el, index) => {
 		            el.style.top = `${this.topOffset + index * this.spacing}px`;
@@ -1362,7 +1395,18 @@
 		    }
 		}
 		
-		let NOTIF = new NotificationManager();
+		// Initialize global instance when DOM is ready
+		let NOTIF;
+		
+		// Initialize immediately if DOM is already ready, otherwise wait
+		if (document.readyState === 'loading') {
+		    document.addEventListener('DOMContentLoaded', () => {
+		        NOTIF = new NotificationManager();
+		    });
+		} else {
+		    // DOM already loaded
+		    NOTIF = new NotificationManager();
+		}
 		</script>
 		<!-- end 'notif.js' -->
 			<!-- begin 'ColorUtil.js' -->
