@@ -2092,8 +2092,6 @@
 		        /* attach once‑only grid listeners for selected values & legend */
 		        this._attachGridListeners();
 		
-		        /* performance warning banner */
-		        this._createPerformanceWarning();
 		
 		        // Apply initial panel visibility from CONFIG
 		        this._applyInitialPanelVisibility();
@@ -2836,40 +2834,6 @@
 		        this.hoverPanel.style.display = 'block';
 		    }
 		
-		    /* ---------- performance warning --------------------------- */
-		    _createPerformanceWarning() {
-		        this.performanceWarning = document.createElement('div');
-		        this.performanceWarning.style.cssText = `   
-		            position: fixed;
-		            top: 60px;
-		            left: 50%;
-		            transform: translateX(-50%);
-		            background: rgba(255, 68, 68, 0.9);
-		            color: white;
-		            padding: 12px 20px;
-		            border-radius: 8px;
-		            font-family: 'Courier New', monospace;
-		            font-size: 12px;
-		            font-weight: bold;
-		            z-index: 1000;
-		            display: none;
-		            max-width: 400px;
-		            text-align: center;
-		            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-		        `;
-		        document.body.appendChild(this.performanceWarning);
-		    }
-		
-		    _showPerformanceWarning(message) {
-		        this.performanceWarning.textContent = message;
-		        this.performanceWarning.style.display = 'block';
-		
-		        // Hide after duration from CONFIG
-		        setTimeout(() => {
-		            this.performanceWarning.style.display = 'none';
-		        }, CONFIG.performance.performanceWarningDuration);
-		    }
-		
 		    _checkPerformance() {
 		        const now = performance.now();
 		
@@ -2935,10 +2899,10 @@
 		            changesApplied.push('non-selected point size to 5');
 		        }
 		
-		        // Show warning message
+		        // Show error notification using NOTIF system
 		        if (changesApplied.length > 0) {
 		            const message = `Performance warning: Low FPS detected (${this.fps}). Adjusted: ${changesApplied.join(', ')}.`;
-		            this._showPerformanceWarning(message);
+		            NOTIF.error(message, null, CONFIG.performance.performanceWarningDuration);
 		        }
 		    }
 		}
