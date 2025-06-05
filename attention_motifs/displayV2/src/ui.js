@@ -354,6 +354,8 @@ class UIManager {
         // Single Apply button for columns with loading notifications
         if (applyColumns) {
             applyColumns.addEventListener('click', async () => {
+                const sp = NOTIF.spinner('Updating columns...');
+
                 const newColorBy = colorBySelect.value;
                 const newSelectBy = selectBySelect.value;
 
@@ -362,11 +364,10 @@ class UIManager {
                 const selectChanged = newSelectBy !== this.pointCloud.state.selectBy;
 
                 if (!colorChanged && !selectChanged) {
+                    sp.complete();
                     NOTIF.show('No changes to apply', 2000);
                     return;
                 }
-
-                const sp = NOTIF.spinner('Updating columns...');
 
                 try {
                     // Clear caches first
