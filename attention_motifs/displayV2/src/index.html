@@ -132,37 +132,38 @@
 							<input id="speed" type="range" min="1" max="200" step="1" value="50">
 						</div>
 						<span class="value-display-right" id="speedValue">50</span></label>
-				</di	v>
-			</div>
-			<!-- Axis Selection - Three Columns -->
-			<div class="control-section">
-				<h4>Axis Selection</h4>
-				<div class="axis-selection">
-					<div class="axis-item">
-						<label>X-Axis:</label>
-						<select id="xAxisSelect"></select>
+					</di v>
+				</div>
+				<!-- Axis Selection - Three Columns -->
+				<div class="control-section">
+					<h4>Axis Selection</h4>
+					<div class="axis-selection">
+						<div class="axis-item">
+							<label>X-Axis:</label>
+							<select id="xAxisSelect"></select>
+						</div>
+						<div class="axis-item">
+							<label>Y-Axis:</label>
+							<select id="yAxisSelect"></select>
+						</div>
+						<div class="axis-item">
+							<label>Z-Axis:</label>
+							<select id="zAxisSelect"></select>
+						</div>
 					</div>
-					<div class="axis-item">
-						<label>Y-Axis:</label>
-						<select id="yAxisSelect"></select>
-					</div>
-					<div class="axis-item">
-						<label>Z-Axis:</label>
-						<select id="zAxisSelect"></select>
+					<button id="applyAxes" style="width: 100%; margin-top: 10px;">Apply Axes</button>
+				</div>
+				<!-- Configuration -->
+				<div class="control-section">
+					<h4>Configuration</h4>
+					<div class="side-by-side">
+						<button id="exportConfigBtn" class="export-btn">Export Current Config</button>
+						<button id="resetConfigBtn" class="export-btn">Reset Config</button>
 					</div>
 				</div>
-				<button id="applyAxes" style="width: 100%; margin-top: 10px;">Apply Axes</button>
+				<div class="close-hint">Press M to close</div>
 			</div>
-			<!-- Configuration -->
-			<div class="control-section">
-				<h4>Configuration</h4>
-				<div class="side-by-side">
-					<button id="exportConfigBtn" class="export-btn">Export Current Config</button>
-					<button id="resetConfigBtn" class="export-btn">Reset Config</button>
-				</div>
-			</div>
-			<div class="close-hint">Press M to close</div>
-		</div>
+		</div><!-- /#container -->
 		<!-- ---------- Info panel (center bottom) - for selected values only ---------- -->
 		<div id="infoMenu" class="menu">
 			<div id="selectedValuesContainer">
@@ -218,20 +219,19 @@
 				</div>
 			</div>
 		</div>
-	</div><!-- /#container -->
-	<!-- ---------- bootstrap script ---------- -->
-	<script>
-		document.addEventListener('DOMContentLoaded', async () => {
-			let sp = NOTIF.spinner('Starting up...');
-			await getConfig();
-			const model = await DataModel.load(CONFIG.dataFile, CONFIG.numericalPrefix);
-			const pointCloud = new PointCloud(model);
-			const uiManager = new UIManager(pointCloud);
-			pointCloud.setUIManager(uiManager);
-			sp.complete();
-			NOTIF.success('Ready! Press H for help.');
-		});
-	</script>
+		<!-- ---------- bootstrap script ---------- -->
+		<script>
+			document.addEventListener('DOMContentLoaded', async () => {
+				let sp = NOTIF.spinner('Starting up...');
+				await getConfig();
+				const model = await DataModel.load(CONFIG.dataFile, CONFIG.numericalPrefix);
+				const pointCloud = new PointCloud(model);
+				const uiManager = new UIManager(pointCloud);
+				pointCloud.setUIManager(uiManager);
+				sp.complete();
+				NOTIF.success('Ready! Press H for help.');
+			});
+		</script>
 </body>
 
 </html>
