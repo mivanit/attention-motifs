@@ -17,37 +17,43 @@ class DataModel {
 		return out;
 	}
 
-	/** fast accessor */
 	getCoord(rowIdx, axisIdx) {
 		return this._pcaFlat[rowIdx * this.numericCols.length + axisIdx];
 	}
 
 	row(idx) { return this.df.data[idx]; }
 
-	static async load(filename, numericalPrefix) {
+	static async load(filename, numericalPrefix, progressCallback = (msg, err = null) => {}) {
+		progressCallback('Downloading data...');
+
 		const resp = await fetch(filename);
+		if (!resp.ok) {
+			progressCallback(`Failed to load data: ${resp.status} ${resp.statusText}`, Error);
+		}
+
+		progressCallback('Parsing data...');
+
 		const text = await resp.text();
 		const df = DataFrame.from_jsonl(text);
+
+		progressCallback('Processing columns...');
+
 		const numeric = df.columns
 			.filter(c => c.startsWith(numericalPrefix))
 			.sort((a, b) => {
-				// Extract the part after the prefix
 				const aSuffix = a.substring(numericalPrefix.length);
 				const bSuffix = b.substring(numericalPrefix.length);
-
-				// Check if both suffixes are integers
 				const aNum = parseInt(aSuffix, 10);
 				const bNum = parseInt(bSuffix, 10);
-
-				// If both are valid integers, sort numerically
 				if (!isNaN(aNum) && !isNaN(bNum) &&
 					aNum.toString() === aSuffix && bNum.toString() === bSuffix) {
 					return aNum - bNum;
 				}
-
-				// Otherwise, sort lexicographically
 				return a.localeCompare(b);
 			});
+
+		progressCallback('Finalizing...');
+
 		return new DataModel(df, numeric);
 	}
 }

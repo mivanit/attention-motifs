@@ -599,3 +599,50 @@ button:hover {
 	width: 100%;
 	margin: 0;
 }
+
+/* Loading indicator */
+.loading-indicator {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 34, 68, 0.95);
+    color: #00ff00;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 1001;
+    display: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border: 1px solid #00ff00;
+    min-width: 200px;
+    text-align: center;
+}
+
+.loading-indicator.visible {
+    display: block;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #004400;
+    border-radius: 50%;
+    border-top-color: #00ff00;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-progress {
+    margin-top: 4px;
+    font-size: 10px;
+    color: #00ccff;
+}

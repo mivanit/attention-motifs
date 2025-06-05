@@ -612,8 +612,165 @@
 			width: 100%;
 			margin: 0;
 		}
+		
+		/* Loading indicator */
+		.loading-indicator {
+		    position: fixed;
+		    top: 20px;
+		    left: 50%;
+		    transform: translateX(-50%);
+		    background: rgba(0, 34, 68, 0.95);
+		    color: #00ff00;
+		    padding: 12px 24px;
+		    border-radius: 8px;
+		    font-family: 'Courier New', monospace;
+		    font-size: 12px;
+		    font-weight: bold;
+		    z-index: 1001;
+		    display: none;
+		    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+		    border: 1px solid #00ff00;
+		    min-width: 200px;
+		    text-align: center;
+		}
+		
+		.loading-indicator.visible {
+		    display: block;
+		}
+		
+		.loading-spinner {
+		    display: inline-block;
+		    width: 12px;
+		    height: 12px;
+		    border: 2px solid #004400;
+		    border-radius: 50%;
+		    border-top-color: #00ff00;
+		    animation: spin 1s ease-in-out infinite;
+		    margin-right: 8px;
+		    vertical-align: middle;
+		}
+		
+		@keyframes spin {
+		    to { transform: rotate(360deg); }
+		}
+		
+		.loading-progress {
+		    margin-top: 4px;
+		    font-size: 10px;
+		    color: #00ccff;
+		}
 		</style>
 		<!-- end 'style.css' -->
+			<!-- begin 'notif.css' -->
+		<style>
+		/* Notification system styling */
+		.notification-container {
+		    position: fixed;
+		    top: 0;
+		    left: 50%;
+		    transform: translateX(-50%);
+		    z-index: 1001;
+		    pointer-events: none;
+		}
+		
+		.notification-indicator {
+		    position: absolute;
+		    left: 50%;
+		    transform: translateX(-50%);
+		    background: rgba(0, 34, 68, 0.95);
+		    color: #00ff00;
+		    padding: 12px 24px;
+		    border-radius: 8px;
+		    font-family: 'Courier New', monospace;
+		    font-size: 12px;
+		    font-weight: bold;
+		    display: block;
+		    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+		    border: 1px solid #00ff00;
+		    min-width: 200px;
+		    text-align: center;
+		    transition: all 0.3s ease;
+		    opacity: 1;
+		    margin-bottom: 10px;
+		}
+		
+		/* Success styling */
+		.notification-indicator.success {
+		    background: rgba(0, 68, 34, 0.95);
+		    border-color: #00ff88;
+		    color: #00ff88;
+		}
+		
+		/* Error styling */
+		.notification-indicator.error {
+		    background: rgba(68, 0, 0, 0.95);
+		    border-color: #ff4444;
+		    color: #ff4444;
+		}
+		
+		/* Progress bar styling */
+		.notification-indicator.pbar {
+		    padding-bottom: 16px;
+		}
+		
+		/* Loading spinner */
+		.notification-spinner {
+		    display: inline-block;
+		    width: 12px;
+		    height: 12px;
+		    border: 2px solid #004400;
+		    border-radius: 50%;
+		    border-top-color: #00ff00;
+		    animation: spin 1s ease-in-out infinite;
+		    margin-right: 8px;
+		    vertical-align: middle;
+		}
+		
+		.notification-indicator.success .notification-spinner {
+		    border-color: #004400;
+		    border-top-color: #00ff88;
+		}
+		
+		.notification-indicator.error .notification-spinner {
+		    display: none; /* No spinner for errors */
+		}
+		
+		/* Progress bar components */
+		.notification-progress-container {
+		    width: 100%;
+		    height: 6px;
+		    background: rgba(255, 255, 255, 0.1);
+		    border-radius: 3px;
+		    margin-top: 8px;
+		    overflow: hidden;
+		}
+		
+		.notification-progress-bar {
+		    height: 100%;
+		    background: #00ff00;
+		    border-radius: 3px;
+		    transition: width 0.3s ease;
+		    width: 0%;
+		}
+		
+		.notification-indicator.success .notification-progress-bar {
+		    background: #00ff88;
+		}
+		
+		.notification-indicator.error .notification-progress-bar {
+		    background: #ff4444;
+		}
+		
+		@keyframes spin {
+		    to { transform: rotate(360deg); }
+		}
+		
+		/* Hide spinner when not in spinner mode */
+		.notification-indicator:not(.spinner) .notification-spinner {
+		    display: none;
+		}
+		</style>
+		<!-- end 'notif.css' -->
 	<!-- code -->
 			<!-- begin 'config.js' -->
 		<script>
@@ -983,6 +1140,231 @@
 		}
 		</script>
 		<!-- end 'config.js' -->
+			<!-- begin 'notif.js' -->
+		<script>
+		/* notif.js - Standalone notification system */
+		class NotificationManager {
+		    constructor(options = {}) {
+		        // Timeout settings
+		        this.defaultTimeout = options.defaultTimeout || 4000;
+		        this.successTimeout = options.successTimeout || 2000;
+		        this.fadeTimeout = options.fadeTimeout || 300;
+		        
+		        // Layout settings
+		        this.topOffset = options.topOffset || 20;
+		        this.spacing = options.spacing || 70;
+		        this.slideOffset = options.slideOffset || -20;
+		        
+		        this.notifications = new Map(); // Map of id -> notification data
+		        this.nextId = 0;
+		        this._createContainer();
+		    }
+		
+		    _createContainer() {
+		        this.container = document.createElement('div');
+		        this.container.className = 'notification-container';
+		        document.body.appendChild(this.container);
+		    }
+		
+		    _createNotificationElement(id, type, message) {
+		        const element = document.createElement('div');
+		        element.className = `notification-indicator visible ${type}`;
+		        element.dataset.id = id;
+		        
+		        if (type === 'spinner') {
+		            element.innerHTML = `
+		                <span class="notification-spinner"></span>
+		                <span class="notification-text">${message}</span>
+		            `;
+		        } else if (type === 'pbar') {
+		            element.innerHTML = `
+		                <div class="notification-text">${message}</div>
+		                <div class="notification-progress-container">
+		                    <div class="notification-progress-bar" style="width: 0%"></div>
+		                </div>
+		            `;
+		        } else {
+		            element.innerHTML = `
+		                <span class="notification-text">${message}</span>
+		            `;
+		        }
+		        
+		        this.container.appendChild(element);
+		        this._updatePositions();
+		        return element;
+		    }
+		
+		    _updatePositions() {
+		        const notifications = Array.from(this.container.children);
+		        notifications.forEach((el, index) => {
+		            el.style.top = `${this.topOffset + index * this.spacing}px`;
+		        });
+		    }
+		
+		    _removeNotification(id) {
+		        const notifData = this.notifications.get(id);
+		        if (!notifData) return;
+		
+		        // Clear timeout if exists
+		        if (notifData.timeout) {
+		            clearTimeout(notifData.timeout);
+		        }
+		
+		        // Remove element with fade animation
+		        notifData.element.style.opacity = '0';
+		        notifData.element.style.transform = `translateX(-50%) translateY(${this.slideOffset}px)`;
+		        
+		        setTimeout(() => {
+		            if (notifData.element.parentNode) {
+		                notifData.element.parentNode.removeChild(notifData.element);
+		            }
+		            this.notifications.delete(id);
+		            this._updatePositions();
+		        }, this.fadeTimeout);
+		    }
+		
+		    /**
+		     * Show a regular notification message
+		     * @param {string} message - Message to display
+		     * @param {number} timeout - Auto-hide timeout in ms (default from constructor)
+		     */
+		    show(message, timeout = null) {
+		        console.log(message);
+		        
+		        const id = this.nextId++;
+		        const element = this._createNotificationElement(id, 'show', message);
+		
+		        const hideTimeout = timeout || this.defaultTimeout;
+		        const timeoutId = setTimeout(() => {
+		            this._removeNotification(id);
+		        }, hideTimeout);
+		
+		        this.notifications.set(id, {
+		            element,
+		            type: 'show',
+		            timeout: timeoutId
+		        });
+		    }
+		
+		    /**
+		     * Show a persistent spinner with message
+		     * @param {string} message - Loading message to display
+		     * @returns {object} Spinner control object with .complete() method
+		     */
+		    spinner(message) {
+		        console.log(message);
+		        
+		        const id = this.nextId++;
+		        const element = this._createNotificationElement(id, 'spinner', message);
+		
+		        this.notifications.set(id, {
+		            element,
+		            type: 'spinner',
+		            timeout: null
+		        });
+		
+		        return {
+		            complete: () => {
+		                this._removeNotification(id);
+		            }
+		        };
+		    }
+		
+		    /**
+		     * Show a persistent progress bar with message
+		     * @param {string} message - Loading message to display
+		     * @returns {object} Progress bar control object with .progress(value) method
+		     */
+		    pbar(message) {
+		        console.log(message);
+		        
+		        const id = this.nextId++;
+		        const element = this._createNotificationElement(id, 'pbar', message);
+		
+		        this.notifications.set(id, {
+		            element,
+		            type: 'pbar',
+		            timeout: null
+		        });
+		
+		        return {
+		            progress: (value) => {
+		                const progressBar = element.querySelector('.notification-progress-bar');
+		                if (progressBar) {
+		                    const percentage = Math.max(0, Math.min(100, value * 100));
+		                    progressBar.style.width = `${percentage}%`;
+		                }
+		            },
+		            complete: () => {
+		                this._removeNotification(id);
+		            }
+		        };
+		    }
+		
+		    /**
+		     * Show success message
+		     * @param {string} message - Success message
+		     * @param {number} timeout - Auto-hide timeout in ms (default from constructor)
+		     */
+		    success(message, timeout = null) {
+		        console.log(message);
+		        
+		        const id = this.nextId++;
+		        const element = this._createNotificationElement(id, 'success', message);
+		
+		        const hideTimeout = timeout || this.successTimeout;
+		        const timeoutId = setTimeout(() => {
+		            this._removeNotification(id);
+		        }, hideTimeout);
+		
+		        this.notifications.set(id, {
+		            element,
+		            type: 'success',
+		            timeout: timeoutId
+		        });
+		    }
+		
+		    /**
+		     * Show error message
+		     * @param {string} message - Error message
+		     * @param {Error} err - Error object to log
+		     * @param {number} timeout - Auto-hide timeout in ms (default from constructor)
+		     */
+		    error(message, err = null, timeout = null) {
+		        if (err) {
+		            console.error(err);
+		        } else {
+		            console.error(message);
+		        }
+		        
+		        const id = this.nextId++;
+		        const element = this._createNotificationElement(id, 'error', message);
+		
+		        const hideTimeout = timeout || this.defaultTimeout;
+		        const timeoutId = setTimeout(() => {
+		            this._removeNotification(id);
+		        }, hideTimeout);
+		
+		        this.notifications.set(id, {
+		            element,
+		            type: 'error',
+		            timeout: timeoutId
+		        });
+		    }
+		
+		    /**
+		     * Hide all notifications
+		     */
+		    clear() {
+		        for (const [id] of this.notifications) {
+		            this._removeNotification(id);
+		        }
+		    }
+		}
+		
+		let NOTIF = new NotificationManager();
+		</script>
+		<!-- end 'notif.js' -->
 			<!-- begin 'ColorUtil.js' -->
 		<script>
 		function hslToHex(h, s, l) {
@@ -1249,37 +1631,43 @@
 				return out;
 			}
 		
-			/** fast accessor */
 			getCoord(rowIdx, axisIdx) {
 				return this._pcaFlat[rowIdx * this.numericCols.length + axisIdx];
 			}
 		
 			row(idx) { return this.df.data[idx]; }
 		
-			static async load(filename, numericalPrefix) {
+			static async load(filename, numericalPrefix, progressCallback = (msg, err = null) => {}) {
+				progressCallback('Downloading data...');
+		
 				const resp = await fetch(filename);
+				if (!resp.ok) {
+					progressCallback(`Failed to load data: ${resp.status} ${resp.statusText}`, Error);
+				}
+		
+				progressCallback('Parsing data...');
+		
 				const text = await resp.text();
 				const df = DataFrame.from_jsonl(text);
+		
+				progressCallback('Processing columns...');
+		
 				const numeric = df.columns
 					.filter(c => c.startsWith(numericalPrefix))
 					.sort((a, b) => {
-						// Extract the part after the prefix
 						const aSuffix = a.substring(numericalPrefix.length);
 						const bSuffix = b.substring(numericalPrefix.length);
-		
-						// Check if both suffixes are integers
 						const aNum = parseInt(aSuffix, 10);
 						const bNum = parseInt(bSuffix, 10);
-		
-						// If both are valid integers, sort numerically
 						if (!isNaN(aNum) && !isNaN(bNum) &&
 							aNum.toString() === aSuffix && bNum.toString() === bSuffix) {
 							return aNum - bNum;
 						}
-		
-						// Otherwise, sort lexicographically
 						return a.localeCompare(b);
 					});
+		
+				progressCallback('Finalizing...');
+		
 				return new DataModel(df, numeric);
 			}
 		}
