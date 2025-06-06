@@ -1,0 +1,15 @@
+models = [
+	# "pythia-14m",
+	# "tiny-stories-1M",
+	"gpt2-small",
+	"gpt2-medium",
+	"pythia-1b",
+	"meta-llama/Llama-3.2-1B",
+	"gemma-2b",
+]
+
+prompts_file = "data/pile_demo.jsonl"
+patterns_path = "/home/miv/projects/attn/website/patterns/docs"
+
+prompts_n_samples = 128
+n_proc = 12
