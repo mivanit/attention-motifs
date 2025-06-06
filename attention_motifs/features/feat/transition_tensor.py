@@ -4,7 +4,7 @@ import torch
 import scipy.stats as stats
 
 # attention-motifs
-from attention_motifs.transition_tensor import (
+from attention_motifs.math.transition_tensor import (
 	transition_tensor_torch,
 )
 
