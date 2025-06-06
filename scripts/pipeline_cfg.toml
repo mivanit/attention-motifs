@@ -9,7 +9,7 @@ models = [
 ]
 
 prompts_file = "data/pile_demo.jsonl"
-patterns_path = "/home/miv/projects/attn/website/patterns/docs"
+patterns_dir = "/home/miv/projects/attn/website/patterns/docs"
 
 prompts_n_samples = 128
 n_proc = 12

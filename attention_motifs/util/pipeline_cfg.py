@@ -1,0 +1,144 @@
+import tomllib
+from dataclasses import dataclass
+from pathlib import Path
+
+
+PIPELINE_CFG_EXAMPLES: str = """
+# use `pipeline_cfg.toml`
+python {script_path}
+# use `pipeline_cfg.toml` and override some parameters
+python {script_path} --prompts_n_samples 1000 --models gpt2-small,pythia-14m
+# use `some/path/my_cfg.toml`
+python {script_path} some/path/my_cfg.toml
+# use `some/path/my_cfg.toml` and override some parameters
+python {script_path} some/path/my_cfg.toml --prompts_n_samples 1000 --models gpt2-small,pythia-14m
+""".strip()
+
+@dataclass(kw_only=True)
+class PipelineConfig:
+	"""Configuration for the attention motifs pipeline."""
+
+	models: list[str]
+	prompts_n_samples: int
+	n_proc: int
+	prompts_file: Path
+	patterns_dir: Path
+	features_dir: Path
+
+	def validate(self) -> None:
+		# TODO: check models actually exist in TransformerLens?
+		assert all(isinstance(model, str) for model in self.models), (
+			"All models must be strings."
+		)
+		assert isinstance(self.prompts_n_samples, int) and self.prompts_n_samples > 0, (
+			"prompts_n_samples must be a positive integer."
+		)
+		assert isinstance(self.n_proc, int) and self.n_proc > 0, (
+			"n_proc must be a positive integer."
+		)
+		assert self.prompts_file.is_file(), (
+			f"prompts_file {self.prompts_file} does not exist."
+		)
+		assert not self.patterns_dir.is_file(), (
+			f"patterns_dir {self.patterns_dir} must be a directory."
+		)
+		assert not self.features_dir.is_file(), (
+			f"features_dir {self.features_dir} must be a directory."
+		)
+
+	@classmethod
+	def load(cls, data: dict) -> "PipelineConfig":
+		"""Load configuration from a dictionary."""
+		config: "PipelineConfig" = cls(
+			models=data["models"],
+			prompts_n_samples=data["prompts_n_samples"],
+			n_proc=data["n_proc"],
+			prompts_file=Path(data["prompts_file"]),
+			patterns_dir=Path(data["patterns_dir"]),
+			features_dir=Path(data["features_dir"]),
+		)
+		config.validate()
+		return config
+
+	@classmethod
+	def from_toml(cls, path: Path) -> "PipelineConfig":
+		"""Load configuration from a TOML file."""
+		with path.open("rb") as f:
+			data: dict = tomllib.load(f)
+		return cls.load(data)
+
+	@classmethod
+	def from_cli(cls, argv: list[str]) -> "PipelineConfig":
+		"""returns a PipelineConfig from CLI
+
+		The first (optional) positional argument is a path to a TOML file.
+		If omitted, the file `pipeline_cfg.toml` in the current working
+		directory is assumed.  Any keyword flags override values loaded
+		from the TOML.
+
+		# Usage:
+		```
+		# use `pipeline_cfg.toml`
+		python scrips/run_pipeline.py
+		# use `pipeline_cfg.toml` and override some parameters
+		python scrips/run_pipeline.py --prompts_n_samples 1000 --models gpt2-small,pythia-14m
+		# use `some/path/my_cfg.toml`
+		python scrips/run_pipeline.py some/path/my_cfg.toml
+		# use `some/path/my_cfg.toml` and override some parameters
+		python scrips/run_pipeline.py some/path/my_cfg.toml --prompts_n_samples 1000 --models gpt2-small,pythia-14m
+		```
+		"""
+		import argparse
+
+		parser: argparse.ArgumentParser = argparse.ArgumentParser(
+			description="Attention-motifs pipeline configuration"
+		)
+		# optional positional path to the config file
+		parser.add_argument(
+			"config_path",
+			nargs="?",
+			default="pipeline_cfg.toml",
+			type=Path,
+			help="Path to a TOML config file (default: pipeline_cfg.toml).",
+		)
+
+		# overrideable fields
+		parser.add_argument(
+			"--models", type=str, help="Comma-separated list of model names."
+		)
+		parser.add_argument(
+			"--prompts_n_samples", type=int, help="Number of samples per prompt."
+		)
+		parser.add_argument("--n_proc", type=int, help="Number of parallel processes.")
+		parser.add_argument(
+			"--prompts_file", type=Path, help="Path to the prompts file."
+		)
+		parser.add_argument(
+			"--patterns_dir", type=Path, help="Directory for learned patterns."
+		)
+		parser.add_argument(
+			"--features_dir", type=Path, help="Directory for extracted features."
+		)
+
+		args: argparse.Namespace = parser.parse_args(argv)
+
+		# 1. Load the base configuration from the TOML file
+		config: PipelineConfig = cls.from_toml(args.config_path)
+
+		# 2. Apply any command-line overrides
+		if args.models is not None:
+			config.models = [m.strip() for m in args.models.split(",") if m.strip()]
+		if args.prompts_n_samples is not None:
+			config.prompts_n_samples = args.prompts_n_samples
+		if args.n_proc is not None:
+			config.n_proc = args.n_proc
+		if args.prompts_file is not None:
+			config.prompts_file = args.prompts_file
+		if args.patterns_dir is not None:
+			config.patterns_dir = args.patterns_dir
+		if args.features_dir is not None:
+			config.features_dir = args.features_dir
+
+		# 3. Final sanity check
+		config.validate()
+		return config
