@@ -132,18 +132,6 @@
 			</table>
 		</div>
 	</div>
-	<script>
-		// Dummy pattern loading function
-		async function loadAttentionPatterns(headId, promptHashes) {
-			// Simulate API call
-			await new Promise(resolve => setTimeout(resolve, 100));
-			return promptHashes.map(hash => ({
-				hash: hash,
-				dims: [Math.floor(Math.random() * 20) + 5, Math.floor(Math.random() * 20) + 5],
-				data: null // Would contain actual attention matrix
-			}));
-		}
-	</script>
 </body>
 
 </html>

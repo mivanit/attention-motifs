@@ -1,13 +1,22 @@
+function generateRandomEmbedding() {
+	return Array.from({ length: 64 }, () => Math.random() * 2 - 1);
+}
+
+async function loadAttentionPattern(headId, promptHash) {
+	// Simulate API call
+	await new Promise(resolve => setTimeout(resolve, 100));
+	return promptHashes.map(hash => ({
+		hash: hash,
+		dims: [Math.floor(Math.random() * 20) + 5, Math.floor(Math.random() * 20) + 5],
+		data: null // Would contain actual attention matrix
+	}));
+}
+
 class HeadInfo {
 	constructor(id, classifications = [], embeddingLocation = null) {
 		this.id = id;
 		this.classifications = classifications;
-		this.embeddingLocation = embeddingLocation || this.generateRandomEmbedding();
-		this.patternCache = new Map();
-	}
-
-	generateRandomEmbedding() {
-		return Array.from({ length: 64 }, () => Math.random() * 2 - 1);
+		this.embeddingLocation = embeddingLocation;
 	}
 
 	async getAttentionPatterns(promptHashes) {
