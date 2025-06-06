@@ -1,5 +1,5 @@
 {
-	"dataFile": "pca.jsonl",
+	"dataFile": "src/pca.jsonl",
 	"numericalPrefix": "pc.",
 	"defaultColorColumn": "activation.model",
 	"defaultSelectionColumn": "activation.model",
