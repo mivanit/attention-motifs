@@ -1495,6 +1495,7 @@ am-assemble-display:
 	cp attention_motifs/display/embeddings.html data/features/index.html
 	cp attention_motifs/display/embeddings.html data/head_embed/index.html
 	$(PYTHON) -m muutils.web.bundle_html attention_motifs/displayV2/src/index.html --output attention_motifs/displayV2/index.html
+	$(PYTHON) -m muutils.web.bundle_html attention_motifs/headInfo/src/index.html --output attention_motifs/headInfo/index.html
 
 .PHONY: am-server-embed
 am-server-embed: am-assemble-display

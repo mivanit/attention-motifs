@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Attention Head Analysis</title>
+	<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+	<link rel="stylesheet" href="style.css">
+	<script src="AttentionPedia.js"></script>
+</head>
+
+<body>
+	<div class="container" x-data="headAnalysisApp()" x-init="init()">" <!-- Header -->
+		<div class="section header">
+			<h1 x-text="currentHead?.id || 'Loading...'"></h1>
+			<div class="head-subtitle" x-text="getModelInfo()"></div>
+		</div>
+		<!-- Main Grid: Model Position + Tool Links -->
+		<div class="main-grid">
+			<div class="section">
+				<h3>Position in Model</h3>
+				<div style="margin-bottom: 10px; font-size: 0.9em; color: #7f8c8d;" x-text="getPositionText()">
+				</div>
+				<div class="model-grid">
+					<template x-for="i in 144" :key="i">
+						<div class="model-head" :class="{ 'current': isCurrentPosition(i) }"></div>
+					</template>
+				</div>
+			</div>
+			<div class="section">
+				<h3>Analysis Tools</h3>
+				<a href="#" class="link-button">View in Pattern Lens</a>
+				<a href="#" class="link-button">View in Embedding Space</a>
+				<a href="#" class="link-button secondary">Download Raw Patterns</a>
+				<a href="#" class="link-button secondary">Export Analysis</a>
+			</div>
+		</div>
+		<!-- AttentionPedia Information -->
+		<div class="section">
+			<h2>AttentionPedia Classifications</h2>
+			<div style="margin-bottom: 15px;">
+				<template x-for="classification in currentHead?.classifications || []" :key="classification.name">
+					<span class="tag" :class="getTagClass(classification.type)" x-text="classification.name"></span>
+				</template>
+			</div>
+			<template x-for="classification in currentHead?.classifications || []" :key="classification.name">
+				<div class="citation">
+					<strong x-text="classification.fullName"></strong><br>
+					<span x-text="classification.authors"></span> - <a :href="classification.url" x-text="classification.url"></a><br>
+					<em x-text="classification.description"></em>
+				</div>
+			</template>
+		</div>
+		<!-- Attention Patterns Table -->
+		<div class="section">
+			<div class="patterns-header">
+				<h2>Attention Patterns</h2>
+				<div>
+					<button class="button secondary" @click="randomizePrompts()">Randomize Prompts</button>
+					<button class="button">Configure Prompts</button>
+				</div>
+			</div>
+			<table style="width: 100%; border-collapse: collapse;">
+				<!-- Header row with prompts -->
+				<thead>
+					<tr>
+						<th style="width: 200px; padding: 10px; border: 1px solid #ddd; background: #f8f9fa; text-align: left;">Head</th>
+						<template x-for="(prompt, index) in prompts" :key="index">
+							<th style="padding: 10px; border: 1px solid #ddd; background: #f8f9fa; font-size: 0.9em;" x-text="`Prompt ${index + 1}: ${prompt.substring(0, 30)}...`"></th>
+						</template>
+					</tr>
+				</thead>
+				<tbody>
+					<!-- Current head section -->
+					<tr>
+						<td colspan="5" style="padding: 12px; background: #2c3e50; color: white; font-weight: bold; border: 1px solid #ddd;">
+							<span x-text="`Current Head (${currentHead?.id || 'Loading...'})`"></span>
+						</td>
+					</tr>
+					<tr>
+						<td style="padding: 15px; border: 1px solid #ddd; vertical-align: top;">
+							<div class="neighbor-name" x-text="currentHead?.id || 'Loading...'"></div>
+							<div style="font-size: 0.8em; color: #7f8c8d; margin-bottom: 8px;" x-text="getClassificationSummary(currentHead)"></div>
+							<a href="#" class="neighbor-link">View Details →</a>
+						</td>
+						<template x-for="(prompt, index) in prompts" :key="index">
+							<td style="padding: 10px; border: 1px solid #ddd;">
+								<div class="mini-pattern" x-text="getPatternDisplay(currentHead, index)"></div>
+							</td>
+						</template>
+					</tr>
+					<!-- Nearest neighbors section -->
+					<tr>
+						<td colspan="5" style="padding: 12px; background: #34495e; color: white; font-weight: bold; border: 1px solid #ddd;"> Nearest Neighbors in Embedding Space <a href="#" style="color: #ecf0f1; text-decoration: none; float: right;">View Embedding Space →</a>
+						</td>
+					</tr>
+					<template x-for="neighbor in nearestNeighbors" :key="neighbor.id">
+						<tr>
+							<td style="padding: 15px; border: 1px solid #ddd; vertical-align: top;">
+								<div class="neighbor-name" x-text="neighbor.id"></div>
+								<div class="neighbor-distance" x-text="`Distance: ${neighbor.distance.toFixed(2)}`"></div>
+								<a :href="`?head=${neighbor.id}`" class="neighbor-link">View →</a>
+							</td>
+							<template x-for="(prompt, index) in prompts" :key="index">
+								<td style="padding: 10px; border: 1px solid #ddd;">
+									<div class="mini-pattern" x-text="getPatternDisplay(neighbor, index)"></div>
+								</td>
+							</template>
+						</tr>
+					</template>
+					<!-- Same classification section -->
+					<tr>
+						<td colspan="5" style="padding: 12px; background: #34495e; color: white; font-weight: bold; border: 1px solid #ddd;"> Other Heads with Same Classification <a href="#" style="color: #ecf0f1; text-decoration: none; float: right;">View All Similar Heads →</a>
+						</td>
+					</tr>
+					<template x-for="similar in sameClassHeads" :key="similar.id">
+						<tr>
+							<td style="padding: 15px; border: 1px solid #ddd; vertical-align: top;">
+								<div class="neighbor-name" x-text="similar.id"></div>
+								<div class="neighbor-distance" x-text="getClassificationSummary(similar)"></div>
+								<a :href="`?head=${similar.id}`" class="neighbor-link">View →</a>
+							</td>
+							<template x-for="(prompt, index) in prompts" :key="index">
+								<td style="padding: 10px; border: 1px solid #ddd;">
+									<div class="mini-pattern" x-text="getPatternDisplay(similar, index)"></div>
+								</td>
+							</template>
+						</tr>
+					</template>
+				</tbody>
+			</table>
+		</div>
+	</div>
+	<script>
+		// Dummy pattern loading function
+		async function loadAttentionPatterns(headId, promptHashes) {
+			// Simulate API call
+			await new Promise(resolve => setTimeout(resolve, 100));
+			return promptHashes.map(hash => ({
+				hash: hash,
+				dims: [Math.floor(Math.random() * 20) + 5, Math.floor(Math.random() * 20) + 5],
+				data: null // Would contain actual attention matrix
+			}));
+		}
+	</script>
+</body>
+
+</html>
