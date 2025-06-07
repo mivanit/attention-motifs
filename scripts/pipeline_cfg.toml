@@ -1,3 +1,4 @@
+# models -- which models to use
 models = [
 	# "pythia-14m",
 	# "tiny-stories-1M",
@@ -8,8 +9,16 @@ models = [
 	"gemma-2b",
 ]
 
+# paths -- where to find stuff and where to save it
 prompts_file = "data/pile_demo.jsonl"
 patterns_dir = "/home/miv/projects/attn/website/patterns/docs"
+features_dir = "data/features"
 
+# prompts -- how many, how to slice them
 prompts_n_samples = 128
+prompts_min_chars = 100
+prompts_max_chars = 1000
+
+# computing -- no effect on the results
 n_proc = 12
+device = "cpu"

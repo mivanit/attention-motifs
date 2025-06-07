@@ -19,11 +19,18 @@ class PipelineConfig:
 	"""Configuration for the attention motifs pipeline."""
 
 	models: list[str]
-	prompts_n_samples: int
-	n_proc: int
+	# paths
 	prompts_file: Path
 	patterns_dir: Path
 	features_dir: Path
+	# prompts
+	prompts_n_samples: int
+	prompts_min_chars: int
+	prompts_max_chars: int
+	# computing
+	n_proc: int
+	force_overwrite: bool = False
+	device: str = "cpu"
 
 	def validate(self) -> None:
 		# TODO: check models actually exist in TransformerLens?
@@ -32,9 +39,6 @@ class PipelineConfig:
 		)
 		assert isinstance(self.prompts_n_samples, int) and self.prompts_n_samples > 0, (
 			"prompts_n_samples must be a positive integer."
-		)
-		assert isinstance(self.n_proc, int) and self.n_proc > 0, (
-			"n_proc must be a positive integer."
 		)
 		assert self.prompts_file.is_file(), (
 			f"prompts_file {self.prompts_file} does not exist."
@@ -45,6 +49,16 @@ class PipelineConfig:
 		assert not self.features_dir.is_file(), (
 			f"features_dir {self.features_dir} must be a directory."
 		)
+		assert isinstance(self.n_proc, int) and self.n_proc > 0, (
+			"n_proc must be a positive integer."
+		)
+		assert isinstance(self.force_overwrite, bool), (
+			"force_overwrite must be a boolean."
+		)
+		assert isinstance(self.device, str), (
+			"device must be a string representing the torch device (e.g., 'cpu', 'cuda')."
+		)
+
 
 	@classmethod
 	def load(cls, data: dict) -> "PipelineConfig":
@@ -56,6 +70,7 @@ class PipelineConfig:
 			prompts_file=Path(data["prompts_file"]),
 			patterns_dir=Path(data["patterns_dir"]),
 			features_dir=Path(data["features_dir"]),
+			device=data.get("device", "cpu"),  # default to 'cpu' if not specified
 		)
 		config.validate()
 		return config
@@ -119,6 +134,9 @@ class PipelineConfig:
 		parser.add_argument(
 			"--features_dir", type=Path, help="Directory for extracted features."
 		)
+		parser.add_argument(
+			"--device", type=str, default="cpu", help="torch device to use (default: cpu)."
+		)
 
 		args: argparse.Namespace = parser.parse_args(argv)
 
@@ -138,6 +156,8 @@ class PipelineConfig:
 			config.patterns_dir = args.patterns_dir
 		if args.features_dir is not None:
 			config.features_dir = args.features_dir
+		if args.device is not None:
+			config.device = args.device
 
 		# 3. Final sanity check
 		config.validate()
