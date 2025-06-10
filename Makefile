@@ -1511,7 +1511,7 @@ am-bundle-display:
 	cp attention_motifs/frontend/display/embeddings.html data/features/index.html
 	cp attention_motifs/frontend/display/embeddings.html data/head_embed/index.html
 	$(PYTHON) -m muutils.web.bundle_html attention_motifs/frontend/displayV2/src/index.html --output attention_motifs/frontend/displayV2/index.html
-	$(PYTHON) -m muutils.web.bundle_html attention_motifs/frontend/headInfo/src/index.html --output attention_motifs/frontend/headInfo/index.html
+	$(PYTHON) -m muutils.web.bundle_html attention_motifs/frontend/attnpedia/src/index.html --output attention_motifs/frontend/attnpedia/index.html
 
 .PHONY: am-server-embed
 am-server-embed: am-bundle-display
