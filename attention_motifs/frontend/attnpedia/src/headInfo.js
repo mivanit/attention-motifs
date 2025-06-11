@@ -1,12 +1,17 @@
 class HeadInfo {
-	constructor(id, model, layer, head, paramCount) {
+	constructor(id, model, layer, head) {
 		this.id = id;
 		this.model = model;
 		this.layer = layer;
 		this.head = head;
-		this.paramCount = paramCount;
 		this.classifications = [];
-		this.citations = [];
+	}
+
+
+	static from_id(id) {
+		// split by ":", should have 3 components
+		// `{model}:L{layer}:H{head}`
+		
 	}
 
 	async getPatterns(promptHash) {
@@ -25,4 +30,4 @@ class HeadInfo {
 		const hash2 = otherHead.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
 		return Math.abs(hash1 - hash2) / 10000;
 	}
-}
+}	
