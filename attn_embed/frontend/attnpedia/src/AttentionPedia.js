@@ -54,25 +54,4 @@ class AttentionPedia {
 			return {};
 		}
 	}
-
-	async getNearestHeads(headId, n = 5) {
-		await this._ensureLoaded();
-		const targetHead = this.heads.get(headId);
-		if (!targetHead) return [];
-
-		const distances = [];
-		this.heads.forEach((head, id) => {
-			if (id !== headId && head.model === targetHead.model) {
-				distances.push({
-					head: head,
-					distance: targetHead.distanceTo(head)
-				});
-			}
-		});
-
-		return distances
-			.sort((a, b) => a.distance - b.distance)
-			.slice(0, n)
-			.map(item => ({ ...item.head, distance: item.distance }));
-	}
 }
