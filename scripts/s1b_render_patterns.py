@@ -15,10 +15,8 @@ def render_patterns(cfg: PipelineConfig) -> None:
 		)
 
 
-
-
 if __name__ == "__main__":
 	import sys
+
 	cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv)
 	render_patterns(cfg)
-

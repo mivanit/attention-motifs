@@ -14,6 +14,7 @@ python {script_path} some/path/my_cfg.toml
 python {script_path} some/path/my_cfg.toml --prompts_n_samples 1000 --models gpt2-small,pythia-14m
 """.strip()
 
+
 @dataclass(kw_only=True)
 class PipelineConfig:
 	"""Configuration for the attention motifs pipeline."""
@@ -58,7 +59,6 @@ class PipelineConfig:
 		assert isinstance(self.device, str), (
 			"device must be a string representing the torch device (e.g., 'cpu', 'cuda')."
 		)
-
 
 	@classmethod
 	def load(cls, data: dict) -> "PipelineConfig":
@@ -135,7 +135,10 @@ class PipelineConfig:
 			"--features_dir", type=Path, help="Directory for extracted features."
 		)
 		parser.add_argument(
-			"--device", type=str, default="cpu", help="torch device to use (default: cpu)."
+			"--device",
+			type=str,
+			default="cpu",
+			help="torch device to use (default: cpu).",
 		)
 
 		args: argparse.Namespace = parser.parse_args(argv)

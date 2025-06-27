@@ -1,6 +1,7 @@
 from pattern_lens.activations import activations_main
 from attn_embed.util.pipeline_cfg import PipelineConfig
 
+
 def generate_activations(cfg: PipelineConfig) -> None:
 	n_models: int = len(cfg.models)
 	idx: int
@@ -22,8 +23,9 @@ def generate_activations(cfg: PipelineConfig) -> None:
 			device=cfg.device,
 		)
 
+
 if __name__ == "__main__":
 	import sys
+
 	cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv)
 	generate_activations(cfg)
-

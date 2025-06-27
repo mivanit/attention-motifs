@@ -16,9 +16,7 @@ ATTNPEDIA_PATH: Path = (
 )
 
 ATTNPEDIA_GROUPS_PATH: Path = (
-	Path(importlib.resources.files(attn_embed))
-	/ "attnpedia"
-	/ "attn-pedia-groups.json"
+	Path(importlib.resources.files(attn_embed)) / "attnpedia" / "attn-pedia-groups.json"
 )
 
 if not ATTNPEDIA_PATH.is_file():
@@ -248,10 +246,9 @@ class AttentionPedia:
 		self._head_type_colors = color_dict
 		self._head_type_groups = group_dict
 
-
 	def type_metadata(self) -> dict[str, dict]:
 		"""Get metadata about each attention head type.
-		
+
 		# Returns:
 		- `dict[str, dict]`
 			Dictionary mapping type names to their metadata (url, notes, model, n_heads, heads)
@@ -265,35 +262,32 @@ class AttentionPedia:
 					notes=paper["notes"],
 					model=paper["model"],
 					n_heads=len(head_class["heads"]),
-					heads=[
-						f"{paper['model']}:{h}"
-						for h in head_class["heads"]
-					],
+					heads=[f"{paper['model']}:{h}" for h in head_class["heads"]],
 				)
-		
+
 		return metadata
 
 
 def main() -> None:
 	"""Main CLI interface for AttentionPedia."""
 	import argparse
-	
-	parser: argparse.ArgumentParser = argparse.ArgumentParser(description="AttentionPedia CLI")
+
+	parser: argparse.ArgumentParser = argparse.ArgumentParser(
+		description="AttentionPedia CLI"
+	)
 	parser.add_argument(
 		"mode",
 		choices=["head-to-types", "type-to-heads", "type-metadata", "all"],
-		help="What to output"
+		help="What to output",
 	)
 	parser.add_argument(
-		"--out", 
-		type=Path,
-		help="Output file path (default: print to console)"
+		"--out", type=Path, help="Output file path (default: print to console)"
 	)
-	
+
 	args: argparse.Namespace = parser.parse_args()
-	
+
 	pedia: AttentionPedia = AttentionPedia()
-	result: dict|list[dict]
+	result: dict | list[dict]
 
 	lines: bool = False
 	match args.mode:
@@ -317,7 +311,7 @@ def main() -> None:
 			result = pedia.type_metadata()
 		case _:
 			raise ValueError(f"Unknown mode: {args.mode}")
-	
+
 	# Output result
 	output: str
 	if lines:
