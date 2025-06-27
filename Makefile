@@ -1507,10 +1507,10 @@ am-features:
 .PHONY: am-bundle-display
 am-bundle-display:
 	@echo "bundle embedding display files"
-	$(PYTHON) -m muutils.web.bundle_html attention_motifs/frontend/display/src/embeddings.html --output attention_motifs/frontend/display/embeddings.html
-	cp attention_motifs/frontend/display/embeddings.html data/features/index.html
-	cp attention_motifs/frontend/display/embeddings.html data/head_embed/index.html
-	$(PYTHON) -m muutils.web.bundle_html attention_motifs/frontend/displayV2/src/index.html --output attention_motifs/frontend/displayV2/index.html
+	$(PYTHON) -m muutils.web.bundle_html attention_motifs/frontend/embeds-old/src/embeddings.html --output attention_motifs/frontend/embeds-old/embeddings.html
+	cp attention_motifs/frontend/embeds-old/embeddings.html data/features/index.html
+	cp attention_motifs/frontend/embeds-old/embeddings.html data/head_embed/index.html
+	$(PYTHON) -m js_embedding_vis --cfg-path attention_motifs/frontend/embeds/config.json --out-path attention_motifs/frontend/embeds/index.html
 	$(PYTHON) -m muutils.web.bundle_html attention_motifs/frontend/attnpedia/src/index.html --output attention_motifs/frontend/attnpedia/index.html
 
 .PHONY: am-server-embed
