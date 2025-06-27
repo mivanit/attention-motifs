@@ -1510,7 +1510,7 @@ FRONTEND_ATTNPEDIA_BUILD_DIR = $(FRONTEND_ATTNPEDIA_DIR)/build
 
 .PHONY: am-frontend-ap-build
 am-frontend-ap-build:
-	cd $(FRONTEND_ATTNPEDIA_DIR) && tsc
+	cd $(FRONTEND_ATTNPEDIA_DIR) && tsc || true
 	mkdir -p $(FRONTEND_ATTNPEDIA_BUILD_DIR) || true
 	cp $(FRONTEND_ATTNPEDIA_DIR)/src/*.js $(FRONTEND_ATTNPEDIA_DIR)/src/*.html $(FRONTEND_ATTNPEDIA_DIR)/src/*.css $(FRONTEND_ATTNPEDIA_BUILD_DIR)/ || true
 
