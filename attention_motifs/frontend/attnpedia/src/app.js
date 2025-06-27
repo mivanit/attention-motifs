@@ -36,6 +36,8 @@ document.addEventListener('alpine:init', () => {
 			return {
 				classifications: [],
 				typesMetadata: {},
+				currentTooltip: null,
+				hideTimeout: null,
 
 				async loadData() {
 					const types = await ATTENTION_PEDIA.get_head_types(headId);
@@ -47,30 +49,61 @@ document.addEventListener('alpine:init', () => {
 				},
 
 				showTooltip(event, type) {
+					// Clear any existing timeout
+					if (this.hideTimeout) {
+						clearTimeout(this.hideTimeout);
+						this.hideTimeout = null;
+					}
+
+					// Hide any existing tooltip
+					this.hideCurrentTooltip();
+
 					const meta = this.typesMetadata[type];
 					const content = `${type}<br>${meta.notes}<br>${meta.n_heads} heads<br><a href="${meta.url}" target="_blank">${meta.url}</a>`;
 
-					let tooltip = document.getElementById('tooltip');
-					if (!tooltip) {
-						tooltip = document.createElement('div');
-						tooltip.id = 'tooltip';
-						tooltip.className = 'tooltip';
-						tooltip.style.pointerEvents = 'auto';
-						document.body.appendChild(tooltip);
-					}
-
-					clearTimeout(this.hideTimeout);
+					const tooltip = document.createElement('div');
+					tooltip.className = 'tooltip show';
 					tooltip.innerHTML = content;
-					tooltip.style.left = (event.target.getBoundingClientRect().left + window.scrollX) + 'px';
-					tooltip.style.top = (event.target.getBoundingClientRect().bottom + window.scrollY + 5) + 'px';
-					tooltip.classList.add('show');
+					document.body.appendChild(tooltip);
+
+					// Position to the right of the element
+					const rect = event.target.getBoundingClientRect();
+					tooltip.style.left = (rect.right + window.scrollX + 10) + 'px';
+					tooltip.style.top = (rect.top + window.scrollY) + 'px';
+
+					this.currentTooltip = tooltip;
+
+					// Add hover listeners to keep tooltip open
+					tooltip.addEventListener('mouseenter', () => {
+						if (this.hideTimeout) {
+							clearTimeout(this.hideTimeout);
+							this.hideTimeout = null;
+						}
+					});
+
+					tooltip.addEventListener('mouseleave', () => {
+						this.startHideTimer();
+					});
 				},
 
 				hideTooltip() {
+					this.startHideTimer();
+				},
+
+				startHideTimer() {
+					if (this.hideTimeout) {
+						clearTimeout(this.hideTimeout);
+					}
 					this.hideTimeout = setTimeout(() => {
-						const tooltip = document.getElementById('tooltip');
-						if (tooltip) tooltip.classList.remove('show');
-					}, 500);
+						this.hideCurrentTooltip();
+					}, 300);
+				},
+
+				hideCurrentTooltip() {
+					if (this.currentTooltip) {
+						this.currentTooltip.remove();
+						this.currentTooltip = null;
+					}
 				}
 			};
 		}

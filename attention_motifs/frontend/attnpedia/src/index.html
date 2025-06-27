@@ -38,7 +38,7 @@
                                     <div class="classifications-container">
                                         <template x-for="classification in classifications" :key="classification">
                                             <div class="classification-line">
-                                                <span class="classification-tag" @mouseenter="showTooltip($event, classification)" @mouseleave="hideTooltip()" @mouseenter.document="if($event.target.id === 'tooltip') clearTimeout(hideTimeout)" x-text="classification">
+                                                <span class="classification-tag" @mouseenter="showTooltip($event, classification)" @mouseleave="hideTooltip()" x-text="classification">
                                                 </span>
                                             </div>
                                         </template>

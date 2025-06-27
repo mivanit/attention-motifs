@@ -113,18 +113,21 @@ body {
 }
 
 .tooltip {
-	position: absolute;
-	background: #333;
-	color: white;
-	padding: 8px 12px;
-	border-radius: 4px;
-	font-size: 12px;
-	max-width: 300px;
-	z-index: 1000;
-	pointer-events: auto;
-	opacity: 0;
-	transition: opacity 0.2s;
-	line-height: 1.4;
+    position: absolute;
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    max-width: 300px;
+    z-index: 1000;
+    pointer-events: auto;
+    opacity: 0;
+    transition: opacity 0.2s;
+    line-height: 1.4;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .tooltip a {
@@ -138,10 +141,9 @@ body {
 .tooltip::after {
 	content: '';
 	position: absolute;
-	top: 100%;
-	left: 50%;
-	margin-left: -5px;
+	top: 0.75em;
+	left: -8px;
 	border-width: 5px;
 	border-style: solid;
-	border-color: #333 transparent transparent transparent;
-}
+	border-color: transparent #333 transparent transparent;
+ }

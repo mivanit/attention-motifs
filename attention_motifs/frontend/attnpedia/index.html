@@ -125,18 +125,21 @@
     }
     
     .tooltip {
-    	position: absolute;
-    	background: #333;
-    	color: white;
-    	padding: 8px 12px;
-    	border-radius: 4px;
-    	font-size: 12px;
-    	max-width: 300px;
-    	z-index: 1000;
-    	pointer-events: auto;
-    	opacity: 0;
-    	transition: opacity 0.2s;
-    	line-height: 1.4;
+        position: absolute;
+        background: #333;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        max-width: 300px;
+        z-index: 1000;
+        pointer-events: auto;
+        opacity: 0;
+        transition: opacity 0.2s;
+        line-height: 1.4;
+        white-space: normal;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
     }
     
     .tooltip a {
@@ -150,13 +153,12 @@
     .tooltip::after {
     	content: '';
     	position: absolute;
-    	top: 100%;
-    	left: 50%;
-    	margin-left: -5px;
+    	top: 0.75em;
+    	left: -8px;
     	border-width: 5px;
     	border-style: solid;
-    	border-color: #333 transparent transparent transparent;
-    }
+    	border-color: transparent #333 transparent transparent;
+     }
     </style>
     <!-- end 'style.css' -->
         <!-- begin 'AttentionPedia.js' -->
@@ -342,6 +344,8 @@
     			return {
     				classifications: [],
     				typesMetadata: {},
+    				currentTooltip: null,
+    				hideTimeout: null,
     
     				async loadData() {
     					const types = await ATTENTION_PEDIA.get_head_types(headId);
@@ -353,30 +357,61 @@
     				},
     
     				showTooltip(event, type) {
+    					// Clear any existing timeout
+    					if (this.hideTimeout) {
+    						clearTimeout(this.hideTimeout);
+    						this.hideTimeout = null;
+    					}
+    
+    					// Hide any existing tooltip
+    					this.hideCurrentTooltip();
+    
     					const meta = this.typesMetadata[type];
     					const content = `${type}<br>${meta.notes}<br>${meta.n_heads} heads<br><a href="${meta.url}" target="_blank">${meta.url}</a>`;
     
-    					let tooltip = document.getElementById('tooltip');
-    					if (!tooltip) {
-    						tooltip = document.createElement('div');
-    						tooltip.id = 'tooltip';
-    						tooltip.className = 'tooltip';
-    						tooltip.style.pointerEvents = 'auto';
-    						document.body.appendChild(tooltip);
-    					}
-    
-    					clearTimeout(this.hideTimeout);
+    					const tooltip = document.createElement('div');
+    					tooltip.className = 'tooltip show';
     					tooltip.innerHTML = content;
-    					tooltip.style.left = (event.target.getBoundingClientRect().left + window.scrollX) + 'px';
-    					tooltip.style.top = (event.target.getBoundingClientRect().bottom + window.scrollY + 5) + 'px';
-    					tooltip.classList.add('show');
+    					document.body.appendChild(tooltip);
+    
+    					// Position to the right of the element
+    					const rect = event.target.getBoundingClientRect();
+    					tooltip.style.left = (rect.right + window.scrollX + 10) + 'px';
+    					tooltip.style.top = (rect.top + window.scrollY) + 'px';
+    
+    					this.currentTooltip = tooltip;
+    
+    					// Add hover listeners to keep tooltip open
+    					tooltip.addEventListener('mouseenter', () => {
+    						if (this.hideTimeout) {
+    							clearTimeout(this.hideTimeout);
+    							this.hideTimeout = null;
+    						}
+    					});
+    
+    					tooltip.addEventListener('mouseleave', () => {
+    						this.startHideTimer();
+    					});
     				},
     
     				hideTooltip() {
+    					this.startHideTimer();
+    				},
+    
+    				startHideTimer() {
+    					if (this.hideTimeout) {
+    						clearTimeout(this.hideTimeout);
+    					}
     					this.hideTimeout = setTimeout(() => {
-    						const tooltip = document.getElementById('tooltip');
-    						if (tooltip) tooltip.classList.remove('show');
-    					}, 500);
+    						this.hideCurrentTooltip();
+    					}, 300);
+    				},
+    
+    				hideCurrentTooltip() {
+    					if (this.currentTooltip) {
+    						this.currentTooltip.remove();
+    						this.currentTooltip = null;
+    					}
     				}
     			};
     		}
@@ -409,7 +444,7 @@
                                     <div class="classifications-container">
                                         <template x-for="classification in classifications" :key="classification">
                                             <div class="classification-line">
-                                                <span class="classification-tag" @mouseenter="showTooltip($event, classification)" @mouseleave="hideTooltip()" @mouseenter.document="if($event.target.id === 'tooltip') clearTimeout(hideTimeout)" x-text="classification">
+                                                <span class="classification-tag" @mouseenter="showTooltip($event, classification)" @mouseleave="hideTooltip()" x-text="classification">
                                                 </span>
                                             </div>
                                         </template>
