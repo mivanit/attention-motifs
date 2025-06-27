@@ -245,7 +245,7 @@
     			"text": "In the beginning was the word"
     		}
     	],
-    	"heads": [
+    	"heads_display": [
     		"gpt2-small:L5:H5",
     		"gpt2-small:L3:H8",
     		"gpt2-small:L7:H2",
@@ -262,40 +262,19 @@
     		loading: true,
     		error: null,
     		prompts: [],
-    		heads: [],
+    		heads_display: [],
     
     		async init() {
     			try {
-    				// Simulate loading delay
-    				await new Promise(resolve => setTimeout(resolve, 500));
-    
-    				// In a real app, you'd do: const config = await this.loadJson('config.json');
     				const config = mockConfig;
-    
     				this.prompts = config.prompts;
-    				this.heads = config.heads;
+    				this.heads_display = config.heads_display;
     			} catch (err) {
     				this.error = `Failed to load config: ${err.message}`;
     			} finally {
     				this.loading = false;
     			}
     		},
-    
-    		async loadJson(filename) {
-    			const response = await fetch(filename);
-    			if (!response.ok) {
-    				throw new Error(`Failed to fetch ${filename}: ${response.status}`);
-    			}
-    			return await response.json();
-    		},
-    
-    		getPatternSize() {
-    			return Math.floor(Math.random() * 8) + 8;
-    		},
-    
-    		viewPattern(headId, promptHash) {
-    			alert(`Viewing pattern for ${headId} on prompt ${promptHash}`);
-    		}
     	}));
     });
     </script>
@@ -304,42 +283,40 @@
 
 <body>
     <div class="container" x-data="attentionApp" x-init="await init()">
+        <!-- show when loading -->
         <template x-if="loading">
             <div class="loading">Loading...</div>
         </template>
         
+        <!-- show if there is an error -->
         <template x-if="error">
             <div class="error" x-text="error"></div>
         </template>
 
-        <template x-if="!loading && !error">
-            <div class="section">
-                <table class="pattern-table">
-                    <thead>
+        <div class="section">
+            <table class="pattern-table">
+                <thead>
+                    <tr>
+                        <th>Head</th>
+                        <template x-for="prompt in prompts" :key="prompt.hash">
+                            <th x-text="prompt.text"></th>
+                        </template>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="headId in heads_display" :key="headId">
                         <tr>
-                            <th>Head</th>
+                            <td class="head-info" x-text="headId"></td>
                             <template x-for="prompt in prompts" :key="prompt.hash">
-                                <th x-text="prompt.text"></th>
+                                <td>
+                                    <div class="pattern-placeholder"></div>
+                                </td>
                             </template>
                         </tr>
-                    </thead>
-                    <tbody>
-                        <template x-for="headId in heads" :key="headId">
-                            <tr>
-                                <td class="head-info" x-text="headId"></td>
-                                <template x-for="prompt in prompts" :key="prompt.hash">
-                                    <td>
-                                        <div class="pattern-placeholder" 
-                                             @click="viewPattern(headId, prompt.hash)">
-                                        </div>
-                                    </td>
-                                </template>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
-        </template>
+                    </template>
+                </tbody>
+            </table>
+        </div>
     </div>
 </body>
 </html>

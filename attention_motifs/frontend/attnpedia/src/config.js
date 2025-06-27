@@ -18,7 +18,7 @@ const mockConfig = {
 			"text": "In the beginning was the word"
 		}
 	],
-	"heads": [
+	"heads_display": [
 		"gpt2-small:L5:H5",
 		"gpt2-small:L3:H8",
 		"gpt2-small:L7:H2",

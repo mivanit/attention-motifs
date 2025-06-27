@@ -15,42 +15,40 @@
 
 <body>
     <div class="container" x-data="attentionApp" x-init="await init()">
+        <!-- show when loading -->
         <template x-if="loading">
             <div class="loading">Loading...</div>
         </template>
         
+        <!-- show if there is an error -->
         <template x-if="error">
             <div class="error" x-text="error"></div>
         </template>
 
-        <template x-if="!loading && !error">
-            <div class="section">
-                <table class="pattern-table">
-                    <thead>
+        <div class="section">
+            <table class="pattern-table">
+                <thead>
+                    <tr>
+                        <th>Head</th>
+                        <template x-for="prompt in prompts" :key="prompt.hash">
+                            <th x-text="prompt.text"></th>
+                        </template>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="headId in heads_display" :key="headId">
                         <tr>
-                            <th>Head</th>
+                            <td class="head-info" x-text="headId"></td>
                             <template x-for="prompt in prompts" :key="prompt.hash">
-                                <th x-text="prompt.text"></th>
+                                <td>
+                                    <div class="pattern-placeholder"></div>
+                                </td>
                             </template>
                         </tr>
-                    </thead>
-                    <tbody>
-                        <template x-for="headId in heads" :key="headId">
-                            <tr>
-                                <td class="head-info" x-text="headId"></td>
-                                <template x-for="prompt in prompts" :key="prompt.hash">
-                                    <td>
-                                        <div class="pattern-placeholder" 
-                                             @click="viewPattern(headId, prompt.hash)">
-                                        </div>
-                                    </td>
-                                </template>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
-        </template>
+                    </template>
+                </tbody>
+            </table>
+        </div>
     </div>
 </body>
 </html>
