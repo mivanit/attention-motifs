@@ -9,14 +9,14 @@ from collections import defaultdict
 
 import polars as pl
 
-import attention_motifs
+import attn_embed
 
 ATTNPEDIA_PATH: Path = (
-	Path(importlib.resources.files(attention_motifs)) / "attnpedia" / "attn-pedia.json"
+	Path(importlib.resources.files(attn_embed)) / "attnpedia" / "attn-pedia.json"
 )
 
 ATTNPEDIA_GROUPS_PATH: Path = (
-	Path(importlib.resources.files(attention_motifs))
+	Path(importlib.resources.files(attn_embed))
 	/ "attnpedia"
 	/ "attn-pedia-groups.json"
 )

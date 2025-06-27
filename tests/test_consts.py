@@ -1,6 +1,6 @@
 import torch
 
-from attention_motifs.consts import (
+from attn_embed.consts import (
 	compute_text_hashes,
 	b64encode,
 	batches,

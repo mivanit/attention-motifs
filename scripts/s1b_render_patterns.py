@@ -1,4 +1,4 @@
-from attention_motifs.util.pipeline_cfg import PipelineConfig
+from attn_embed.util.pipeline_cfg import PipelineConfig
 from pattern_lens.figures import figures_main
 
 

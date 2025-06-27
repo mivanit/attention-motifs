@@ -1,5 +1,5 @@
 from pattern_lens.activations import activations_main
-from attention_motifs.util.pipeline_cfg import PipelineConfig
+from attn_embed.util.pipeline_cfg import PipelineConfig
 
 def generate_activations(cfg: PipelineConfig) -> None:
 	n_models: int = len(cfg.models)

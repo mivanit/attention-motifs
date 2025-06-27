@@ -13,7 +13,7 @@ from muutils.json_serialize import (
 	JSONitem,
 )
 
-from attention_motifs.consts import (
+from attn_embed.consts import (
 	PROMPT_HASH_BITS,
 	PromptHashStr,
 	b64encode,

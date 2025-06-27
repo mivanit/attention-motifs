@@ -1,6 +1,6 @@
 import torch
 
-from attention_motifs.dataset.dataset import (
+from attn_embed.dataset.dataset import (
 	APGenerationConfig,
 	PromptDatasetConfig,
 	CollectedAttentionPatternDataloader,

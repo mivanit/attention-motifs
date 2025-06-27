@@ -5,11 +5,11 @@ import json
 
 import pytest
 
-from attention_motifs.dataset.dataset import (
+from attn_embed.dataset.dataset import (
 	APGenerationConfig,
 	CollectedAttentionPatternDataloader,
 )
-from attention_motifs.dataset.prompts import PromptDatasetConfig
+from attn_embed.dataset.prompts import PromptDatasetConfig
 
 TEMP_DIR: Path = Path("tests/_temp")
 

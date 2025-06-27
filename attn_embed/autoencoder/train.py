@@ -28,12 +28,12 @@ from trnbl import TrainingManager
 from zanj import ZANJ
 
 # this project
-from attention_motifs.dataset.dataset import (
+from attn_embed.dataset.dataset import (
 	DataloaderMock,
 	CollectedAttentionPatternDataloader,
 )
-from attention_motifs.dataset.util import AttentionPatternMetadata
-from attention_motifs.autoencoder.train_util import contrastive_loss
+from attn_embed.dataset.util import AttentionPatternMetadata
+from attn_embed.autoencoder.train_util import contrastive_loss
 
 
 def get_dataset(

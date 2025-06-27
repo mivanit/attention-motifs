@@ -4,7 +4,7 @@ from pathlib import Path
 # muutils
 
 # attention-motifs
-from attention_motifs.features.features import (
+from attn_embed.features.features import (
 	scalar_feature_table,
 	compute_scalar_features,
 )

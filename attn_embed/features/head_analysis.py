@@ -17,8 +17,8 @@ import sklearn.base
 import umap
 
 # attention-motifs
-from attention_motifs.features.analysis import parse_cls, DistanceTensorResult
-from attention_motifs.attnpedia.attnpedia import AttentionPedia
+from attn_embed.features.analysis import parse_cls, DistanceTensorResult
+from attn_embed.attnpedia.attnpedia import AttentionPedia
 
 
 def filter_umap_warns():

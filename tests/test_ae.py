@@ -3,7 +3,7 @@ import torch
 from torch import Tensor
 from jaxtyping import Float, Int
 
-from attention_motifs.autoencoder.train_util import (
+from attn_embed.autoencoder.train_util import (
 	contrastive_loss,
 )  # replace with actual import path
 

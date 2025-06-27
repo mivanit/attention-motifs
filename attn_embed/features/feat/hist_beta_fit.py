@@ -4,9 +4,9 @@ from jaxtyping import Float
 # muutils
 
 # attention-motifs
-from attention_motifs.util.bins import Bins
-from attention_motifs.features.vec_features import vec_features
-from attention_motifs.util import prefix_dict
+from attn_embed.util.bins import Bins
+from attn_embed.features.vec_features import vec_features
+from attn_embed.util import prefix_dict
 
 
 def hist_beta_fit(

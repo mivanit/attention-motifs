@@ -4,13 +4,13 @@ import torch
 import pytest
 import json
 
-from attention_motifs.dataset.dataset import (
+from attn_embed.dataset.dataset import (
 	APGenerationConfig,
 	AttentionPatternDataset,
 	AttentionPatternMetadata,
 	CollectedAttentionPatternDataloader,
 )
-from attention_motifs.dataset.prompts import PromptDataset, PromptDatasetConfig
+from attn_embed.dataset.prompts import PromptDataset, PromptDatasetConfig
 
 TEMP_DIR: Path = Path("tests/_temp")
 

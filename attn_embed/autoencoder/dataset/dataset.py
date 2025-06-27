@@ -21,7 +21,7 @@ from muutils.spinner import SpinnerContext, NoOpContextManager
 from muutils.misc import shorten_numerical_to_str
 from zanj import ZANJ
 
-from attention_motifs.consts import (
+from attn_embed.consts import (
 	PATTERN_DTYPE,
 	AttentionPatternBatch,
 	PromptHashIntSequence,
@@ -30,7 +30,7 @@ from attention_motifs.consts import (
 	DIVIDER_S2,
 	tensor_batches_indexed,
 )
-from attention_motifs.dataset.util import (
+from attn_embed.dataset.util import (
 	AttentionPatternDataset,
 	AttentionPatternMetadataArray,
 	process_length_bin,
@@ -38,7 +38,7 @@ from attention_motifs.dataset.util import (
 	AttentionPatternMetadata,
 )
 
-from attention_motifs.dataset.prompts import PromptDataset, PromptDatasetConfig
+from attn_embed.dataset.prompts import PromptDataset, PromptDatasetConfig
 
 
 @serializable_dataclass

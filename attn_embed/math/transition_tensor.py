@@ -9,7 +9,7 @@ from scipy.optimize import curve_fit
 
 from muutils.dbg import dbg
 
-from attention_motifs.math.matrix_powers import matrix_powers, matrix_powers_torch
+from attn_embed.math.matrix_powers import matrix_powers, matrix_powers_torch
 
 
 def cross_entropy(

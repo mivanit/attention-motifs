@@ -2,11 +2,11 @@ import json
 import pytest
 from pathlib import Path
 
-from attention_motifs.consts import (
+from attn_embed.consts import (
 	compute_text_hashes,
 )
 
-from attention_motifs.dataset.prompts import (
+from attn_embed.dataset.prompts import (
 	Prompt,
 	PromptDataset,
 	PromptDatasetConfig,

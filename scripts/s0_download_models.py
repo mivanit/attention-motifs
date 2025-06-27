@@ -1,6 +1,6 @@
 from transformer_lens import HookedTransformer
 
-from attention_motifs.util.pipeline_cfg import PipelineConfig
+from attn_embed.util.pipeline_cfg import PipelineConfig
 
 
 def download_models(cfg: PipelineConfig) -> None:

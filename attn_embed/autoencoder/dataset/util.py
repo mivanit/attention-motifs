@@ -15,7 +15,7 @@ from muutils.json_serialize import (
 )
 from muutils.errormode import ErrorMode
 
-from attention_motifs.consts import (
+from attn_embed.consts import (
 	AttentionPattern,
 	AttentionPatternBatch,
 	TokenSequence,
@@ -27,7 +27,7 @@ from attention_motifs.consts import (
 	PromptHashInt,
 )
 
-from attention_motifs.dataset.prompts import PromptDataset
+from attn_embed.dataset.prompts import PromptDataset
 
 AttentionPatternMetadataTuple = tuple[str, int, int, int, PromptHashInt]
 

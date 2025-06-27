@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from jaxtyping import Float
 
-from attention_motifs.math.transition_tensor import (
+from attn_embed.math.transition_tensor import (
 	transition_tensor,
 	transition_tensor_torch,
 )

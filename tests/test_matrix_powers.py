@@ -5,7 +5,7 @@ import torch
 
 from muutils.dbg import dbg_tensor
 
-from attention_motifs.math.matrix_powers import matrix_powers, matrix_powers_torch
+from attn_embed.math.matrix_powers import matrix_powers, matrix_powers_torch
 
 
 class TestMatrixPowers:

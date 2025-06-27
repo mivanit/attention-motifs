@@ -3,16 +3,16 @@ import pytest
 import torch
 from jaxtyping import Float
 
-from attention_motifs.dataset.util import (
+from attn_embed.dataset.util import (
 	AttentionPatternMetadataArray,
 	AttentionPatternMetadata,
 )
-from attention_motifs.dataset.dataset import (
+from attn_embed.dataset.dataset import (
 	AttentionPatternDataset,
 	CollectedAttentionPatternDataloader,
 )
-from attention_motifs.dataset.prompts import PromptDataset, PromptDatasetConfig
-from attention_motifs.autoencoder.vit_ae import VitAEConfig
+from attn_embed.dataset.prompts import PromptDataset, PromptDatasetConfig
+from attn_embed.autoencoder.vit_ae import VitAEConfig
 
 
 @pytest.mark.integration
