@@ -1504,17 +1504,32 @@ am-features:
 
 # step 4: display stuff
 # --------------------------------------------------
-.PHONY: am-bundle-display
-am-bundle-display:
+FRONTEND_DIR = attention_motifs/frontend
+FRONTEND_ATTNPEDIA_DIR = $(FRONTEND_DIR)/attnpedia
+FRONTEND_ATTNPEDIA_BUILD_DIR = $(FRONTEND_ATTNPEDIA_DIR)/build
+
+.PHONY: am-frontend-ap-build
+am-frontend-ap-build:
+	cd $(FRONTEND_ATTNPEDIA_DIR) && tsc
+	mkdir -p $(FRONTEND_ATTNPEDIA_BUILD_DIR) || true
+	cp $(FRONTEND_ATTNPEDIA_DIR)/src/*.js $(FRONTEND_ATTNPEDIA_DIR)/src/*.html $(FRONTEND_ATTNPEDIA_DIR)/src/*.css $(FRONTEND_ATTNPEDIA_BUILD_DIR)/ || true
+
+.PHONY: am-frontend-ap-clean
+am-frontend-ap-clean:
+	rm -rf $(FRONTEND_ATTNPEDIA_BUILD_DIR)
+
+.PHONY: am-frontend-bundle
+am-frontend-bundle: am-frontend-ap-build
 	@echo "bundle embedding display files"
-	$(PYTHON) -m muutils.web.bundle_html attention_motifs/frontend/embeds-old/src/embeddings.html --output attention_motifs/frontend/embeds-old/embeddings.html
-	cp attention_motifs/frontend/embeds-old/embeddings.html data/features/index.html
-	cp attention_motifs/frontend/embeds-old/embeddings.html data/head_embed/index.html
-	$(PYTHON) -m js_embedding_vis --cfg-path attention_motifs/frontend/embeds/config.json --out-path attention_motifs/frontend/embeds/index.html
-	$(PYTHON) -m muutils.web.bundle_html attention_motifs/frontend/attnpedia/src/index.html --output attention_motifs/frontend/attnpedia/index.html
+	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/embeds-old/src/embeddings.html --output $(FRONTEND_DIR)/embeds-old/embeddings.html
+	cp $(FRONTEND_DIR)/embeds-old/embeddings.html data/features/index.html
+	cp $(FRONTEND_DIR)/embeds-old/embeddings.html data/head_embed/index.html
+	$(PYTHON) -m js_embedding_vis --cfg-path $(FRONTEND_DIR)/embeds/config.json --out-path $(FRONTEND_DIR)/embeds/index.html
+	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_ATTNPEDIA_BUILD_DIR)/index.html --output $(FRONTEND_ATTNPEDIA_DIR)/index.html
+
 
 .PHONY: am-server-embed
-am-server-embed: am-bundle-display
+am-server-embed: am-frontend-bundle
 	@echo "start the attention head embedding server"
 	$(PYTHON) -m http.server --directory data/features/
 
