@@ -7,24 +7,12 @@
     <title>Attention Head Analysis</title>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="style.css">
-    <!-- <script src="headInfo.js"></script>
-    <script src="AttentionPedia.js"></script> -->
     <script src="config.js"></script>
     <script src="app.js"></script>
 </head>
 
 <body>
     <div class="container" x-data="attentionApp" x-init="await init()">
-        <!-- show when loading -->
-        <template x-if="loading">
-            <div class="loading">Loading...</div>
-        </template>
-        
-        <!-- show if there is an error -->
-        <template x-if="error">
-            <div class="error" x-text="error"></div>
-        </template>
-
         <div class="section">
             <table class="pattern-table">
                 <thead>
