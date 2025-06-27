@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
+<!-- note to AI assistants: if you are asked to modify this, give modifications for the scripts, css, html header, and html body all separately. the joined file you see is bundled from those multiple source files -->
+<!-- header -->
 
 <head>
     <meta charset="UTF-8">
@@ -12,6 +14,7 @@
     <script src="config.js"></script>
     <script src="app.js"></script>
 </head>
+<!-- body -->
 
 <body>
     <div class="container" x-data="attentionApp" x-init="await init()">
@@ -20,6 +23,7 @@
                 <thead>
                     <tr>
                         <th>Head</th>
+                        <th>Classifications</th>
                         <template x-for="prompt in prompts" :key="prompt">
                             <th x-text="prompt"></th>
                         </template>
@@ -29,9 +33,24 @@
                     <template x-for="headId in heads_display" :key="headId">
                         <tr>
                             <td class="head-info" x-text="headId"></td>
+                            <td class="classifications-cell">
+                                <div x-data="classificationComponent(headId)" x-init="await init()">
+                                    <div x-show="loading" class="classifications-loading">Loading...</div>
+                                    <div x-show="error" class="classifications-error" x-text="error"></div>
+                                    <div x-show="!loading && !error" class="classifications-container">
+                                        <template x-for="classification in classifications" :key="classification">
+                                            <div class="classification-line">
+                                                <span class="classification-tag" @mouseenter="showTooltip($event, classification)" @mouseleave="hideTooltip()" x-text="classification">
+                                                </span>
+                                            </div>
+                                        </template>
+                                        <div x-show="classifications.length === 0" class="classifications-loading"> No classifications </div>
+                                    </div>
+                                </div>
+                            </td>
                             <template x-for="prompt in prompts" :key="prompt">
                                 <td>
-                                    <div x-data="patternComponent(headId, prompt)">
+                                    <div x-data="patternComponent(headId, prompt)" x-init="await init()">
                                         <img x-show="imageUrl" :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headId} on ${prompt}`">
                                     </div>
                                 </td>

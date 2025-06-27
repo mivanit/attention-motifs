@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
+<!-- note to AI assistants: if you are asked to modify this, give modifications for the scripts, css, html header, and html body all separately. the joined file you see is bundled from those multiple source files -->
+<!-- header -->
 
 <head>
     <meta charset="UTF-8">
@@ -15,7 +17,7 @@
     }
     
     .container {
-    	max-width: 1200px;
+    	max-width: 1400px;
     	margin: 0 auto;
     }
     
@@ -33,6 +35,7 @@
     .pattern-table td {
     	padding: 12px;
     	border: 1px solid #ddd;
+    	vertical-align: top;
     }
     
     .pattern-table th {
@@ -75,6 +78,82 @@
     	font-size: 12px;
     	color: #666;
     }
+    
+    .classifications-cell {
+    	min-width: 150px;
+    	font-size: 12px;
+    	line-height: 1.6;
+    }
+    
+    .classification-tag {
+    	display: inline-block;
+    	background: #e3f2fd;
+    	color: #1565c0;
+    	padding: 3px 8px;
+    	margin: 2px;
+    	border-radius: 4px;
+    	font-size: 11px;
+    	cursor: help;
+    	border: 1px solid #bbdefb;
+    	position: relative;
+    }
+    
+    .classification-tag:hover {
+    	background: #bbdefb;
+    }
+    
+    .classifications-container {
+    	display: flex;
+    	flex-direction: column;
+    	gap: 4px;
+    }
+    
+    .classification-line {
+    	display: block;
+    	margin-bottom: 2px;
+    }
+    
+    .classifications-loading {
+    	color: #666;
+    	font-style: italic;
+    	font-size: 11px;
+    }
+    
+    .classifications-error {
+    	color: #c62828;
+    	font-size: 11px;
+    }
+    
+    .tooltip {
+    	position: absolute;
+    	background: #333;
+    	color: white;
+    	padding: 8px 12px;
+    	border-radius: 4px;
+    	font-size: 12px;
+    	max-width: 300px;
+    	z-index: 1000;
+    	pointer-events: none;
+    	opacity: 0;
+    	transition: opacity 0.2s;
+    	line-height: 1.4;
+    	white-space: nowrap;
+    }
+    
+    .tooltip.show {
+    	opacity: 1;
+    }
+    
+    .tooltip::after {
+    	content: '';
+    	position: absolute;
+    	top: 100%;
+    	left: 50%;
+    	margin-left: -5px;
+    	border-width: 5px;
+    	border-style: solid;
+    	border-color: #333 transparent transparent transparent;
+    }
     </style>
     <!-- end 'style.css' -->
         <!-- begin 'AttentionPedia.js' -->
@@ -85,7 +164,7 @@
     	const r = await fetch(path);
     	if (r.ok) {
     		const loaded = await r.json();
-    		return this._load(loaded);
+    		return loaded;
     	} else {
     		throw new Error(`Failed to load AttentionPedia data from ${path}`);
     	}
@@ -93,11 +172,20 @@
     
     class AttentionPedia {
     	constructor() {
-    		this._data = load_attnpedia();
+    		this._data = null;
+    		this._loaded = false;
     	}
     
-    	get_head_types(head_id) {
-    		if (head_id in this._data.head_to_types) {
+    	async _ensureLoaded() {
+    		if (!this._loaded) {
+    			this._data = await load_attnpedia();
+    			this._loaded = true;
+    		}
+    	}
+    
+    	async get_head_types(head_id) {
+    		await this._ensureLoaded();
+    		if (this._data && head_id in this._data.head_to_types) {
     			return this._data.head_to_types[head_id];
     		}
     		else {
@@ -105,8 +193,9 @@
     		}
     	}
     
-    	get_type_heads(type) {
-    		if (type in this._data.type_to_heads) {
+    	async get_type_heads(type) {
+    		await this._ensureLoaded();
+    		if (this._data && type in this._data.type_to_heads) {
     			return this._data.type_to_heads[type];
     		}
     		else {
@@ -114,8 +203,9 @@
     		}
     	}
     
-    	get_type_meta(type) {
-    		if (type in this._data.type_metadata) {
+    	async get_type_meta(type) {
+    		await this._ensureLoaded();
+    		if (this._data && type in this._data.type_metadata) {
     			return this._data.type_metadata[type];
     		}
     		else {
@@ -123,7 +213,8 @@
     		}
     	}
     
-    	getNearestHeads(headId, n = 5) {
+    	async getNearestHeads(headId, n = 5) {
+    		await this._ensureLoaded();
     		const targetHead = this.heads.get(headId);
     		if (!targetHead) return [];
     
@@ -242,12 +333,79 @@
     					}
     				}
     			};
+    		},
+    
+    		classificationComponent(headId) {
+    			return {
+    				loading: true,
+    				classifications: [],
+    				typesMetadata: {},
+    				error: null,
+    
+    				async init() {
+    					try {
+    						const types = await ATTENTION_PEDIA.get_head_types(headId);
+    						this.classifications = types;
+    
+    						// Load metadata for each type
+    						for (const type of types) {
+    							this.typesMetadata[type] = await ATTENTION_PEDIA.get_type_meta(type);
+    						}
+    
+    						this.loading = false;
+    					} catch (error) {
+    						console.error(`Failed to get classifications for ${headId}:`, error);
+    						this.error = error.message;
+    						this.loading = false;
+    					}
+    				},
+    
+    				showTooltip(event, type) {
+    					const meta = this.typesMetadata[type];
+    					if (!meta || Object.keys(meta).length === 0) {
+    						return;
+    					}
+    
+    					let content = type;
+    					if (meta.description) {
+    						content += ` - ${meta.description}`;
+    					}
+    					if (meta.frequency) {
+    						content += ` (freq: ${meta.frequency})`;
+    					}
+    
+    					// Create or update tooltip
+    					let tooltip = document.getElementById('tooltip');
+    					if (!tooltip) {
+    						tooltip = document.createElement('div');
+    						tooltip.id = 'tooltip';
+    						tooltip.className = 'tooltip';
+    						document.body.appendChild(tooltip);
+    					}
+    
+    					tooltip.textContent = content;
+    
+    					// Position tooltip
+    					const rect = event.target.getBoundingClientRect();
+    					tooltip.style.left = (rect.left + window.scrollX) + 'px';
+    					tooltip.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+    					tooltip.classList.add('show');
+    				},
+    
+    				hideTooltip() {
+    					const tooltip = document.getElementById('tooltip');
+    					if (tooltip) {
+    						tooltip.classList.remove('show');
+    					}
+    				}
+    			};
     		}
     	}));
     });
     </script>
     <!-- end 'app.js' -->
 </head>
+<!-- body -->
 
 <body>
     <div class="container" x-data="attentionApp" x-init="await init()">
@@ -256,6 +414,7 @@
                 <thead>
                     <tr>
                         <th>Head</th>
+                        <th>Classifications</th>
                         <template x-for="prompt in prompts" :key="prompt">
                             <th x-text="prompt"></th>
                         </template>
@@ -265,9 +424,24 @@
                     <template x-for="headId in heads_display" :key="headId">
                         <tr>
                             <td class="head-info" x-text="headId"></td>
+                            <td class="classifications-cell">
+                                <div x-data="classificationComponent(headId)" x-init="await init()">
+                                    <div x-show="loading" class="classifications-loading">Loading...</div>
+                                    <div x-show="error" class="classifications-error" x-text="error"></div>
+                                    <div x-show="!loading && !error" class="classifications-container">
+                                        <template x-for="classification in classifications" :key="classification">
+                                            <div class="classification-line">
+                                                <span class="classification-tag" @mouseenter="showTooltip($event, classification)" @mouseleave="hideTooltip()" x-text="classification">
+                                                </span>
+                                            </div>
+                                        </template>
+                                        <div x-show="classifications.length === 0" class="classifications-loading"> No classifications </div>
+                                    </div>
+                                </div>
+                            </td>
                             <template x-for="prompt in prompts" :key="prompt">
                                 <td>
-                                    <div x-data="patternComponent(headId, prompt)">
+                                    <div x-data="patternComponent(headId, prompt)" x-init="await init()">
                                         <img x-show="imageUrl" :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headId} on ${prompt}`">
                                     </div>
                                 </td>
