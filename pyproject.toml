@@ -1,5 +1,5 @@
 [project]
-name = "attention-motifs"
+name = "attn_embed"
 version = "0.0.4"
 description = "template for python projects/packages"
 authors = [

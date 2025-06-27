@@ -25,11 +25,11 @@ attrs==25.3.0
     #   referencing
 beartype==0.14.1
     # via
-    #   attention-motifs
+    #   attn-embed
     #   pattern-lens
     #   transformer-lens
 beautifulsoup4==4.13.4
-    # via attention-motifs
+    # via attn-embed
 better-abc==0.0.3
     # via transformer-lens
 blinker==1.9.0
@@ -73,7 +73,7 @@ coverage-badge==1.1.2
 cycler==0.12.1
     # via matplotlib
 dash==3.0.4
-    # via attention-motifs
+    # via attn-embed
 datasets==3.6.0
     # via transformer-lens
 debugpy==1.8.14
@@ -86,7 +86,7 @@ dill==0.3.8
     #   multiprocess
 einops==0.8.1
     # via
-    #   attention-motifs
+    #   attn-embed
     #   transformer-lens
 executing==2.2.0
     # via stack-data
@@ -140,7 +140,7 @@ iniconfig==2.1.0
     # via pytest
 ipykernel==6.29.5
     # via
-    #   attention-motifs
+    #   attn-embed
     #   pattern-lens
 ipython==9.3.0
     # via
@@ -150,13 +150,13 @@ ipython-pygments-lexers==1.1.1
     # via ipython
 ipywidgets==8.1.7
     # via
-    #   attention-motifs
+    #   attn-embed
     #   pattern-lens
 itsdangerous==2.2.0
     # via flask
 jaxtyping==0.3.2
     # via
-    #   attention-motifs
+    #   attn-embed
     #   pattern-lens
     #   transformer-lens
     #   zanj
@@ -172,7 +172,7 @@ joblib==1.5.1
     #   pynndescent
     #   scikit-learn
 js-embedding-vis @ git+https://github.com/mivanit/js-embedding-vis@2fbd6a5115b285edebaab9b4e96c8ef6f45ff8b9
-    # via attention-motifs
+    # via attn-embed
 jsonschema==4.24.0
     # via nbformat
 jsonschema-specifications==2025.4.1
@@ -212,7 +212,7 @@ markupsafe==3.0.2
     #   werkzeug
 matplotlib==3.10.3
     # via
-    #   attention-motifs
+    #   attn-embed
     #   pattern-lens
 matplotlib-inline==0.1.7
     # via
@@ -230,7 +230,7 @@ multiprocess==0.70.16
     # via datasets
 muutils==0.8.10
     # via
-    #   attention-motifs
+    #   attn-embed
     #   lmcat
     #   pattern-lens
     #   trnbl
@@ -241,7 +241,7 @@ mypy-extensions==1.1.0
 narwhals==1.44.0
     # via plotly
 nbformat==5.10.4
-    # via attention-motifs
+    # via attn-embed
 nest-asyncio==1.6.0
     # via
     #   dash
@@ -250,13 +250,13 @@ networkx==3.5
     # via torch
 numba==0.61.2
     # via
-    #   attention-motifs
+    #   attn-embed
     #   pynndescent
     #   umap-learn
 numpy==1.26.4
     # via
     #   accelerate
-    #   attention-motifs
+    #   attn-embed
     #   contourpy
     #   datasets
     #   matplotlib
@@ -324,7 +324,7 @@ packaging==25.0
     #   wandb
 pandas==2.3.0
     # via
-    #   attention-motifs
+    #   attn-embed
     #   datasets
     #   pattern-lens
     #   pysr
@@ -334,13 +334,13 @@ parso==0.8.4
 pathspec==0.12.1
     # via mypy
 pattern-lens==0.4.0
-    # via attention-motifs
+    # via attn-embed
 pdoc==15.0.4
 pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
     # via ipython
 pillow==11.2.1
     # via
-    #   attention-motifs
+    #   attn-embed
     #   matplotlib
     #   pattern-lens
 platformdirs==4.3.8
@@ -349,16 +349,16 @@ platformdirs==4.3.8
     #   wandb
 plotly==6.1.2
     # via
-    #   attention-motifs
+    #   attn-embed
     #   dash
 pluggy==1.6.0
     # via
     #   pytest
     #   pytest-cov
 polars==1.31.0
-    # via attention-motifs
+    # via attn-embed
 pot==0.9.5
-    # via attention-motifs
+    # via attn-embed
 prompt-toolkit==3.0.51
     # via ipython
 propcache==0.3.2
@@ -384,7 +384,7 @@ pycparser==2.22 ; implementation_name == 'pypy'
     # via cffi
 pydantic==2.10.4
     # via
-    #   attention-motifs
+    #   attn-embed
     #   wandb
 pydantic-core==2.27.2
     # via pydantic
@@ -400,7 +400,7 @@ pynndescent==0.5.13
 pyparsing==3.2.3
     # via matplotlib
 pysr==1.5.8
-    # via attention-motifs
+    # via attn-embed
 pytest==8.4.1
     # via pytest-cov
 pytest-cov==6.2.1
@@ -458,7 +458,7 @@ scikit-learn==1.7.0
     #   umap-learn
 scipy==1.16.0
     # via
-    #   attention-motifs
+    #   attn-embed
     #   pattern-lens
     #   pot
     #   pynndescent
@@ -506,7 +506,7 @@ tomli==2.2.1 ; python_full_version <= '3.11'
 torch==2.7.1
     # via
     #   accelerate
-    #   attention-motifs
+    #   attn-embed
     #   pattern-lens
     #   transformer-lens
 tornado==6.5.1
@@ -515,7 +515,7 @@ tornado==6.5.1
     #   jupyter-client
 tqdm==4.67.1
     # via
-    #   attention-motifs
+    #   attn-embed
     #   datasets
     #   huggingface-hub
     #   pattern-lens
@@ -535,7 +535,7 @@ traitlets==5.14.3
     #   nbformat
 transformer-lens==2.16.1
     # via
-    #   attention-motifs
+    #   attn-embed
     #   pattern-lens
 transformers==4.52.4
     # via
@@ -546,15 +546,15 @@ transformers-stream-generator==0.0.5
 triton==3.3.1 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
 trnbl==0.1.1
-    # via attention-motifs
+    # via attn-embed
 typeguard==4.4.2
     # via
-    #   attention-motifs
+    #   attn-embed
     #   pattern-lens
     #   transformer-lens
 typing-extensions==4.12.2
     # via
-    #   attention-motifs
+    #   attn-embed
     #   beautifulsoup4
     #   dash
     #   huggingface-hub
@@ -571,7 +571,7 @@ typing-extensions==4.12.2
 tzdata==2025.2
     # via pandas
 umap-learn==0.5.7
-    # via attention-motifs
+    # via attn-embed
 urllib3==2.5.0
     # via
     #   requests
@@ -597,7 +597,7 @@ yarl==1.20.1
     # via aiohttp
 zanj==0.5.1
     # via
-    #   attention-motifs
+    #   attn-embed
     #   pattern-lens
 zipp==3.23.0
     # via importlib-metadata
