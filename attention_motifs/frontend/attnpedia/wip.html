@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attention Head Analysis</title>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .loading, .error {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            color: #e74c3c;
+            background: #fdf2f2;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+        }
+
+        .pattern-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .pattern-table th,
+        .pattern-table td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        .pattern-table th {
+            background: #f8f9fa;
+            font-weight: 500;
+            text-align: left;
+        }
+
+        .head-info {
+            text-align: left !important;
+            font-family: monospace;
+            font-weight: 500;
+        }
+
+        .pattern-placeholder {
+            width: 60px;
+            height: 60px;
+            background: #ecf0f1;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            color: #7f8c8d;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 0 auto;
+        }
+
+        .pattern-placeholder:hover {
+            background: #d5dbdb;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container" x-data="attentionApp" x-init="await init()">
+        <template x-if="loading">
+            <div class="loading">Loading...</div>
+        </template>
+        
+        <template x-if="error">
+            <div class="error" x-text="error"></div>
+        </template>
+
+        <template x-if="!loading && !error">
+            <div class="section">
+                <table class="pattern-table">
+                    <thead>
+                        <tr>
+                            <th>Head</th>
+                            <template x-for="prompt in prompts" :key="prompt.hash">
+                                <th x-text="prompt.text"></th>
+                            </template>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="headId in heads" :key="headId">
+                            <tr>
+                                <td class="head-info" x-text="headId"></td>
+                                <template x-for="prompt in prompts" :key="prompt.hash">
+                                    <td>
+                                        <div class="pattern-placeholder" 
+                                             @click="viewPattern(headId, prompt.hash)"
+                                             x-text="`${getPatternSize()}×${getPatternSize()}`">
+                                        </div>
+                                    </td>
+                                </template>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </template>
+    </div>
+
+    <script>
+        // Mock config data (in a real app, this would be loaded from config.json)
+        const mockConfig = {
+            "prompts": [
+                {
+                    "hash": "prompt_001",
+                    "text": "The cat sat on the mat"
+                },
+                {
+                    "hash": "prompt_002", 
+                    "text": "When John and Mary went to the store"
+                },
+                {
+                    "hash": "prompt_003",
+                    "text": "The quick brown fox jumps over"
+                },
+                {
+                    "hash": "prompt_004",
+                    "text": "In the beginning was the word"
+                }
+            ],
+            "heads": [
+                "gpt2-small:L5:H5",
+                "gpt2-small:L3:H8",
+                "gpt2-small:L7:H2",
+                "gpt2-medium:L4:H6",
+                "gpt2-medium:L8:H1"
+            ]
+        };
+
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('attentionApp', () => ({
+                loading: true,
+                error: null,
+                prompts: [],
+                heads: [],
+
+                async init() {
+                    try {
+                        // Simulate loading delay
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        
+                        // In a real app, you'd do: const config = await this.loadJson('config.json');
+                        const config = mockConfig;
+                        
+                        this.prompts = config.prompts;
+                        this.heads = config.heads;
+                    } catch (err) {
+                        this.error = `Failed to load config: ${err.message}`;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async loadJson(filename) {
+                    const response = await fetch(filename);
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch ${filename}: ${response.status}`);
+                    }
+                    return await response.json();
+                },
+
+                getPatternSize() {
+                    return Math.floor(Math.random() * 8) + 8;
+                },
+
+                viewPattern(headId, promptHash) {
+                    alert(`Viewing pattern for ${headId} on prompt ${promptHash}`);
+                }
+            }));
+        });
+    </script>
+</body>
+</html>
