@@ -1,4 +1,6 @@
-const ATTNPEDIA_URL = "ap.json";
+const ATTNPEDIA_URL = CONFIG.attnpedia_url; 
+// TODO: fallback to getting from github?
+// || "https://raw.githubusercontent.com/<TODO>";
 
 async function load_attnpedia(path = ATTNPEDIA_URL) {
 	const r = await fetch(path);
@@ -74,5 +76,3 @@ class AttentionPedia {
 			.map(item => ({ ...item.head, distance: item.distance }));
 	}
 }
-
-let ATTENTION_PEDIA = new AttentionPedia();

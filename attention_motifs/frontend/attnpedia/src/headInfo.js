@@ -1,5 +1,3 @@
-const BASE_PATH = "../../../../docs/demo";
-
 class HeadInfo {
     constructor(id, model, layer, head) {
         this.id = id;
@@ -32,6 +30,6 @@ class HeadInfo {
     }
 
     async get_pattern_url(promptHash) {
-        return `${BASE_PATH}/${this.model}/prompts/${promptHash}/L${this.layer}/H${this.head}/raw.png`;
+        return `${this.model}/prompts/${promptHash}/L${this.layer}/H${this.head}/raw.png`;
     }
 }

@@ -6,9 +6,9 @@ document.addEventListener('alpine:init', () => {
 		heads_display: [],
 
 		async init() {
-			const config = mockConfig;
-			this.prompts = config.prompts;
-			this.heads_display = config.heads_display;
+			this.attention_pedia = new AttentionPedia();
+			this.prompts = CONFIG.prompts;
+			this.heads_display = CONFIG.heads_display;
 			this.loading = false;
 		},
 
@@ -21,7 +21,8 @@ document.addEventListener('alpine:init', () => {
 				async init() {
 					try {
 						const headInfo = HeadInfo.from_id(headId);
-						this.imageUrl = await headInfo.get_pattern_url(promptHash);
+						imageUrl_rel = await headInfo.get_pattern_url(promptHash);
+						this.imageUrl = `${CONFIG.patterns_path}/${imageUrl_rel}`;
 						this.loading = false;
 					} catch (error) {
 						console.error(`Failed to get pattern URL for ${headId}:${promptHash}:`, error);
@@ -40,11 +41,11 @@ document.addEventListener('alpine:init', () => {
 				hideTimeout: null,
 
 				async loadData() {
-					const types = await ATTENTION_PEDIA.get_head_types(headId);
+					const types = await this.attention_pedia.get_head_types(headId);
 					this.classifications = types;
 
 					for (const type of types) {
-						this.typesMetadata[type] = await ATTENTION_PEDIA.get_type_meta(type);
+						this.typesMetadata[type] = await this.attention_pedia.get_type_meta(type);
 					}
 				},
 
