@@ -1508,11 +1508,12 @@ FRONTEND_DIR = attention_motifs/frontend
 FRONTEND_ATTNPEDIA_DIR = $(FRONTEND_DIR)/attnpedia
 FRONTEND_ATTNPEDIA_BUILD_DIR = $(FRONTEND_ATTNPEDIA_DIR)/build
 
+# cd $(FRONTEND_ATTNPEDIA_DIR) && tsc || true
 .PHONY: am-frontend-ap-build
 am-frontend-ap-build:
-	cd $(FRONTEND_ATTNPEDIA_DIR) && tsc || true
 	mkdir -p $(FRONTEND_ATTNPEDIA_BUILD_DIR) || true
 	cp $(FRONTEND_ATTNPEDIA_DIR)/src/*.js $(FRONTEND_ATTNPEDIA_DIR)/src/*.html $(FRONTEND_ATTNPEDIA_DIR)/src/*.css $(FRONTEND_ATTNPEDIA_BUILD_DIR)/ || true
+	$(PYTHON) -m attention_motifs.attnpedia all > $(FRONTEND_ATTNPEDIA_DIR)/ap.json
 
 .PHONY: am-frontend-ap-clean
 am-frontend-ap-clean:

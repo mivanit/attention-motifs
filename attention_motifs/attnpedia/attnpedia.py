@@ -1,4 +1,5 @@
 import json
+import sys
 import matplotlib.colors as mcolors
 from typing import Callable, Literal
 import warnings
@@ -246,3 +247,90 @@ class AttentionPedia:
 		# Store the results
 		self._head_type_colors = color_dict
 		self._head_type_groups = group_dict
+
+
+	def type_metadata(self) -> dict[str, dict]:
+		"""Get metadata about each attention head type.
+		
+		# Returns:
+		- `dict[str, dict]`
+			Dictionary mapping type names to their metadata (url, notes, model, n_heads, heads)
+		"""
+		metadata: dict = dict()
+		for paper in self.data_raw:
+			for head_class in paper["classes"]:
+				head_class_name: str = f"{paper['prefix']}:{head_class['type']}"
+				metadata[head_class_name] = dict(
+					url=paper["url"],
+					notes=paper["notes"],
+					model=paper["model"],
+					n_heads=len(head_class["heads"]),
+					heads=[
+						f"{paper['model']}:{h}"
+						for h in head_class["heads"]
+					],
+				)
+		
+		return metadata
+
+
+def main() -> None:
+	"""Main CLI interface for AttentionPedia."""
+	import argparse
+	
+	parser: argparse.ArgumentParser = argparse.ArgumentParser(description="AttentionPedia CLI")
+	parser.add_argument(
+		"mode",
+		choices=["head-to-types", "type-to-heads", "type-metadata", "all"],
+		help="What to output"
+	)
+	parser.add_argument(
+		"--out", 
+		type=Path,
+		help="Output file path (default: print to console)"
+	)
+	
+	args: argparse.Namespace = parser.parse_args()
+	
+	pedia: AttentionPedia = AttentionPedia()
+	result: dict|list[dict]
+
+	lines: bool = False
+	match args.mode:
+		case "all":
+			result = {
+				"head_to_types": pedia.head_to_types(),
+				"type_to_heads": pedia.type_to_heads(),
+				"type_metadata": pedia.type_metadata(),
+			}
+		case "dataframe":
+			result = pedia.dataframe().to_dict(orient="records")
+			lines = True
+		case "df":
+			result = pedia.dataframe().to_dict(orient="records")
+			lines = True
+		case "head-to-types":
+			result = pedia.head_to_types()
+		case "type-to-heads":
+			result = pedia.type_to_heads()
+		case "type-metadata":
+			result = pedia.type_metadata()
+		case _:
+			raise ValueError(f"Unknown mode: {args.mode}")
+	
+	# Output result
+	output: str
+	if lines:
+		output = "\n".join(json.dumps(item) for item in result)
+	else:
+		output = json.dumps(result, indent="\t")
+
+	if args.out:
+		args.out.write_text(output)
+		print(f"# written to {args.out}", file=sys.stderr)
+	else:
+		print(output)
+
+
+if __name__ == "__main__":
+	main()
