@@ -121,11 +121,14 @@ body {
 	font-size: 12px;
 	max-width: 300px;
 	z-index: 1000;
-	pointer-events: none;
+	pointer-events: auto;
 	opacity: 0;
 	transition: opacity 0.2s;
 	line-height: 1.4;
-	white-space: nowrap;
+}
+
+.tooltip a {
+	color: #87ceeb;
 }
 
 .tooltip.show {

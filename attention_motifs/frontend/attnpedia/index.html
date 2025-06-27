@@ -133,11 +133,14 @@
     	font-size: 12px;
     	max-width: 300px;
     	z-index: 1000;
-    	pointer-events: none;
+    	pointer-events: auto;
     	opacity: 0;
     	transition: opacity 0.2s;
     	line-height: 1.4;
-    	white-space: nowrap;
+    }
+    
+    .tooltip a {
+    	color: #87ceeb;
     }
     
     .tooltip.show {
@@ -337,66 +340,43 @@
     
     		classificationComponent(headId) {
     			return {
-    				loading: true,
     				classifications: [],
     				typesMetadata: {},
-    				error: null,
     
-    				async init() {
-    					try {
-    						const types = await ATTENTION_PEDIA.get_head_types(headId);
-    						this.classifications = types;
+    				async loadData() {
+    					const types = await ATTENTION_PEDIA.get_head_types(headId);
+    					this.classifications = types;
     
-    						// Load metadata for each type
-    						for (const type of types) {
-    							this.typesMetadata[type] = await ATTENTION_PEDIA.get_type_meta(type);
-    						}
-    
-    						this.loading = false;
-    					} catch (error) {
-    						console.error(`Failed to get classifications for ${headId}:`, error);
-    						this.error = error.message;
-    						this.loading = false;
+    					for (const type of types) {
+    						this.typesMetadata[type] = await ATTENTION_PEDIA.get_type_meta(type);
     					}
     				},
     
     				showTooltip(event, type) {
     					const meta = this.typesMetadata[type];
-    					if (!meta || Object.keys(meta).length === 0) {
-    						return;
-    					}
+    					const content = `${type}<br>${meta.notes}<br>${meta.n_heads} heads<br><a href="${meta.url}" target="_blank">${meta.url}</a>`;
     
-    					let content = type;
-    					if (meta.description) {
-    						content += ` - ${meta.description}`;
-    					}
-    					if (meta.frequency) {
-    						content += ` (freq: ${meta.frequency})`;
-    					}
-    
-    					// Create or update tooltip
     					let tooltip = document.getElementById('tooltip');
     					if (!tooltip) {
     						tooltip = document.createElement('div');
     						tooltip.id = 'tooltip';
     						tooltip.className = 'tooltip';
+    						tooltip.style.pointerEvents = 'auto';
     						document.body.appendChild(tooltip);
     					}
     
-    					tooltip.textContent = content;
-    
-    					// Position tooltip
-    					const rect = event.target.getBoundingClientRect();
-    					tooltip.style.left = (rect.left + window.scrollX) + 'px';
-    					tooltip.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+    					clearTimeout(this.hideTimeout);
+    					tooltip.innerHTML = content;
+    					tooltip.style.left = (event.target.getBoundingClientRect().left + window.scrollX) + 'px';
+    					tooltip.style.top = (event.target.getBoundingClientRect().bottom + window.scrollY + 5) + 'px';
     					tooltip.classList.add('show');
     				},
     
     				hideTooltip() {
-    					const tooltip = document.getElementById('tooltip');
-    					if (tooltip) {
-    						tooltip.classList.remove('show');
-    					}
+    					this.hideTimeout = setTimeout(() => {
+    						const tooltip = document.getElementById('tooltip');
+    						if (tooltip) tooltip.classList.remove('show');
+    					}, 500);
     				}
     			};
     		}
@@ -425,17 +405,14 @@
                         <tr>
                             <td class="head-info" x-text="headId"></td>
                             <td class="classifications-cell">
-                                <div x-data="classificationComponent(headId)" x-init="await init()">
-                                    <div x-show="loading" class="classifications-loading">Loading...</div>
-                                    <div x-show="error" class="classifications-error" x-text="error"></div>
-                                    <div x-show="!loading && !error" class="classifications-container">
+                                <div x-data="classificationComponent(headId)" x-init="loadData()">
+                                    <div class="classifications-container">
                                         <template x-for="classification in classifications" :key="classification">
                                             <div class="classification-line">
-                                                <span class="classification-tag" @mouseenter="showTooltip($event, classification)" @mouseleave="hideTooltip()" x-text="classification">
+                                                <span class="classification-tag" @mouseenter="showTooltip($event, classification)" @mouseleave="hideTooltip()" @mouseenter.document="if($event.target.id === 'tooltip') clearTimeout(hideTimeout)" x-text="classification">
                                                 </span>
                                             </div>
                                         </template>
-                                        <div x-show="classifications.length === 0" class="classifications-loading"> No classifications </div>
                                     </div>
                                 </div>
                             </td>

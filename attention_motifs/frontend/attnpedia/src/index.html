@@ -34,17 +34,14 @@
                         <tr>
                             <td class="head-info" x-text="headId"></td>
                             <td class="classifications-cell">
-                                <div x-data="classificationComponent(headId)" x-init="await init()">
-                                    <div x-show="loading" class="classifications-loading">Loading...</div>
-                                    <div x-show="error" class="classifications-error" x-text="error"></div>
-                                    <div x-show="!loading && !error" class="classifications-container">
+                                <div x-data="classificationComponent(headId)" x-init="loadData()">
+                                    <div class="classifications-container">
                                         <template x-for="classification in classifications" :key="classification">
                                             <div class="classification-line">
-                                                <span class="classification-tag" @mouseenter="showTooltip($event, classification)" @mouseleave="hideTooltip()" x-text="classification">
+                                                <span class="classification-tag" @mouseenter="showTooltip($event, classification)" @mouseleave="hideTooltip()" @mouseenter.document="if($event.target.id === 'tooltip') clearTimeout(hideTimeout)" x-text="classification">
                                                 </span>
                                             </div>
                                         </template>
-                                        <div x-show="classifications.length === 0" class="classifications-loading"> No classifications </div>
                                     </div>
                                 </div>
                             </td>
