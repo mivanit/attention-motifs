@@ -123,29 +123,17 @@
     // Mock config data (in a real app, this would be loaded from config.json)
     const mockConfig = {
     	"prompts": [
-    		{
-    			"hash": "4cI1GEw6ALlDIgyrDHqSNw",
-    			"text": "The cat sat on the mat"
-    		},
-    		{
-    			"hash": "7ACbiDg7tQ7q3vA1mz2I_g",
-    			"text": "When John and Mary went to the store"
-    		},
-    		{
-    			"hash": "9Hg1qyV1vUCZPQxUjnXqvQ",
-    			"text": "The quick brown fox jumps over"
-    		},
-    		{
-    			"hash": "154QVY-xqZlyiFm1FvmMhg",
-    			"text": "In the beginning was the word"
-    		}
+    		"4cI1GEw6ALlDIgyrDHqSNw",
+    		"7ACbiDg7tQ7q3vA1mz2I_g",
+    		"9Hg1qyV1vUCZPQxUjnXqvQ",
+    		"154QVY-xqZlyiFm1FvmMhg",
     	],
     	"heads_display": [
     		"gpt2-small:L5:H5",
     		"gpt2-small:L3:H8",
     		"gpt2-small:L7:H2",
-    		"gpt2-medium:L4:H6",
-    		"gpt2-medium:L8:H1"
+    		"pythia-14m:L0:H3",
+    		"pythia-14m:L2:H1"
     	]
     };
     </script>
@@ -198,8 +186,8 @@
                 <thead>
                     <tr>
                         <th>Head</th>
-                        <template x-for="prompt in prompts" :key="prompt.hash">
-                            <th x-text="prompt.text"></th>
+                        <template x-for="prompt in prompts" :key="prompt">
+                            <th x-text="prompt"></th>
                         </template>
                     </tr>
                 </thead>
@@ -207,12 +195,10 @@
                     <template x-for="headId in heads_display" :key="headId">
                         <tr>
                             <td class="head-info" x-text="headId"></td>
-                            <template x-for="prompt in prompts" :key="prompt.hash">
+                            <template x-for="prompt in prompts" :key="prompt">
                                 <td>
-                                    <div x-data="patternComponent(headId, prompt.hash)" x-init="await init()">
-                                        <div x-show="loading" class="pattern-loading">...</div>
-                                        <img x-show="!loading && imageUrl" :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headId} on ${prompt.text}`">
-                                        <div x-show="!loading && error" class="pattern-error" :title="error"> Error </div>
+                                    <div x-data="patternComponent(headId, prompt)">
+                                        <img x-show="imageUrl" :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headId} on ${prompt}`">
                                     </div>
                                 </td>
                             </template>

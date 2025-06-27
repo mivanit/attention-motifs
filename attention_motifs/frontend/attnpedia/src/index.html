@@ -19,8 +19,8 @@
                 <thead>
                     <tr>
                         <th>Head</th>
-                        <template x-for="prompt in prompts" :key="prompt.hash">
-                            <th x-text="prompt.text"></th>
+                        <template x-for="prompt in prompts" :key="prompt">
+                            <th x-text="prompt"></th>
                         </template>
                     </tr>
                 </thead>
@@ -28,12 +28,10 @@
                     <template x-for="headId in heads_display" :key="headId">
                         <tr>
                             <td class="head-info" x-text="headId"></td>
-                            <template x-for="prompt in prompts" :key="prompt.hash">
+                            <template x-for="prompt in prompts" :key="prompt">
                                 <td>
-                                    <div x-data="patternComponent(headId, prompt.hash)" x-init="await init()">
-                                        <div x-show="loading" class="pattern-loading">...</div>
-                                        <img x-show="!loading && imageUrl" :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headId} on ${prompt.text}`">
-                                        <div x-show="!loading && error" class="pattern-error" :title="error"> Error </div>
+                                    <div x-data="patternComponent(headId, prompt)">
+                                        <img x-show="imageUrl" :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headId} on ${prompt}`">
                                     </div>
                                 </td>
                             </template>
