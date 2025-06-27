@@ -7,6 +7,7 @@
     <title>Attention Head Analysis</title>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="style.css">
+    <script src="headInfo.js"></script>
     <script src="config.js"></script>
     <script src="app.js"></script>
 </head>
@@ -29,7 +30,18 @@
                             <td class="head-info" x-text="headId"></td>
                             <template x-for="prompt in prompts" :key="prompt.hash">
                                 <td>
-                                    <div class="pattern-placeholder"></div>
+                                    <div x-data="patternComponent(headId, prompt.hash)" x-init="await init()">
+                                        <div x-show="loading" class="pattern-loading">...</div>
+                                        <img x-show="!loading && imageUrl" 
+                                             :src="imageUrl" 
+                                             class="pattern-image" 
+                                             :alt="`Pattern for ${headId} on ${prompt.text}`">
+                                        <div x-show="!loading && error" 
+                                             class="pattern-error" 
+                                             :title="error">
+                                            Error
+                                        </div>
+                                    </div>
                                 </td>
                             </template>
                         </tr>
