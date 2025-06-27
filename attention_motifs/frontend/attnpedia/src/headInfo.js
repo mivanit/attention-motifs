@@ -1,4 +1,4 @@
-const BASE_PATH = "../../../../docs/demo"
+const BASE_PATH = "../../../../docs/demo";
 
 class HeadInfo {
     constructor(id, model, layer, head) {
@@ -8,6 +8,7 @@ class HeadInfo {
         this.head = head;
         this.classifications = [];
     }
+
     static from_id(id) {
         // split by ":", should have 3 components
         // `{model}:L{layer}:H{head}`
@@ -29,6 +30,7 @@ class HeadInfo {
         }
         return new HeadInfo(id, model, layer, head);
     }
+
     async get_pattern_url(promptHash) {
         return `${BASE_PATH}/${this.model}/prompts/${promptHash}/L${this.layer}/H${this.head}/raw.png`;
     }

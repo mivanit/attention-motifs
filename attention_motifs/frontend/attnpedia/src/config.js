@@ -2,19 +2,19 @@
 const mockConfig = {
 	"prompts": [
 		{
-			"hash": "prompt_001",
+			"hash": "4cI1GEw6ALlDIgyrDHqSNw",
 			"text": "The cat sat on the mat"
 		},
 		{
-			"hash": "prompt_002",
+			"hash": "7ACbiDg7tQ7q3vA1mz2I_g",
 			"text": "When John and Mary went to the store"
 		},
 		{
-			"hash": "prompt_003",
+			"hash": "9Hg1qyV1vUCZPQxUjnXqvQ",
 			"text": "The quick brown fox jumps over"
 		},
 		{
-			"hash": "prompt_004",
+			"hash": "154QVY-xqZlyiFm1FvmMhg",
 			"text": "In the beginning was the word"
 		}
 	],

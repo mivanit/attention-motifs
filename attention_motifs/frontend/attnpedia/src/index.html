@@ -32,15 +32,8 @@
                                 <td>
                                     <div x-data="patternComponent(headId, prompt.hash)" x-init="await init()">
                                         <div x-show="loading" class="pattern-loading">...</div>
-                                        <img x-show="!loading && imageUrl" 
-                                             :src="imageUrl" 
-                                             class="pattern-image" 
-                                             :alt="`Pattern for ${headId} on ${prompt.text}`">
-                                        <div x-show="!loading && error" 
-                                             class="pattern-error" 
-                                             :title="error">
-                                            Error
-                                        </div>
+                                        <img x-show="!loading && imageUrl" :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headId} on ${prompt.text}`">
+                                        <div x-show="!loading && error" class="pattern-error" :title="error"> Error </div>
                                     </div>
                                 </td>
                             </template>
@@ -51,4 +44,5 @@
         </div>
     </div>
 </body>
+
 </html>
