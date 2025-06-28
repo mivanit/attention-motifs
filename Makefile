@@ -36,7 +36,7 @@ DOCS_DIR := docs
 TESTS_DIR := tests
 
 # tests temp directory to clean up. will remove this in `make clean`
-TESTS_TEMP_DIR := $(TESTS_DIR)/_temp/
+TESTS_TEMP_DIR := $(TESTS_DIR)/.temp/
 
 # probably don't change these:
 # --------------------------------------------------
@@ -1495,19 +1495,18 @@ am-figures:
 .PHONY: am-features
 am-features:
 	@echo "generate features for attention patterns"
-	$(PYTHON) -m attention_motifs.features.generate --act-path $(DEMO_DATA) --processes $(N_PROC) $(FEAT_KWARGS)
-# NUMBA_CACHE_DIR=.numba-cache 
+	HF_TOKEN=$(HF_TOKEN) $(PYTHON) pipeline/s2_features.py $(PIPELINE_CFG_PATH)
 
+.PHONY: am-pipeline
+am-pipeline: am-download-models am-activations am-figures am-features
+	@echo "run the whole attention-motifs pipeline"
 
 TEST_CONFIG ?= tests/pipeline_cfg_test.toml
 
 .PHONY: am-pipeline-test
 am-pipeline-test:
 	@echo "run the whole pipeline with test data"
-	$(MAKE) am-download-models PIPELINE_CFG_PATH=$(TEST_CONFIG)
-	$(MAKE) am-activations PIPELINE_CFG_PATH=$(TEST_CONFIG)
-	$(MAKE) am-figures PIPELINE_CFG_PATH=$(TEST_CONFIG)
-
+	$(MAKE) am-pipeline PIPELINE_CFG_PATH=$(TEST_CONFIG)
 
 
 # step 5: display stuff

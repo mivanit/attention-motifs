@@ -11,12 +11,12 @@ from attn_embed.dataset.dataset import (
 )
 from attn_embed.dataset.prompts import PromptDatasetConfig
 
-TEMP_DIR: Path = Path("tests/_temp")
+TEMP_DIR: Path = Path("tests/.temp")
 
 
 def make_sample_prompts_file() -> Path:
-	"""Create a small prompts file inside tests/_temp with multiple lines."""
-	# We'll not use a tempfile here so we can see the file in tests/_temp
+	"""Create a small prompts file inside tests/.temp with multiple lines."""
+	# We'll not use a tempfile here so we can see the file in tests/.temp
 	pfile = TEMP_DIR / "sample_prompts.jsonl"
 	pfile.parent.mkdir(exist_ok=True, parents=True)
 	# create a few sample prompts

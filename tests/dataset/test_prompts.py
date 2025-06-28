@@ -13,7 +13,7 @@ from attn_embed.dataset.prompts import (
 )
 
 # The directory where test output will be written
-TEMP_DIR: Path = Path("tests/_temp")
+TEMP_DIR: Path = Path("tests/.temp")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -181,7 +181,7 @@ def test_prompt_dataset_config_missing_path():
 	"""
 	Test that from_source_path raises FileNotFoundError if path is missing.
 	"""
-	bogus_path = Path("tests/_temp/this_file_does_not_exist.jsonl")
+	bogus_path = Path("tests/.temp/this_file_does_not_exist.jsonl")
 	with pytest.raises(FileNotFoundError):
 		_ = PromptDatasetConfig.from_source_path(bogus_path)
 

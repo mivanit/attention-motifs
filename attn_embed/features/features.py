@@ -22,7 +22,7 @@ from pattern_lens.consts import (
 from pattern_lens.load_activations import load_activations
 from pattern_lens.figures import HTConfigMock
 
-from attn_embed.util import prefix_dict
+from attn_embed.util.util import prefix_dict
 from attn_embed.util.bins import Bins
 from attn_embed.features.vec_features import vec_features
 from attn_embed.math.cos_sim import cosine_similarity_matrix
@@ -146,17 +146,22 @@ def scalar_feature_table(
 
 	# add a activation.layer_depth column by applying get_layer_depth to each row
 	df = df.with_columns(
-		pl.col("activation.layer").apply(
-			get_layer_depth,
-			model_configs=model_configs,
+		pl.struct(
+			[
+				"activation.model",
+				"activation.layer",
+			]
+		).map_elements(
+			lambda s: get_layer_depth(s, model_configs),
 			return_dtype=pl.Float64,
-		).alias("activation.layer_depth"),
+		).alias("activation.layer_depth")
 	)
 
 	# n models, n prompts, n features
 	out_fname: str = f"raw-m{len(models)}-p{len(prompts)}-c{len(df.columns)}.jsonl"
 	print(f"output shape: {df.shape}")
 	print(f"saving to {out_path / out_fname}")
+	out_path.mkdir(parents=True, exist_ok=True)
 	df.write_ndjson(out_path / out_fname)
 
 	return df

@@ -12,12 +12,12 @@ from attn_embed.dataset.dataset import (
 )
 from attn_embed.dataset.prompts import PromptDataset, PromptDatasetConfig
 
-TEMP_DIR: Path = Path("tests/_temp")
+TEMP_DIR: Path = Path("tests/.temp")
 
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_temp_dir():
-	"""Fixture to ensure the tests/_temp directory exists before tests run."""
+	"""Fixture to ensure the tests/.temp directory exists before tests run."""
 	TEMP_DIR.mkdir(exist_ok=True, parents=True)
 	yield
 
