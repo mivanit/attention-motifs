@@ -1497,9 +1497,12 @@ am-features:
 	@echo "generate features for attention patterns"
 	HF_TOKEN=$(HF_TOKEN) $(PYTHON) pipeline/s2_features.py $(PIPELINE_CFG_PATH)
 
+
+# entire pipeline
+# --------------------------------------------------
 .PHONY: am-pipeline
 am-pipeline: am-download-models am-activations am-figures am-features
-	@echo "run the whole attention-motifs pipeline"
+	@echo "run the whole attention-motifs pipeline on the config $(PIPELINE_CFG_PATH)"
 
 TEST_CONFIG ?= tests/pipeline_cfg_test.toml
 
@@ -1509,7 +1512,7 @@ am-pipeline-test:
 	$(MAKE) am-pipeline PIPELINE_CFG_PATH=$(TEST_CONFIG)
 
 
-# step 5: display stuff
+# display stuff
 # --------------------------------------------------
 FRONTEND_DIR = attention_motifs/frontend
 FRONTEND_ATTNPEDIA_DIR = $(FRONTEND_DIR)/attnpedia
