@@ -143,7 +143,6 @@ def scalar_feature_table(
 	# turn everything into a DataFrame
 	df: pl.DataFrame = pl.DataFrame(output)
 
-
 	# add a activation.layer_depth column by applying get_layer_depth to each row
 	df = df.with_columns(
 		pl.struct(
@@ -151,10 +150,12 @@ def scalar_feature_table(
 				"activation.model",
 				"activation.layer",
 			]
-		).map_elements(
+		)
+		.map_elements(
 			lambda s: get_layer_depth(s, model_configs),
 			return_dtype=pl.Float64,
-		).alias("activation.layer_depth")
+		)
+		.alias("activation.layer_depth")
 	)
 
 	# n models, n prompts, n features

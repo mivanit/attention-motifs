@@ -62,24 +62,26 @@ class PipelineConfig:
 
 	def as_str(self) -> str:
 		"""Return a string representation of the configuration."""
-		return "\n".join([
-			"PipelineConfig(",
-			f"  models={self.models},",
-			f"  prompts_n_samples={self.prompts_n_samples},",
-			f"  n_proc={self.n_proc},",
-			f"  prompts_file={self.prompts_file},",
-			f"  patterns_dir={self.patterns_dir},",
-			f"  features_dir={self.features_dir},",
-			f"  prompts_min_chars={self.prompts_min_chars},",
-			f"  prompts_max_chars={self.prompts_max_chars},",
-			f"  device={self.device}",
-			")",
-		])
-	
+		return "\n".join(
+			[
+				"PipelineConfig(",
+				f"  models={self.models},",
+				f"  prompts_n_samples={self.prompts_n_samples},",
+				f"  n_proc={self.n_proc},",
+				f"  prompts_file={self.prompts_file},",
+				f"  patterns_dir={self.patterns_dir},",
+				f"  features_dir={self.features_dir},",
+				f"  prompts_min_chars={self.prompts_min_chars},",
+				f"  prompts_max_chars={self.prompts_max_chars},",
+				f"  device={self.device}",
+				")",
+			]
+		)
+
 	def __str__(self) -> str:
 		"""Return a string representation of the configuration."""
 		return self.as_str()
-	
+
 	def __repr__(self) -> str:
 		"""Return a string representation of the configuration."""
 		return self.as_str()
