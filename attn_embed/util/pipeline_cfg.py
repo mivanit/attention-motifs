@@ -60,6 +60,30 @@ class PipelineConfig:
 			"device must be a string representing the torch device (e.g., 'cpu', 'cuda')."
 		)
 
+	def as_str(self) -> str:
+		"""Return a string representation of the configuration."""
+		return "\n".join([
+			"PipelineConfig(",
+			f"  models={self.models},",
+			f"  prompts_n_samples={self.prompts_n_samples},",
+			f"  n_proc={self.n_proc},",
+			f"  prompts_file={self.prompts_file},",
+			f"  patterns_dir={self.patterns_dir},",
+			f"  features_dir={self.features_dir},",
+			f"  prompts_min_chars={self.prompts_min_chars},",
+			f"  prompts_max_chars={self.prompts_max_chars},",
+			f"  device={self.device}",
+			")",
+		])
+	
+	def __str__(self) -> str:
+		"""Return a string representation of the configuration."""
+		return self.as_str()
+	
+	def __repr__(self) -> str:
+		"""Return a string representation of the configuration."""
+		return self.as_str()
+
 	@classmethod
 	def load(cls, data: dict) -> "PipelineConfig":
 		"""Load configuration from a dictionary."""
@@ -70,6 +94,8 @@ class PipelineConfig:
 			prompts_file=Path(data["prompts_file"]),
 			patterns_dir=Path(data["patterns_dir"]),
 			features_dir=Path(data["features_dir"]),
+			prompts_min_chars=data["prompts_min_chars"],
+			prompts_max_chars=data["prompts_max_chars"],
 			device=data.get("device", "cpu"),  # default to 'cpu' if not specified
 		)
 		config.validate()

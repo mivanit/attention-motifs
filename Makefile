@@ -1443,17 +1443,8 @@ help: help-targets info
 # CONFIGURE DEMO
 # --------------------------------------------------
 HF_TOKEN ?= $(shell cat .meta/local/.hf_token)
-DEMO_PROMPTS ?= data/pile_demo.jsonl
-# DEMO_MODEL ?= gpt2-small
-# DEMO_MODEL ?= pythia-14m,pythia-1b,tiny-stories-1M,gpt2-small,gpt2-medium,meta-llama/Llama-3.2-1B,gemma-2b
-# DEMO_MODEL ?= pythia-14m,pythia-1b,tiny-stories-1M,gpt2-small,gpt2-medium,Llama-3.2-1B,gemma-2b,gemma-2-2b
-# DEMO_MODEL ?= pythia-410m,pythia-1b,gpt2-small,gpt2-medium,gpt2-large,Llama-3.2-1B,Llama-3.2-1B-Instruct,gemma-2b,gemma-2-2b
-DEMO_N_SAMPLES ?= 128
-# DEMO_N_SAMPLES ?= 32
-DEMO_ARGS ?= --min-chars 128 --max-chars 512
-# DEMO_DATA ?= docs/temp
-DEMO_DATA ?= /home/miv/projects/attn/website/patterns/docs
-N_PROC ?= 12
+# modify this file, or point to a different one
+PIPELINE_CFG_PATH ?= pipeline/pipeline_cfg.toml
 FEAT_KWARGS ?=
 # --------------------------------------------------
 
@@ -1486,27 +1477,36 @@ am-help:
 .PHONY: am-download-models
 am-download-models:
 	@echo "download models specified in 'DEMO_MODELS'. optional."
-	$(PYTHON) scripts/download_models.py $(DEMO_MODELS)
+	HF_TOKEN=$(HF_TOKEN) $(PYTHON) pipeline/s0_download_models.py $(PIPELINE_CFG_PATH)
 
 # step 1: generate activations
 .PHONY: am-activations
 am-activations:
 	@echo "generate activations given models and prompts"
-	HF_TOKEN=$(HF_TOKEN) $(PYTHON) -m pattern_lens.activations --model $(DEMO_MODELS) --prompts $(DEMO_PROMPTS) --raw-prompts --save-path $(DEMO_DATA) --n-samples $(DEMO_N_SAMPLES) $(DEMO_ARGS)
+	HF_TOKEN=$(HF_TOKEN) $(PYTHON) pipeline/s1_activations.py $(PIPELINE_CFG_PATH)
 
 # step 1.b: generate attention matrix figures
 .PHONY: am-figures
 am-figures:
 	@echo "generate attention matrix figures for pattern-lens"
-	$(PYTHON) -m attention_motifs.figure_funcs --model $(DEMO_MODELS) --save-path $(DEMO_DATA) --n-samples $(DEMO_N_SAMPLES)
+	HF_TOKEN=$(HF_TOKEN) $(PYTHON) pipeline/s1b_render_patterns.py $(PIPELINE_CFG_PATH)
 
 # step 2: generate features for attention patterns
 .PHONY: am-features
 am-features:
 	@echo "generate features for attention patterns"
-	NUMBA_CACHE_DIR=.numba-cache $(PYTHON) -m attention_motifs.features.generate --act-path $(DEMO_DATA) --processes $(N_PROC) $(FEAT_KWARGS)
+	$(PYTHON) -m attention_motifs.features.generate --act-path $(DEMO_DATA) --processes $(N_PROC) $(FEAT_KWARGS)
+# NUMBA_CACHE_DIR=.numba-cache 
 
-# step 3: create
+
+TEST_CONFIG ?= tests/pipeline_cfg_test.toml
+
+.PHONY: am-pipeline-test
+am-pipeline-test:
+	@echo "run the whole pipeline with test data"
+	$(MAKE) am-download-models PIPELINE_CFG_PATH=$(TEST_CONFIG)
+	$(MAKE) am-activations PIPELINE_CFG_PATH=$(TEST_CONFIG)
+	$(MAKE) am-figures PIPELINE_CFG_PATH=$(TEST_CONFIG)
 
 
 

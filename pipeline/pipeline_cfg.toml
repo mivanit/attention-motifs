@@ -2,16 +2,21 @@
 models = [
 	# "pythia-14m",
 	# "tiny-stories-1M",
+	"pythia-410m",
+	"pythia-1b",
 	"gpt2-small",
 	"gpt2-medium",
-	"pythia-1b",
-	"meta-llama/Llama-3.2-1B",
+	"gpt2-large",
+	"Llama-3.2-1B",
+	"Llama-3.2-1B-Instruct",
 	"gemma-2b",
+	"gemma-2-2b",
 ]
 
 # paths -- where to find stuff and where to save it
-prompts_file = "data/pile_demo.jsonl"
-patterns_dir = "/home/miv/projects/attn/website/patterns/docs"
+prompts_file = "data/test/pile_demo.jsonl"
+patterns_dir = "data/patterns"
+# patterns_dir = "/home/miv/projects/attn/website/patterns/docs"
 features_dir = "data/features"
 
 # prompts -- how many, how to slice them

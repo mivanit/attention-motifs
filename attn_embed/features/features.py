@@ -74,6 +74,13 @@ def process_prompt(
 	return output
 
 
+def get_layer_depth(row: dict, model_configs: dict[str, HTConfigMock]) -> float:
+	model: str = row["activation.model"]
+	layer_idx: int = row["activation.layer"]
+	model_n_layers: int = model_configs[model].n_layers
+	return float(layer_idx) / float(model_n_layers - 1)
+
+
 def scalar_feature_table(
 	features_func: Callable[
 		[Float[torch.Tensor, "n_ctx n_ctx"]],
@@ -94,6 +101,7 @@ def scalar_feature_table(
 	print(f"models: {models}")
 
 	output: list[dict[str, int | float | str]] = list()
+	model_configs: dict[str, HTConfigMock] = dict()
 
 	for idx, model in enumerate(models):
 		print(f"model: '{model}'")
@@ -101,6 +109,7 @@ def scalar_feature_table(
 			model_path: Path = act_path / model
 			with open(model_path / "model_cfg.json", "r") as f:
 				model_cfg = HTConfigMock.load(json.load(f))
+			model_configs[model] = model_cfg
 
 		with SpinnerContext(message="loading prompts", **SPINNER_KWARGS):
 			# load prompts
@@ -131,7 +140,19 @@ def scalar_feature_table(
 			)
 			output.extend(itertools.chain.from_iterable(model_out))
 
+	# turn everything into a DataFrame
 	df: pl.DataFrame = pl.DataFrame(output)
+
+
+	# add a activation.layer_depth column by applying get_layer_depth to each row
+	df = df.with_columns(
+		pl.col("activation.layer").apply(
+			get_layer_depth,
+			model_configs=model_configs,
+			return_dtype=pl.Float64,
+		).alias("activation.layer_depth"),
+	)
+
 	# n models, n prompts, n features
 	out_fname: str = f"raw-m{len(models)}-p{len(prompts)}-c{len(df.columns)}.jsonl"
 	print(f"output shape: {df.shape}")

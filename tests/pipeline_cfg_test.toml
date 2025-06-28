@@ -1,0 +1,19 @@
+# models -- which models to use
+models = [
+	"tiny-stories-1M",
+	"pythia-14m",
+]
+
+# paths -- where to find stuff and where to save it
+prompts_file = "data/text/pile_demo.jsonl"
+patterns_dir = "tests/.temp/patterns"
+features_dir = "tests/.temp/features"
+
+# prompts -- how many, how to slice them
+prompts_n_samples = 8
+prompts_min_chars = 10
+prompts_max_chars = 100
+
+# computing -- no effect on the results
+n_proc = 12
+device = "cuda:0"

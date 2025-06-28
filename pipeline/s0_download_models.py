@@ -14,5 +14,6 @@ def download_models(cfg: PipelineConfig) -> None:
 if __name__ == "__main__":
 	import sys
 
-	cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv)
+	cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv[1:])
+	print(f"Using configuration:\n{cfg}")
 	download_models(cfg)
