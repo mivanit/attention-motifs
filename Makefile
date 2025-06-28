@@ -1464,6 +1464,12 @@ am-clean:
 	@echo "clean up ALL attention-motifs generated files (be careful!)"
 	rm -rf $(DEMO_DATA)
 
+# help for attention-motifs
+# --------------------------------------------------
+am-help:
+	@echo -n "# attention-motifs make targets"
+	@echo ":"
+	@cat Makefile | sed -n '/^\.PHONY: / h; /\(^\t@*echo\|^\t:\)/ {H; x; /PHONY/ s/.PHONY: \(.*\)\n.*"\(.*\)"/    make \1\t\2/p; d; x}' | grep "am-*" | sort -k2,2 | expand -t 35
 
 
 # the main pipeline
@@ -1499,10 +1505,11 @@ am-features:
 	@echo "generate features for attention patterns"
 	NUMBA_CACHE_DIR=.numba-cache $(PYTHON) -m attention_motifs.features.generate --act-path $(DEMO_DATA) --processes $(N_PROC) $(FEAT_KWARGS)
 
+# step 3: create
 
 
 
-# step 4: display stuff
+# step 5: display stuff
 # --------------------------------------------------
 FRONTEND_DIR = attention_motifs/frontend
 FRONTEND_ATTNPEDIA_DIR = $(FRONTEND_DIR)/attnpedia
@@ -1538,8 +1545,3 @@ am-server-embed: am-frontend-bundle
 am-server-patternlens:
 	@echo "start the pattern lens server"
 	$(PYTHON) -m pattern_lens.server --rewrite-index --path $(DEMO_DATA)
-
-am-help:
-	@echo -n "# attention-motifs make targets"
-	@echo ":"
-	@cat Makefile | sed -n '/^\.PHONY: / h; /\(^\t@*echo\|^\t:\)/ {H; x; /PHONY/ s/.PHONY: \(.*\)\n.*"\(.*\)"/    make \1\t\2/p; d; x}' | grep "am-*" | sort -k2,2 | expand -t 35

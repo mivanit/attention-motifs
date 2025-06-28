@@ -46,7 +46,11 @@ in the `notebooks` directory, run the notebooks in order: `01` to `04`.
 - `03` computes and saves distances between heads according to equation 5, and was used for figure 5.
 - `04` loads the distances between heads, labelling some and projecting them to a 2D space. This was used for figures 6, 12, and 13.
 
-Other notebooks include `A0` for a basic example of getting attention patterns, `A1` for the synthetic example used in figure 1, and `A2` for working with the `pattern_lens` interface.
+Other notebooks include:
+
+- `A0` for a basic example of getting attention patterns
+- `A1` for the synthetic example used in figure 1
+- `A2` for working with the `pattern_lens` interface.
 
 # Configuration
 
