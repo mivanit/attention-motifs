@@ -1,37 +1,94 @@
+
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+from muutils.json_serialize import serializable_dataclass, SerializableDataclass, serializable_field
 
 PIPELINE_CFG_EXAMPLES: str = """
 # use `pipeline_cfg.toml`
 python {script_path}
 # use `pipeline_cfg.toml` and override some parameters
-python {script_path} --prompts_n_samples 1000 --models gpt2-small,pythia-14m
+python {script_path} --prompts-n-samples 1000 --models gpt2-small,pythia-14m
 # use `some/path/my_cfg.toml`
 python {script_path} some/path/my_cfg.toml
 # use `some/path/my_cfg.toml` and override some parameters
-python {script_path} some/path/my_cfg.toml --prompts_n_samples 1000 --models gpt2-small,pythia-14m
+python {script_path} some/path/my_cfg.toml --prompts-n-samples 1000 --models gpt2-small,pythia-14m
 """.strip()
 
 
-@dataclass(kw_only=True)
-class PipelineConfig:
+
+
+DATA_FNAMES: dict[str, str] = dict(
+	raw = "raw.jsonl",
+	norms = "norms.jsonl",
+	scaled = "scaled.jsonl",
+	pca = "pca.jsonl",
+)
+
+FIGURE_FNAMES: dict[str, str] = dict(
+	pca = "pca.pdf",
+	cov_full = "covariance-full.pdf",
+	cov_reduced = "covariance-reduced.pdf",
+	pca_all = "pca-all.png",
+)
+
+
+def _ser_path(path: Path) -> str|None:
+	"""Serialize a Path object to a string."""
+	return path.as_posix() if path is not None else None
+
+def _deser_path(path_str: str|None) -> Path|None:
+	"""Deserialize a string to a Path object."""
+	return Path(path_str) if path_str is not None else None
+
+@serializable_dataclass(kw_only=True)
+class PipelineConfig(SerializableDataclass):
 	"""Configuration for the attention motifs pipeline."""
 
 	models: list[str]
-	# paths
-	prompts_file: Path
-	patterns_dir: Path
-	features_dir: Path
-	# prompts
+
+	# input paths
+	prompts_file: Path = serializable_field(
+		serialization_fn=_ser_path,
+		deserialize_fn=_deser_path,
+	)
+	patterns_dir: Path = serializable_field(
+		serialization_fn=_ser_path,
+		deserialize_fn=_deser_path,
+	)
+
+	# prompts processing
 	prompts_n_samples: int
 	prompts_min_chars: int
 	prompts_max_chars: int
+
 	# computing
 	n_proc: int
-	force_overwrite: bool = False
-	device: str = "cpu"
+	force_overwrite: bool = serializable_field(default=False)
+	device: str = serializable_field(default="cpu")
+
+	# output paths
+	features_dir: Path = serializable_field(
+		serialization_fn=_ser_path,
+		deserialize_fn=_deser_path,
+	)
+	data_fnames: dict[str, str] = serializable_field(
+		default_factory=lambda: DATA_FNAMES,
+	)
+
+	# plotting/logging
+	figures_dir: Path|None = serializable_field(
+		default=None,
+		serialization_fn=_ser_path,
+		deserialize_fn=_deser_path,
+	)
+	figures_fnames: dict[str, str] = serializable_field(
+		default_factory=lambda: FIGURE_FNAMES,
+	)
+	verbose: int = serializable_field(default=1)
+	
+	def figure_path(self, fname: str) -> Path:
 
 	def validate(self) -> None:
 		# TODO: check models actually exist in TransformerLens?
@@ -59,6 +116,12 @@ class PipelineConfig:
 		assert isinstance(self.device, str), (
 			"device must be a string representing the torch device (e.g., 'cpu', 'cuda')."
 		)
+		assert self.prompts_min_chars >= 0, (
+			"prompts_min_chars must be a non-negative integer."
+		)
+		assert self.prompts_max_chars >= self.prompts_min_chars, (
+			"prompts_max_chars must be greater than or equal to prompts_min_chars."
+		)
 
 	def as_str(self) -> str:
 		"""Return a string representation of the configuration."""
@@ -73,7 +136,10 @@ class PipelineConfig:
 				f"  features_dir={self.features_dir},",
 				f"  prompts_min_chars={self.prompts_min_chars},",
 				f"  prompts_max_chars={self.prompts_max_chars},",
+				f"  force_overwrite={self.force_overwrite},",
 				f"  device={self.device}",
+				f"  figures_dir={self.figures_dir if self.figures_dir else 'None'}",
+				f"  verbose={self.verbose}",
 				")",
 			]
 		)
@@ -99,6 +165,13 @@ class PipelineConfig:
 			prompts_min_chars=data["prompts_min_chars"],
 			prompts_max_chars=data["prompts_max_chars"],
 			device=data.get("device", "cpu"),  # default to 'cpu' if not specified
+			force_overwrite=data.get("force_overwrite", False),  # default to False
+			figures_dir=(
+				Path(data["figures_dir"]) 
+				if "figures_dir" in data else None
+				# default to None if not specified
+			),
+			verbose=data.get("verbose", 1),  # default to 1 if not specified
 		)
 		config.validate()
 		return config
@@ -124,11 +197,11 @@ class PipelineConfig:
 		# use `pipeline_cfg.toml`
 		python scrips/run_pipeline.py
 		# use `pipeline_cfg.toml` and override some parameters
-		python scrips/run_pipeline.py --prompts_n_samples 1000 --models gpt2-small,pythia-14m
+		python scrips/run_pipeline.py --prompts-n-samples 1000 --models gpt2-small,pythia-14m
 		# use `some/path/my_cfg.toml`
 		python scrips/run_pipeline.py some/path/my_cfg.toml
 		# use `some/path/my_cfg.toml` and override some parameters
-		python scrips/run_pipeline.py some/path/my_cfg.toml --prompts_n_samples 1000 --models gpt2-small,pythia-14m
+		python scrips/run_pipeline.py some/path/my_cfg.toml --prompts-n-samples 1000 --models gpt2-small,pythia-14m
 		```
 		"""
 		import argparse
@@ -150,23 +223,40 @@ class PipelineConfig:
 			"--models", type=str, help="Comma-separated list of model names."
 		)
 		parser.add_argument(
-			"--prompts_n_samples", type=int, help="Number of samples per prompt."
+			"--prompts-n-samples", type=int, help="Number of samples per prompt."
 		)
 		parser.add_argument("--n_proc", type=int, help="Number of parallel processes.")
 		parser.add_argument(
-			"--prompts_file", type=Path, help="Path to the prompts file."
+			"--prompts-file", type=Path, help="Path to the prompts file."
 		)
 		parser.add_argument(
-			"--patterns_dir", type=Path, help="Directory for learned patterns."
+			"--patterns-dir", type=Path, help="Directory for learned patterns."
 		)
 		parser.add_argument(
-			"--features_dir", type=Path, help="Directory for extracted features."
+			"--features-dir", type=Path, help="Directory for extracted features."
 		)
 		parser.add_argument(
 			"--device",
 			type=str,
 			default="cpu",
 			help="torch device to use (default: cpu).",
+		)
+		parser.add_argument(
+			"--force_overwrite",
+			action="store_true",
+			help="Force overwrite existing files.",
+		)
+		parser.add_argument(
+			"--figures-dir",
+			type=Path,
+			default=None,
+			help="Directory for plots (default: None, no plots).",
+		)
+		parser.add_argument(
+			"--verbose",
+			type=int,
+			default=1,
+			help="Verbosity level (default: 1). Higher values mean more output.",
 		)
 
 		args: argparse.Namespace = parser.parse_args(argv)
@@ -189,6 +279,10 @@ class PipelineConfig:
 			config.features_dir = args.features_dir
 		if args.device is not None:
 			config.device = args.device
+		if args.force_overwrite is not None:
+			config.force_overwrite = args.force_overwrite
+		if args.figures_dir is not None:
+			config.figures_dir = args.figures_dir
 
 		# 3. Final sanity check
 		config.validate()

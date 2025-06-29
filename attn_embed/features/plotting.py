@@ -16,7 +16,8 @@ def plot_correlation_matrix(
 	df: pl.DataFrame,
 	feature_cols: list[str],
 	sort_by: Literal["sum", "var", "none"] = "sum",
-) -> None:
+	show: bool = True,
+) -> plt.Figure:
 	"""Plot a correlation matrix of features and identify features with NaN correlations.
 
 	# Parameters:
@@ -91,8 +92,11 @@ def plot_correlation_matrix(
 		f"Feature Correlation Matrix (Sorted by {sort_method.get(sort_by, sort_by)})"
 	)
 
-	plt.tight_layout()
-	plt.show()
+	if show:
+		plt.tight_layout()
+		plt.show()
+
+	return fig
 
 
 def apply_pca(

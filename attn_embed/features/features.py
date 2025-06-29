@@ -86,11 +86,12 @@ def scalar_feature_table(
 		[Float[torch.Tensor, "n_ctx n_ctx"]],
 		dict[str, float],
 	],
-	act_path: Path = Path("../docs/temp"),
+	act_path: Path,
+	out_path: Path,
 	models: list[str] | None = None,
-	out_path: Path = Path("data/features/"),
 	processes: int | None = None,
 	chunksize: int | None = None,
+	verbose: bool = True,
 ) -> pl.DataFrame:
 	if models is None:
 		models = [
@@ -98,13 +99,15 @@ def scalar_feature_table(
 			for cfg in (act_path / "models.jsonl").read_text().splitlines()
 		]
 
-	print(f"models: {models}")
+	print_log = print if verbose else lambda *args, **kwargs: None
+
+	print_log(f"# models: {models}")
 
 	output: list[dict[str, int | float | str]] = list()
 	model_configs: dict[str, HTConfigMock] = dict()
 
 	for idx, model in enumerate(models):
-		print(f"model: '{model}'")
+		print_log(f"  # model: '{model}'")
 		with SpinnerContext(message="setting up paths", **SPINNER_KWARGS):
 			model_path: Path = act_path / model
 			with open(model_path / "model_cfg.json", "r") as f:
@@ -118,11 +121,11 @@ def scalar_feature_table(
 			# truncate to n_samples
 			prompts = prompts
 
-		print(f"{len(prompts)} prompts loaded")
+		print_log(f"  # {len(prompts)} prompts loaded")
 
 		# for prompt in tqdm.tqdm(prompts, desc="prompts", total=len(prompts)):
 		processes = processes or mp.cpu_count()
-		print(f"using {processes} processes")
+		print_log(f"  # using {processes} processes")
 		# chunksize = 1
 		with mp.Pool(processes=processes) as pool:
 			# process each prompt in parallel
@@ -159,11 +162,11 @@ def scalar_feature_table(
 	)
 
 	# n models, n prompts, n features
-	out_fname: str = f"raw-m{len(models)}-p{len(prompts)}-c{len(df.columns)}.jsonl"
-	print(f"output shape: {df.shape}")
-	print(f"saving to {out_path / out_fname}")
-	out_path.mkdir(parents=True, exist_ok=True)
-	df.write_ndjson(out_path / out_fname)
+	# out_fname: str = f"raw-m{len(models)}-p{len(prompts)}-c{len(df.columns)}.jsonl"
+	print_log(f"# output shape: {df.shape}")
+	print_log(f"# saving to {out_path}")
+	out_path.parent.mkdir(parents=True, exist_ok=True)
+	df.write_ndjson(out_path)
 
 	return df
 

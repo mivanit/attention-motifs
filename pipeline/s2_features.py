@@ -16,4 +16,5 @@ if __name__ == "__main__":
 		models=cfg.models,
 		out_path=cfg.features_dir,
 		processes=cfg.n_proc,
+		verbose=cfg.verbose > 0,
 	)
