@@ -1,9 +1,8 @@
 
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-
-from muutils.json_serialize import serializable_dataclass, SerializableDataclass, serializable_field
+from typing import Literal
 
 PIPELINE_CFG_EXAMPLES: str = """
 # use `pipeline_cfg.toml`
@@ -17,16 +16,17 @@ python {script_path} some/path/my_cfg.toml --prompts-n-samples 1000 --models gpt
 """.strip()
 
 
+DataFilename = Literal["raw", "norms", "scaled", "pca"]
+FigureFilename = Literal["pca", "cov_full", "cov_reduced", "pca_all"]
 
-
-DATA_FNAMES: dict[str, str] = dict(
+DATA_FNAMES: dict[DataFilename, str] = dict(
 	raw = "raw.jsonl",
 	norms = "norms.jsonl",
 	scaled = "scaled.jsonl",
 	pca = "pca.jsonl",
 )
 
-FIGURE_FNAMES: dict[str, str] = dict(
+FIGURE_FNAMES: dict[FigureFilename, str] = dict(
 	pca = "pca.pdf",
 	cov_full = "covariance-full.pdf",
 	cov_reduced = "covariance-reduced.pdf",
@@ -42,21 +42,15 @@ def _deser_path(path_str: str|None) -> Path|None:
 	"""Deserialize a string to a Path object."""
 	return Path(path_str) if path_str is not None else None
 
-@serializable_dataclass(kw_only=True)
-class PipelineConfig(SerializableDataclass):
+@dataclass(kw_only=True)
+class PipelineConfig:
 	"""Configuration for the attention motifs pipeline."""
 
 	models: list[str]
 
 	# input paths
-	prompts_file: Path = serializable_field(
-		serialization_fn=_ser_path,
-		deserialize_fn=_deser_path,
-	)
-	patterns_dir: Path = serializable_field(
-		serialization_fn=_ser_path,
-		deserialize_fn=_deser_path,
-	)
+	prompts_file: Path
+	patterns_dir: Path
 
 	# prompts processing
 	prompts_n_samples: int
@@ -65,32 +59,29 @@ class PipelineConfig(SerializableDataclass):
 
 	# computing
 	n_proc: int
-	force_overwrite: bool = serializable_field(default=False)
-	device: str = serializable_field(default="cpu")
+	force_overwrite: bool = False
+	device: str = "cpu"
 
 	# output paths
-	features_dir: Path = serializable_field(
-		serialization_fn=_ser_path,
-		deserialize_fn=_deser_path,
-	)
-	data_fnames: dict[str, str] = serializable_field(
+	features_dir: Path
+	data_fnames: dict[str, str] = field(
 		default_factory=lambda: DATA_FNAMES,
 	)
 
 	# plotting/logging
-	figures_dir: Path|None = serializable_field(
-		default=None,
-		serialization_fn=_ser_path,
-		deserialize_fn=_deser_path,
-	)
-	figures_fnames: dict[str, str] = serializable_field(
+	figures_dir: Path|None = None
+	figures_fnames: dict[str, str] = field(
 		default_factory=lambda: FIGURE_FNAMES,
 	)
-	verbose: int = serializable_field(default=1)
+	verbose: int = 1
 	
-	def figure_path(self, fname: str) -> Path:
+	def data_path(self, fname: DataFilename) -> Path:
+		return self.features_dir / self.data_fnames[fname]
 
-	def validate(self) -> None:
+	def figure_path(self, fname: FigureFilename) -> Path:
+		return self.figures_dir / self.figures_fnames[fname]	
+
+	def validate_cfg(self) -> None:
 		# TODO: check models actually exist in TransformerLens?
 		assert all(isinstance(model, str) for model in self.models), (
 			"All models must be strings."
@@ -123,23 +114,17 @@ class PipelineConfig(SerializableDataclass):
 			"prompts_max_chars must be greater than or equal to prompts_min_chars."
 		)
 
+
 	def as_str(self) -> str:
 		"""Return a string representation of the configuration."""
 		return "\n".join(
 			[
 				"PipelineConfig(",
-				f"  models={self.models},",
-				f"  prompts_n_samples={self.prompts_n_samples},",
-				f"  n_proc={self.n_proc},",
-				f"  prompts_file={self.prompts_file},",
-				f"  patterns_dir={self.patterns_dir},",
-				f"  features_dir={self.features_dir},",
-				f"  prompts_min_chars={self.prompts_min_chars},",
-				f"  prompts_max_chars={self.prompts_max_chars},",
-				f"  force_overwrite={self.force_overwrite},",
-				f"  device={self.device}",
-				f"  figures_dir={self.figures_dir if self.figures_dir else 'None'}",
-				f"  verbose={self.verbose}",
+				"\n".join([
+					f"  {field.name}={getattr(self, field.name)!r},"
+					for field in self.__dataclass_fields__.values()
+					if field.name not in ("data_fnames", "figures_fnames")
+				]),
 				")",
 			]
 		)
@@ -172,8 +157,10 @@ class PipelineConfig(SerializableDataclass):
 				# default to None if not specified
 			),
 			verbose=data.get("verbose", 1),  # default to 1 if not specified
+			data_fnames={**DATA_FNAMES, **data.get("data_fnames", DATA_FNAMES)},
+			figures_fnames={**FIGURE_FNAMES, **data.get("figures_fnames", FIGURE_FNAMES)},
 		)
-		config.validate()
+		config.validate_cfg()
 		return config
 
 	@classmethod
@@ -285,5 +272,5 @@ class PipelineConfig(SerializableDataclass):
 			config.figures_dir = args.figures_dir
 
 		# 3. Final sanity check
-		config.validate()
+		config.validate_cfg()
 		return config

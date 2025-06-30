@@ -14,7 +14,7 @@ if __name__ == "__main__":
 		features_func=compute_scalar_features,
 		act_path=cfg.patterns_dir,
 		models=cfg.models,
-		out_path=cfg.features_dir,
+		out_path=cfg.data_path("raw"),
 		processes=cfg.n_proc,
 		verbose=cfg.verbose > 0,
 	)
