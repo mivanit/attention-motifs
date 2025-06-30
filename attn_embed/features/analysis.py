@@ -477,6 +477,26 @@ class DistanceTensorResult(SerializableDataclass):
 			path,
 		)
 
+	def save_raw(self, path: Path | str) -> None:
+		"""Save the raw data to json and npy"""
+		path = Path(path)
+		path.parent.mkdir(parents=True, exist_ok=True)
+
+		json_meta: str = json.dumps(
+			dict(
+				cls_values=self.cls_values,
+				prompt_values=self.prompt_values,
+			),
+		)
+		with open(path / "dists_meta.json", "w") as f:
+			f.write(json_meta)
+
+		# save the mean distances
+		np.save(
+			path / "distances.npy",
+			self.mean_dists,
+		)
+
 	@classmethod
 	def read(cls, path: Path | str, zanj: ZANJ | None = None) -> "DistanceTensorResult":
 		if zanj is None:

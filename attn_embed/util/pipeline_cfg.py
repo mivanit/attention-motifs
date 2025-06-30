@@ -15,14 +15,18 @@ python {script_path} some/path/my_cfg.toml --prompts-n-samples 1000 --models gpt
 """.strip()
 
 
-DataFilename = Literal["raw", "norms", "scaled", "pca"]
-FigureFilename = Literal["pca", "cov_full", "cov_reduced", "pca_all"]
+DataFilename = Literal[
+	"raw", "norms", "scaled", "pca", "head_dists_zanj", "head_dists_raw"
+]
+FigureFilename = Literal["pca", "cov_full", "cov_reduced", "pca_all", "head_dists"]
 
 DATA_FNAMES: dict[DataFilename, str] = dict(
 	raw="raw.jsonl",
 	norms="norms.jsonl",
 	scaled="scaled.jsonl",
 	pca="pca.jsonl",
+	head_dists_zanj="head_dists.zanj",
+	head_dists_raw="head_dists_raw",
 )
 
 FIGURE_FNAMES: dict[FigureFilename, str] = dict(
@@ -30,6 +34,7 @@ FIGURE_FNAMES: dict[FigureFilename, str] = dict(
 	cov_full="covariance-full.pdf",
 	cov_reduced="covariance-reduced.pdf",
 	pca_all="pca-all.png",
+	head_dists="head-dists-heatmap.pdf",
 )
 
 
@@ -300,4 +305,10 @@ class PipelineConfig:
 
 def pipeline_step_major(msg: str) -> None:
 	"""Print a message for a pipeline step."""
-	print(f"\033[94m==================== {msg} ====================\033[m")
+	# print(f"\033[94m==================== {msg} ====================\033[m")
+	import shutil
+
+	term_width: int = shutil.get_terminal_size((80, 20)).columns
+	print(f"\033[94m{'=' * term_width}\033[m")
+	print(f"\033[94m{msg.center(term_width)}\033[m")
+	print(f"\033[94m{'=' * term_width}\033[m")
