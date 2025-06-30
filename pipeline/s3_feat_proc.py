@@ -32,8 +32,8 @@ from attn_embed.features.plotting import (
 )
 from muutils.dbg import dbg
 
-def main(cfg: PipelineConfig) -> None:
-	# raw data from file instead of regenerating
+def compute_normalization(cfg: PipelineConfig) -> tuple[pl.DataFrame, list[str]]:
+	# raw data from file
 	data_raw: pl.DataFrame = pl.read_ndjson(cfg.data_path("raw"))
 
 	# this will filter all-nan rows
@@ -53,6 +53,17 @@ def main(cfg: PipelineConfig) -> None:
 	
 	# dbg(null_stats(data_scaled))
 	# dbg_tensor(DATA_SCALED[FEATURE_COLS].to_numpy())
+	return data_scaled, feature_cols
+
+
+def compute_pca(
+		cfg: PipelineConfig,
+		data_scaled: pl.DataFrame,
+		feature_cols: list[str],
+	) -> tuple[pl.DataFrame, np.ndarray]:
+
+	if data_scaled is None:
+		data_scaled: pl.DataFrame = pl.read_ndjson(cfg.data_path("scaled"))
 
 	meta_cols: list[str] = [
 		col for col in data_scaled.columns if col.startswith("activation.")
@@ -80,17 +91,20 @@ def main(cfg: PipelineConfig) -> None:
 		pca_obj,
 		feature_names=feature_cols,
 	)
-	df_importance.sort(pl.col("PC0").abs(), descending=True)
+	# df_importance.sort(pl.col("PC0").abs(), descending=True)
+
+	return df_importance, pca_data
 
 
-
-	display(aggregate_feature_stats(df_importance, side=1).sort("max", descending=True))
-
-
+def compute_covariance(
+	cfg: PipelineConfig,
+	data_scaled: pl.DataFrame,
+	df_importance: pl.DataFrame,
+) -> None:
 	cov_feats: list[str]
 	cov_mat: Float[np.ndarray, "n_features n_features"]
 
-	# full
+	# full covariance matrix
 	cov_feats, cov_mat = plot_importance_covariance(
 		data_scaled,
 		df_importance,
@@ -123,7 +137,13 @@ def main(cfg: PipelineConfig) -> None:
 	)
 
 
-	n_dims: int = 5
+
+def plot_pca_all(
+	cfg: PipelineConfig,
+	data_scaled: pl.DataFrame,
+	pca_data: np.ndarray,
+) -> None:
+	n_dims: int = cfg.plot_kwargs.get("n_dims", 5)
 	embed_fig, embed_ax = plt.subplots(
 		n_dims - 1,
 		n_dims - 1,
@@ -160,6 +180,38 @@ def main(cfg: PipelineConfig) -> None:
 	fig_pca_all_jpg: Path = cfg.figure_path("pca_all")
 	print(f"saving to {fig_pca_all_jpg}")
 	plt.savefig(fig_pca_all_jpg, bbox_inches="tight", pad_inches=0.01, dpi=500)
+
+
+def main(cfg: PipelineConfig) -> None:
+	"""Main function to run the pipeline."""
+	print(f"Running pipeline with config: {cfg}")
+
+	# compute normalization
+	data_scaled: pl.DataFrame; feature_cols: list[str]
+	data_scaled, feature_cols = compute_normalization(cfg=cfg)
+
+	# compute PCA
+	df_importance: pl.DataFrame
+	pca_data: np.ndarray
+	df_importance, pca_data = compute_pca(
+		cfg=cfg,
+		data_scaled=data_scaled,
+		feature_cols=feature_cols,
+	)
+
+	# compute covariance
+	compute_covariance(
+		cfg=cfg,
+		data_scaled=data_scaled,
+		df_importance=df_importance,
+	)
+
+	# plot PCA all
+	plot_pca_all(
+		cfg=cfg,
+		data_scaled=data_scaled,
+		pca_data=pca_data,
+	)
 
 if __name__ == "__main__":
 	import sys

@@ -73,6 +73,9 @@ class PipelineConfig:
 	figures_fnames: dict[str, str] = field(
 		default_factory=lambda: FIGURE_FNAMES,
 	)
+	plot_kwargs: dict[str, str] = field(
+		default_factory=lambda: dict(),
+	)
 	verbose: int = 1
 	
 	def data_path(self, fname: DataFilename) -> Path:
@@ -159,6 +162,7 @@ class PipelineConfig:
 			verbose=data.get("verbose", 1),  # default to 1 if not specified
 			data_fnames={**DATA_FNAMES, **data.get("data_fnames", DATA_FNAMES)},
 			figures_fnames={**FIGURE_FNAMES, **data.get("figures_fnames", FIGURE_FNAMES)},
+			plot_kwargs=data.get("plot_kwargs", {}),
 		)
 		config.validate_cfg()
 		return config

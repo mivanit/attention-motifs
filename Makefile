@@ -1497,11 +1497,17 @@ am-features:
 	@echo "generate features for attention patterns"
 	HF_TOKEN=$(HF_TOKEN) $(PYTHON) pipeline/s2_features.py $(PIPELINE_CFG_PATH)
 
+# step 3: process features (scaling, PCA)
+.PHONY: am-feat-proc
+am-feat-proc:
+	@echo "process features (scaling, PCA, etc.)"
+	HF_TOKEN=$(HF_TOKEN) $(PYTHON) pipeline/s3_feat_proc.py $(PIPELINE_CFG_PATH)
+
 
 # entire pipeline
 # --------------------------------------------------
 .PHONY: am-pipeline
-am-pipeline: am-download-models am-activations am-figures am-features
+am-pipeline: am-download-models am-activations am-figures am-features am-feat-proc
 	@echo "run the whole attention-motifs pipeline on the config $(PIPELINE_CFG_PATH)"
 
 TEST_CONFIG ?= tests/pipeline_cfg_test.toml

@@ -94,7 +94,7 @@ dependencies = [
 exclude = ["__pycache__"]
 
 	[tool.ruff.lint]
-		ignore = ["F722", "F841"]
+		ignore = ["F722", "F841", "F702"]
 
 	[tool.ruff.format]
 		indent-style = "tab"
