@@ -1,6 +1,6 @@
 from transformer_lens import HookedTransformer
 
-from attn_embed.util.pipeline_cfg import PipelineConfig
+from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
 
 
 def download_models(cfg: PipelineConfig) -> None:
@@ -12,8 +12,8 @@ def download_models(cfg: PipelineConfig) -> None:
 
 
 if __name__ == "__main__":
+	pipeline_step_major("pipeline step 0: download models")
 	import sys
 
 	cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv[1:])
-	print(f"Using configuration:\n{cfg}")
 	download_models(cfg)

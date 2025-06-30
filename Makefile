@@ -1515,6 +1515,7 @@ TEST_CONFIG ?= tests/pipeline_cfg_test.toml
 .PHONY: am-pipeline-test
 am-pipeline-test:
 	@echo "run the whole pipeline with test data"
+	rm -rf tests/.temp/ || true
 	$(MAKE) am-pipeline PIPELINE_CFG_PATH=$(TEST_CONFIG)
 
 

@@ -1,5 +1,5 @@
 from pattern_lens.activations import activations_main
-from attn_embed.util.pipeline_cfg import PipelineConfig
+from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
 
 
 def generate_activations(cfg: PipelineConfig) -> None:
@@ -25,6 +25,7 @@ def generate_activations(cfg: PipelineConfig) -> None:
 
 
 if __name__ == "__main__":
+	pipeline_step_major("pipeline step 1: generate activations")
 	import sys
 
 	cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv[1:])

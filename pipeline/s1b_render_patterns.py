@@ -1,4 +1,4 @@
-from attn_embed.util.pipeline_cfg import PipelineConfig
+from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
 from pattern_lens.figures import figures_main
 
 
@@ -16,8 +16,8 @@ def render_patterns(cfg: PipelineConfig) -> None:
 
 
 if __name__ == "__main__":
+	pipeline_step_major("pipeline step 1.b: render patterns")
 	import sys
 
 	cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv[1:])
-	print(f"Using configuration:\n{cfg}")
 	render_patterns(cfg)

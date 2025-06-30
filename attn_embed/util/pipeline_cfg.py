@@ -282,3 +282,8 @@ class PipelineConfig:
 		# 3. Final sanity check
 		config.validate_cfg()
 		return config
+
+
+def pipeline_step_major(msg: str) -> None:
+	"""Print a message for a pipeline step."""
+	print(f"\033[94m==================== {msg} ====================\033[m")

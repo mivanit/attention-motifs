@@ -125,7 +125,9 @@ def apply_pca(
 	"""
 	# Fit PCA
 	pca: PCA = PCA(n_components=n_components, random_state=0)
-	reduced: np.ndarray = pca.fit_transform(data[feature_cols].to_numpy())
+	pca_input = data[feature_cols].to_numpy()
+	dbg_tensor(pca_input)
+	reduced: np.ndarray = pca.fit_transform(pca_input)
 
 	# Plot explained variance if requested
 	if plot_variance:

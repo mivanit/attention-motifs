@@ -7,8 +7,7 @@ from jaxtyping import Float
 from muutils.dbg import dbg_tensor
 from sklearn.decomposition import PCA
 
-from attn_embed.util.pipeline_cfg import PipelineConfig
-
+from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
 
 
 # attention-motifs
@@ -210,6 +209,7 @@ def main(cfg: PipelineConfig) -> None:
 
 
 if __name__ == "__main__":
+	pipeline_step_major("pipeline step 3: process attention features")
 	import sys
 
 	cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv[1:])
