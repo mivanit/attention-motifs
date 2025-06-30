@@ -190,8 +190,9 @@ def plot_pca_all(
 	plt.savefig(fig_pca_all_jpg, bbox_inches="tight", pad_inches=0.01, dpi=500)
 
 
-def main(cfg: PipelineConfig) -> None:
+def feat_proc(cfg: PipelineConfig) -> None:
 	"""Main function to run the pipeline."""
+	pipeline_step_major("pipeline step 3: process attention features")
 
 	if cfg.do_figures:
 		cfg.figures_dir.mkdir(parents=True, exist_ok=True)
@@ -227,9 +228,7 @@ def main(cfg: PipelineConfig) -> None:
 
 
 if __name__ == "__main__":
-	pipeline_step_major("pipeline step 3: process attention features")
 	import sys
 
 	cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv[1:])
-	print(f"Running pipeline with config: {cfg}")
-	main(cfg)
+	feat_proc(cfg)

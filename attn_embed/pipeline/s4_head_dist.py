@@ -9,7 +9,8 @@ from attn_embed.features.analysis import (
 from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
 
 
-def main(cfg: PipelineConfig) -> None:
+def head_dists(cfg: PipelineConfig) -> None:
+	pipeline_step_major("pipeline step 4: compute head distances")
 	df_pca: pl.DataFrame = pl.read_ndjson(cfg.data_path("pca"))
 
 	head_dists: DistanceTensorResult = DistanceTensorResult.build_distance_tensor(
@@ -32,8 +33,7 @@ def main(cfg: PipelineConfig) -> None:
 
 
 if __name__ == "__main__":
-	pipeline_step_major("pipeline step 4: compute head distances")
 	import sys
 
 	cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv[1:])
-	main(cfg)
+	head_dists(cfg)

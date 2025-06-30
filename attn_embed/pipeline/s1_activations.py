@@ -3,6 +3,7 @@ from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
 
 
 def generate_activations(cfg: PipelineConfig) -> None:
+	pipeline_step_major("pipeline step 1: generate activations")
 	n_models: int = len(cfg.models)
 	idx: int
 	model_name: str
@@ -25,9 +26,7 @@ def generate_activations(cfg: PipelineConfig) -> None:
 
 
 if __name__ == "__main__":
-	pipeline_step_major("pipeline step 1: generate activations")
 	import sys
 
 	cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv[1:])
-	print(f"Using configuration:\n{cfg}")
 	generate_activations(cfg)

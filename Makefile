@@ -23,7 +23,7 @@
 
 # it assumes that the source is in a directory named the same as the package name
 # this also gets passed to some other places
-PACKAGE_NAME := attention_motifs
+PACKAGE_NAME := attn_embed
 
 # for checking you are on the right branch when publishing
 PUBLISH_BRANCH := main
@@ -1473,48 +1473,10 @@ am-help:
 # 3. process features, distances between heads, the actual analysis
 # 4. display stuff
 
-# step 0: download models
-.PHONY: am-download-models
-am-download-models:
-	@echo "download models specified in 'DEMO_MODELS'. optional."
-	HF_TOKEN=$(HF_TOKEN) $(PYTHON) pipeline/s0_download_models.py $(PIPELINE_CFG_PATH)
-
-# step 1: generate activations
-.PHONY: am-activations
-am-activations:
-	@echo "generate activations given models and prompts"
-	HF_TOKEN=$(HF_TOKEN) $(PYTHON) pipeline/s1_activations.py $(PIPELINE_CFG_PATH)
-
-# step 1.b: generate attention matrix figures
-.PHONY: am-figures
-am-figures:
-	@echo "generate attention matrix figures for pattern-lens"
-	HF_TOKEN=$(HF_TOKEN) $(PYTHON) pipeline/s1b_render_patterns.py $(PIPELINE_CFG_PATH)
-
-# step 2: generate features for attention patterns
-.PHONY: am-features
-am-features:
-	@echo "generate features for attention patterns"
-	HF_TOKEN=$(HF_TOKEN) $(PYTHON) pipeline/s2_features.py $(PIPELINE_CFG_PATH)
-
-# step 3: process features (scaling, PCA)
-.PHONY: am-feat-proc
-am-feat-proc:
-	@echo "process features (scaling, PCA, etc.)"
-	$(PYTHON) pipeline/s3_feat_proc.py $(PIPELINE_CFG_PATH)
-
-# step 4: head distances
-.PHONY: am-head-dist
-am-head-dist:
-	@echo "calculate distances between attention heads"
-	$(PYTHON) pipeline/s4_head_dist.py $(PIPELINE_CFG_PATH)
-
-
-# entire pipeline
-# --------------------------------------------------
 .PHONY: am-pipeline
-am-pipeline: am-download-models am-activations am-figures am-features am-feat-proc am-head-dist
+am-pipeline:
 	@echo "run the whole attention-motifs pipeline on the config $(PIPELINE_CFG_PATH)"
+	$(PYTHON) -m attn_embed.pipeline.full $(PIPELINE_CFG_PATH)
 
 TEST_CONFIG ?= tests/pipeline_cfg_test.toml
 
@@ -1527,7 +1489,7 @@ am-pipeline-test:
 
 # display stuff
 # --------------------------------------------------
-FRONTEND_DIR = attention_motifs/frontend
+FRONTEND_DIR = attn_embed/frontend
 FRONTEND_ATTNPEDIA_DIR = $(FRONTEND_DIR)/attnpedia
 FRONTEND_ATTNPEDIA_BUILD_DIR = $(FRONTEND_ATTNPEDIA_DIR)/build
 
@@ -1536,7 +1498,7 @@ FRONTEND_ATTNPEDIA_BUILD_DIR = $(FRONTEND_ATTNPEDIA_DIR)/build
 am-frontend-ap-build:
 	mkdir -p $(FRONTEND_ATTNPEDIA_BUILD_DIR) || true
 	cp $(FRONTEND_ATTNPEDIA_DIR)/src/*.js $(FRONTEND_ATTNPEDIA_DIR)/src/*.html $(FRONTEND_ATTNPEDIA_DIR)/src/*.css $(FRONTEND_ATTNPEDIA_BUILD_DIR)/ || true
-	$(PYTHON) -m attention_motifs.attnpedia all > $(FRONTEND_ATTNPEDIA_DIR)/ap.json
+	$(PYTHON) -m attn_embed.attnpedia all > $(FRONTEND_ATTNPEDIA_DIR)/ap.json
 
 .PHONY: am-frontend-ap-clean
 am-frontend-ap-clean:

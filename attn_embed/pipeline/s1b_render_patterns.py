@@ -3,6 +3,7 @@ from pattern_lens.figures import figures_main
 
 
 def render_patterns(cfg: PipelineConfig) -> None:
+	pipeline_step_major("pipeline step 1.b: render patterns")
 	n_models: int = len(cfg.models)
 	for idx, model in enumerate(cfg.models):
 		print(f"processing model {idx + 1} / {n_models}: {model}")
@@ -16,7 +17,6 @@ def render_patterns(cfg: PipelineConfig) -> None:
 
 
 if __name__ == "__main__":
-	pipeline_step_major("pipeline step 1.b: render patterns")
 	import sys
 
 	cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv[1:])
