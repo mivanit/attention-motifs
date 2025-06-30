@@ -69,7 +69,7 @@ def null_stats(df: pl.DataFrame) -> pl.DataFrame:
 def filter_data(
 	df: pl.DataFrame,
 	remove_models: list[str] | None = None,
-	missing_threshold: float | int = 10,
+	missing_threshold: float | int = 0,
 	threshold_is_percent: bool = False,
 ) -> pl.DataFrame:
 	"""Remove 'feat.*' columns that have zero variance or too many missing values,

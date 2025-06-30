@@ -1,6 +1,6 @@
 # models -- which models to use
 models = [
-	"tiny-stories-1M",
+	# "tiny-stories-1M",
 	"pythia-14m",
 ]
 
@@ -10,10 +10,13 @@ patterns_dir = "tests/.temp/patterns"
 features_dir = "tests/.temp/features"
 
 # prompts -- how many, how to slice them
-prompts_n_samples = 8
+prompts_n_samples = 2
 prompts_min_chars = 10
 prompts_max_chars = 100
 
 # computing -- no effect on the results
 n_proc = 12
 device = "cuda:0"
+
+verbose = 99
+figures_dir = "tests/.temp/figures"

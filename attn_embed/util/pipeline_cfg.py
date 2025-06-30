@@ -47,8 +47,6 @@ def _deser_path(path_str: str | None) -> Path | None:
 class PipelineConfig:
 	"""Configuration for the attention motifs pipeline."""
 
-	models: list[str]
-
 	# input paths
 	prompts_file: Path
 	patterns_dir: Path
@@ -57,6 +55,10 @@ class PipelineConfig:
 	prompts_n_samples: int
 	prompts_min_chars: int
 	prompts_max_chars: int
+
+	# data processing
+	models: list[str]
+	pca_n_components: int = 16
 
 	# computing
 	n_proc: int
@@ -79,10 +81,19 @@ class PipelineConfig:
 	)
 	verbose: int = 1
 
+	@property
+	def do_figures(self) -> bool:
+		"""Check if figures are enabled."""
+		return self.figures_dir is not None
+
 	def data_path(self, fname: DataFilename) -> Path:
 		return self.features_dir / self.data_fnames[fname]
 
 	def figure_path(self, fname: FigureFilename) -> Path:
+		if self.figures_dir is None:
+			raise ValueError(
+				"figures_dir is not set, this means figures should be disabled."
+			)
 		return self.figures_dir / self.figures_fnames[fname]
 
 	def validate_cfg(self) -> None:
@@ -93,15 +104,15 @@ class PipelineConfig:
 		assert isinstance(self.prompts_n_samples, int) and self.prompts_n_samples > 0, (
 			"prompts_n_samples must be a positive integer."
 		)
-		assert self.prompts_file.is_file(), (
-			f"prompts_file {self.prompts_file} does not exist."
-		)
-		assert not self.patterns_dir.is_file(), (
-			f"patterns_dir {self.patterns_dir} must be a directory."
-		)
-		assert not self.features_dir.is_file(), (
-			f"features_dir {self.features_dir} must be a directory."
-		)
+		# assert self.prompts_file.is_file(), (
+		# 	f"prompts_file {self.prompts_file} does not exist."
+		# )
+		# assert not self.patterns_dir.is_file(), (
+		# 	f"patterns_dir {self.patterns_dir} must be a directory."
+		# )
+		# assert not self.features_dir.is_file(), (
+		# 	f"features_dir {self.features_dir} must be a directory."
+		# )
 		assert isinstance(self.n_proc, int) and self.n_proc > 0, (
 			"n_proc must be a positive integer."
 		)
@@ -127,7 +138,7 @@ class PipelineConfig:
 					[
 						f"  {field.name}={getattr(self, field.name)!r},"
 						for field in self.__dataclass_fields__.values()
-						if field.name not in ("data_fnames", "figures_fnames")
+						# if field.name not in ("data_fnames", "figures_fnames")
 					]
 				),
 				")",
@@ -146,12 +157,15 @@ class PipelineConfig:
 	def load(cls, data: dict) -> "PipelineConfig":
 		"""Load configuration from a dictionary."""
 		config: "PipelineConfig" = cls(
-			models=data["models"],
 			prompts_n_samples=data["prompts_n_samples"],
 			n_proc=data["n_proc"],
 			prompts_file=Path(data["prompts_file"]),
 			patterns_dir=Path(data["patterns_dir"]),
 			features_dir=Path(data["features_dir"]),
+			models=data["models"],
+			pca_n_components=data.get(
+				"pca_n_components", 16
+			),  # default to 16 if not specified
 			prompts_min_chars=data["prompts_min_chars"],
 			prompts_max_chars=data["prompts_max_chars"],
 			device=data.get("device", "cpu"),  # default to 'cpu' if not specified

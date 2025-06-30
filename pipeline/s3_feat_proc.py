@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
 from jaxtyping import Float
-from muutils.dbg import dbg_tensor
+from muutils.dbg import dbg, dbg_tensor
 from sklearn.decomposition import PCA
 
 from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
@@ -14,6 +14,7 @@ from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
 from attn_embed.features.analysis import (
 	filter_data,
 	normalize_data,
+	null_stats,
 	pca_importance_table,
 	plot_importance_covariance,
 )
@@ -30,20 +31,28 @@ def compute_normalization(cfg: PipelineConfig) -> tuple[pl.DataFrame, list[str]]
 	# this will filter all-nan rows
 	data_filtered: pl.DataFrame = filter_data(data_raw)
 
-	# dbg(null_stats(data_filtered))
+	if cfg.verbose > 1:
+		dbg(null_stats(data_filtered))
 
 	# normalize the data
 	feature_cols: list[str] = [
 		col for col in data_filtered.columns if col.startswith("feat.")
 	]
+
+	if cfg.verbose > 0:
+		dbg_tensor(data_filtered[feature_cols].to_numpy())
+
 	data_scaled: pl.DataFrame
 	_data_norms: pl.DataFrame
 	data_scaled, _data_norms = normalize_data(data_filtered, feature_cols)
 	_data_norms.write_ndjson(cfg.data_path("norms"))
 	data_scaled.write_ndjson(cfg.data_path("scaled"))
 
-	# dbg(null_stats(data_scaled))
-	# dbg_tensor(DATA_SCALED[FEATURE_COLS].to_numpy())
+	if cfg.verbose > 1:
+		dbg(null_stats(data_scaled))
+	if cfg.verbose > 0:
+		dbg_tensor(data_scaled[feature_cols].to_numpy())
+
 	return data_scaled, feature_cols
 
 
@@ -61,11 +70,17 @@ def compute_pca(
 	pca_data: np.ndarray
 	pca_obj: PCA
 	pca_data, pca_obj = apply_pca(
-		data_scaled, n_components=16, feature_cols=feature_cols
+		data_scaled,
+		n_components=cfg.pca_n_components,
+		feature_cols=feature_cols,
+		plot_variance=cfg.do_figures,
 	)
-	plt.savefig(cfg.figure_path("pca"), bbox_inches="tight", pad_inches=0.01)
-	dbg_tensor(pca_data)
-	dbg_tensor(pca_obj.components_)
+	if cfg.do_figures:
+		plt.savefig(cfg.figure_path("pca"), bbox_inches="tight", pad_inches=0.01)
+
+	if cfg.verbose > 0:
+		dbg_tensor(pca_data)
+		dbg_tensor(pca_obj.components_)
 
 	# pca and meta in one dataframe
 	df_pca: pl.DataFrame = pl.concat(
@@ -90,7 +105,7 @@ def compute_pca(
 	return df_importance, pca_data
 
 
-def compute_covariance(
+def plot_feat_covariance(
 	cfg: PipelineConfig,
 	data_scaled: pl.DataFrame,
 	df_importance: pl.DataFrame,
@@ -177,7 +192,9 @@ def plot_pca_all(
 
 def main(cfg: PipelineConfig) -> None:
 	"""Main function to run the pipeline."""
-	print(f"Running pipeline with config: {cfg}")
+
+	if cfg.do_figures:
+		cfg.figures_dir.mkdir(parents=True, exist_ok=True)
 
 	# compute normalization
 	data_scaled: pl.DataFrame
@@ -194,18 +211,19 @@ def main(cfg: PipelineConfig) -> None:
 	)
 
 	# compute covariance
-	compute_covariance(
-		cfg=cfg,
-		data_scaled=data_scaled,
-		df_importance=df_importance,
-	)
+	if cfg.do_figures:
+		plot_feat_covariance(
+			cfg=cfg,
+			data_scaled=data_scaled,
+			df_importance=df_importance,
+		)
 
-	# plot PCA all
-	plot_pca_all(
-		cfg=cfg,
-		data_scaled=data_scaled,
-		pca_data=pca_data,
-	)
+		# plot PCA all
+		plot_pca_all(
+			cfg=cfg,
+			data_scaled=data_scaled,
+			pca_data=pca_data,
+		)
 
 
 if __name__ == "__main__":
@@ -213,4 +231,5 @@ if __name__ == "__main__":
 	import sys
 
 	cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv[1:])
+	print(f"Running pipeline with config: {cfg}")
 	main(cfg)
