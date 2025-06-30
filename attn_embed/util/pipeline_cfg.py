@@ -1,4 +1,3 @@
-
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -20,27 +19,29 @@ DataFilename = Literal["raw", "norms", "scaled", "pca"]
 FigureFilename = Literal["pca", "cov_full", "cov_reduced", "pca_all"]
 
 DATA_FNAMES: dict[DataFilename, str] = dict(
-	raw = "raw.jsonl",
-	norms = "norms.jsonl",
-	scaled = "scaled.jsonl",
-	pca = "pca.jsonl",
+	raw="raw.jsonl",
+	norms="norms.jsonl",
+	scaled="scaled.jsonl",
+	pca="pca.jsonl",
 )
 
 FIGURE_FNAMES: dict[FigureFilename, str] = dict(
-	pca = "pca.pdf",
-	cov_full = "covariance-full.pdf",
-	cov_reduced = "covariance-reduced.pdf",
-	pca_all = "pca-all.png",
+	pca="pca.pdf",
+	cov_full="covariance-full.pdf",
+	cov_reduced="covariance-reduced.pdf",
+	pca_all="pca-all.png",
 )
 
 
-def _ser_path(path: Path) -> str|None:
+def _ser_path(path: Path) -> str | None:
 	"""Serialize a Path object to a string."""
 	return path.as_posix() if path is not None else None
 
-def _deser_path(path_str: str|None) -> Path|None:
+
+def _deser_path(path_str: str | None) -> Path | None:
 	"""Deserialize a string to a Path object."""
 	return Path(path_str) if path_str is not None else None
+
 
 @dataclass(kw_only=True)
 class PipelineConfig:
@@ -69,7 +70,7 @@ class PipelineConfig:
 	)
 
 	# plotting/logging
-	figures_dir: Path|None = None
+	figures_dir: Path | None = None
 	figures_fnames: dict[str, str] = field(
 		default_factory=lambda: FIGURE_FNAMES,
 	)
@@ -77,12 +78,12 @@ class PipelineConfig:
 		default_factory=lambda: dict(),
 	)
 	verbose: int = 1
-	
+
 	def data_path(self, fname: DataFilename) -> Path:
 		return self.features_dir / self.data_fnames[fname]
 
 	def figure_path(self, fname: FigureFilename) -> Path:
-		return self.figures_dir / self.figures_fnames[fname]	
+		return self.figures_dir / self.figures_fnames[fname]
 
 	def validate_cfg(self) -> None:
 		# TODO: check models actually exist in TransformerLens?
@@ -117,17 +118,18 @@ class PipelineConfig:
 			"prompts_max_chars must be greater than or equal to prompts_min_chars."
 		)
 
-
 	def as_str(self) -> str:
 		"""Return a string representation of the configuration."""
 		return "\n".join(
 			[
 				"PipelineConfig(",
-				"\n".join([
-					f"  {field.name}={getattr(self, field.name)!r},"
-					for field in self.__dataclass_fields__.values()
-					if field.name not in ("data_fnames", "figures_fnames")
-				]),
+				"\n".join(
+					[
+						f"  {field.name}={getattr(self, field.name)!r},"
+						for field in self.__dataclass_fields__.values()
+						if field.name not in ("data_fnames", "figures_fnames")
+					]
+				),
 				")",
 			]
 		)
@@ -155,13 +157,15 @@ class PipelineConfig:
 			device=data.get("device", "cpu"),  # default to 'cpu' if not specified
 			force_overwrite=data.get("force_overwrite", False),  # default to False
 			figures_dir=(
-				Path(data["figures_dir"]) 
-				if "figures_dir" in data else None
+				Path(data["figures_dir"]) if "figures_dir" in data else None
 				# default to None if not specified
 			),
 			verbose=data.get("verbose", 1),  # default to 1 if not specified
 			data_fnames={**DATA_FNAMES, **data.get("data_fnames", DATA_FNAMES)},
-			figures_fnames={**FIGURE_FNAMES, **data.get("figures_fnames", FIGURE_FNAMES)},
+			figures_fnames={
+				**FIGURE_FNAMES,
+				**data.get("figures_fnames", FIGURE_FNAMES),
+			},
 			plot_kwargs=data.get("plot_kwargs", {}),
 		)
 		config.validate_cfg()

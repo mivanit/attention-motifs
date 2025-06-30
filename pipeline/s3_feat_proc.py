@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import muutils.tensor_info
 import numpy as np
 import polars as pl
 from jaxtyping import Float
@@ -10,27 +9,20 @@ from sklearn.decomposition import PCA
 
 from attn_embed.util.pipeline_cfg import PipelineConfig
 
-from attn_embed.features.features import (
-	scalar_feature_table,
-	compute_scalar_features,
-)
 
 
 # attention-motifs
 from attn_embed.features.analysis import (
-	aggregate_feature_stats,
 	filter_data,
 	normalize_data,
-	null_stats,
 	pca_importance_table,
 	plot_importance_covariance,
 )
 from attn_embed.features.plotting import (
 	apply_pca,
-	plot_correlation_matrix,
 	plot_embedding,
 )
-from muutils.dbg import dbg
+
 
 def compute_normalization(cfg: PipelineConfig) -> tuple[pl.DataFrame, list[str]]:
 	# raw data from file
@@ -38,7 +30,7 @@ def compute_normalization(cfg: PipelineConfig) -> tuple[pl.DataFrame, list[str]]
 
 	# this will filter all-nan rows
 	data_filtered: pl.DataFrame = filter_data(data_raw)
-	
+
 	# dbg(null_stats(data_filtered))
 
 	# normalize the data
@@ -50,18 +42,17 @@ def compute_normalization(cfg: PipelineConfig) -> tuple[pl.DataFrame, list[str]]
 	data_scaled, _data_norms = normalize_data(data_filtered, feature_cols)
 	_data_norms.write_ndjson(cfg.data_path("norms"))
 	data_scaled.write_ndjson(cfg.data_path("scaled"))
-	
+
 	# dbg(null_stats(data_scaled))
 	# dbg_tensor(DATA_SCALED[FEATURE_COLS].to_numpy())
 	return data_scaled, feature_cols
 
 
 def compute_pca(
-		cfg: PipelineConfig,
-		data_scaled: pl.DataFrame,
-		feature_cols: list[str],
-	) -> tuple[pl.DataFrame, np.ndarray]:
-
+	cfg: PipelineConfig,
+	data_scaled: pl.DataFrame,
+	feature_cols: list[str],
+) -> tuple[pl.DataFrame, np.ndarray]:
 	if data_scaled is None:
 		data_scaled: pl.DataFrame = pl.read_ndjson(cfg.data_path("scaled"))
 
@@ -70,7 +61,9 @@ def compute_pca(
 	]
 	pca_data: np.ndarray
 	pca_obj: PCA
-	pca_data, pca_obj = apply_pca(data_scaled, n_components=16, feature_cols=feature_cols)
+	pca_data, pca_obj = apply_pca(
+		data_scaled, n_components=16, feature_cols=feature_cols
+	)
 	plt.savefig(cfg.figure_path("pca"), bbox_inches="tight", pad_inches=0.01)
 	dbg_tensor(pca_data)
 	dbg_tensor(pca_obj.components_)
@@ -81,7 +74,9 @@ def compute_pca(
 			# metadata -- "activation.*"
 			data_scaled[meta_cols],
 			# pca cols
-			pl.DataFrame(pca_data, schema=[f"pc.{i}" for i in range(pca_data.shape[1])]),
+			pl.DataFrame(
+				pca_data, schema=[f"pc.{i}" for i in range(pca_data.shape[1])]
+			),
 		],
 		how="horizontal",
 	)
@@ -137,7 +132,6 @@ def compute_covariance(
 	)
 
 
-
 def plot_pca_all(
 	cfg: PipelineConfig,
 	data_scaled: pl.DataFrame,
@@ -187,7 +181,8 @@ def main(cfg: PipelineConfig) -> None:
 	print(f"Running pipeline with config: {cfg}")
 
 	# compute normalization
-	data_scaled: pl.DataFrame; feature_cols: list[str]
+	data_scaled: pl.DataFrame
+	feature_cols: list[str]
 	data_scaled, feature_cols = compute_normalization(cfg=cfg)
 
 	# compute PCA
@@ -212,6 +207,7 @@ def main(cfg: PipelineConfig) -> None:
 		data_scaled=data_scaled,
 		pca_data=pca_data,
 	)
+
 
 if __name__ == "__main__":
 	import sys
