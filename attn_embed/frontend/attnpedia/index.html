@@ -161,7 +161,58 @@
     	border-width: 5px;
     	border-style: solid;
     	border-color: transparent #333 transparent transparent;
-     }
+    }
+    
+    .prompt-header {
+    	min-width: 100px;
+    	cursor: help;
+    	text-align: center;
+    }
+    
+    .prompt-header:hover {
+    	background: #e3f2fd;
+    }
+    
+    .prompt-hash {
+    	font-family: monospace;
+    	font-size: 11px;
+    	font-weight: bold;
+    	margin-bottom: 2px;
+    }
+    
+    .prompt-tokens {
+    	font-size: 10px;
+    	color: #666;
+    }
+    
+    .prompt-tooltip {
+    	position: absolute;
+    	background: #333;
+    	color: white;
+    	padding: 12px;
+    	border-radius: 8px;
+    	font-size: 12px;
+    	max-width: 400px;
+    	z-index: 1000;
+    	opacity: 0;
+    	transition: opacity 0.2s;
+    	line-height: 1.4;
+    	white-space: normal;
+    	word-wrap: break-word;
+    	overflow-wrap: break-word;
+    	box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    
+    .prompt-tooltip.show {
+    	opacity: 1;
+    }
+    
+    .distance-cell {
+    	font-family: monospace;
+    	font-size: 11px;
+    	text-align: center;
+    	min-width: 60px;
+    }
     </style>
     <!-- end 'style.css' -->
         <!-- begin 'config.js' -->
@@ -222,15 +273,10 @@
     		head_viewing: "gpt2-small:L5:H5",
     		heads_display: null,
     		table: {
-    			n_nearby: 3,
-    			n_share_class: 2
+    			n_nearby: 5,
+    			n_share_class: 5
     		},
-    		prompts: [
-    			"4cI1GEw6ALlDIgyrDHqSNw",
-    			"7ACbiDg7tQ7q3vA1mz2I_g",
-    			"9Hg1qyV1vUCZPQxUjnXqvQ",
-    			"154QVY-xqZlyiFm1FvmMhg",
-    		],
+    		prompts_url: "../../../../data/patterns/gpt2-small/prompts.jsonl",
     		patterns_path: "../../../../data/patterns/",
     		attnpedia_url: "ap.json",
     		headDistsnpy_url: "../../../../data/features/head_dists_raw/distances.npy",
@@ -1130,18 +1176,101 @@
     	async getHeadDistances(head_name, head_names_list) {
     		await this._ensureLoaded();
     		const head_idx = this.get_head_idx(head_name);
+    		if (head_idx === -1) {
+    			console.warn(`Head not found: ${head_name}`);
+    			return head_names_list.map(target_head => ({
+    				head_name: target_head,
+    				distance: 0
+    			}));
+    		}
+    		
     		const dists_from_head = this.head_dists_arr.get(head_idx);
+    		if (!dists_from_head) {
+    			console.warn(`No distances found for head: ${head_name}`);
+    			return head_names_list.map(target_head => ({
+    				head_name: target_head,
+    				distance: 0
+    			}));
+    		}
+    		
     		return head_names_list.map(target_head => {
     			const target_idx = this.get_head_idx(target_head);
+    			if (target_idx === -1) {
+    				console.warn(`Target head not found: ${target_head}`);
+    				return {
+    					head_name: target_head,
+    					distance: 0
+    				};
+    			}
+    			
+    			const distance = dists_from_head[target_idx];
     			return {
     				head_name: target_head,
-    				distance: dists_from_head[target_idx]
+    				distance: distance !== undefined ? distance : 0
     			};
     		});
     	}
     }
     </script>
     <!-- end 'head_embeds.js' -->
+        <!-- begin 'prompts.js' -->
+    <script>
+    const PROMPTS_URL = CONFIG.prompts_url;
+    
+    async function load_prompts(path = PROMPTS_URL) {
+    	const r = await fetch(path);
+    	if (r.ok) {
+    		const text = await r.text();
+    		const lines = text.trim().split('\n');
+    		const prompts = [];
+    		
+    		for (const line of lines) {
+    			if (line.trim()) {
+    				try {
+    					const prompt = JSON.parse(line);
+    					prompts.push(prompt);
+    				} catch (e) {
+    					console.warn('Failed to parse prompt line:', line, e);
+    				}
+    			}
+    		}
+    		
+    		return prompts;
+    	} else {
+    		throw new Error(`Failed to load prompts data from ${path}`);
+    	}
+    }
+    
+    class PromptsLoader {
+    	constructor() {
+    		this._data = null;
+    		this._loaded = false;
+    	}
+    
+    	async _ensureLoaded() {
+    		if (!this._loaded) {
+    			this._data = await load_prompts();
+    			this._loaded = true;
+    		}
+    	}
+    
+    	async getPrompts() {
+    		await this._ensureLoaded();
+    		return this._data || [];
+    	}
+    
+    	async getPromptByHash(hash) {
+    		await this._ensureLoaded();
+    		return this._data?.find(prompt => prompt.hash === hash) || null;
+    	}
+    
+    	async getPromptHashes() {
+    		await this._ensureLoaded();
+    		return this._data?.map(prompt => prompt.hash) || [];
+    	}
+    }
+    </script>
+    <!-- end 'prompts.js' -->
         <!-- begin 'headInfo.js' -->
     <script>
     class HeadInfo {
@@ -1195,9 +1324,11 @@
     		async init() {
     			this.attention_pedia = new AttentionPedia();
     			this.head_distances = new HeadDistances();
-    			this.prompts = CONFIG.prompts;
+    			this.prompts_loader = new PromptsLoader();
+    			this.prompts = await this.prompts_loader.getPrompts();
     			this.heads_display = CONFIG.heads_display;
     			this.current_head = CONFIG.head_viewing;
+    			this.promptTooltip = null;
     			await this.updateHeadsWithDistances();
     			this.loading = false;
     		},
@@ -1211,16 +1342,19 @@
     			// If heads_display is explicitly set, use it
     			if (this.heads_display && Array.isArray(this.heads_display)) {
     				const headsWithDistances = await this.head_distances.getHeadDistances(this.current_head, this.heads_display);
-    				const maxDistance = Math.max(...headsWithDistances.map(h => h.distance));
+    				const maxDistance = Math.max(...headsWithDistances.map(h => h.distance || 0));
     				
     				this.heads_display_with_distances = headsWithDistances
-    					.sort((a, b) => a.distance - b.distance)
-    					.map(item => ({
-    						headId: item.head_name,
-    						distance: item.distance,
-    						distanceText: item.distance === 0 ? 'Current' : item.distance.toFixed(3),
-    						distanceColor: this.getDistanceColor(item.distance, maxDistance)
-    					}));
+    					.sort((a, b) => (a.distance || 0) - (b.distance || 0))
+    					.map(item => {
+    						const distance = item.distance !== undefined ? item.distance : 0;
+    						return {
+    							headId: item.head_name,
+    							distance: distance,
+    							distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
+    							distanceColor: this.getDistanceColor(distance, maxDistance)
+    						};
+    					});
     				return;
     			}
     
@@ -1244,16 +1378,19 @@
     			const allHeads = Array.from(headsToShow);
     			const headsWithDistances = await this.head_distances.getHeadDistances(this.current_head, allHeads);
     
-    			const maxDistance = Math.max(...headsWithDistances.map(h => h.distance));
+    			const maxDistance = Math.max(...headsWithDistances.map(h => h.distance || 0));
     
     			this.heads_display_with_distances = headsWithDistances
-    				.sort((a, b) => a.distance - b.distance)
-    				.map(item => ({
-    					headId: item.head_name,
-    					distance: item.distance,
-    					distanceText: item.distance === 0 ? 'Current' : item.distance.toFixed(3),
-    					distanceColor: this.getDistanceColor(item.distance, maxDistance)
-    				}));
+    				.sort((a, b) => (a.distance || 0) - (b.distance || 0))
+    				.map(item => {
+    					const distance = item.distance !== undefined ? item.distance : 0;
+    					return {
+    						headId: item.head_name,
+    						distance: distance,
+    						distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
+    						distanceColor: this.getDistanceColor(distance, maxDistance)
+    					};
+    				});
     		},
     
     		getDistanceColor(distance, maxDistance) {
@@ -1261,6 +1398,30 @@
     			const intensity = Math.min(distance / maxDistance, 1);
     			const blue = Math.floor(255 * (1 - intensity * 0.7));
     			return `rgba(0, 123, ${blue}, ${0.2 + intensity * 0.6})`;
+    		},
+    
+    		showPromptTooltip(event, prompt) {
+    			// Hide existing tooltip
+    			this.hidePromptTooltip();
+    
+    			const tooltip = document.createElement('div');
+    			tooltip.className = 'prompt-tooltip show';
+    			tooltip.innerHTML = `<strong>Text:</strong><br>${prompt.text}<br><br><strong>Source:</strong> ${prompt.meta?.pile_set_name || 'Unknown'}`;
+    			document.body.appendChild(tooltip);
+    
+    			// Position tooltip
+    			const rect = event.target.getBoundingClientRect();
+    			tooltip.style.left = (rect.left + window.scrollX) + 'px';
+    			tooltip.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+    
+    			this.promptTooltip = tooltip;
+    		},
+    
+    		hidePromptTooltip() {
+    			if (this.promptTooltip) {
+    				this.promptTooltip.remove();
+    				this.promptTooltip = null;
+    			}
     		},
     
     		patternComponent(headId, promptHash) {
@@ -1375,8 +1536,11 @@
                         <th>Head</th>
                         <th>Distance</th>
                         <th>Classifications</th>
-                        <template x-for="prompt in prompts" :key="prompt">
-                            <th x-text="prompt"></th>
+                        <template x-for="prompt in prompts" :key="prompt.hash">
+                            <th class="prompt-header" @mouseenter="showPromptTooltip($event, prompt)" @mouseleave="hidePromptTooltip()">
+                                <div class="prompt-hash" x-text="prompt.hash"></div>
+                                <div class="prompt-tokens" x-text="`${prompt.n_tokens} tokens`"></div>
+                            </th>
                         </template>
                     </tr>
                 </thead>
@@ -1397,10 +1561,10 @@
                                     </div>
                                 </div>
                             </td>
-                            <template x-for="prompt in prompts" :key="prompt">
+                            <template x-for="prompt in prompts" :key="prompt.hash">
                                 <td>
-                                    <div x-data="patternComponent(headRow.headId, prompt)" x-init="await init()">
-                                        <img x-show="imageUrl" :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headRow.headId} on ${prompt}`">
+                                    <div x-data="patternComponent(headRow.headId, prompt.hash)" x-init="await init()">
+                                        <img x-show="imageUrl" :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headRow.headId} on ${prompt.hash}`">
                                     </div>
                                 </td>
                             </template>
