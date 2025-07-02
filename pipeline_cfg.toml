@@ -7,7 +7,7 @@ prompts_file = "data/text/pile_demo.jsonl"
 # where to save patters -- both npz files of activations, and in step 1b png files of activation patterns
 # structure is:
 # `{patterns_dir}/{model_name}/prompts/{prompt_hash}/activations.npz`
-# `{patterns_dir}/{model_name}/prompts/{prompt_hash}/L{layer_idx}/H{head_idx}/raw.png`
+# `{patterns_dir}/{model_name}/prompts/{prompt_hash}/L{layer_idx}/H{head_idx}/attn.png`
 patterns_dir = "data/patterns"
 
 # prompts processing

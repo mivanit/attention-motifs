@@ -1,24 +1,24 @@
-import numpy as np
-import matplotlib.pyplot as plt
+# import numpy as np
+# import matplotlib.pyplot as plt
 
-from muutils.tensor_info import array_summary
+# from muutils.tensor_info import array_summary
 
 from pattern_lens.figure_util import (
 	AttentionMatrix,
 )
 from pattern_lens.attn_figure_funcs import (
-	register_attn_figure_multifunc,
+	# register_attn_figure_multifunc,
 	register_attn_figure_func,
 )
 from pattern_lens.figure_util import (
-	matplotlib_multifigure_saver,
+	# matplotlib_multifigure_saver,
 	save_matrix_wrapper,
 	Matrix2D,
 )
 from pattern_lens.figures import main as pl_main
 
-from attn_embed.math.math import compute_envelope_params, linear_plot
-from attn_embed.math.transition_tensor import transition_tensor
+# from attn_embed.math.math import compute_envelope_params, linear_plot
+# from attn_embed.math.transition_tensor import transition_tensor
 
 
 # gram matrices and FFTs
@@ -45,81 +45,87 @@ from attn_embed.math.transition_tensor import transition_tensor
 		"Shifted FFT (imag)": np.imag(fft_shifted),
 """
 
-
 @register_attn_figure_func
-@save_matrix_wrapper(fmt="png", normalize=True)
-def log10(attn_matrix: AttentionMatrix) -> Matrix2D:
-	"log10 of attention matrix"
-	return np.log10(attn_matrix + 1e-8)
+@save_matrix_wrapper(fmt="png", normalize=True, cmap="Blues")
+def attn(attn_matrix: AttentionMatrix) -> Matrix2D:
+	"raw attention matrix"
+	return attn_matrix
 
 
-@register_attn_figure_multifunc(["log", "diag_wgts", "first_tok_wgts"])
-@matplotlib_multifigure_saver(["log", "diag_wgts", "first_tok_wgts"])
-def basic(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -> None:
-	"abs of 2D fft of raw attention matrix"
-	axes["diag_wgts"].plot(np.diag(attn_matrix), "o")
-	axes["first_tok_wgts"].plot(attn_matrix[0], "o")
+# @register_attn_figure_func
+# @save_matrix_wrapper(fmt="png", normalize=True)
+# def log10(attn_matrix: AttentionMatrix) -> Matrix2D:
+# 	"log10 of attention matrix"
+# 	return np.log10(attn_matrix + 1e-8)
 
 
-@register_attn_figure_multifunc(["tensor", "time", "time_diffs"])
-@matplotlib_multifigure_saver(["tensor", "time", "time_diffs"])
-def markov_transition(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -> None:
-	# manual config here
-	p_threshold: float = 0.95
-	idxs, tt, res = transition_tensor(
-		attn_matrix, exact=100, approx_l10=7.0, approx_pts=100
-	)
-	n_ctx: int = attn_matrix.shape[0]
+# @register_attn_figure_multifunc(["log", "diag_wgts", "first_tok_wgts"])
+# @matplotlib_multifigure_saver(["log", "diag_wgts", "first_tok_wgts"])
+# def basic(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -> None:
+# 	"abs of 2D fft of raw attention matrix"
+# 	axes["diag_wgts"].plot(np.diag(attn_matrix), "o")
+# 	axes["first_tok_wgts"].plot(attn_matrix[0], "o")
 
-	#
-	axes["tensor"].set_title("transition tensor")
-	axes["tensor"].matshow(
-		np.log1p(1 - tt[:, :, 0].T), aspect=(tt.shape[0] / tt.shape[1])
-	)
-	axes["tensor"].set_xticks(range(len(idxs)))
-	axes["tensor"].set_xticklabels(idxs)
-	axes["tensor"].tick_params(axis="x", rotation=90)
-	axes["tensor"].set_xlabel("markov iteration")
-	axes["tensor"].set_ylabel("token idx")
 
-	#
-	axes["time"].set_title(f"time to transition probability > {p_threshold}")
-	indices_raw = np.apply_along_axis(
-		lambda row: np.searchsorted(row, p_threshold, side="right"),
-		axis=0,
-		arr=tt[:, :, 0],
-	)
-	axes["tensor"].plot(indices_raw, np.arange(indices_raw.shape[0]), "r.")
-	idxs_with_inf = np.concatenate((idxs, [1e10]))
-	indices_adjusted = np.array(idxs_with_inf[indices_raw], dtype=float)
-	# if last element, set to inf
-	# indices_adjusted[indices_raw == len(idxs)] = 1e10
-	indices_adjusted_l10 = np.log10(indices_adjusted[1:])
-	axes["time"].plot(indices_adjusted_l10, "ro")
-	axes["time"].set_xlabel("token idx")
-	axes["time"].set_ylabel("log10(iters to transition)")
-	idxs_x = np.arange(len(indices_adjusted_l10))
-	for envtype in ("lower", "upper", "bestfit"):
-		env_lower = compute_envelope_params(
-			x=idxs_x,
-			y=indices_adjusted_l10,
-			envelope_type=envtype,
-		)
-		axes["time"].plot(
-			idxs_x,
-			linear_plot(idxs_x, env_lower[0], env_lower[1]),
-			label=f"{envtype}, $R^2={env_lower[2]:.3f}$",
-		)
-	axes["time"].legend()
+# @register_attn_figure_multifunc(["tensor", "time", "time_diffs"])
+# @matplotlib_multifigure_saver(["tensor", "time", "time_diffs"])
+# def markov_transition(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -> None:
+# 	# manual config here
+# 	p_threshold: float = 0.95
+# 	idxs, tt, res = transition_tensor(
+# 		attn_matrix, exact=100, approx_l10=7.0, approx_pts=100
+# 	)
+# 	n_ctx: int = attn_matrix.shape[0]
 
-	#
-	indices_adjusted_diff = np.diff(indices_adjusted)
-	axes["time_diffs"].set_title(
-		f"dist of transition times diff\n${array_summary(indices_adjusted_diff, fmt='latex', dtype=False)}$"
-	)
-	axes["time_diffs"].hist(indices_adjusted_diff, bins=10)
-	axes["time_diffs"].set_xlabel("diff")
-	axes["time_diffs"].set_ylabel("count")
+# 	#
+# 	axes["tensor"].set_title("transition tensor")
+# 	axes["tensor"].matshow(
+# 		np.log1p(1 - tt[:, :, 0].T), aspect=(tt.shape[0] / tt.shape[1])
+# 	)
+# 	axes["tensor"].set_xticks(range(len(idxs)))
+# 	axes["tensor"].set_xticklabels(idxs)
+# 	axes["tensor"].tick_params(axis="x", rotation=90)
+# 	axes["tensor"].set_xlabel("markov iteration")
+# 	axes["tensor"].set_ylabel("token idx")
+
+# 	#
+# 	axes["time"].set_title(f"time to transition probability > {p_threshold}")
+# 	indices_raw = np.apply_along_axis(
+# 		lambda row: np.searchsorted(row, p_threshold, side="right"),
+# 		axis=0,
+# 		arr=tt[:, :, 0],
+# 	)
+# 	axes["tensor"].plot(indices_raw, np.arange(indices_raw.shape[0]), "r.")
+# 	idxs_with_inf = np.concatenate((idxs, [1e10]))
+# 	indices_adjusted = np.array(idxs_with_inf[indices_raw], dtype=float)
+# 	# if last element, set to inf
+# 	# indices_adjusted[indices_raw == len(idxs)] = 1e10
+# 	indices_adjusted_l10 = np.log10(indices_adjusted[1:])
+# 	axes["time"].plot(indices_adjusted_l10, "ro")
+# 	axes["time"].set_xlabel("token idx")
+# 	axes["time"].set_ylabel("log10(iters to transition)")
+# 	idxs_x = np.arange(len(indices_adjusted_l10))
+# 	for envtype in ("lower", "upper", "bestfit"):
+# 		env_lower = compute_envelope_params(
+# 			x=idxs_x,
+# 			y=indices_adjusted_l10,
+# 			envelope_type=envtype,
+# 		)
+# 		axes["time"].plot(
+# 			idxs_x,
+# 			linear_plot(idxs_x, env_lower[0], env_lower[1]),
+# 			label=f"{envtype}, $R^2={env_lower[2]:.3f}$",
+# 		)
+# 	axes["time"].legend()
+
+# 	#
+# 	indices_adjusted_diff = np.diff(indices_adjusted)
+# 	axes["time_diffs"].set_title(
+# 		f"dist of transition times diff\n${array_summary(indices_adjusted_diff, fmt='latex', dtype=False)}$"
+# 	)
+# 	axes["time_diffs"].hist(indices_adjusted_diff, bins=10)
+# 	axes["time_diffs"].set_xlabel("diff")
+# 	axes["time_diffs"].set_ylabel("count")
 
 
 # @register_attn_figure_func
@@ -176,6 +182,10 @@ def markov_transition(attn_matrix: AttentionMatrix, axes: dict[str, plt.Axes]) -
 # 	ax.hist(degrees_ax1, bins=50, density=True, alpha=0.7, label="Ax1")
 # 	ax.legend()
 # 	ax.set_title("Histogram of Node Degrees")
+
+
+def _ensure_register():
+	print("Registering attention figure functions...")
 
 
 if __name__ == "__main__":

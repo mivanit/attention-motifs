@@ -30,6 +30,6 @@ class HeadInfo {
     }
 
     async get_pattern_url(promptHash) {
-        return `${this.model}/prompts/${promptHash}/L${this.layer}/H${this.head}/raw.png`;
+        return `${this.model}/prompts/${promptHash}/L${this.layer}/H${this.head}/attn.png`;
     }
 }

@@ -1,3 +1,4 @@
+from attn_embed.figure_funcs import _ensure_register
 from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
 from pattern_lens.figures import figures_main
 
@@ -12,7 +13,7 @@ def render_patterns(cfg: PipelineConfig) -> None:
 			save_path=cfg.patterns_dir,
 			n_samples=cfg.prompts_n_samples,
 			force=cfg.force_overwrite,
-			figure_funcs_select=None,
+			figure_funcs_select={"attn"},
 		)
 
 
@@ -20,4 +21,5 @@ if __name__ == "__main__":
 	import sys
 
 	cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv[1:])
+	_ensure_register()
 	render_patterns(cfg)
