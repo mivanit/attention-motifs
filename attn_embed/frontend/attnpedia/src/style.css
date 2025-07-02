@@ -198,3 +198,11 @@ body {
 	text-align: center;
 	min-width: 60px;
 }
+
+.matching-classification {
+	background-color: rgba(255, 152, 0, 0.2) !important;
+}
+
+.matching-classification:hover {
+	background-color: rgba(255, 152, 0, 0.3) !important;
+}

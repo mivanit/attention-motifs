@@ -11,7 +11,9 @@ document.addEventListener('alpine:init', () => {
 			this.attention_pedia = new AttentionPedia();
 			this.head_distances = new HeadDistances();
 			this.prompts_loader = new PromptsLoader();
-			this.prompts = await this.prompts_loader.getPrompts();
+			const allPrompts = await this.prompts_loader.getPrompts();
+			const n_prompts = CONFIG.n_prompts || 10;
+			this.prompts = allPrompts.slice(0, n_prompts);
 			this.heads_display = CONFIG.heads_display;
 			this.current_head = CONFIG.head_viewing;
 			this.promptTooltip = null;
@@ -30,17 +32,27 @@ document.addEventListener('alpine:init', () => {
 				const headsWithDistances = await this.head_distances.getHeadDistances(this.current_head, this.heads_display);
 				const maxDistance = Math.max(...headsWithDistances.map(h => h.distance || 0));
 				
-				this.heads_display_with_distances = headsWithDistances
-					.sort((a, b) => (a.distance || 0) - (b.distance || 0))
-					.map(item => {
-						const distance = item.distance !== undefined ? item.distance : 0;
-						return {
-							headId: item.head_name,
-							distance: distance,
-							distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
-							distanceColor: this.getDistanceColor(distance, maxDistance)
-						};
+				// Get current head classifications for matching
+				const currentHeadClassifications = await this.attention_pedia.get_head_types(this.current_head);
+				
+				this.heads_display_with_distances = [];
+				for (const item of headsWithDistances.sort((a, b) => (a.distance || 0) - (b.distance || 0))) {
+					const distance = item.distance !== undefined ? item.distance : 0;
+					
+					// Check if this head has matching classifications
+					const headClassifications = await this.attention_pedia.get_head_types(item.head_name);
+					const hasMatchingClassification = headClassifications.some(cls => 
+						currentHeadClassifications.includes(cls)
+					);
+					
+					this.heads_display_with_distances.push({
+						headId: item.head_name,
+						distance: distance,
+						distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
+						distanceColor: this.getDistanceColor(distance, maxDistance),
+						hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head
 					});
+				}
 				return;
 			}
 
@@ -66,17 +78,27 @@ document.addEventListener('alpine:init', () => {
 
 			const maxDistance = Math.max(...headsWithDistances.map(h => h.distance || 0));
 
-			this.heads_display_with_distances = headsWithDistances
-				.sort((a, b) => (a.distance || 0) - (b.distance || 0))
-				.map(item => {
-					const distance = item.distance !== undefined ? item.distance : 0;
-					return {
-						headId: item.head_name,
-						distance: distance,
-						distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
-						distanceColor: this.getDistanceColor(distance, maxDistance)
-					};
+			// Get current head classifications for matching
+			const currentHeadClassifications = await this.attention_pedia.get_head_types(this.current_head);
+			
+			this.heads_display_with_distances = [];
+			for (const item of headsWithDistances.sort((a, b) => (a.distance || 0) - (b.distance || 0))) {
+				const distance = item.distance !== undefined ? item.distance : 0;
+				
+				// Check if this head has matching classifications
+				const headClassifications = await this.attention_pedia.get_head_types(item.head_name);
+				const hasMatchingClassification = headClassifications.some(cls => 
+					currentHeadClassifications.includes(cls)
+				);
+				
+				this.heads_display_with_distances.push({
+					headId: item.head_name,
+					distance: distance,
+					distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
+					distanceColor: this.getDistanceColor(distance, maxDistance),
+					hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head
 				});
+			}
 		},
 
 		getDistanceColor(distance, maxDistance) {

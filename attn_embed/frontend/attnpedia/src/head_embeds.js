@@ -39,27 +39,32 @@ class HeadDistances {
 	}
 
 	get_head_idx(head_name) {
-		// {"cls_values": ["pythia-1b:L0:H0", "pythia-1b:L0:H1", "pythia-1b:L0:H2", ...]}
-		return this.head_dists_meta.cls_values.indexOf(head_name);
+		const idx = this.head_dists_meta.cls_values.indexOf(head_name);
+		if (idx === -1) {
+			throw new Error(`Head not found: ${head_name}`);
+		}
+		return idx;
 	}
 
 	get_head_name(head_idx) {
+		if (head_idx < 0 || head_idx >= this.head_dists_meta.cls_values.length) {
+			throw new Error(`Invalid head index: ${head_idx}`);
+		}
 		return this.head_dists_meta.cls_values[head_idx];
 	}
 
 	async getNearestHeads(head_name, n = 5) {
 		await this._ensureLoaded();
-		// get the index of this head
+		
 		const head_idx = this.get_head_idx(head_name);
-		// get the distances for this head
-		const dists_to_this_head = this.head_dists_arr.get(head_idx);
-		// sort the distances and get the indices of the n nearest
-		// excluding the closest head, which will be itself
-		const indexed_dists = Array.from(dists_to_this_head, (dist, idx) => ({ dist, idx }));
+		const distanceRow = this.head_dists_arr.get(head_idx);
+		const distanceArray = Array.from(distanceRow.data);
+		
+		// Sort distances and get indices of n nearest (excluding self)
+		const indexed_dists = Array.from(distanceArray, (dist, idx) => ({ dist, idx }));
 		indexed_dists.sort((a, b) => a.dist - b.dist);
-		// Skip the first element (itself) and take the next n
 		const best_n_items = indexed_dists.slice(1, n + 1);
-		// return dict with head names and distances
+		
 		return {
 			head_names: best_n_items.map(item => this.get_head_name(item.idx)),
 			distances: best_n_items.map(item => item.dist)
@@ -70,44 +75,23 @@ class HeadDistances {
 		await this._ensureLoaded();
 		const head_idx1 = this.get_head_idx(head_name1);
 		const head_idx2 = this.get_head_idx(head_name2);
-		const dists_from_head1 = this.head_dists_arr.get(head_idx1);
-		return dists_from_head1[head_idx2];
+		
+		const distanceRow = this.head_dists_arr.get(head_idx1);
+		return distanceRow.data[head_idx2];
 	}
 
 	async getHeadDistances(head_name, head_names_list) {
 		await this._ensureLoaded();
 		const head_idx = this.get_head_idx(head_name);
-		if (head_idx === -1) {
-			console.warn(`Head not found: ${head_name}`);
-			return head_names_list.map(target_head => ({
-				head_name: target_head,
-				distance: 0
-			}));
-		}
-		
-		const dists_from_head = this.head_dists_arr.get(head_idx);
-		if (!dists_from_head) {
-			console.warn(`No distances found for head: ${head_name}`);
-			return head_names_list.map(target_head => ({
-				head_name: target_head,
-				distance: 0
-			}));
-		}
+		const distanceRow = this.head_dists_arr.get(head_idx);
+		const distanceArray = Array.from(distanceRow.data);
 		
 		return head_names_list.map(target_head => {
 			const target_idx = this.get_head_idx(target_head);
-			if (target_idx === -1) {
-				console.warn(`Target head not found: ${target_head}`);
-				return {
-					head_name: target_head,
-					distance: 0
-				};
-			}
-			
-			const distance = dists_from_head[target_idx];
+			const distance = distanceArray[target_idx];
 			return {
 				head_name: target_head,
-				distance: distance !== undefined ? distance : 0
+				distance: distance
 			};
 		});
 	}

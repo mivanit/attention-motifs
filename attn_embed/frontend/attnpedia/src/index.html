@@ -45,7 +45,7 @@
                         <tr>
                             <td class="head-info" x-text="headRow.headId"></td>
                             <td class="distance-cell" :style="`background-color: ${headRow.distanceColor}`" x-text="headRow.distanceText"></td>
-                            <td class="classifications-cell">
+                            <td class="classifications-cell" :class="headRow.hasMatchingClassification ? 'matching-classification' : ''">
                                 <div x-data="classificationComponent(headRow.headId)" x-init="loadData()">
                                     <div class="classifications-container">
                                         <template x-for="classification in classifications" :key="classification">

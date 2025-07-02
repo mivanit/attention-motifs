@@ -213,6 +213,14 @@
     	text-align: center;
     	min-width: 60px;
     }
+    
+    .matching-classification {
+    	background-color: rgba(255, 152, 0, 0.2) !important;
+    }
+    
+    .matching-classification:hover {
+    	background-color: rgba(255, 152, 0, 0.3) !important;
+    }
     </style>
     <!-- end 'style.css' -->
         <!-- begin 'config.js' -->
@@ -276,6 +284,7 @@
     			n_nearby: 5,
     			n_share_class: 5
     		},
+    		n_prompts: 5,
     		prompts_url: "../../../../data/patterns/gpt2-small/prompts.jsonl",
     		patterns_path: "../../../../data/patterns/",
     		attnpedia_url: "ap.json",
@@ -1138,27 +1147,32 @@
     	}
     
     	get_head_idx(head_name) {
-    		// {"cls_values": ["pythia-1b:L0:H0", "pythia-1b:L0:H1", "pythia-1b:L0:H2", ...]}
-    		return this.head_dists_meta.cls_values.indexOf(head_name);
+    		const idx = this.head_dists_meta.cls_values.indexOf(head_name);
+    		if (idx === -1) {
+    			throw new Error(`Head not found: ${head_name}`);
+    		}
+    		return idx;
     	}
     
     	get_head_name(head_idx) {
+    		if (head_idx < 0 || head_idx >= this.head_dists_meta.cls_values.length) {
+    			throw new Error(`Invalid head index: ${head_idx}`);
+    		}
     		return this.head_dists_meta.cls_values[head_idx];
     	}
     
     	async getNearestHeads(head_name, n = 5) {
     		await this._ensureLoaded();
-    		// get the index of this head
+    		
     		const head_idx = this.get_head_idx(head_name);
-    		// get the distances for this head
-    		const dists_to_this_head = this.head_dists_arr.get(head_idx);
-    		// sort the distances and get the indices of the n nearest
-    		// excluding the closest head, which will be itself
-    		const indexed_dists = Array.from(dists_to_this_head, (dist, idx) => ({ dist, idx }));
+    		const distanceRow = this.head_dists_arr.get(head_idx);
+    		const distanceArray = Array.from(distanceRow.data);
+    		
+    		// Sort distances and get indices of n nearest (excluding self)
+    		const indexed_dists = Array.from(distanceArray, (dist, idx) => ({ dist, idx }));
     		indexed_dists.sort((a, b) => a.dist - b.dist);
-    		// Skip the first element (itself) and take the next n
     		const best_n_items = indexed_dists.slice(1, n + 1);
-    		// return dict with head names and distances
+    		
     		return {
     			head_names: best_n_items.map(item => this.get_head_name(item.idx)),
     			distances: best_n_items.map(item => item.dist)
@@ -1169,44 +1183,23 @@
     		await this._ensureLoaded();
     		const head_idx1 = this.get_head_idx(head_name1);
     		const head_idx2 = this.get_head_idx(head_name2);
-    		const dists_from_head1 = this.head_dists_arr.get(head_idx1);
-    		return dists_from_head1[head_idx2];
+    		
+    		const distanceRow = this.head_dists_arr.get(head_idx1);
+    		return distanceRow.data[head_idx2];
     	}
     
     	async getHeadDistances(head_name, head_names_list) {
     		await this._ensureLoaded();
     		const head_idx = this.get_head_idx(head_name);
-    		if (head_idx === -1) {
-    			console.warn(`Head not found: ${head_name}`);
-    			return head_names_list.map(target_head => ({
-    				head_name: target_head,
-    				distance: 0
-    			}));
-    		}
-    		
-    		const dists_from_head = this.head_dists_arr.get(head_idx);
-    		if (!dists_from_head) {
-    			console.warn(`No distances found for head: ${head_name}`);
-    			return head_names_list.map(target_head => ({
-    				head_name: target_head,
-    				distance: 0
-    			}));
-    		}
+    		const distanceRow = this.head_dists_arr.get(head_idx);
+    		const distanceArray = Array.from(distanceRow.data);
     		
     		return head_names_list.map(target_head => {
     			const target_idx = this.get_head_idx(target_head);
-    			if (target_idx === -1) {
-    				console.warn(`Target head not found: ${target_head}`);
-    				return {
-    					head_name: target_head,
-    					distance: 0
-    				};
-    			}
-    			
-    			const distance = dists_from_head[target_idx];
+    			const distance = distanceArray[target_idx];
     			return {
     				head_name: target_head,
-    				distance: distance !== undefined ? distance : 0
+    				distance: distance
     			};
     		});
     	}
@@ -1325,7 +1318,9 @@
     			this.attention_pedia = new AttentionPedia();
     			this.head_distances = new HeadDistances();
     			this.prompts_loader = new PromptsLoader();
-    			this.prompts = await this.prompts_loader.getPrompts();
+    			const allPrompts = await this.prompts_loader.getPrompts();
+    			const n_prompts = CONFIG.n_prompts || 10;
+    			this.prompts = allPrompts.slice(0, n_prompts);
     			this.heads_display = CONFIG.heads_display;
     			this.current_head = CONFIG.head_viewing;
     			this.promptTooltip = null;
@@ -1344,17 +1339,27 @@
     				const headsWithDistances = await this.head_distances.getHeadDistances(this.current_head, this.heads_display);
     				const maxDistance = Math.max(...headsWithDistances.map(h => h.distance || 0));
     				
-    				this.heads_display_with_distances = headsWithDistances
-    					.sort((a, b) => (a.distance || 0) - (b.distance || 0))
-    					.map(item => {
-    						const distance = item.distance !== undefined ? item.distance : 0;
-    						return {
-    							headId: item.head_name,
-    							distance: distance,
-    							distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
-    							distanceColor: this.getDistanceColor(distance, maxDistance)
-    						};
+    				// Get current head classifications for matching
+    				const currentHeadClassifications = await this.attention_pedia.get_head_types(this.current_head);
+    				
+    				this.heads_display_with_distances = [];
+    				for (const item of headsWithDistances.sort((a, b) => (a.distance || 0) - (b.distance || 0))) {
+    					const distance = item.distance !== undefined ? item.distance : 0;
+    					
+    					// Check if this head has matching classifications
+    					const headClassifications = await this.attention_pedia.get_head_types(item.head_name);
+    					const hasMatchingClassification = headClassifications.some(cls => 
+    						currentHeadClassifications.includes(cls)
+    					);
+    					
+    					this.heads_display_with_distances.push({
+    						headId: item.head_name,
+    						distance: distance,
+    						distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
+    						distanceColor: this.getDistanceColor(distance, maxDistance),
+    						hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head
     					});
+    				}
     				return;
     			}
     
@@ -1380,17 +1385,27 @@
     
     			const maxDistance = Math.max(...headsWithDistances.map(h => h.distance || 0));
     
-    			this.heads_display_with_distances = headsWithDistances
-    				.sort((a, b) => (a.distance || 0) - (b.distance || 0))
-    				.map(item => {
-    					const distance = item.distance !== undefined ? item.distance : 0;
-    					return {
-    						headId: item.head_name,
-    						distance: distance,
-    						distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
-    						distanceColor: this.getDistanceColor(distance, maxDistance)
-    					};
+    			// Get current head classifications for matching
+    			const currentHeadClassifications = await this.attention_pedia.get_head_types(this.current_head);
+    			
+    			this.heads_display_with_distances = [];
+    			for (const item of headsWithDistances.sort((a, b) => (a.distance || 0) - (b.distance || 0))) {
+    				const distance = item.distance !== undefined ? item.distance : 0;
+    				
+    				// Check if this head has matching classifications
+    				const headClassifications = await this.attention_pedia.get_head_types(item.head_name);
+    				const hasMatchingClassification = headClassifications.some(cls => 
+    					currentHeadClassifications.includes(cls)
+    				);
+    				
+    				this.heads_display_with_distances.push({
+    					headId: item.head_name,
+    					distance: distance,
+    					distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
+    					distanceColor: this.getDistanceColor(distance, maxDistance),
+    					hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head
     				});
+    			}
     		},
     
     		getDistanceColor(distance, maxDistance) {
@@ -1549,7 +1564,7 @@
                         <tr>
                             <td class="head-info" x-text="headRow.headId"></td>
                             <td class="distance-cell" :style="`background-color: ${headRow.distanceColor}`" x-text="headRow.distanceText"></td>
-                            <td class="classifications-cell">
+                            <td class="classifications-cell" :class="headRow.hasMatchingClassification ? 'matching-classification' : ''">
                                 <div x-data="classificationComponent(headRow.headId)" x-init="loadData()">
                                     <div class="classifications-container">
                                         <template x-for="classification in classifications" :key="classification">
