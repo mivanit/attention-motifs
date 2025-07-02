@@ -16,6 +16,8 @@
     <script>getConfig();</script>
     <script src="array.js"></script>
     <script src="AttentionPedia.js"></script>
+    <script src="head_embeds.js"></script>
+    <script src="prompts.js"></script>
     <script src="headInfo.js"></script>
     <script src="app.js"></script>
 </head>
@@ -28,18 +30,23 @@
                 <thead>
                     <tr>
                         <th>Head</th>
+                        <th>Distance</th>
                         <th>Classifications</th>
-                        <template x-for="prompt in prompts" :key="prompt">
-                            <th x-text="prompt"></th>
+                        <template x-for="prompt in prompts" :key="prompt.hash">
+                            <th class="prompt-header" @mouseenter="showPromptTooltip($event, prompt)" @mouseleave="hidePromptTooltip()">
+                                <div class="prompt-hash" x-text="prompt.hash"></div>
+                                <div class="prompt-tokens" x-text="`${prompt.n_tokens} tokens`"></div>
+                            </th>
                         </template>
                     </tr>
                 </thead>
                 <tbody>
-                    <template x-for="headId in heads_display" :key="headId">
+                    <template x-for="headRow in heads_display_with_distances" :key="headRow.headId">
                         <tr>
-                            <td class="head-info" x-text="headId"></td>
+                            <td class="head-info" x-text="headRow.headId"></td>
+                            <td class="distance-cell" :style="`background-color: ${headRow.distanceColor}`" x-text="headRow.distanceText"></td>
                             <td class="classifications-cell">
-                                <div x-data="classificationComponent(headId)" x-init="loadData()">
+                                <div x-data="classificationComponent(headRow.headId)" x-init="loadData()">
                                     <div class="classifications-container">
                                         <template x-for="classification in classifications" :key="classification">
                                             <div class="classification-line">
@@ -50,10 +57,10 @@
                                     </div>
                                 </div>
                             </td>
-                            <template x-for="prompt in prompts" :key="prompt">
+                            <template x-for="prompt in prompts" :key="prompt.hash">
                                 <td>
-                                    <div x-data="patternComponent(headId, prompt)" x-init="await init()">
-                                        <img x-show="imageUrl" :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headId} on ${prompt}`">
+                                    <div x-data="patternComponent(headRow.headId, prompt.hash)" x-init="await init()">
+                                        <img x-show="imageUrl" :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headRow.headId} on ${prompt.hash}`">
                                     </div>
                                 </td>
                             </template>

@@ -4,12 +4,110 @@ document.addEventListener('alpine:init', () => {
 		error: null,
 		prompts: [],
 		heads_display: [],
+		heads_display_with_distances: [],
+		current_head: null,
 
 		async init() {
 			this.attention_pedia = new AttentionPedia();
-			this.prompts = CONFIG.prompts;
+			this.head_distances = new HeadDistances();
+			this.prompts_loader = new PromptsLoader();
+			this.prompts = await this.prompts_loader.getPrompts();
 			this.heads_display = CONFIG.heads_display;
+			this.current_head = CONFIG.head_viewing;
+			this.promptTooltip = null;
+			await this.updateHeadsWithDistances();
 			this.loading = false;
+		},
+
+		async updateHeadsWithDistances() {
+			if (!this.current_head) {
+				this.heads_display_with_distances = [];
+				return;
+			}
+
+			// If heads_display is explicitly set, use it
+			if (this.heads_display && Array.isArray(this.heads_display)) {
+				const headsWithDistances = await this.head_distances.getHeadDistances(this.current_head, this.heads_display);
+				const maxDistance = Math.max(...headsWithDistances.map(h => h.distance || 0));
+				
+				this.heads_display_with_distances = headsWithDistances
+					.sort((a, b) => (a.distance || 0) - (b.distance || 0))
+					.map(item => {
+						const distance = item.distance !== undefined ? item.distance : 0;
+						return {
+							headId: item.head_name,
+							distance: distance,
+							distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
+							distanceColor: this.getDistanceColor(distance, maxDistance)
+						};
+					});
+				return;
+			}
+
+			// Auto-populate table with current head + nearby + same class heads
+			const headsToShow = new Set();
+			headsToShow.add(this.current_head);
+
+			// Add nearest heads
+			const n_nearby = CONFIG.table?.n_nearby || 3;
+			const nearestHeads = await this.head_distances.getNearestHeads(this.current_head, n_nearby);
+			nearestHeads.head_names.forEach(head => headsToShow.add(head));
+
+			// Add same class heads
+			const n_share_class = CONFIG.table?.n_share_class || 2;
+			const currentHeadTypes = await this.attention_pedia.get_head_types(this.current_head);
+			for (const type of currentHeadTypes) {
+				const sameTypeHeads = await this.attention_pedia.get_type_heads(type);
+				sameTypeHeads.slice(0, n_share_class).forEach(head => headsToShow.add(head));
+			}
+
+			const allHeads = Array.from(headsToShow);
+			const headsWithDistances = await this.head_distances.getHeadDistances(this.current_head, allHeads);
+
+			const maxDistance = Math.max(...headsWithDistances.map(h => h.distance || 0));
+
+			this.heads_display_with_distances = headsWithDistances
+				.sort((a, b) => (a.distance || 0) - (b.distance || 0))
+				.map(item => {
+					const distance = item.distance !== undefined ? item.distance : 0;
+					return {
+						headId: item.head_name,
+						distance: distance,
+						distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
+						distanceColor: this.getDistanceColor(distance, maxDistance)
+					};
+				});
+		},
+
+		getDistanceColor(distance, maxDistance) {
+			if (distance === 0) return 'rgba(0, 123, 255, 0.1)';
+			const intensity = Math.min(distance / maxDistance, 1);
+			const blue = Math.floor(255 * (1 - intensity * 0.7));
+			return `rgba(0, 123, ${blue}, ${0.2 + intensity * 0.6})`;
+		},
+
+		showPromptTooltip(event, prompt) {
+			// Hide existing tooltip
+			this.hidePromptTooltip();
+
+			const tooltip = document.createElement('div');
+			tooltip.className = 'prompt-tooltip show';
+			tooltip.innerHTML = `<strong>Text:</strong><br>${prompt.text}<br><br><strong>Source:</strong> ${prompt.meta?.pile_set_name || 'Unknown'}`;
+			document.body.appendChild(tooltip);
+
+			// Position tooltip
+			const rect = event.target.getBoundingClientRect();
+			tooltip.style.left = (rect.left + window.scrollX) + 'px';
+			tooltip.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+
+			this.promptTooltip = tooltip;
+		},
+
+		hidePromptTooltip() {
+			if (this.promptTooltip) {
+				this.promptTooltip.remove();
+				this.promptTooltip = null;
+			}
 		},
 
 		patternComponent(headId, promptHash) {

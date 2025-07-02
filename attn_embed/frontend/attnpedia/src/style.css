@@ -146,4 +146,55 @@ body {
 	border-width: 5px;
 	border-style: solid;
 	border-color: transparent #333 transparent transparent;
- }
+}
+
+.prompt-header {
+	min-width: 100px;
+	cursor: help;
+	text-align: center;
+}
+
+.prompt-header:hover {
+	background: #e3f2fd;
+}
+
+.prompt-hash {
+	font-family: monospace;
+	font-size: 11px;
+	font-weight: bold;
+	margin-bottom: 2px;
+}
+
+.prompt-tokens {
+	font-size: 10px;
+	color: #666;
+}
+
+.prompt-tooltip {
+	position: absolute;
+	background: #333;
+	color: white;
+	padding: 12px;
+	border-radius: 8px;
+	font-size: 12px;
+	max-width: 400px;
+	z-index: 1000;
+	opacity: 0;
+	transition: opacity 0.2s;
+	line-height: 1.4;
+	white-space: normal;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+	box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.prompt-tooltip.show {
+	opacity: 1;
+}
+
+.distance-cell {
+	font-family: monospace;
+	font-size: 11px;
+	text-align: center;
+	min-width: 60px;
+}

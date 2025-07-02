@@ -52,19 +52,12 @@ let URL_UPDATE_TIMEOUT = null;
 function getDefaultConfig() {
 	let default_cfg = {
 		head_viewing: "gpt2-small:L5:H5",
-		heads_display: [
-			"gpt2-small:L5:H5",
-			"gpt2-small:L3:H8",
-			"gpt2-small:L7:H2",
-			"pythia-14m:L0:H3",
-			"pythia-14m:L2:H1"
-		],
-		prompts: [
-			"4cI1GEw6ALlDIgyrDHqSNw",
-			"7ACbiDg7tQ7q3vA1mz2I_g",
-			"9Hg1qyV1vUCZPQxUjnXqvQ",
-			"154QVY-xqZlyiFm1FvmMhg",
-		],
+		heads_display: null,
+		table: {
+			n_nearby: 5,
+			n_share_class: 5
+		},
+		prompts_url: "../../../../data/patterns/gpt2-small/prompts.jsonl",
 		patterns_path: "../../../../data/patterns/",
 		attnpedia_url: "ap.json",
 		headDistsnpy_url: "../../../../data/features/head_dists_raw/distances.npy",
