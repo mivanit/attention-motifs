@@ -1508,10 +1508,10 @@ am-frontend-ap-clean:
 am-frontend-bundle: am-frontend-ap-build
 	@echo "bundle embedding display files"
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/embeds-old/src/embeddings.html --output $(FRONTEND_DIR)/embeds-old/embeddings.html
-	cp $(FRONTEND_DIR)/embeds-old/embeddings.html data/features/index.html
-	cp $(FRONTEND_DIR)/embeds-old/embeddings.html data/head_embed/index.html
 	$(PYTHON) -m js_embedding_vis --cfg-path $(FRONTEND_DIR)/embeds/config.json --out-path $(FRONTEND_DIR)/embeds/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_ATTNPEDIA_BUILD_DIR)/index.html --output $(FRONTEND_ATTNPEDIA_DIR)/index.html
+# cp $(FRONTEND_DIR)/embeds-old/embeddings.html data/features/index.html
+# cp $(FRONTEND_DIR)/embeds-old/embeddings.html data/head_embed/index.html
 
 
 .PHONY: am-server-embed
