@@ -41,13 +41,16 @@ def compute_normalization(cfg: PipelineConfig) -> tuple[pl.DataFrame, list[str]]
 
 	if cfg.verbose > 0:
 		dbg_tensor(data_filtered[feature_cols].to_numpy())
-
+	
 	data_scaled: pl.DataFrame
 	_data_norms: pl.DataFrame
 	data_scaled, _data_norms = normalize_data(data_filtered, feature_cols)
+
+	# save the normalized data, and what we normalized by
 	_data_norms.write_ndjson(cfg.data_path("norms"))
 	data_scaled.write_ndjson(cfg.data_path("scaled"))
 
+	# print some debug information
 	if cfg.verbose > 1:
 		dbg(null_stats(data_scaled))
 	if cfg.verbose > 0:
@@ -67,6 +70,8 @@ def compute_pca(
 	meta_cols: list[str] = [
 		col for col in data_scaled.columns if col.startswith("activation.")
 	]
+
+	# compute PCA
 	pca_data: np.ndarray
 	pca_obj: PCA
 	pca_data, pca_obj = apply_pca(
@@ -75,9 +80,16 @@ def compute_pca(
 		feature_cols=feature_cols,
 		plot_variance=cfg.do_figures,
 	)
+	# save raw PCA data
+	np.save(
+		cfg.data_path("pca_npy"),
+		pca_data,
+	)
+	# PCA importance figure
 	if cfg.do_figures:
 		plt.savefig(cfg.figure_path("pca"), bbox_inches="tight", pad_inches=0.01)
 
+	# debug printing
 	if cfg.verbose > 0:
 		dbg_tensor(pca_data)
 		dbg_tensor(pca_obj.components_)
@@ -94,106 +106,19 @@ def compute_pca(
 		],
 		how="horizontal",
 	)
+	# save PCA as table
 	df_pca.write_ndjson(cfg.data_path("pca"))
 
+
+	# importance table
 	df_importance: pl.DataFrame = pca_importance_table(
 		pca_obj,
 		feature_names=feature_cols,
 	)
 	# df_importance.sort(pl.col("PC0").abs(), descending=True)
+	df_importance.write_ndjson(cfg.data_path("importance"))
 
 	return df_importance, pca_data
-
-
-def plot_feat_covariance(
-	cfg: PipelineConfig,
-	data_scaled: pl.DataFrame,
-	df_importance: pl.DataFrame,
-) -> None:
-	cov_feats: list[str]
-	cov_mat: Float[np.ndarray, "n_features n_features"]
-
-	# full covariance matrix
-	cov_feats, cov_mat = plot_importance_covariance(
-		data_scaled,
-		df_importance,
-		# feature_order=sorted(FEATURE_COLS, key=lambda x: x.split(".")[-1]),
-		metrics=["abs_max", "abs_mean"],
-		descending=True,
-		cmap="coolwarm",
-		figsize=(20, 20),
-		tick_pad=100,
-		imp_legend_align=-0.15,
-	)
-	plt.savefig(cfg.figure_path("cov_full"), bbox_inches="tight", pad_inches=0.01)
-
-	# reduced
-	plot_importance_covariance(
-		data_scaled,
-		df_importance,
-		# feature_order=sorted(FEATURE_COLS, key=lambda x: x.split(".")[-1]),
-		metrics=["abs_max", "abs_mean"],
-		descending=True,
-		cmap="coolwarm",
-		figsize=(10, 10),
-		tick_pad=100,
-		importance_threshold=0.2,
-	)
-	plt.savefig(
-		cfg.figure_path("cov_reduced"),
-		bbox_inches="tight",
-		pad_inches=0.01,
-	)
-
-
-def plot_pca_all(
-	cfg: PipelineConfig,
-	data_scaled: pl.DataFrame,
-	pca_data: np.ndarray,
-) -> None:
-	n_dims: int = cfg.plot_kwargs.get("n_dims", 5)
-	embed_fig, embed_ax = plt.subplots(
-		n_dims - 1,
-		n_dims - 1,
-		figsize=(15, 15),
-	)
-	for i in range(n_dims - 1):
-		for j in range(i + 1, n_dims):
-			handles = plot_embedding(
-				embedding=pca_data,
-				labels=data_scaled["activation.model"],
-				dims=(i, j),
-				alpha=0.1,
-				marker_size=1,
-				title=f"({i}, {j})",
-				ax=embed_ax[i, j - 1],
-				do_legend=False,
-			)
-			embed_ax[i, j - 1].set_ylabel(None)
-
-		for k in range(i):
-			embed_ax[i, k].axis("off")
-
-	plt.legend(
-		handles=handles,
-		loc="lower left",
-		bbox_to_anchor=(-3, 1),
-		title="Models",
-		fontsize=16,
-		title_fontsize=20,
-	)
-	# fig_pca_all_png: Path = PATH_FIGURES / "pca-all.png"
-	# print(f"saving to {fig_pca_all_png}")
-	# plt.savefig(fig_pca_all_png, dpi=250, bbox_inches="tight", pad_inches=0.01)
-	fig_pca_all_jpg: Path = cfg.figure_path("pca_all")
-	print(f"saving to {fig_pca_all_jpg}")
-	plt.savefig(
-		fig_pca_all_jpg,
-		bbox_inches="tight",
-		pad_inches=0.01,
-		dpi=cfg.plot_kwargs.get("pca_all_dpi", 500)
-	)
-
 
 def feat_proc(cfg: PipelineConfig) -> None:
 	"""Main function to run the pipeline."""
@@ -208,28 +133,11 @@ def feat_proc(cfg: PipelineConfig) -> None:
 	data_scaled, feature_cols = compute_normalization(cfg=cfg)
 
 	# compute PCA
-	df_importance: pl.DataFrame
-	pca_data: np.ndarray
-	df_importance, pca_data = compute_pca(
+	compute_pca(
 		cfg=cfg,
 		data_scaled=data_scaled,
 		feature_cols=feature_cols,
 	)
-
-	# compute covariance
-	if cfg.do_figures:
-		plot_feat_covariance(
-			cfg=cfg,
-			data_scaled=data_scaled,
-			df_importance=df_importance,
-		)
-
-		# plot PCA all
-		plot_pca_all(
-			cfg=cfg,
-			data_scaled=data_scaled,
-			pca_data=pca_data,
-		)
 
 
 if __name__ == "__main__":

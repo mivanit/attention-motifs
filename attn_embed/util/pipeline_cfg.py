@@ -16,15 +16,21 @@ python {script_path} some/path/my_cfg.toml --prompts-n-samples 1000 --models gpt
 
 
 DataFilename = Literal[
-	"raw", "norms", "scaled", "pca", "head_dists_zanj", "head_dists_raw"
+	"raw", "norms", "scaled", "pca", "pca_npy", "head_dists_zanj", "head_dists_raw"
 ]
 FigureFilename = Literal["pca", "cov_full", "cov_reduced", "pca_all", "head_dists"]
+
+PlotKwargKey = Literal[
+	"pca_all_dpi",
+]
 
 DATA_FNAMES: dict[DataFilename, str] = dict(
 	raw="raw.jsonl",
 	norms="norms.jsonl",
 	scaled="scaled.jsonl",
+	importance="importance.jsonl",
 	pca="pca.jsonl",
+	pca_npy="pca.npy",
 	head_dists_zanj="head_dists.zanj",
 	head_dists_raw="head_dists_raw",
 )
@@ -72,16 +78,16 @@ class PipelineConfig:
 
 	# output paths
 	features_dir: Path
-	data_fnames: dict[str, str] = field(
+	data_fnames: dict[DataFilename, str] = field(
 		default_factory=lambda: DATA_FNAMES,
 	)
 
 	# plotting/logging
 	figures_dir: Path | None = None
-	figures_fnames: dict[str, str] = field(
+	figures_fnames: dict[FigureFilename, str] = field(
 		default_factory=lambda: FIGURE_FNAMES,
 	)
-	plot_kwargs: dict[str, str] = field(
+	plot_kwargs: dict[PlotKwargKey, str] = field(
 		default_factory=lambda: dict(
 			pca_all_dpi=500,  # default DPI for PCA all figure
 		),
