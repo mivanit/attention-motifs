@@ -82,7 +82,9 @@ class PipelineConfig:
 		default_factory=lambda: FIGURE_FNAMES,
 	)
 	plot_kwargs: dict[str, str] = field(
-		default_factory=lambda: dict(),
+		default_factory=lambda: dict(
+			pca_all_dpi=500,  # default DPI for PCA all figure
+		),
 	)
 	verbose: int = 1
 

@@ -187,7 +187,12 @@ def plot_pca_all(
 	# plt.savefig(fig_pca_all_png, dpi=250, bbox_inches="tight", pad_inches=0.01)
 	fig_pca_all_jpg: Path = cfg.figure_path("pca_all")
 	print(f"saving to {fig_pca_all_jpg}")
-	plt.savefig(fig_pca_all_jpg, bbox_inches="tight", pad_inches=0.01, dpi=500)
+	plt.savefig(
+		fig_pca_all_jpg,
+		bbox_inches="tight",
+		pad_inches=0.01,
+		dpi=cfg.plot_kwargs.get("pca_all_dpi", 500)
+	)
 
 
 def feat_proc(cfg: PipelineConfig) -> None:
