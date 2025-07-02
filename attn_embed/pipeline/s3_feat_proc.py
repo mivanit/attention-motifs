@@ -1,9 +1,7 @@
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
-from jaxtyping import Float
 from muutils.dbg import dbg, dbg_tensor
 from sklearn.decomposition import PCA
 
@@ -16,11 +14,9 @@ from attn_embed.features.analysis import (
 	normalize_data,
 	null_stats,
 	pca_importance_table,
-	plot_importance_covariance,
 )
 from attn_embed.features.plotting import (
 	apply_pca,
-	plot_embedding,
 )
 
 
@@ -41,7 +37,7 @@ def compute_normalization(cfg: PipelineConfig) -> tuple[pl.DataFrame, list[str]]
 
 	if cfg.verbose > 0:
 		dbg_tensor(data_filtered[feature_cols].to_numpy())
-	
+
 	data_scaled: pl.DataFrame
 	_data_norms: pl.DataFrame
 	data_scaled, _data_norms = normalize_data(data_filtered, feature_cols)
@@ -109,7 +105,6 @@ def compute_pca(
 	# save PCA as table
 	df_pca.write_ndjson(cfg.data_path("pca"))
 
-
 	# importance table
 	df_importance: pl.DataFrame = pca_importance_table(
 		pca_obj,
@@ -119,6 +114,7 @@ def compute_pca(
 	df_importance.write_ndjson(cfg.data_path("importance"))
 
 	return df_importance, pca_data
+
 
 def feat_proc(cfg: PipelineConfig) -> None:
 	"""Main function to run the pipeline."""

@@ -4,22 +4,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
 from jaxtyping import Float
-from muutils.dbg import dbg, dbg_tensor
-from sklearn.decomposition import PCA
 
 from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
 
 
 # attention-motifs
 from attn_embed.features.analysis import (
-	filter_data,
-	normalize_data,
-	null_stats,
-	pca_importance_table,
 	plot_importance_covariance,
 )
 from attn_embed.features.plotting import (
-	apply_pca,
 	plot_embedding,
 )
 
@@ -110,7 +103,7 @@ def plot_pca_all(
 		fig_pca_all_jpg,
 		bbox_inches="tight",
 		pad_inches=0.01,
-		dpi=cfg.plot_kwargs.get("pca_all_dpi", 500)
+		dpi=cfg.plot_kwargs.get("pca_all_dpi", 500),
 	)
 
 

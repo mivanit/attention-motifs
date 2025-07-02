@@ -20,9 +20,7 @@ DataFilename = Literal[
 ]
 FigureFilename = Literal["pca", "cov_full", "cov_reduced", "pca_all", "head_dists"]
 
-PlotKwargKey = Literal[
-	"pca_all_dpi",
-]
+PlotKwargKey = Literal["pca_all_dpi",]
 
 DATA_FNAMES: dict[DataFilename, str] = dict(
 	raw="raw.jsonl",
