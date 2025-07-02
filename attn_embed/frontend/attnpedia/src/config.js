@@ -65,8 +65,10 @@ function getDefaultConfig() {
 			"9Hg1qyV1vUCZPQxUjnXqvQ",
 			"154QVY-xqZlyiFm1FvmMhg",
 		],
-		patterns_path: "../../../../docs/demo",
+		patterns_path: "../../../../data/patterns/",
 		attnpedia_url: "ap.json",
+		headDistsnpy_url: "../../../../data/features/head_dists_raw/distances.npy",
+		headDistsmeta_url: "../../../../data/features/head_dists_raw/dists_meta.json",
 	};
 
 	if (INLINE_CONFIG) {
