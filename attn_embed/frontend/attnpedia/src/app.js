@@ -17,6 +17,11 @@ document.addEventListener('alpine:init', () => {
 			this.heads_display = CONFIG.heads_display;
 			this.current_head = CONFIG.head_viewing;
 			this.promptTooltip = null;
+			
+			// Set pattern size CSS variable
+			const patternSize = CONFIG.pattern_size || 120;
+			document.documentElement.style.setProperty('--pattern-size', `${patternSize}px`);
+			
 			await this.updateHeadsWithDistances();
 			this.loading = false;
 		},
@@ -65,40 +70,102 @@ document.addEventListener('alpine:init', () => {
 			const nearestHeads = await this.head_distances.getNearestHeads(this.current_head, n_nearby);
 			nearestHeads.head_names.forEach(head => headsToShow.add(head));
 
-			// Add same class heads
+			// Get all heads with distances to identify gaps
+			const allHeadsWithDistances = await this.head_distances.getHeadDistances(this.current_head, Array.from(headsToShow));
+			const sortedByDistance = allHeadsWithDistances.sort((a, b) => a.distance - b.distance);
+
+			// Add same class heads and track where they fit in distance order
 			const n_share_class = CONFIG.table?.n_share_class || 2;
 			const currentHeadTypes = await this.attention_pedia.get_head_types(this.current_head);
+			const sameClassHeads = new Set();
+			
 			for (const type of currentHeadTypes) {
 				const sameTypeHeads = await this.attention_pedia.get_type_heads(type);
-				sameTypeHeads.slice(0, n_share_class).forEach(head => headsToShow.add(head));
+				sameTypeHeads.slice(0, n_share_class).forEach(head => {
+					if (!headsToShow.has(head)) {
+						headsToShow.add(head);
+						sameClassHeads.add(head);
+					}
+				});
 			}
 
-			const allHeads = Array.from(headsToShow);
-			const headsWithDistances = await this.head_distances.getHeadDistances(this.current_head, allHeads);
+			const finalHeadsWithDistances = await this.head_distances.getHeadDistances(this.current_head, Array.from(headsToShow));
 
-			const maxDistance = Math.max(...headsWithDistances.map(h => h.distance || 0));
+			// Create ordered list with gap indicators
+			const sortedFinal = finalHeadsWithDistances.sort((a, b) => a.distance - b.distance);
+			const rowsWithGaps = this.insertGapRows(sortedFinal, nearestHeads, sameClassHeads);
+
+			const maxDistance = Math.max(...finalHeadsWithDistances.map(h => h.distance || 0));
 
 			// Get current head classifications for matching
 			const currentHeadClassifications = await this.attention_pedia.get_head_types(this.current_head);
 			
 			this.heads_display_with_distances = [];
-			for (const item of headsWithDistances.sort((a, b) => (a.distance || 0) - (b.distance || 0))) {
-				const distance = item.distance !== undefined ? item.distance : 0;
-				
-				// Check if this head has matching classifications
-				const headClassifications = await this.attention_pedia.get_head_types(item.head_name);
-				const hasMatchingClassification = headClassifications.some(cls => 
-					currentHeadClassifications.includes(cls)
-				);
-				
-				this.heads_display_with_distances.push({
-					headId: item.head_name,
-					distance: distance,
-					distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
-					distanceColor: this.getDistanceColor(distance, maxDistance),
-					hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head
-				});
+			for (const item of rowsWithGaps) {
+				if (item.isGap) {
+					// Add gap row
+					this.heads_display_with_distances.push({
+						isGap: true,
+						gapCount: item.gapCount,
+						nextDistance: item.nextDistance,
+						expandable: true,
+						expanded: false
+					});
+				} else {
+					const distance = item.distance !== undefined ? item.distance : 0;
+					
+					// Check if this head has matching classifications
+					const headClassifications = await this.attention_pedia.get_head_types(item.head_name);
+					const hasMatchingClassification = headClassifications.some(cls => 
+						currentHeadClassifications.includes(cls)
+					);
+					
+					this.heads_display_with_distances.push({
+						headId: item.head_name,
+						distance: distance,
+						distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
+						distanceColor: this.getDistanceColor(distance, maxDistance),
+						hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head
+					});
+				}
 			}
+		},
+
+		insertGapRows(sortedHeads, nearestHeads, sameClassHeads) {
+			const result = [];
+			let lastNearbyIndex = -1;
+			
+			// Find the last index of nearby heads in the sorted list
+			for (let i = 0; i < sortedHeads.length; i++) {
+				if (nearestHeads.head_names.includes(sortedHeads[i].head_name) || sortedHeads[i].head_name === this.current_head) {
+					lastNearbyIndex = i;
+				}
+			}
+			
+			// Add all heads up to and including the last nearby head
+			for (let i = 0; i <= lastNearbyIndex; i++) {
+				result.push(sortedHeads[i]);
+			}
+			
+			// Check for gaps when adding same-class heads
+			let nextNearbyIndex = lastNearbyIndex + 1;
+			for (let i = lastNearbyIndex + 1; i < sortedHeads.length; i++) {
+				if (sameClassHeads.has(sortedHeads[i].head_name)) {
+					// Check if there's a gap
+					const gapSize = i - nextNearbyIndex;
+					if (gapSize > 0) {
+						result.push({
+							isGap: true,
+							gapCount: gapSize,
+							nextDistance: sortedHeads[i].distance
+						});
+					}
+					result.push(sortedHeads[i]);
+					nextNearbyIndex = i + 1;
+				}
+			}
+			
+			return result;
 		},
 
 		getDistanceColor(distance, maxDistance) {
@@ -130,6 +197,15 @@ document.addEventListener('alpine:init', () => {
 				this.promptTooltip.remove();
 				this.promptTooltip = null;
 			}
+		},
+
+		async expandGap(index) {
+			// TODO: Implement gap expansion logic
+			// This would fetch the skipped heads and insert them into the table
+			console.log('Expanding gap at index:', index);
+			// For now, just mark as expanded
+			this.heads_display_with_distances[index].expanded = true;
+			this.heads_display_with_distances[index].expandable = false;
 		},
 
 		patternComponent(headId, promptHash) {

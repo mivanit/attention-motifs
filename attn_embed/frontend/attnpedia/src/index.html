@@ -41,8 +41,20 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <template x-for="headRow in heads_display_with_distances" :key="headRow.headId">
-                        <tr>
+                    <template x-for="(headRow, index) in heads_display_with_distances" :key="headRow.headId || `gap-${index}`">
+                        <!-- Gap row -->
+                        <tr x-show="headRow.isGap" class="gap-row">
+                            <td class="gap-cell" :colspan="3 + prompts.length">
+                                <div class="gap-content">
+                                    <span x-text="`... ${headRow.gapCount} heads skipped (distance > ${headRow.nextDistance?.toFixed(3)}) ...`"></span>
+                                    <button class="gap-expand-btn" @click="expandGap(index)" x-show="headRow.expandable">
+                                        Expand
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- Regular head row -->
+                        <tr x-show="!headRow.isGap">
                             <td class="head-info" x-text="headRow.headId"></td>
                             <td class="distance-cell" :style="`background-color: ${headRow.distanceColor}`" x-text="headRow.distanceText"></td>
                             <td class="classifications-cell" :class="headRow.hasMatchingClassification ? 'matching-classification' : ''">

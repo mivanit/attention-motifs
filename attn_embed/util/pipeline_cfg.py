@@ -43,18 +43,18 @@ FIGURE_FNAMES: dict[FigureFilename, str] = dict(
 
 
 def _ser_path(path: Path) -> str | None:
-	"""Serialize a Path object to a string."""
+	"""Serialize a Path object to a string"""
 	return path.as_posix() if path is not None else None
 
 
 def _deser_path(path_str: str | None) -> Path | None:
-	"""Deserialize a string to a Path object."""
+	"""Deserialize a string to a Path object"""
 	return Path(path_str) if path_str is not None else None
 
 
 @dataclass(kw_only=True)
 class PipelineConfig:
-	"""Configuration for the attention motifs pipeline."""
+	"""Configuration for the attention motifs pipeline"""
 
 	# input paths
 	prompts_file: Path
@@ -94,7 +94,7 @@ class PipelineConfig:
 
 	@property
 	def do_figures(self) -> bool:
-		"""Check if figures are enabled."""
+		"""Check if figures are enabled"""
 		return self.figures_dir is not None
 
 	def data_path(self, fname: DataFilename) -> Path:
@@ -103,45 +103,45 @@ class PipelineConfig:
 	def figure_path(self, fname: FigureFilename) -> Path:
 		if self.figures_dir is None:
 			raise ValueError(
-				"figures_dir is not set, this means figures should be disabled."
+				"figures_dir is not set, this means figures should be disabled"
 			)
 		return self.figures_dir / self.figures_fnames[fname]
 
 	def validate_cfg(self) -> None:
 		# TODO: check models actually exist in TransformerLens?
 		assert all(isinstance(model, str) for model in self.models), (
-			"All models must be strings."
+			"All models must be strings"
 		)
 		assert isinstance(self.prompts_n_samples, int) and self.prompts_n_samples > 0, (
-			"prompts_n_samples must be a positive integer."
+			"prompts_n_samples must be a positive integer"
 		)
 		# assert self.prompts_file.is_file(), (
-		# 	f"prompts_file {self.prompts_file} does not exist."
+		# 	f"prompts_file {self.prompts_file} does not exist"
 		# )
 		# assert not self.patterns_dir.is_file(), (
-		# 	f"patterns_dir {self.patterns_dir} must be a directory."
+		# 	f"patterns_dir {self.patterns_dir} must be a directory"
 		# )
 		# assert not self.features_dir.is_file(), (
-		# 	f"features_dir {self.features_dir} must be a directory."
+		# 	f"features_dir {self.features_dir} must be a directory"
 		# )
 		assert isinstance(self.n_proc, int) and self.n_proc > 0, (
-			"n_proc must be a positive integer."
+			"n_proc must be a positive integer"
 		)
 		assert isinstance(self.force_overwrite, bool), (
-			"force_overwrite must be a boolean."
+			"force_overwrite must be a boolean"
 		)
 		assert isinstance(self.device, str), (
-			"device must be a string representing the torch device (e.g., 'cpu', 'cuda')."
+			"device must be a string representing the torch device (e.g., 'cpu', 'cuda')"
 		)
 		assert self.prompts_min_chars >= 0, (
-			"prompts_min_chars must be a non-negative integer."
+			"prompts_min_chars must be a non-negative integer"
 		)
 		assert self.prompts_max_chars >= self.prompts_min_chars, (
-			"prompts_max_chars must be greater than or equal to prompts_min_chars."
+			"prompts_max_chars must be greater than or equal to prompts_min_chars"
 		)
 
 	def as_str(self) -> str:
-		"""Return a string representation of the configuration."""
+		"""Return a string representation of the configuration"""
 		return "\n".join(
 			[
 				"PipelineConfig(",
@@ -157,16 +157,16 @@ class PipelineConfig:
 		)
 
 	def __str__(self) -> str:
-		"""Return a string representation of the configuration."""
+		"""Return a string representation of the configuration"""
 		return self.as_str()
 
 	def __repr__(self) -> str:
-		"""Return a string representation of the configuration."""
+		"""Return a string representation of the configuration"""
 		return self.as_str()
 
 	@classmethod
 	def load(cls, data: dict) -> "PipelineConfig":
-		"""Load configuration from a dictionary."""
+		"""Load configuration from a dictionary"""
 		config: "PipelineConfig" = cls(
 			prompts_n_samples=data["prompts_n_samples"],
 			n_proc=data["n_proc"],
@@ -198,7 +198,7 @@ class PipelineConfig:
 
 	@classmethod
 	def from_toml(cls, path: Path) -> "PipelineConfig":
-		"""Load configuration from a TOML file."""
+		"""Load configuration from a TOML file"""
 		with path.open("rb") as f:
 			data: dict = tomllib.load(f)
 		return cls.load(data)
@@ -235,48 +235,48 @@ class PipelineConfig:
 			nargs="?",
 			default="pipeline_cfg.toml",
 			type=Path,
-			help="Path to a TOML config file (default: pipeline_cfg.toml).",
+			help="Path to a TOML config file (default: pipeline_cfg.toml)",
 		)
 
 		# overrideable fields
 		parser.add_argument(
-			"--models", type=str, help="Comma-separated list of model names."
+			"--models", type=str, help="Comma-separated list of model names"
 		)
 		parser.add_argument(
-			"--prompts-n-samples", type=int, help="Number of samples per prompt."
+			"--prompts-n-samples", type=int, help="Number of samples per prompt"
 		)
-		parser.add_argument("--n_proc", type=int, help="Number of parallel processes.")
+		parser.add_argument("--n_proc", type=int, help="Number of parallel processes")
 		parser.add_argument(
-			"--prompts-file", type=Path, help="Path to the prompts file."
-		)
-		parser.add_argument(
-			"--patterns-dir", type=Path, help="Directory for learned patterns."
+			"--prompts-file", type=Path, help="Path to the prompts file"
 		)
 		parser.add_argument(
-			"--features-dir", type=Path, help="Directory for extracted features."
+			"--patterns-dir", type=Path, help="Directory for learned patterns"
+		)
+		parser.add_argument(
+			"--features-dir", type=Path, help="Directory for extracted features"
 		)
 		parser.add_argument(
 			"--device",
 			type=str,
-			default="cpu",
-			help="torch device to use (default: cpu).",
+			default=None,
+			help="torch device to use",
 		)
 		parser.add_argument(
 			"--force_overwrite",
 			action="store_true",
-			help="Force overwrite existing files.",
+			help="Force overwrite existing files",
 		)
 		parser.add_argument(
 			"--figures-dir",
 			type=Path,
 			default=None,
-			help="Directory for plots (default: None, no plots).",
+			help="Directory for plots (default: None, no plots)",
 		)
 		parser.add_argument(
 			"--verbose",
 			type=int,
 			default=1,
-			help="Verbosity level (default: 1). Higher values mean more output.",
+			help="Verbosity level (default: 1). Higher values mean more output",
 		)
 
 		args: argparse.Namespace = parser.parse_args(argv)
@@ -310,7 +310,7 @@ class PipelineConfig:
 
 
 def pipeline_step_major(msg: str) -> None:
-	"""Print a message for a pipeline step."""
+	"""Print a message for a pipeline step"""
 	# print(f"\033[94m==================== {msg} ====================\033[m")
 	import shutil
 

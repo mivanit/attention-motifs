@@ -15,9 +15,9 @@ patterns_dir = "data/patterns"
 # how many total prompts to use
 prompts_n_samples = 128
 # minimum chars per prompt
-prompts_min_chars = 100
+prompts_min_chars = 64
 # maximum chars per prompt
-prompts_max_chars = 1000
+prompts_max_chars = 512
 
 # data processing
 # ============================================================

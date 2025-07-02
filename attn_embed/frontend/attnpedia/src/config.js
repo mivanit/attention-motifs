@@ -58,6 +58,7 @@ function getDefaultConfig() {
 			n_share_class: 5
 		},
 		n_prompts: 5,
+		pattern_size: 120,
 		prompts_url: "../../../../data/patterns/gpt2-small/prompts.jsonl",
 		patterns_path: "../../../../data/patterns/",
 		attnpedia_url: "ap.json",
