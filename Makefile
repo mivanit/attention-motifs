@@ -1444,7 +1444,7 @@ help: help-targets info
 # --------------------------------------------------
 HF_TOKEN ?= $(shell cat .meta/local/.hf_token)
 # modify this file, or point to a different one
-PIPELINE_CFG_PATH ?= pipeline/pipeline_cfg.toml
+PIPELINE_CFG_PATH ?= pipeline_cfg.toml
 FEAT_KWARGS ?=
 # --------------------------------------------------
 

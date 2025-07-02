@@ -1,20 +1,22 @@
 # models -- which models to use
 models = [
-	# "pythia-14m",
-	# "tiny-stories-1M",
-	"pythia-410m",
+	# "pythia-410m",
 	"pythia-1b",
 	"gpt2-small",
 	"gpt2-medium",
-	"gpt2-large",
-	"Llama-3.2-1B",
-	"Llama-3.2-1B-Instruct",
+	# "gpt2-large",
+	"meta-llama/Llama-3.2-1B",
+	# "Llama-3.2-1B",
+	# "Llama-3.2-1B-Instruct",
 	"gemma-2b",
 	"gemma-2-2b",
+	# these are tiny and look weird
+	# "pythia-14m",
+	# "tiny-stories-1M",
 ]
 
 # paths -- where to find stuff and where to save it
-prompts_file = "data/test/pile_demo.jsonl"
+prompts_file = "data/text/pile_demo.jsonl"
 patterns_dir = "data/patterns"
 # patterns_dir = "/home/miv/projects/attn/website/patterns/docs"
 features_dir = "data/features"
@@ -26,4 +28,8 @@ prompts_max_chars = 1000
 
 # computing -- no effect on the results
 n_proc = 12
-device = "cpu"
+device = "cuda:0"
+
+# 
+verbose = 99
+figures_dir = "data/figures"
