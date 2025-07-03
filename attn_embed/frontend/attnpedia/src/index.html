@@ -56,7 +56,9 @@
                     </tr>
                     <template x-for="(headRow, index) in heads_display_with_distances" :key="headRow.headId || `gap-${index}`">
                         <tr>
-                            <td class="head-info" x-text="headRow.headId"></td>
+                            <td class="head-info">
+                                <a :href="getHeadLink(headRow.headId)" x-text="headRow.headId" class="head-link"></a>
+                            </td>
                             <td class="distance-cell" :style="`background-color: ${headRow.distanceColor}`" x-text="headRow.distanceText"></td>
                             <td class="classifications-cell" :class="headRow.hasMatchingClassification ? 'matching-classification' : ''" 
                                 x-data="classificationComponent(headRow.headId)" x-init="await loadData()">

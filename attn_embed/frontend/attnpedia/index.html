@@ -56,6 +56,15 @@
     	font-family: monospace;
     }
     
+    .head-link {
+    	color: #1565c0;
+    	text-decoration: none;
+    }
+    
+    .head-link:hover {
+    	text-decoration: underline;
+    }
+    
     .pattern-image {
     	width: var(--pattern-size, 120px);
     	height: var(--pattern-size, 120px);
@@ -1880,6 +1889,13 @@
     			return `rgba(0, 123, ${blue}, ${0.2 + intensity * 0.6})`;
     		},
     
+    		getHeadLink(headId) {
+    			// Create a new URL with the head_viewing parameter set to this head
+    			const url = new URL(window.location.href);
+    			url.searchParams.set('head_viewing', headId);
+    			return url.toString();
+    		},
+    
     		showPromptTooltip(event, prompt) {
     			// Hide existing tooltip
     			this.hidePromptTooltip();
@@ -2065,7 +2081,9 @@
                     </tr>
                     <template x-for="(headRow, index) in heads_display_with_distances" :key="headRow.headId || `gap-${index}`">
                         <tr>
-                            <td class="head-info" x-text="headRow.headId"></td>
+                            <td class="head-info">
+                                <a :href="getHeadLink(headRow.headId)" x-text="headRow.headId" class="head-link"></a>
+                            </td>
                             <td class="distance-cell" :style="`background-color: ${headRow.distanceColor}`" x-text="headRow.distanceText"></td>
                             <td class="classifications-cell" :class="headRow.hasMatchingClassification ? 'matching-classification' : ''" 
                                 x-data="classificationComponent(headRow.headId)" x-init="await loadData()">

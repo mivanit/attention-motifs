@@ -154,6 +154,13 @@ document.addEventListener('alpine:init', () => {
 			return `rgba(0, 123, ${blue}, ${0.2 + intensity * 0.6})`;
 		},
 
+		getHeadLink(headId) {
+			// Create a new URL with the head_viewing parameter set to this head
+			const url = new URL(window.location.href);
+			url.searchParams.set('head_viewing', headId);
+			return url.toString();
+		},
+
 		showPromptTooltip(event, prompt) {
 			// Hide existing tooltip
 			this.hidePromptTooltip();

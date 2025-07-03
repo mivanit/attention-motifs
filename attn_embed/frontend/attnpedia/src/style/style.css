@@ -41,6 +41,15 @@ body {
 	font-family: monospace;
 }
 
+.head-link {
+	color: #1565c0;
+	text-decoration: none;
+}
+
+.head-link:hover {
+	text-decoration: underline;
+}
+
 .pattern-image {
 	width: var(--pattern-size, 120px);
 	height: var(--pattern-size, 120px);
