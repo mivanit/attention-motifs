@@ -12,7 +12,9 @@
     <title>Attention Head Analysis</title>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="notif.css">
     <script src="config.js"></script>
+    <script src="notif.js"></script>
     <script>getConfig();</script>
     <script src="array.js"></script>
     <script src="AttentionPedia.js"></script>
@@ -41,39 +43,65 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <template x-for="(headRow, index) in heads_display_with_distances" :key="headRow.headId || `gap-${index}`">
-                        <!-- Gap row -->
-                        <tr x-show="headRow.isGap" class="gap-row">
-                            <td class="gap-cell" :colspan="3 + prompts.length">
-                                <div class="gap-content">
-                                    <span x-text="`... ${headRow.gapCount} heads skipped (distance > ${headRow.nextDistance?.toFixed(3)}) ...`"></span>
-                                    <button class="gap-expand-btn" @click="expandGap(index)" x-show="headRow.expandable">
-                                        Expand
-                                    </button>
-                                </div>
-                            </td>
+                    <!-- Loading state -->
+                    <tr x-show="loading">
+                        <td :colspan="3 + prompts.length" style="text-align: center; padding: 20px; color: #666;">
+                            Loading attention heads data...
+                        </td>
+                    </tr>
+                    <!-- Debug info -->
+                    <tr x-show="!loading && heads_display_with_distances.length === 0">
+                        <td :colspan="3 + prompts.length" style="text-align: center; padding: 20px; color: #666;">
+                            No heads data available (length: <span x-text="heads_display_with_distances.length"></span>)
+                        </td>
+                    </tr>
+                    <tr x-show="!loading && heads_display_with_distances.length > 0" style="background: #f0f0f0;">
+                        <td :colspan="3 + prompts.length" style="text-align: center; padding: 10px; font-size: 12px;">
+                            Debug: Found <span x-text="heads_display_with_distances.length"></span> heads to display
+                        </td>
+                    </tr>
+                    <!-- Simple test row to see if template works -->
+                    <tr x-show="!loading && heads_display_with_distances.length > 0" style="background: #ffffcc;">
+                        <td>TEST ROW</td>
+                        <td>WORKS</td>
+                        <td>YEP</td>
+                        <template x-for="prompt in prompts" :key="prompt.hash">
+                            <td>IMG</td>
+                        </template>
+                    </tr>
+                    <!-- Test x-for loop -->
+                    <template x-for="(headRow, index) in heads_display_with_distances.slice(0, 2)" :key="`test-${index}`">
+                        <tr style="background: #ffcccc;">
+                            <td x-text="`Item ${index}`"></td>
+                            <td x-text="headRow.headId || 'NO_ID'"></td>
+                            <td x-text="headRow.isGap ? 'GAP' : 'HEAD'"></td>
+                            <template x-for="prompt in prompts" :key="prompt.hash">
+                                <td>TEST</td>
+                            </template>
                         </tr>
-                        <!-- Regular head row -->
-                        <tr x-show="!headRow.isGap">
+                    </template>
+                    <!-- Minimal actual template test -->
+                    <template x-for="(headRow, index) in heads_display_with_distances.slice(0, 1)" :key="`minimal-${index}`">
+                        <tr x-show="!headRow.isGap" style="background: #ccffcc;">
+                            <td x-text="headRow.headId"></td>
+                            <td x-text="headRow.distanceText"></td>
+                            <td>Classifications here</td>
+                            <template x-for="prompt in prompts" :key="prompt.hash">
+                                <td>Pattern</td>
+                            </template>
+                        </tr>
+                    </template>
+                    <template x-for="(headRow, index) in heads_display_with_distances" :key="headRow.headId || `gap-${index}`">
+                        <!-- Always show regular head row for testing -->
+                        <tr>
                             <td class="head-info" x-text="headRow.headId"></td>
                             <td class="distance-cell" :style="`background-color: ${headRow.distanceColor}`" x-text="headRow.distanceText"></td>
                             <td class="classifications-cell" :class="headRow.hasMatchingClassification ? 'matching-classification' : ''">
-                                <div x-data="classificationComponent(headRow.headId)" x-init="loadData()">
-                                    <div class="classifications-container">
-                                        <template x-for="classification in classifications" :key="classification">
-                                            <div class="classification-line">
-                                                <span class="classification-tag" @mouseenter="showTooltip($event, classification)" @mouseleave="hideTooltip()" x-text="classification">
-                                                </span>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </div>
+                                Classifications loading...
                             </td>
                             <template x-for="prompt in prompts" :key="prompt.hash">
                                 <td>
-                                    <div x-data="patternComponent(headRow.headId, prompt.hash)" x-init="await init()">
-                                        <img x-show="imageUrl" :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headRow.headId} on ${prompt.hash}`">
-                                    </div>
+                                    <div class="pattern-loading">Loading...</div>
                                 </td>
                             </template>
                         </tr>

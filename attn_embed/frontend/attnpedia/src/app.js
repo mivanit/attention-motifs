@@ -6,28 +6,52 @@ document.addEventListener('alpine:init', () => {
 		heads_display: [],
 		heads_display_with_distances: [],
 		current_head: null,
+		
+		// Error tracking for aggregated notifications
+		failureTracker: {
+			patterns: { failed: 0, total: 0 },
+			classifications: { failed: 0, total: 0 }
+		},
 
 		async init() {
-			this.attention_pedia = new AttentionPedia();
-			this.head_distances = new HeadDistances();
-			this.prompts_loader = new PromptsLoader();
-			const allPrompts = await this.prompts_loader.getPrompts();
-			const n_prompts = CONFIG.n_prompts || 10;
-			this.prompts = allPrompts.slice(0, n_prompts);
-			this.heads_display = CONFIG.heads_display;
-			this.current_head = CONFIG.head_viewing;
-			this.promptTooltip = null;
-			
-			// Set pattern size CSS variable
-			const patternSize = CONFIG.pattern_size || 120;
-			document.documentElement.style.setProperty('--pattern-size', `${patternSize}px`);
-			
-			await this.updateHeadsWithDistances();
-			this.loading = false;
+			try {
+				this.attention_pedia = new AttentionPedia();
+				this.head_distances = new HeadDistances();
+				this.prompts_loader = new PromptsLoader();
+				const allPrompts = await this.prompts_loader.getPrompts();
+				const n_prompts = CONFIG.n_prompts || 10;
+				this.prompts = allPrompts.slice(0, n_prompts);
+				this.heads_display = CONFIG.heads_display;
+				this.current_head = CONFIG.head_viewing;
+				
+				// Debug logging
+				console.log('Patterns we are looking at:', this.prompts.map(p => p.hash));
+				console.log('Current head viewing:', this.current_head);
+				console.log('Heads display config:', this.heads_display);
+				this.promptTooltip = null;
+				
+				// Set pattern size CSS variable
+				const patternSize = CONFIG.pattern_size || 120;
+				document.documentElement.style.setProperty('--pattern-size', `${patternSize}px`);
+				
+				await this.updateHeadsWithDistances();
+				this.loading = false;
+				
+				// Check for aggregated errors after a short delay to let components load
+				setTimeout(() => {
+					this.showAggregatedErrors();
+					this.resetFailureTracker();
+				}, 2000);
+			} catch (error) {
+				NOTIF.error('Failed to initialize application data', error);
+				this.loading = false;
+				this.error = error.message;
+			}
 		},
 
 		async updateHeadsWithDistances() {
 			if (!this.current_head) {
+				console.log('No current head set, table will be empty');
 				this.heads_display_with_distances = [];
 				return;
 			}
@@ -40,7 +64,8 @@ document.addEventListener('alpine:init', () => {
 				// Get current head classifications for matching
 				const currentHeadClassifications = await this.attention_pedia.get_head_types(this.current_head);
 				
-				this.heads_display_with_distances = [];
+				// Build the entire array at once instead of pushing items
+				const newHeadsArray = [];
 				for (const item of headsWithDistances.sort((a, b) => (a.distance || 0) - (b.distance || 0))) {
 					const distance = item.distance !== undefined ? item.distance : 0;
 					
@@ -50,14 +75,19 @@ document.addEventListener('alpine:init', () => {
 						currentHeadClassifications.includes(cls)
 					);
 					
-					this.heads_display_with_distances.push({
+					newHeadsArray.push({
 						headId: item.head_name,
 						distance: distance,
 						distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
 						distanceColor: this.getDistanceColor(distance, maxDistance),
-						hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head
+						hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head,
+						isGap: false
 					});
 				}
+				
+				// Assign the complete array at once to trigger Alpine.js reactivity
+				this.heads_display_with_distances = newHeadsArray;
+				console.log('Final heads list (explicit config):', this.heads_display_with_distances.map(h => h.headId || 'GAP'));
 				return;
 			}
 
@@ -100,11 +130,12 @@ document.addEventListener('alpine:init', () => {
 			// Get current head classifications for matching
 			const currentHeadClassifications = await this.attention_pedia.get_head_types(this.current_head);
 			
-			this.heads_display_with_distances = [];
+			// Build the entire array at once instead of pushing items
+			const newHeadsArray = [];
 			for (const item of rowsWithGaps) {
 				if (item.isGap) {
 					// Add gap row
-					this.heads_display_with_distances.push({
+					newHeadsArray.push({
 						isGap: true,
 						gapCount: item.gapCount,
 						nextDistance: item.nextDistance,
@@ -120,15 +151,32 @@ document.addEventListener('alpine:init', () => {
 						currentHeadClassifications.includes(cls)
 					);
 					
-					this.heads_display_with_distances.push({
+					newHeadsArray.push({
 						headId: item.head_name,
 						distance: distance,
 						distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
 						distanceColor: this.getDistanceColor(distance, maxDistance),
-						hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head
+						hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head,
+						isGap: false
 					});
 				}
 			}
+			
+			// Assign the complete array at once to trigger Alpine.js reactivity
+			this.heads_display_with_distances = newHeadsArray;
+			console.log('Final heads list (auto-populated):', this.heads_display_with_distances.map(h => h.headId || 'GAP'));
+			console.log('Full heads_display_with_distances structure:', this.heads_display_with_distances);
+			console.log('Number of items in heads_display_with_distances:', this.heads_display_with_distances.length);
+			console.log('First few items detailed:', this.heads_display_with_distances.slice(0, 3));
+			console.log('First item properties:', JSON.stringify(this.heads_display_with_distances[0], null, 2));
+			console.log('Is first item a gap?', this.heads_display_with_distances[0].isGap);
+			console.log('Loading state:', this.loading);
+			console.log('All items isGap status:', this.heads_display_with_distances.map((item, i) => `${i}: ${item.isGap} (${item.headId || 'GAP'})`));
+			
+			// Force Alpine.js reactivity update
+			this.$nextTick(() => {
+				console.log('After $nextTick, length:', this.heads_display_with_distances.length);
+			});
 		},
 
 		insertGapRows(sortedHeads, nearestHeads, sameClassHeads) {
@@ -208,20 +256,39 @@ document.addEventListener('alpine:init', () => {
 			this.heads_display_with_distances[index].expandable = false;
 		},
 
+		showAggregatedErrors() {
+			const { patterns, classifications } = this.failureTracker;
+			
+			if (patterns.failed > 0) {
+				NOTIF.error(`Failed to load ${patterns.failed}/${patterns.total} attention patterns`);
+			}
+			
+			if (classifications.failed > 0) {
+				NOTIF.error(`Failed to load ${classifications.failed}/${classifications.total} classification sets`);
+			}
+		},
+
+		resetFailureTracker() {
+			this.failureTracker.patterns = { failed: 0, total: 0 };
+			this.failureTracker.classifications = { failed: 0, total: 0 };
+		},
+
 		patternComponent(headId, promptHash) {
+			const app = this;
 			return {
 				loading: true,
 				imageUrl: null,
 				error: null,
 
 				async init() {
+					app.failureTracker.patterns.total++;
 					try {
 						const headInfo = HeadInfo.from_id(headId);
 						imageUrl_rel = await headInfo.get_pattern_url(promptHash);
 						this.imageUrl = `${CONFIG.patterns_path}/${imageUrl_rel}`;
 						this.loading = false;
 					} catch (error) {
-						console.error(`Failed to get pattern URL for ${headId}:${promptHash}:`, error);
+						app.failureTracker.patterns.failed++;
 						this.error = error.message;
 						this.loading = false;
 					}
@@ -230,6 +297,7 @@ document.addEventListener('alpine:init', () => {
 		},
 
 		classificationComponent(headId) {
+			const app = this;
 			return {
 				classifications: [],
 				typesMetadata: {},
@@ -237,11 +305,17 @@ document.addEventListener('alpine:init', () => {
 				hideTimeout: null,
 
 				async loadData() {
-					const types = await this.attention_pedia.get_head_types(headId);
-					this.classifications = types;
+					app.failureTracker.classifications.total++;
+					try {
+						const types = await this.attention_pedia.get_head_types(headId);
+						this.classifications = types;
 
-					for (const type of types) {
-						this.typesMetadata[type] = await this.attention_pedia.get_type_meta(type);
+						for (const type of types) {
+							this.typesMetadata[type] = await this.attention_pedia.get_type_meta(type);
+						}
+					} catch (error) {
+						app.failureTracker.classifications.failed++;
+						this.classifications = [];
 					}
 				},
 
