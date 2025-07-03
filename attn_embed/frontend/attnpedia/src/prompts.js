@@ -29,28 +29,39 @@ async function load_prompts(path = PROMPTS_URL) {
 class PromptsLoader {
 	constructor() {
 		this._data = null;
+		this._hashToIndex = null;
 		this._loaded = false;
 	}
 
 	async _ensureLoaded() {
 		if (!this._loaded) {
 			this._data = await load_prompts();
+			// Build hash to index map for efficient lookups
+			this._hashToIndex = {};
+			for (let i = 0; i < this._data.length; i++) {
+				const prompt = this._data[i];
+				if (prompt.hash) {
+					this._hashToIndex[prompt.hash] = i;
+				}
+			}
 			this._loaded = true;
 		}
 	}
 
-	async getPrompts() {
+	async get_all() {
 		await this._ensureLoaded();
 		return this._data || [];
 	}
 
 	async getPromptByHash(hash) {
 		await this._ensureLoaded();
-		return this._data?.find(prompt => prompt.hash === hash) || null;
+		if (!this._hashToIndex || !this._data) return null;
+		const index = this._hashToIndex[hash];
+		return index !== undefined ? this._data[index] : null;
 	}
 
 	async getPromptHashes() {
 		await this._ensureLoaded();
-		return this._data?.map(prompt => prompt.hash) || [];
+		return this._hashToIndex ? Object.keys(this._hashToIndex) : [];
 	}
 }
