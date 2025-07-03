@@ -1,9 +1,0 @@
-// Debug logging
-console.log('Patterns we are looking at:', this.prompts.map(p => p.hash));
-console.log('Current head viewing:', this.current_head);
-console.log('Heads display config:', this.heads_display);
-
-
-
-// TODO: fallback to getting from github?
-// || "https://raw.githubusercontent.com/<TODO>";

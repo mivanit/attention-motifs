@@ -1494,22 +1494,22 @@ FRONTEND_ATTNPEDIA_DIR = $(FRONTEND_DIR)/attnpedia
 FRONTEND_ATTNPEDIA_BUILD_DIR = $(FRONTEND_ATTNPEDIA_DIR)/build
 
 # cd $(FRONTEND_ATTNPEDIA_DIR) && tsc || true
+# cp $(FRONTEND_ATTNPEDIA_DIR)/src/*.js $(FRONTEND_ATTNPEDIA_DIR)/src/*.html $(FRONTEND_ATTNPEDIA_DIR)/src/*.css $(FRONTEND_ATTNPEDIA_BUILD_DIR)/ || true
+# mkdir -p $(FRONTEND_ATTNPEDIA_BUILD_DIR) || true
 .PHONY: am-frontend-ap-build
 am-frontend-ap-build:
-	mkdir -p $(FRONTEND_ATTNPEDIA_BUILD_DIR) || true
-	cp $(FRONTEND_ATTNPEDIA_DIR)/src/*.js $(FRONTEND_ATTNPEDIA_DIR)/src/*.html $(FRONTEND_ATTNPEDIA_DIR)/src/*.css $(FRONTEND_ATTNPEDIA_BUILD_DIR)/ || true
 	$(PYTHON) -m attn_embed.attnpedia all > $(FRONTEND_ATTNPEDIA_DIR)/ap.json
 
-.PHONY: am-frontend-ap-clean
-am-frontend-ap-clean:
-	rm -rf $(FRONTEND_ATTNPEDIA_BUILD_DIR)
+# .PHONY: am-frontend-ap-clean
+# am-frontend-ap-clean:
+# 	rm -rf $(FRONTEND_ATTNPEDIA_BUILD_DIR)
 
 .PHONY: am-frontend-bundle
 am-frontend-bundle: am-frontend-ap-build
 	@echo "bundle embedding display files"
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/embeds-old/src/embeddings.html --output $(FRONTEND_DIR)/embeds-old/embeddings.html
 	$(PYTHON) -m js_embedding_vis --cfg-path $(FRONTEND_DIR)/embeds/config.json --out-path $(FRONTEND_DIR)/embeds/index.html
-	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_ATTNPEDIA_BUILD_DIR)/index.html --output $(FRONTEND_ATTNPEDIA_DIR)/index.html
+	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_ATTNPEDIA_DIR)/src/index.html --output $(FRONTEND_ATTNPEDIA_DIR)/index.html
 # cp $(FRONTEND_DIR)/embeds-old/embeddings.html data/features/index.html
 # cp $(FRONTEND_DIR)/embeds-old/embeddings.html data/head_embed/index.html
 
