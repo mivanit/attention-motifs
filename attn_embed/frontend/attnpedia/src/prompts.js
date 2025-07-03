@@ -1,4 +1,6 @@
 const PROMPTS_URL = CONFIG.prompts_url;
+// TODO: fallback to getting from github?
+// || "https://raw.githubusercontent.com/<TODO>";
 
 async function load_prompts(path = PROMPTS_URL) {
 	const r = await fetch(path);

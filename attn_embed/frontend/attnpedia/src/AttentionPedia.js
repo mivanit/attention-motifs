@@ -1,4 +1,4 @@
-const ATTNPEDIA_URL = CONFIG.attnpedia_url; 
+const ATTNPEDIA_URL = CONFIG.attnpedia_url;
 // TODO: fallback to getting from github?
 // || "https://raw.githubusercontent.com/<TODO>";
 
@@ -27,31 +27,16 @@ class AttentionPedia {
 
 	async get_head_types(head_id) {
 		await this._ensureLoaded();
-		if (this._data && head_id in this._data.head_to_types) {
-			return this._data.head_to_types[head_id];
-		}
-		else {
-			return [];
-		}
+		return this._data?.head_to_types?.[head_id] || [];
 	}
 
 	async get_type_heads(type) {
 		await this._ensureLoaded();
-		if (this._data && type in this._data.type_to_heads) {
-			return this._data.type_to_heads[type];
-		}
-		else {
-			return [];
-		}
+		return this._data?.type_to_heads?.[type] || [];
 	}
 
 	async get_type_meta(type) {
 		await this._ensureLoaded();
-		if (this._data && type in this._data.type_metadata) {
-			return this._data.type_metadata[type];
-		}
-		else {
-			return {};
-		}
+		return this._data?.type_metadata?.[type] || {};
 	}
 }

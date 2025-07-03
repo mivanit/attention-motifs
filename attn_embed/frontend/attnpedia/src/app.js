@@ -24,10 +24,6 @@ document.addEventListener('alpine:init', () => {
 				this.heads_display = CONFIG.heads_display;
 				this.current_head = CONFIG.head_viewing;
 				
-				// Debug logging
-				console.log('Patterns we are looking at:', this.prompts.map(p => p.hash));
-				console.log('Current head viewing:', this.current_head);
-				console.log('Heads display config:', this.heads_display);
 				this.promptTooltip = null;
 				
 				// Set pattern size CSS variable
@@ -51,7 +47,6 @@ document.addEventListener('alpine:init', () => {
 
 		async updateHeadsWithDistances() {
 			if (!this.current_head) {
-				console.log('No current head set, table will be empty');
 				this.heads_display_with_distances = [];
 				return;
 			}
@@ -81,13 +76,11 @@ document.addEventListener('alpine:init', () => {
 						distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
 						distanceColor: this.getDistanceColor(distance, maxDistance),
 						hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head,
-						isGap: false
 					});
 				}
 				
 				// Assign the complete array at once to trigger Alpine.js reactivity
 				this.heads_display_with_distances = newHeadsArray;
-				console.log('Final heads list (explicit config):', this.heads_display_with_distances.map(h => h.headId || 'GAP'));
 				return;
 			}
 
@@ -102,7 +95,7 @@ document.addEventListener('alpine:init', () => {
 
 			// Get all heads with distances to identify gaps
 			const allHeadsWithDistances = await this.head_distances.getHeadDistances(this.current_head, Array.from(headsToShow));
-			const sortedByDistance = allHeadsWithDistances.sort((a, b) => a.distance - b.distance);
+			allHeadsWithDistances.sort((a, b) => a.distance - b.distance);
 
 			// Add same class heads and track where they fit in distance order
 			const n_share_class = CONFIG.table?.n_share_class || 2;
@@ -121,9 +114,8 @@ document.addEventListener('alpine:init', () => {
 
 			const finalHeadsWithDistances = await this.head_distances.getHeadDistances(this.current_head, Array.from(headsToShow));
 
-			// Create ordered list with gap indicators
+			// Sort by distance
 			const sortedFinal = finalHeadsWithDistances.sort((a, b) => a.distance - b.distance);
-			const rowsWithGaps = this.insertGapRows(sortedFinal, nearestHeads, sameClassHeads);
 
 			const maxDistance = Math.max(...finalHeadsWithDistances.map(h => h.distance || 0));
 
@@ -132,89 +124,28 @@ document.addEventListener('alpine:init', () => {
 			
 			// Build the entire array at once instead of pushing items
 			const newHeadsArray = [];
-			for (const item of rowsWithGaps) {
-				if (item.isGap) {
-					// Add gap row
-					newHeadsArray.push({
-						isGap: true,
-						gapCount: item.gapCount,
-						nextDistance: item.nextDistance,
-						expandable: true,
-						expanded: false
-					});
-				} else {
-					const distance = item.distance !== undefined ? item.distance : 0;
-					
-					// Check if this head has matching classifications
-					const headClassifications = await this.attention_pedia.get_head_types(item.head_name);
-					const hasMatchingClassification = headClassifications.some(cls => 
-						currentHeadClassifications.includes(cls)
-					);
-					
-					newHeadsArray.push({
-						headId: item.head_name,
-						distance: distance,
-						distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
-						distanceColor: this.getDistanceColor(distance, maxDistance),
-						hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head,
-						isGap: false
-					});
-				}
+			for (const item of sortedFinal) {
+				const distance = item.distance !== undefined ? item.distance : 0;
+				
+				// Check if this head has matching classifications
+				const headClassifications = await this.attention_pedia.get_head_types(item.head_name);
+				const hasMatchingClassification = headClassifications.some(cls => 
+					currentHeadClassifications.includes(cls)
+				);
+				
+				newHeadsArray.push({
+					headId: item.head_name,
+					distance: distance,
+					distanceText: distance === 0 ? 'Current' : distance.toFixed(3),
+					distanceColor: this.getDistanceColor(distance, maxDistance),
+					hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head
+				});
 			}
 			
 			// Assign the complete array at once to trigger Alpine.js reactivity
 			this.heads_display_with_distances = newHeadsArray;
-			console.log('Final heads list (auto-populated):', this.heads_display_with_distances.map(h => h.headId || 'GAP'));
-			console.log('Full heads_display_with_distances structure:', this.heads_display_with_distances);
-			console.log('Number of items in heads_display_with_distances:', this.heads_display_with_distances.length);
-			console.log('First few items detailed:', this.heads_display_with_distances.slice(0, 3));
-			console.log('First item properties:', JSON.stringify(this.heads_display_with_distances[0], null, 2));
-			console.log('Is first item a gap?', this.heads_display_with_distances[0].isGap);
-			console.log('Loading state:', this.loading);
-			console.log('All items isGap status:', this.heads_display_with_distances.map((item, i) => `${i}: ${item.isGap} (${item.headId || 'GAP'})`));
-			
-			// Force Alpine.js reactivity update
-			this.$nextTick(() => {
-				console.log('After $nextTick, length:', this.heads_display_with_distances.length);
-			});
 		},
 
-		insertGapRows(sortedHeads, nearestHeads, sameClassHeads) {
-			const result = [];
-			let lastNearbyIndex = -1;
-			
-			// Find the last index of nearby heads in the sorted list
-			for (let i = 0; i < sortedHeads.length; i++) {
-				if (nearestHeads.head_names.includes(sortedHeads[i].head_name) || sortedHeads[i].head_name === this.current_head) {
-					lastNearbyIndex = i;
-				}
-			}
-			
-			// Add all heads up to and including the last nearby head
-			for (let i = 0; i <= lastNearbyIndex; i++) {
-				result.push(sortedHeads[i]);
-			}
-			
-			// Check for gaps when adding same-class heads
-			let nextNearbyIndex = lastNearbyIndex + 1;
-			for (let i = lastNearbyIndex + 1; i < sortedHeads.length; i++) {
-				if (sameClassHeads.has(sortedHeads[i].head_name)) {
-					// Check if there's a gap
-					const gapSize = i - nextNearbyIndex;
-					if (gapSize > 0) {
-						result.push({
-							isGap: true,
-							gapCount: gapSize,
-							nextDistance: sortedHeads[i].distance
-						});
-					}
-					result.push(sortedHeads[i]);
-					nextNearbyIndex = i + 1;
-				}
-			}
-			
-			return result;
-		},
 
 		getDistanceColor(distance, maxDistance) {
 			if (distance === 0) return 'rgba(0, 123, 255, 0.1)';
@@ -247,14 +178,6 @@ document.addEventListener('alpine:init', () => {
 			}
 		},
 
-		async expandGap(index) {
-			// TODO: Implement gap expansion logic
-			// This would fetch the skipped heads and insert them into the table
-			console.log('Expanding gap at index:', index);
-			// For now, just mark as expanded
-			this.heads_display_with_distances[index].expanded = true;
-			this.heads_display_with_distances[index].expandable = false;
-		},
 
 		showAggregatedErrors() {
 			const { patterns, classifications } = this.failureTracker;
@@ -290,7 +213,6 @@ document.addEventListener('alpine:init', () => {
 					} catch (error) {
 						app.failureTracker.patterns.failed++;
 						this.loading = false;
-						// Throw error immediately instead of failing silently
 						throw new Error(`Failed to load pattern for ${headId}/${promptHash}: ${error.message}`);
 					}
 				}
@@ -316,7 +238,6 @@ document.addEventListener('alpine:init', () => {
 						}
 					} catch (error) {
 						app.failureTracker.classifications.failed++;
-						// Throw error immediately instead of failing silently
 						throw new Error(`Failed to load classifications for ${headId}: ${error.message}`);
 					}
 				},

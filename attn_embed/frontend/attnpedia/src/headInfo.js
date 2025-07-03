@@ -4,7 +4,6 @@ class HeadInfo {
         this.model = model;
         this.layer = layer;
         this.head = head;
-        this.classifications = [];
     }
 
     static from_id(id) {

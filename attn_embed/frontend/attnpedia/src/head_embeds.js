@@ -34,10 +34,6 @@ class HeadDistances {
 		}
 	}
 
-	async get_head_loc() {
-		await this._ensureLoaded();
-	}
-
 	get_head_idx(head_name) {
 		const idx = this.head_dists_meta.cls_values.indexOf(head_name);
 		if (idx === -1) {
