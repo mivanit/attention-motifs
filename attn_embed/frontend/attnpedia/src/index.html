@@ -60,12 +60,34 @@
                         <tr>
                             <td class="head-info" x-text="headRow.headId"></td>
                             <td class="distance-cell" :style="`background-color: ${headRow.distanceColor}`" x-text="headRow.distanceText"></td>
-                            <td class="classifications-cell" :class="headRow.hasMatchingClassification ? 'matching-classification' : ''">
-                                Classifications loading...
+                            <td class="classifications-cell" :class="headRow.hasMatchingClassification ? 'matching-classification' : ''" 
+                                x-data="classificationComponent(headRow.headId)" x-init="await loadData()">
+                                <template x-if="classifications.length > 0">
+                                    <div>
+                                        <template x-for="(type, index) in classifications" :key="type">
+                                            <span class="classification-tag" 
+                                                  @mouseenter="showTooltip($event, type)" 
+                                                  @mouseleave="hideTooltip()"
+                                                  x-text="type">
+                                            </span>
+                                        </template>
+                                    </div>
+                                </template>
+                                <template x-if="classifications.length === 0">
+                                    <span class="no-classifications">No classifications</span>
+                                </template>
                             </td>
                             <template x-for="prompt in prompts" :key="prompt.hash">
-                                <td>
-                                    <div class="pattern-loading">Loading...</div>
+                                <td x-data="patternComponent(headRow.headId, prompt.hash)" x-init="await init()">
+                                    <template x-if="loading">
+                                        <div class="pattern-loading">Loading...</div>
+                                    </template>
+                                    <template x-if="error">
+                                        <div class="pattern-error" x-text="error"></div>
+                                    </template>
+                                    <template x-if="!loading && !error && imageUrl">
+                                        <img :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headRow.headId} on ${prompt.hash}`">
+                                    </template>
                                 </td>
                             </template>
                         </tr>
