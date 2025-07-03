@@ -49,14 +49,12 @@
                             Loading attention heads data...
                         </td>
                     </tr>
-                    <!-- Empty state -->
                     <tr x-show="!loading && heads_display_with_distances.length === 0">
                         <td :colspan="3 + prompts.length" style="text-align: center; padding: 20px; color: #666;">
                             No heads data available
                         </td>
                     </tr>
                     <template x-for="(headRow, index) in heads_display_with_distances" :key="headRow.headId || `gap-${index}`">
-                        <!-- Always show regular head row for testing -->
                         <tr>
                             <td class="head-info" x-text="headRow.headId"></td>
                             <td class="distance-cell" :style="`background-color: ${headRow.distanceColor}`" x-text="headRow.distanceText"></td>

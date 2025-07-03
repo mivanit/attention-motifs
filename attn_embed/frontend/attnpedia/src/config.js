@@ -54,8 +54,8 @@ function getDefaultConfig() {
 		head_viewing: "gpt2-small:L5:H5",
 		heads_display: null,
 		table: {
-			n_nearby: 5,
-			n_share_class: 5
+			n_nearby: 2,
+			n_share_class: 2
 		},
 		n_prompts: 5,
 		pattern_size: 120,

@@ -437,8 +437,8 @@
     		head_viewing: "gpt2-small:L5:H5",
     		heads_display: null,
     		table: {
-    			n_nearby: 5,
-    			n_share_class: 5
+    			n_nearby: 2,
+    			n_share_class: 2
     		},
     		n_prompts: 5,
     		pattern_size: 120,
@@ -2017,13 +2017,14 @@
     					app.failureTracker.patterns.total++;
     					try {
     						const headInfo = HeadInfo.from_id(headId);
-    						imageUrl_rel = await headInfo.get_pattern_url(promptHash);
+    						const imageUrl_rel = await headInfo.get_pattern_url(promptHash);
     						this.imageUrl = `${CONFIG.patterns_path}/${imageUrl_rel}`;
     						this.loading = false;
     					} catch (error) {
     						app.failureTracker.patterns.failed++;
-    						this.error = error.message;
     						this.loading = false;
+    						// Throw error immediately instead of failing silently
+    						throw new Error(`Failed to load pattern for ${headId}/${promptHash}: ${error.message}`);
     					}
     				}
     			};
@@ -2040,15 +2041,16 @@
     				async loadData() {
     					app.failureTracker.classifications.total++;
     					try {
-    						const types = await this.attention_pedia.get_head_types(headId);
+    						const types = await app.attention_pedia.get_head_types(headId);
     						this.classifications = types;
     
     						for (const type of types) {
-    							this.typesMetadata[type] = await this.attention_pedia.get_type_meta(type);
+    							this.typesMetadata[type] = await app.attention_pedia.get_type_meta(type);
     						}
     					} catch (error) {
     						app.failureTracker.classifications.failed++;
-    						this.classifications = [];
+    						// Throw error immediately instead of failing silently
+    						throw new Error(`Failed to load classifications for ${headId}: ${error.message}`);
     					}
     				},
     
@@ -2142,23 +2144,43 @@
                             Loading attention heads data...
                         </td>
                     </tr>
-                    <!-- Empty state -->
                     <tr x-show="!loading && heads_display_with_distances.length === 0">
                         <td :colspan="3 + prompts.length" style="text-align: center; padding: 20px; color: #666;">
                             No heads data available
                         </td>
                     </tr>
                     <template x-for="(headRow, index) in heads_display_with_distances" :key="headRow.headId || `gap-${index}`">
-                        <!-- Always show regular head row for testing -->
                         <tr>
                             <td class="head-info" x-text="headRow.headId"></td>
                             <td class="distance-cell" :style="`background-color: ${headRow.distanceColor}`" x-text="headRow.distanceText"></td>
-                            <td class="classifications-cell" :class="headRow.hasMatchingClassification ? 'matching-classification' : ''">
-                                Classifications loading...
+                            <td class="classifications-cell" :class="headRow.hasMatchingClassification ? 'matching-classification' : ''" 
+                                x-data="classificationComponent(headRow.headId)" x-init="await loadData()">
+                                <template x-if="classifications.length > 0">
+                                    <div>
+                                        <template x-for="(type, index) in classifications" :key="type">
+                                            <span class="classification-tag" 
+                                                  @mouseenter="showTooltip($event, type)" 
+                                                  @mouseleave="hideTooltip()"
+                                                  x-text="type">
+                                            </span>
+                                        </template>
+                                    </div>
+                                </template>
+                                <template x-if="classifications.length === 0">
+                                    <span class="no-classifications">No classifications</span>
+                                </template>
                             </td>
                             <template x-for="prompt in prompts" :key="prompt.hash">
-                                <td>
-                                    <div class="pattern-loading">Loading...</div>
+                                <td x-data="patternComponent(headRow.headId, prompt.hash)" x-init="await init()">
+                                    <template x-if="loading">
+                                        <div class="pattern-loading">Loading...</div>
+                                    </template>
+                                    <template x-if="error">
+                                        <div class="pattern-error" x-text="error"></div>
+                                    </template>
+                                    <template x-if="!loading && !error && imageUrl">
+                                        <img :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headRow.headId} on ${prompt.hash}`">
+                                    </template>
                                 </td>
                             </template>
                         </tr>

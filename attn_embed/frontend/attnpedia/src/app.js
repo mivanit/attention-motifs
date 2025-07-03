@@ -284,13 +284,14 @@ document.addEventListener('alpine:init', () => {
 					app.failureTracker.patterns.total++;
 					try {
 						const headInfo = HeadInfo.from_id(headId);
-						imageUrl_rel = await headInfo.get_pattern_url(promptHash);
+						const imageUrl_rel = await headInfo.get_pattern_url(promptHash);
 						this.imageUrl = `${CONFIG.patterns_path}/${imageUrl_rel}`;
 						this.loading = false;
 					} catch (error) {
 						app.failureTracker.patterns.failed++;
-						this.error = error.message;
 						this.loading = false;
+						// Throw error immediately instead of failing silently
+						throw new Error(`Failed to load pattern for ${headId}/${promptHash}: ${error.message}`);
 					}
 				}
 			};
@@ -307,15 +308,16 @@ document.addEventListener('alpine:init', () => {
 				async loadData() {
 					app.failureTracker.classifications.total++;
 					try {
-						const types = await this.attention_pedia.get_head_types(headId);
+						const types = await app.attention_pedia.get_head_types(headId);
 						this.classifications = types;
 
 						for (const type of types) {
-							this.typesMetadata[type] = await this.attention_pedia.get_type_meta(type);
+							this.typesMetadata[type] = await app.attention_pedia.get_type_meta(type);
 						}
 					} catch (error) {
 						app.failureTracker.classifications.failed++;
-						this.classifications = [];
+						// Throw error immediately instead of failing silently
+						throw new Error(`Failed to load classifications for ${headId}: ${error.message}`);
 					}
 				},
 
