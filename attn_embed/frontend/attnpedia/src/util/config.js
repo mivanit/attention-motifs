@@ -53,6 +53,8 @@ function getDefaultConfig() {
 	let default_cfg = {
 		head_viewing: "gpt2-small:L5:H5",
 		heads_display: null,
+		classification_mode: false,
+		current_classification: null,
 		table: {
 			n_nearby: 2,
 			n_share_class: 2

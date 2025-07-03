@@ -27,6 +27,27 @@
 
 <body>
     <div class="container" x-data="attentionApp" x-init="await init()">
+        <!-- Page Title Section -->
+        <div class="title-section">
+            <template x-if="!classification_mode">
+                <div>
+                    <h2 class="page-title">Current Head: <span class="head-name" x-text="current_head"></span></h2>
+                </div>
+            </template>
+            <template x-if="classification_mode && current_classification">
+                <div x-data="classificationInfoComponent(current_classification)" x-init="await loadMetadata()">
+                    <h2 class="page-title" x-text="current_classification"></h2>
+                    <div class="classification-details" x-show="metadata.notes">
+                        <p x-text="metadata.notes"></p>
+                        <p><strong x-text="metadata.n_heads"></strong> heads</p>
+                        <template x-if="metadata.url">
+                            <p><a :href="metadata.url" target="_blank" x-text="metadata.url"></a></p>
+                        </template>
+                    </div>
+                </div>
+            </template>
+        </div>
+        
         <div class="section">
             <table class="pattern-table">
                 <thead>
@@ -68,6 +89,7 @@
                                             <span class="classification-tag" 
                                                   @mouseenter="showTooltip($event, type)" 
                                                   @mouseleave="hideTooltip()"
+                                                  @click="(e) => { e.preventDefault(); window.location.href = getClassificationLink(type); }"
                                                   x-text="type">
                                             </span>
                                         </template>

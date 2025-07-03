@@ -9,6 +9,39 @@ body {
 	margin: 0 auto;
 }
 
+.title-section {
+	background: white;
+	padding: 20px;
+	margin-bottom: 20px;
+	border-radius: 8px;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.page-title {
+	margin: 0 0 10px 0;
+	color: #333;
+	font-size: 24px;
+}
+
+.head-name {
+	font-family: monospace;
+	color: #1565c0;
+}
+
+.classification-details {
+	color: #666;
+	font-size: 14px;
+	line-height: 1.5;
+}
+
+.classification-details p {
+	margin: 5px 0;
+}
+
+.classification-details a {
+	color: #1565c0;
+}
+
 .section {
 	background: white;
 	padding: 20px;
@@ -103,13 +136,15 @@ body {
 	margin: 2px;
 	border-radius: 4px;
 	font-size: 11px;
-	cursor: help;
+	cursor: pointer;
 	border: 1px solid #bbdefb;
 	position: relative;
+	transition: background-color 0.2s;
 }
 
 .classification-tag:hover {
 	background: #bbdefb;
+	text-decoration: underline;
 }
 
 .classifications-container {

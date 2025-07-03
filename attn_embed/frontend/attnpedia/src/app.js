@@ -6,6 +6,8 @@ document.addEventListener('alpine:init', () => {
 		heads_display: [],
 		heads_display_with_distances: [],
 		current_head: null,
+		classification_mode: false,
+		current_classification: null,
 		
 		// Error tracking for aggregated notifications
 		failureTracker: {
@@ -23,6 +25,13 @@ document.addEventListener('alpine:init', () => {
 				this.prompts = allPrompts.slice(0, n_prompts);
 				this.heads_display = CONFIG.heads_display;
 				this.current_head = CONFIG.head_viewing;
+				this.classification_mode = CONFIG.classification_mode || false;
+				this.current_classification = CONFIG.current_classification || null;
+				
+				// Handle classification mode
+				if (this.classification_mode && this.current_classification) {
+					await this.setupClassificationMode(this.current_classification);
+				}
 				
 				this.promptTooltip = null;
 				
@@ -43,6 +52,36 @@ document.addEventListener('alpine:init', () => {
 				this.loading = false;
 				this.error = error.message;
 			}
+		},
+
+		async setupClassificationMode(classificationType) {
+			// Get all heads with this classification
+			const headsOfType = await this.attention_pedia.get_type_heads(classificationType);
+			if (!headsOfType || headsOfType.length === 0) return;
+			
+			// Find the best head for this classification (prefer heads with only this classification)
+			let bestHead = null;
+			let minClassifications = Infinity;
+			
+			for (const head of headsOfType) {
+				const headTypes = await this.attention_pedia.get_head_types(head);
+				if (headTypes.length === 1 && headTypes[0] === classificationType) {
+					// Perfect match - only has this classification
+					bestHead = head;
+					break;
+				} else if (headTypes.length < minClassifications) {
+					// Keep track of head with fewest classifications
+					minClassifications = headTypes.length;
+					bestHead = head;
+				}
+			}
+			
+			if (bestHead) {
+				this.current_head = bestHead;
+			}
+			
+			// Set heads_display to up to 99 heads of this classification
+			this.heads_display = headsOfType.slice(0, 99);
 		},
 
 		async updateHeadsWithDistances() {
@@ -156,8 +195,28 @@ document.addEventListener('alpine:init', () => {
 
 		getHeadLink(headId) {
 			// Create a new URL with the head_viewing parameter set to this head
+			// Clear classification mode and reset table config to defaults from loaded config
 			const url = new URL(window.location.href);
 			url.searchParams.set('head_viewing', headId);
+			url.searchParams.set('classification_mode', 'false');
+			url.searchParams.delete('current_classification');
+			url.searchParams.delete('heads_display');
+			
+			// Reset to default values from LOADED_CONFIG
+			const defaultNearby = LOADED_CONFIG?.table?.n_nearby || 2;
+			const defaultShareClass = LOADED_CONFIG?.table?.n_share_class || 2;
+			url.searchParams.set('table.n_nearby', defaultNearby.toString());
+			url.searchParams.set('table.n_share_class', defaultShareClass.toString());
+			
+			return url.toString();
+		},
+
+		getClassificationLink(classificationType) {
+			// Create URL for classification mode
+			const url = new URL(window.location.href);
+			url.searchParams.set('classification_mode', 'true');
+			url.searchParams.set('current_classification', classificationType);
+			url.searchParams.delete('heads_display'); // Let setupClassificationMode handle this
 			return url.toString();
 		},
 
@@ -249,6 +308,10 @@ document.addEventListener('alpine:init', () => {
 					}
 				},
 
+				getClassificationLink(type) {
+					return app.getClassificationLink(type);
+				},
+
 				showTooltip(event, type) {
 					// Clear any existing timeout
 					if (this.hideTimeout) {
@@ -304,6 +367,21 @@ document.addEventListener('alpine:init', () => {
 					if (this.currentTooltip) {
 						this.currentTooltip.remove();
 						this.currentTooltip = null;
+					}
+				}
+			};
+		},
+
+		classificationInfoComponent(classificationType) {
+			const app = this;
+			return {
+				metadata: {},
+
+				async loadMetadata() {
+					try {
+						this.metadata = await app.attention_pedia.get_type_meta(classificationType);
+					} catch (error) {
+						this.metadata = {};
 					}
 				}
 			};
