@@ -2142,48 +2142,12 @@
                             Loading attention heads data...
                         </td>
                     </tr>
-                    <!-- Debug info -->
+                    <!-- Empty state -->
                     <tr x-show="!loading && heads_display_with_distances.length === 0">
                         <td :colspan="3 + prompts.length" style="text-align: center; padding: 20px; color: #666;">
-                            No heads data available (length: <span x-text="heads_display_with_distances.length"></span>)
+                            No heads data available
                         </td>
                     </tr>
-                    <tr x-show="!loading && heads_display_with_distances.length > 0" style="background: #f0f0f0;">
-                        <td :colspan="3 + prompts.length" style="text-align: center; padding: 10px; font-size: 12px;">
-                            Debug: Found <span x-text="heads_display_with_distances.length"></span> heads to display
-                        </td>
-                    </tr>
-                    <!-- Simple test row to see if template works -->
-                    <tr x-show="!loading && heads_display_with_distances.length > 0" style="background: #ffffcc;">
-                        <td>TEST ROW</td>
-                        <td>WORKS</td>
-                        <td>YEP</td>
-                        <template x-for="prompt in prompts" :key="prompt.hash">
-                            <td>IMG</td>
-                        </template>
-                    </tr>
-                    <!-- Test x-for loop -->
-                    <template x-for="(headRow, index) in heads_display_with_distances.slice(0, 2)" :key="`test-${index}`">
-                        <tr style="background: #ffcccc;">
-                            <td x-text="`Item ${index}`"></td>
-                            <td x-text="headRow.headId || 'NO_ID'"></td>
-                            <td x-text="headRow.isGap ? 'GAP' : 'HEAD'"></td>
-                            <template x-for="prompt in prompts" :key="prompt.hash">
-                                <td>TEST</td>
-                            </template>
-                        </tr>
-                    </template>
-                    <!-- Minimal actual template test -->
-                    <template x-for="(headRow, index) in heads_display_with_distances.slice(0, 1)" :key="`minimal-${index}`">
-                        <tr x-show="!headRow.isGap" style="background: #ccffcc;">
-                            <td x-text="headRow.headId"></td>
-                            <td x-text="headRow.distanceText"></td>
-                            <td>Classifications here</td>
-                            <template x-for="prompt in prompts" :key="prompt.hash">
-                                <td>Pattern</td>
-                            </template>
-                        </tr>
-                    </template>
                     <template x-for="(headRow, index) in heads_display_with_distances" :key="headRow.headId || `gap-${index}`">
                         <!-- Always show regular head row for testing -->
                         <tr>
