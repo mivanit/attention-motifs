@@ -496,7 +496,9 @@ class AttentionPatternViewer {
     async displayPattern(dataLoader, model, promptHash, layerIdx, headIdx) {
         // Load prompt metadata
         const metadata = await dataLoader.loadPromptMetadata(model, promptHash);
-        this.tokens = this.normalizeTokens(metadata.tokens);
+        // Add BOS token at the beginning
+        const tokensWithBOS = ['<BOS>'].concat(metadata.tokens);
+        this.tokens = this.normalizeTokens(tokensWithBOS);
         this.n = this.tokens.length;
         this.pixelSize = this.SIZE / this.n;
 

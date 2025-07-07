@@ -798,7 +798,9 @@
         async displayPattern(dataLoader, model, promptHash, layerIdx, headIdx) {
             // Load prompt metadata
             const metadata = await dataLoader.loadPromptMetadata(model, promptHash);
-            this.tokens = this.normalizeTokens(metadata.tokens);
+            // Add BOS token at the beginning
+            const tokensWithBOS = ['<BOS>'].concat(metadata.tokens);
+            this.tokens = this.normalizeTokens(tokensWithBOS);
             this.n = this.tokens.length;
             this.pixelSize = this.SIZE / this.n;
     
@@ -862,7 +864,7 @@
     <script>
         // Parse URL parameters with defaults for debugging
         const urlParams = new URLSearchParams(window.location.search);
-        const promptHash = urlParams.get('prompt') || '4en2Lj73vX5FFhOwErfDhg';
+        const promptHash = urlParams.get('prompt') || 'LQc1qlQHZHOVpI7zEWAeEA';
         const headParam = urlParams.get('head') || 'gpt2-small.L0.H0';
 
         // Parse head parameter: {model}.L{layer}.H{head}
