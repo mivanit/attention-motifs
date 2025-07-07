@@ -12,7 +12,7 @@ class AttentionDataLoader {
 
     async loadAttentionPattern(model, promptHash, layerIdx, headIdx) {
         const pngPath = `${this.basePath}${model}/prompts/${promptHash}/L${layerIdx}/H${headIdx}/attn.png`;
-        return await loadPNGAsMatrix(pngPath);
+        return await pngToMatrix(pngPath);
     }
 
     async loadPromptMetadata(model, promptHash) {

@@ -14,12 +14,13 @@
     
     #controls {
     	margin-bottom: 20px;
+    	text-align: center;
     }
     
     #info {
     	font-family: monospace;
     	font-size: 14px;
-    	text-align: center;
+    	margin-bottom: 10px;
     }
     
     .main-content {
@@ -46,6 +47,8 @@
     	padding: 1px 2px;
     	border-radius: 2px;
     	transition: background-color 0.1s;
+    	border: 1px solid transparent;
+    	box-sizing: border-box;
     }
     
     .tokens-display .token:hover {
@@ -57,11 +60,11 @@
     }
     
     .tokens-display .token.highlight-x {
-    	border: 2px solid #ff0000;
+    	border: 1px solid #ff0000;
     }
     
     .tokens-display .token.highlight-y {
-    	border: 2px solid #00aa00;
+    	border: 1px solid #00aa00;
     }
     
     .heatmap-container {
@@ -134,24 +137,35 @@
     }
     
     .cell-info {
-    	padding: 10px;
+    	padding: 5px 10px;
     	border: 1px solid #ccc;
     	background: #f9f9f9;
     	font-family: monospace;
     	font-size: 14px;
-    	min-height: 60px;
-    	width: 500px;
+    	width: 80vw;
+    	margin: 0 auto;
+    	min-height: 24px;
     }
     
-    .cell-info-row {
-    	display: flex;
-    	gap: 20px;
-    	margin: 5px 0;
+    .cell-info-table {
+    	width: 100%;
+    	border-collapse: collapse;
+    	table-layout: fixed;
     }
     
-    .cell-info-row span:first-child {
-    	font-weight: bold;
-    	min-width: 80px;
+    .cell-info-table td {
+    	padding: 3px 15px;
+    	border-right: 1px solid #ddd;
+    	width: 33.33%;
+    	text-align: left;
+    }
+    
+    .cell-info-table td .right {
+    	float: right;
+    }
+    
+    .cell-info-table td:last-child {
+    	border-right: none;
     }
     </style>
     <!-- end 'style.css' -->
@@ -160,10 +174,10 @@
 <body>
     <div id="controls">
         <div id="info"></div>
+        <div class="cell-info" id="cellInfo"></div>
     </div>
     <div class="main-content">
         <div class="canvas-section">
-            <div class="cell-info" id="cellInfo"></div>
             <div class="heatmap-container" id="heatmapContainer">
                 <canvas id="heatmapCanvas"></canvas>
                 <div class="x-labels" id="xLabels"></div>
@@ -173,6 +187,83 @@
         </div>
         <div class="tokens-display" id="tokensDisplay"></div>
     </div>
+        <!-- begin 'matrix_png.js' -->
+    <script>
+    /* matrix_png.js
+     *
+     * Decode a square PNG created from a lower‑triangular, row‑stochastic matrix
+     * (values scaled linearly to Matplotlib’s Blues colormap) and recover the
+     * numeric matrix.
+     *
+     * Exported async function:
+     *
+     *     pngToMatrix(url: string, n?: number) -> Promise<number[][]>
+     *
+     *   • `url`  – URL (or data‑URI) of the PNG.
+     *   • `n`    – optional matrix size; validated against the image if supplied.
+     *
+     * Assumptions
+     *   • The PNG is n×n.
+     *   • Pixel (0,0) encodes 1; pixel (1,0) encodes 0.
+     *   • Mapping between these is linear in perceived luminance.
+     *   • The matrix is strictly lower‑triangular; entries above the diagonal are 0.
+     *
+     * The function runs entirely in the browser, using OffscreenCanvas when
+     * available.  It returns the matrix as an Array<Array<number>> with rows in
+     * natural order (row 0 at index 0).
+     */
+    
+    async function pngToMatrix(url, n = null) {
+    	// ---------- load & sanity‑check ------------------------------------------------
+    	const img = new Image();
+    	img.crossOrigin = 'anonymous';   // allow CORS / data URIs
+    	img.src = url;
+    	await img.decode();
+    
+    	const size = img.width;
+    	if (img.height !== size) throw new Error('PNG must be square');
+    	if (n !== null && n !== size) throw new Error('given n does not match PNG size');
+    	n = size;
+    
+    	// ---------- raster to RGBA -----------------------------------------------------
+    	const canvas = typeof OffscreenCanvas !== 'undefined'
+    		? new OffscreenCanvas(size, size)
+    		: Object.assign(document.createElement('canvas'), { width: size, height: size });
+    
+    	const ctx = canvas.getContext('2d');
+    	ctx.drawImage(img, 0, 0);
+    	const { data } = ctx.getImageData(0, 0, size, size); // Uint8ClampedArray
+    
+    	// ---------- calibration --------------------------------------------------------
+    	const gray = (idx) =>
+    		0.2126 * data[idx] + 0.7152 * data[idx + 1] + 0.0722 * data[idx + 2];
+    
+    	const gMin = gray(0);          // pixel (0,0)  -> scalar 1
+    	const gMax = gray(4);          // pixel (1,0)  -> scalar 0
+    	const denom = gMax - gMin || 1;
+    
+    	// ---------- extract matrix -----------------------------------------------------
+    	const matrix = new Array(n);
+    	let rowStart = 0;               // byte offset of first pixel in current row
+    
+    	for (let y = 0; y < n; ++y) {
+    		const row = new Float32Array(n);            // zero‑filled
+    		for (let x = 0; x <= y; ++x) {              // lower triangle incl. diag
+    			const g = gray(rowStart + x * 4);
+    			let v = (gMax - g) / denom;               // linear scaling to [0,1]
+    			if (v < 0) v = 0;
+    			else if (v > 1) v = 1;
+    			row[x] = v;
+    		}
+    		matrix[y] = Array.from(row);
+    		rowStart += n * 4;
+    	}
+    
+    	return matrix;
+    }
+    
+    </script>
+    <!-- end 'matrix_png.js' -->
         <!-- begin 'dataLoader.js' -->
     <script>
     /**
@@ -189,7 +280,7 @@
     
         async loadAttentionPattern(model, promptHash, layerIdx, headIdx) {
             const pngPath = `${this.basePath}${model}/prompts/${promptHash}/L${layerIdx}/H${headIdx}/attn.png`;
-            return await loadPNGAsMatrix(pngPath);
+            return await pngToMatrix(pngPath);
         }
     
         async loadPromptMetadata(model, promptHash) {
@@ -236,6 +327,7 @@
             this.animationFrame = null;
             this.labelElements = { x: [], y: [] };
             this.pngImage = null;
+            this.attentionMatrix = null; // Store the actual matrix data
             this.selectedCell = null; // { x, y } or null
             this.keyboardMode = false;
             this.keysPressed = new Set(); // Track multiple key presses
@@ -433,21 +525,18 @@
                         // Apply intensity-based background color
                         const intensity = Math.min(1, attentionValue * 2); // Scale for visibility
                         const alpha = intensity * 0.3; // Max 30% opacity
-                        token.style.backgroundColor = `rgba(255, 255, 0, ${alpha})`;
+                        token.style.backgroundColor = `rgba(173, 216, 230, ${alpha})`;
                     }
                 }
             });
         }
     
         getPixelValue(x, y) {
-            // Get pixel value from the displayed PNG
-            const imageData = this.ctx.getImageData(
-                x * this.pixelSize + this.pixelSize / 2,
-                y * this.pixelSize + this.pixelSize / 2,
-                1, 1
-            );
-            // Convert from 0-255 to 0-1
-            return imageData.data[0] / 255.0;
+            // Get value from the attention matrix
+            if (!this.attentionMatrix || y >= this.attentionMatrix.length || x >= this.attentionMatrix[y].length) {
+                return 0;
+            }
+            return this.attentionMatrix[y][x];
         }
     
         handleMouseMove(e) {
@@ -619,32 +708,20 @@
             }
         }
     
-        updateCellInfo(x, y, isKeyboard = true) {
+        updateCellInfo(x, y) {
             if (x >= 0 && x < this.n && y >= 0 && y < this.n) {
                 const xToken = this.renderWhitespace(this.tokens[x]);
                 const yToken = this.renderWhitespace(this.tokens[y]);
-                const value = this.getPixelValue(x, y).toFixed(3);
-    
-                let modeInfo = '';
-                if (isKeyboard && this.keyboardMode) {
-                    modeInfo = `
-                        <div class="cell-info-row">
-                            <span>Mode:</span><span>Keyboard navigation (Arrow keys to move, Ctrl+Arrow for 10x, Escape to exit)</span>
-                        </div>
-                    `;
-                }
+                const value = this.getPixelValue(x, y).toFixed(2);
     
                 this.cellInfo.innerHTML = `
-                    <div class="cell-info-row">
-                        <span>X[${x}]:</span><span>${xToken}</span>
-                    </div>
-                    <div class="cell-info-row">
-                        <span>Y[${y}]:</span><span>${yToken}</span>
-                    </div>
-                    <div class="cell-info-row">
-                        <span>Value:</span><span>${value}</span>
-                    </div>
-                    ${modeInfo}
+                    <table class="cell-info-table">
+                        <tr>
+                            <td>X[${x}]: <span class="right">${xToken}</span></td>
+                            <td>Y[${y}]: <span class="right">${yToken}</span></td>
+                            <td>Value: <span class="right">${value}</span></td>
+                        </tr>
+                    </table>
                 `;
             }
         }
@@ -710,7 +787,10 @@
             this.n = this.tokens.length;
             this.pixelSize = this.SIZE / this.n;
     
-            // Load PNG directly
+            // Load attention matrix data
+            this.attentionMatrix = await dataLoader.loadAttentionPattern(model, promptHash, layerIdx, headIdx);
+    
+            // Load PNG directly for display
             const pngPath = `${dataLoader.basePath}${model}/prompts/${promptHash}/L${layerIdx}/H${headIdx}/attn.png`;
     
             return new Promise((resolve, reject) => {

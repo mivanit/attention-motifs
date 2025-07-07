@@ -29,6 +29,7 @@ class AttentionPatternViewer {
         this.animationFrame = null;
         this.labelElements = { x: [], y: [] };
         this.pngImage = null;
+        this.attentionMatrix = null; // Store the actual matrix data
         this.selectedCell = null; // { x, y } or null
         this.keyboardMode = false;
         this.keysPressed = new Set(); // Track multiple key presses
@@ -226,21 +227,18 @@ class AttentionPatternViewer {
                     // Apply intensity-based background color
                     const intensity = Math.min(1, attentionValue * 2); // Scale for visibility
                     const alpha = intensity * 0.3; // Max 30% opacity
-                    token.style.backgroundColor = `rgba(255, 255, 0, ${alpha})`;
+                    token.style.backgroundColor = `rgba(173, 216, 230, ${alpha})`;
                 }
             }
         });
     }
 
     getPixelValue(x, y) {
-        // Get pixel value from the displayed PNG
-        const imageData = this.ctx.getImageData(
-            x * this.pixelSize + this.pixelSize / 2,
-            y * this.pixelSize + this.pixelSize / 2,
-            1, 1
-        );
-        // Convert from 0-255 to 0-1
-        return imageData.data[0] / 255.0;
+        // Get value from the attention matrix
+        if (!this.attentionMatrix || y >= this.attentionMatrix.length || x >= this.attentionMatrix[y].length) {
+            return 0;
+        }
+        return this.attentionMatrix[y][x];
     }
 
     handleMouseMove(e) {
@@ -412,32 +410,20 @@ class AttentionPatternViewer {
         }
     }
 
-    updateCellInfo(x, y, isKeyboard = true) {
+    updateCellInfo(x, y) {
         if (x >= 0 && x < this.n && y >= 0 && y < this.n) {
             const xToken = this.renderWhitespace(this.tokens[x]);
             const yToken = this.renderWhitespace(this.tokens[y]);
-            const value = this.getPixelValue(x, y).toFixed(3);
-
-            let modeInfo = '';
-            if (isKeyboard && this.keyboardMode) {
-                modeInfo = `
-                    <div class="cell-info-row">
-                        <span>Mode:</span><span>Keyboard navigation (Arrow keys to move, Ctrl+Arrow for 10x, Escape to exit)</span>
-                    </div>
-                `;
-            }
+            const value = this.getPixelValue(x, y).toFixed(2);
 
             this.cellInfo.innerHTML = `
-                <div class="cell-info-row">
-                    <span>X[${x}]:</span><span>${xToken}</span>
-                </div>
-                <div class="cell-info-row">
-                    <span>Y[${y}]:</span><span>${yToken}</span>
-                </div>
-                <div class="cell-info-row">
-                    <span>Value:</span><span>${value}</span>
-                </div>
-                ${modeInfo}
+                <table class="cell-info-table">
+                    <tr>
+                        <td>X[${x}]: <span class="right">${xToken}</span></td>
+                        <td>Y[${y}]: <span class="right">${yToken}</span></td>
+                        <td>Value: <span class="right">${value}</span></td>
+                    </tr>
+                </table>
             `;
         }
     }
@@ -503,7 +489,10 @@ class AttentionPatternViewer {
         this.n = this.tokens.length;
         this.pixelSize = this.SIZE / this.n;
 
-        // Load PNG directly
+        // Load attention matrix data
+        this.attentionMatrix = await dataLoader.loadAttentionPattern(model, promptHash, layerIdx, headIdx);
+
+        // Load PNG directly for display
         const pngPath = `${dataLoader.basePath}${model}/prompts/${promptHash}/L${layerIdx}/H${headIdx}/attn.png`;
 
         return new Promise((resolve, reject) => {
