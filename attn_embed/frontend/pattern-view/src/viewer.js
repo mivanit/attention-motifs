@@ -31,6 +31,8 @@ class AttentionPatternViewer {
         this.pngImage = null;
         this.selectedCell = null; // { x, y } or null
         this.keyboardMode = false;
+        this.keysPressed = new Set(); // Track multiple key presses
+        this.keyRepeatInterval = null;
 
         // DOM elements
         this.container = document.getElementById(containerId);
@@ -55,6 +57,7 @@ class AttentionPatternViewer {
         this.overlayCanvas.style.left = '0';
         this.overlayCanvas.style.top = '0';
         this.overlayCanvas.style.pointerEvents = 'none';
+        this.overlayCanvas.style.zIndex = '10';
         this.overlayCtx = this.overlayCanvas.getContext('2d');
 
         // Add overlay to container
@@ -63,6 +66,7 @@ class AttentionPatternViewer {
 
         this.tooltip = document.getElementById('tooltip');
         this.cellInfo = document.getElementById('cellInfo');
+        this.tokensDisplay = document.getElementById('tokensDisplay');
         this.xLabelsContainer = document.getElementById('xLabels');
         this.yLabelsContainer = document.getElementById('yLabels');
 
@@ -71,6 +75,11 @@ class AttentionPatternViewer {
         this.canvas.addEventListener('mouseleave', () => this.handleMouseLeave());
         this.canvas.addEventListener('click', (e) => this.handleClick(e));
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
+        document.addEventListener('keyup', (e) => this.handleKeyUp(e));
+        
+        // Set up token click handlers once
+        this.tokensDisplay.addEventListener('click', (e) => this.handleTokenClick(e, 'x'));
+        this.tokensDisplay.addEventListener('contextmenu', (e) => this.handleTokenClick(e, 'y'));
     }
 
     precalculateBoundaries() {
@@ -91,7 +100,7 @@ class AttentionPatternViewer {
         this.overlayCtx.beginPath();
 
         for (let i = 0; i <= this.n; i++) {
-            const pos = this.cellBoundaries[i];
+            const pos = this.cellBoundaries[i] + 0.5;
             // Horizontal line
             this.overlayCtx.moveTo(0, pos);
             this.overlayCtx.lineTo(this.SIZE, pos);
@@ -107,8 +116,8 @@ class AttentionPatternViewer {
             this.overlayCtx.strokeStyle = this.HM_highlight_strokeStyle;
             this.overlayCtx.lineWidth = this.HM_highlight_lineWidth;
 
-            const x1 = this.cellBoundaries[hoverX];
-            const y1 = this.cellBoundaries[hoverY];
+            const x1 = hoverX * this.pixelSize;
+            const y1 = hoverY * this.pixelSize;
 
             // Highlight the cell's own borders
             this.overlayCtx.strokeRect(x1, y1, this.pixelSize, this.pixelSize);
@@ -142,10 +151,24 @@ class AttentionPatternViewer {
         this.labelElements.x = [];
         this.labelElements.y = [];
 
+        // Hide labels if too many tokens
+        if (this.n > 30) {
+            // Adjust grid layout to account for missing labels
+            this.container.style.gridTemplateColumns = `0px ${LABEL_CONSTANTS.CANVAS_SIZE}px`;
+            this.container.style.gridTemplateRows = `${LABEL_CONSTANTS.CANVAS_SIZE}px 0px`;
+            return;
+        }
+
+        // Reset grid layout for labels
+        this.container.style.gridTemplateColumns = `${LABEL_CONSTANTS.Y_LABEL_WIDTH}px ${LABEL_CONSTANTS.CANVAS_SIZE}px`;
+        this.container.style.gridTemplateRows = `${LABEL_CONSTANTS.CANVAS_SIZE}px ${LABEL_CONSTANTS.X_LABEL_HEIGHT}px`;
+
         this.tokens.forEach((token) => {
+            const displayToken = this.renderWhitespace(token);
+            
             const xLabel = document.createElement('div');
             xLabel.className = 'label x-label';
-            xLabel.textContent = token;
+            xLabel.textContent = displayToken;
             xLabel.style.width = this.pixelSize + 'px';
             xLabel.style.height = LABEL_CONSTANTS.X_LABEL_HEIGHT + 'px';
             this.xLabelsContainer.appendChild(xLabel);
@@ -153,7 +176,7 @@ class AttentionPatternViewer {
 
             const yLabel = document.createElement('div');
             yLabel.className = 'label y-label';
-            yLabel.textContent = token;
+            yLabel.textContent = displayToken;
             yLabel.style.width = LABEL_CONSTANTS.Y_LABEL_WIDTH + 'px';
             yLabel.style.height = this.pixelSize + 'px';
             yLabel.style.lineHeight = this.pixelSize + 'px';
@@ -168,12 +191,26 @@ class AttentionPatternViewer {
         this.labelElements.y.forEach(label => label.classList.remove('highlight'));
 
         if (x >= 0 && x < this.n && y >= 0 && y < this.n) {
-            this.labelElements.x[x].classList.add('highlight');
-            this.labelElements.y[y].classList.add('highlight');
+            if (this.labelElements.x.length > 0) {
+                this.labelElements.x[x].classList.add('highlight');
+                this.labelElements.y[y].classList.add('highlight');
+            }
         }
+        
+        // Update token highlights
+        this.updateTokenHighlights(x, y);
 
         // Render highlights
         this.renderHighlights(x, y);
+    }
+    
+    updateTokenHighlights(x, y) {
+        const tokens = this.tokensDisplay.querySelectorAll('.token');
+        tokens.forEach((token, idx) => {
+            token.classList.remove('highlight-x', 'highlight-y');
+            if (idx === x) token.classList.add('highlight-x');
+            if (idx === y) token.classList.add('highlight-y');
+        });
     }
 
     getPixelValue(x, y) {
@@ -188,10 +225,22 @@ class AttentionPatternViewer {
     }
 
     handleMouseMove(e) {
-        // In keyboard mode, ignore mouse movement
-        if (this.keyboardMode) {
-            return;
+        const rect = this.canvas.getBoundingClientRect();
+        const x = Math.floor((e.clientX - rect.left) / rect.width * this.n);
+        const y = Math.floor((e.clientY - rect.top) / rect.height * this.n);
+        
+        if (x >= 0 && x < this.n && y >= 0 && y < this.n) {
+            // Update cell info with hover position
+            this.updateCellInfo(x, y, false);
+            
+            // Don't update highlights in keyboard mode
+            if (!this.keyboardMode) {
+                this.updateHighlightsFromMouse(e);
+            }
         }
+    }
+    
+    updateHighlightsFromMouse(e) {
 
         const now = Date.now();
         if (now - this.lastMouseTime < this.THROTTLE_DELAY) {
@@ -214,12 +263,16 @@ class AttentionPatternViewer {
                 this.updateHighlights(x, y);
                 this.animationFrame = null;
             });
-        } else {
-            this.handleMouseLeave();
         }
     }
+    
 
     handleMouseLeave() {
+        // Clear cell info if not in keyboard mode
+        if (!this.keyboardMode) {
+            this.cellInfo.innerHTML = '';
+        }
+        
         // In keyboard mode, don't clear highlights
         if (this.keyboardMode) {
             return;
@@ -234,6 +287,9 @@ class AttentionPatternViewer {
         // Remove highlights
         this.labelElements.x.forEach(label => label.classList.remove('highlight'));
         this.labelElements.y.forEach(label => label.classList.remove('highlight'));
+
+        // Clear token highlights
+        this.updateTokenHighlights(-1, -1);
 
         // Render without highlights
         this.renderHighlights(-1, -1);
@@ -258,9 +314,6 @@ class AttentionPatternViewer {
                 this.selectedCell = { x, y };
                 this.updateHighlights(x, y);
                 this.updateCellInfo(x, y);
-                
-                // Hide tooltip since we're using static info now
-                this.tooltip.style.display = 'none';
             }
         }
     }
@@ -271,64 +324,151 @@ class AttentionPatternViewer {
             return;
         }
 
-        let newX = this.selectedCell.x;
-        let newY = this.selectedCell.y;
-
-        switch (e.key) {
-            case 'ArrowUp':
-                e.preventDefault();
-                newY = Math.max(0, newY - 1);
-                break;
-            case 'ArrowDown':
-                e.preventDefault();
-                newY = Math.min(this.n - 1, newY + 1);
-                break;
-            case 'ArrowLeft':
-                e.preventDefault();
-                newX = Math.max(0, newX - 1);
-                break;
-            case 'ArrowRight':
-                e.preventDefault();
-                newX = Math.min(this.n - 1, newX + 1);
-                break;
-            case 'Escape':
-                // Exit keyboard mode
-                this.keyboardMode = false;
-                this.selectedCell = null;
-                this.updateHighlights(-1, -1);
-                this.cellInfo.innerHTML = '';
-                return;
-            default:
-                return;
+        // Track key press
+        this.keysPressed.add(e.key);
+        
+        if (e.key === 'Escape') {
+            // Exit keyboard mode
+            this.keyboardMode = false;
+            this.selectedCell = null;
+            this.updateHighlights(-1, -1);
+            this.cellInfo.innerHTML = '';
+            this.keysPressed.clear();
+            if (this.keyRepeatInterval) {
+                clearInterval(this.keyRepeatInterval);
+                this.keyRepeatInterval = null;
+            }
+            return;
         }
-
-        // Update selection
-        this.selectedCell = { x: newX, y: newY };
-        this.updateHighlights(newX, newY);
-        this.updateCellInfo(newX, newY);
+        
+        // Start continuous movement if not already running
+        if (!this.keyRepeatInterval && this.isArrowKey(e.key)) {
+            e.preventDefault();
+            // Add initial delay before continuous movement
+            this.moveSelection(); // Initial move
+            setTimeout(() => {
+                if (this.hasArrowKeyPressed() && !this.keyRepeatInterval) {
+                    this.keyRepeatInterval = setInterval(() => this.moveSelection(), 100);
+                }
+            }, 300); // 300ms delay before repeat
+        }
+    }
+    
+    handleKeyUp(e) {
+        this.keysPressed.delete(e.key);
+        
+        // Stop continuous movement if no arrow keys pressed
+        if (this.keyRepeatInterval && !this.hasArrowKeyPressed()) {
+            clearInterval(this.keyRepeatInterval);
+            this.keyRepeatInterval = null;
+        }
+    }
+    
+    isArrowKey(key) {
+        return ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key);
+    }
+    
+    hasArrowKeyPressed() {
+        return Array.from(this.keysPressed).some(key => this.isArrowKey(key));
+    }
+    
+    moveSelection() {
+        if (!this.selectedCell) return;
+        
+        let dx = 0, dy = 0;
+        const step = this.keysPressed.has('Control') ? 10 : 1;
+        
+        if (this.keysPressed.has('ArrowLeft')) dx -= step;
+        if (this.keysPressed.has('ArrowRight')) dx += step;
+        if (this.keysPressed.has('ArrowUp')) dy -= step;
+        if (this.keysPressed.has('ArrowDown')) dy += step;
+        
+        const newX = Math.max(0, Math.min(this.n - 1, this.selectedCell.x + dx));
+        const newY = Math.max(0, Math.min(this.n - 1, this.selectedCell.y + dy));
+        
+        if (newX !== this.selectedCell.x || newY !== this.selectedCell.y) {
+            this.selectedCell = { x: newX, y: newY };
+            this.updateHighlights(newX, newY);
+            this.updateCellInfo(newX, newY);
+        }
     }
 
-    updateCellInfo(x, y) {
+    updateCellInfo(x, y, isKeyboard = true) {
         if (x >= 0 && x < this.n && y >= 0 && y < this.n) {
-            const xToken = this.tokens[x];
-            const yToken = this.tokens[y];
+            const xToken = this.renderWhitespace(this.tokens[x]);
+            const yToken = this.renderWhitespace(this.tokens[y]);
             const value = this.getPixelValue(x, y).toFixed(3);
+
+            let modeInfo = '';
+            if (isKeyboard && this.keyboardMode) {
+                modeInfo = `
+                    <div class="cell-info-row">
+                        <span>Mode:</span><span>Keyboard navigation (Arrow keys to move, Ctrl+Arrow for 10x, Escape to exit)</span>
+                    </div>
+                `;
+            }
 
             this.cellInfo.innerHTML = `
                 <div class="cell-info-row">
-                    <span>X:</span><span>${xToken} (position ${x})</span>
+                    <span>X[${x}]:</span><span>${xToken}</span>
                 </div>
                 <div class="cell-info-row">
-                    <span>Y:</span><span>${yToken} (position ${y})</span>
+                    <span>Y[${y}]:</span><span>${yToken}</span>
                 </div>
                 <div class="cell-info-row">
                     <span>Value:</span><span>${value}</span>
                 </div>
-                <div class="cell-info-row">
-                    <span>Mode:</span><span>Keyboard navigation (Arrow keys to move, Escape to exit)</span>
-                </div>
+                ${modeInfo}
             `;
         }
+    }
+    
+    renderWhitespace(token) {
+        if (token === ' ') return '␣';
+        if (token === '\t') return '␉';
+        if (token === '\n') return '␤';
+        if (token === '\r') return '␍';
+        return token;
+    }
+
+    renderTokensDisplay() {
+        // Create individual token spans for click handling
+        const tokenSpans = this.tokens.map((token, idx) => {
+            const isWhitespace = token === ' ' || token === '\t' || token === '\n' || token === '\r';
+            const displayToken = this.renderWhitespace(token);
+            const className = isWhitespace ? 'token whitespace' : 'token';
+            return `<span class="${className}" data-index="${idx}">${displayToken}</span>`;
+        }).join('');
+        
+        this.tokensDisplay.innerHTML = tokenSpans;
+    }
+    
+    handleTokenClick(e, axis) {
+        e.preventDefault();
+        const tokenEl = e.target.closest('.token');
+        if (!tokenEl) return;
+        
+        const index = parseInt(tokenEl.dataset.index);
+        if (isNaN(index) || index < 0 || index >= this.n) return;
+        
+        // Enter keyboard mode if not already
+        if (!this.keyboardMode) {
+            this.keyboardMode = true;
+        }
+        
+        // Update selection
+        if (!this.selectedCell) {
+            this.selectedCell = { x: 0, y: 0 };
+        }
+        
+        if (axis === 'x') {
+            this.selectedCell.x = index;
+        } else {
+            this.selectedCell.y = index;
+        }
+        
+        this.updateHighlights(this.selectedCell.x, this.selectedCell.y);
+        this.updateCellInfo(this.selectedCell.x, this.selectedCell.y);
     }
 
     async displayPattern(dataLoader, model, promptHash, layerIdx, headIdx) {
@@ -372,6 +512,9 @@ class AttentionPatternViewer {
 
                 // Create labels
                 this.createAxisLabels();
+                
+                // Render tokens display
+                this.renderTokensDisplay();
 
                 // Update page title
                 document.title = `${model} L${layerIdx}H${headIdx} - ${promptHash.substring(0, 8)}`;

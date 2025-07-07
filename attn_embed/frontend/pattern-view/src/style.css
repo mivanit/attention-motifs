@@ -12,12 +12,54 @@ body {
 	font-size: 14px;
 }
 
+.main-content {
+	display: flex;
+	gap: 20px;
+	align-items: flex-start;
+}
+
+.tokens-display {
+	flex: 1;
+	padding: 10px;
+	border: 1px solid #ccc;
+	background: #f9f9f9;
+	font-family: monospace;
+	font-size: 14px;
+	white-space: pre-wrap;
+	word-break: break-all;
+	max-height: 600px;
+	overflow-y: auto;
+}
+
+.tokens-display .token {
+	cursor: pointer;
+	padding: 1px 2px;
+	border-radius: 2px;
+	transition: background-color 0.1s;
+}
+
+.tokens-display .token:hover {
+	background-color: #e0e0e0;
+}
+
+.tokens-display .token.whitespace {
+	color: #999;
+}
+
+.tokens-display .token.highlight-x {
+	background-color: #ffcccc;
+}
+
+.tokens-display .token.highlight-y {
+	background-color: #ccffcc;
+}
+
 .heatmap-container {
 	display: grid;
 	grid-template-areas: 
 		"y-labels canvas"
 		"empty x-labels";
-	margin: 20px;
+	margin: 0 20px;
 	gap: 0;
 }
 
@@ -72,7 +114,7 @@ canvas {
 }
 
 .tooltip {
-	display: none !important; /* Hide tooltip since we use static cell info */
+	display: none !important; /* Removed in favor of static cell info */
 }
 
 .cell-info {
@@ -82,7 +124,8 @@ canvas {
 	background: #f9f9f9;
 	font-family: monospace;
 	font-size: 14px;
-	min-height: 60px;
+	min-height: 80px;
+	max-width: 600px;
 }
 
 .cell-info-row {
@@ -93,5 +136,5 @@ canvas {
 
 .cell-info-row span:first-child {
 	font-weight: bold;
-	min-width: 60px;
+	min-width: 80px;
 }

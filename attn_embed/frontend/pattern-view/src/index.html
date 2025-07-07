@@ -11,13 +11,15 @@
 <body>
     <div id="controls">
         <div id="info"></div>
-        <div class="tokens-display" id="tokensDisplay"></div>
     </div>
-    <div class="heatmap-container" id="heatmapContainer">
-        <canvas id="heatmapCanvas"></canvas>
-        <div class="x-labels" id="xLabels"></div>
-        <div class="y-labels" id="yLabels"></div>
-        <div class="tooltip" id="tooltip"></div>
+    <div class="main-content">
+        <div class="heatmap-container" id="heatmapContainer">
+            <canvas id="heatmapCanvas"></canvas>
+            <div class="x-labels" id="xLabels"></div>
+            <div class="y-labels" id="yLabels"></div>
+            <div class="tooltip" id="tooltip"></div>
+        </div>
+        <div class="tokens-display" id="tokensDisplay"></div>
     </div>
     <div class="cell-info" id="cellInfo"></div>
     <script src="dataLoader.js"></script>
@@ -35,15 +37,22 @@
         const layerIdx = parseInt(parts[1].substring(1));
         const headIdx = parseInt(parts[2].substring(1));
 
-        // Update info
-        document.getElementById('info').innerHTML =
-            `<p>Model: ${model} | Layer: ${layerIdx} | Head: ${headIdx} | Prompt hash: ${promptHash}</p>`;
+        // Update info (will be updated with token count after pattern loads)
+        const updateInfo = (tokenCount = null) => {
+            const tokenInfo = tokenCount ? ` | Tokens: ${tokenCount}` : '';
+            document.getElementById('info').innerHTML =
+                `<p>Model: ${model} | Layer: ${layerIdx} | Head: ${headIdx} | Prompt hash: ${promptHash}${tokenInfo}</p>`;
+        };
+        updateInfo();
 
         // Initialize viewer and load data
         const viewer = new AttentionPatternViewer('heatmapContainer');
         const dataLoader = new AttentionDataLoader();
 
-        viewer.displayPattern(dataLoader, model, promptHash, layerIdx, headIdx);
+        viewer.displayPattern(dataLoader, model, promptHash, layerIdx, headIdx).then(() => {
+            // Update info with token count after pattern loads
+            updateInfo(viewer.n);
+        });
     </script>
 </body>
 
