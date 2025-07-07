@@ -26,9 +26,10 @@
         const promptHash = urlParams.get('prompt') || '0NUMVE92ScCvyvMyUywBeQ';
         const headParam = urlParams.get('head') || 'gemma-2b.L0.H0';
 
-        // Parse head parameter: model.L{layer}.H{head}
+        // Parse head parameter: {model}.L{layer}.H{head}
         const parts = headParam.split('.');
         const model = parts[0];
+
         const layerIdx = parseInt(parts[1].substring(1));
         const headIdx = parseInt(parts[2].substring(1));
 
@@ -41,11 +42,6 @@
         const dataLoader = new AttentionDataLoader();
 
         viewer.displayPattern(dataLoader, model, promptHash, layerIdx, headIdx);
-        // .catch(error => {
-        //     console.error('Error loading pattern:', error);
-        //     document.getElementById('info').innerHTML +=
-        //         `<p style="color: red;">Error: ${error.message}</p>`;
-        // });
     </script>
 </body>
 
