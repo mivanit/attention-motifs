@@ -1,4 +1,4 @@
-<h1>Token Heatmap Viewer</h1><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -82,8 +82,6 @@
     </style>
 </head>
 <body>
-    <h1>Token Heatmap Viewer</h1>
-    
     <div>
         <label>Size: </label>
         <input type="number" id="sizeInput" value="20" min="5" max="100">
@@ -101,6 +99,11 @@
         let n = 20;
         let tokens = [];
         let matrix = null;
+		const SIZE = 1000;
+		const HM_grid_strokeStyle = '#ddd';
+		const HM_grid_lineWidth = 0.5;
+		const HM_highlight_strokeStyle = '#ffaaaa';
+		const HM_highlight_lineWidth = 2;
 
         const canvas = document.getElementById('heatmapCanvas');
         const ctx = canvas.getContext('2d');
@@ -109,16 +112,7 @@
         ctx.imageSmoothingEnabled = false;
 
         function generateRandomTokens(size) {
-            const prefixes = ['tok_', 'emb_', 'vec_', 'dim_', 'feat_'];
-            const words = ['cat', 'dog', 'tree', 'book', 'code', 'math', 'data', 'test'];
-            
-            return Array.from({length: size}, (_, i) => {
-                if (Math.random() < 0.5) {
-                    return `${prefixes[Math.floor(Math.random() * prefixes.length)]}${i}`;
-                } else {
-                    return `${words[Math.floor(Math.random() * words.length)]}_${Math.floor(Math.random() * 100)}`;
-                }
-            });
+			return Array.from({length: size}, (_, i) => `tok_${i}`);
         }
 
         function generateLowerTriangularMatrix(size) {
@@ -139,43 +133,46 @@
             return matrix;
         }
 
+		function cmap(value) {
+			// Blues colormap: white to blue
+			const intensity = Math.floor((1 - value) * 255);
+			return `rgb(${intensity}, ${intensity}, 255)`;
+		}
+
         function renderHeatmap(hoverX = -1, hoverY = -1) {
-            const size = 400;
-            canvas.width = size;
-            canvas.height = size;
+            canvas.width = SIZE;
+            canvas.height = SIZE;
             
-            const pixelSize = size / n;
+            const pixelSize = SIZE / n;
             
             // Draw each pixel as a rectangle to ensure pixelated appearance
             for (let i = 0; i < n; i++) {
                 for (let j = 0; j < n; j++) {
                     const value = matrix[i][j];
-                    // Blues colormap: white to blue
-                    const intensity = Math.floor((1 - value) * 255);
-                    ctx.fillStyle = `rgb(${intensity}, ${intensity}, 255)`;
-                    ctx.fillRect(j * pixelSize, i * pixelSize, pixelSize, pixelSize);
+					ctx.fillStyle = cmap(value);
+					ctx.fillRect(j * pixelSize, i * pixelSize, pixelSize, pixelSize);
                 }
             }
             
             // Draw normal grid lines first
-            ctx.strokeStyle = '#ddd';
-            ctx.lineWidth = 0.5;
+            ctx.strokeStyle = HM_grid_strokeStyle;
+            ctx.lineWidth = HM_grid_lineWidth;
             for (let i = 0; i <= n; i++) {
                 ctx.beginPath();
                 ctx.moveTo(0, i * pixelSize);
-                ctx.lineTo(size, i * pixelSize);
+                ctx.lineTo(SIZE, i * pixelSize);
                 ctx.stroke();
                 
                 ctx.beginPath();
                 ctx.moveTo(i * pixelSize, 0);
-                ctx.lineTo(i * pixelSize, size);
+                ctx.lineTo(i * pixelSize, SIZE);
                 ctx.stroke();
             }
             
             // Draw highlighted borders if hovering
             if (hoverX >= 0 && hoverY >= 0) {
-                ctx.strokeStyle = '#ffaaaa';
-                ctx.lineWidth = 2;
+                ctx.strokeStyle = HM_highlight_strokeStyle;
+                ctx.lineWidth = HM_highlight_lineWidth;
                 
                 // Highlight the cell's own borders
                 ctx.strokeRect(hoverX * pixelSize, hoverY * pixelSize, pixelSize, pixelSize);
@@ -197,12 +194,12 @@
                 if (hoverY < n - 1) {
                     ctx.beginPath();
                     ctx.moveTo(hoverX * pixelSize, (hoverY + 1) * pixelSize);
-                    ctx.lineTo(hoverX * pixelSize, size);
+                    ctx.lineTo(hoverX * pixelSize, SIZE);
                     ctx.stroke();
                     
                     ctx.beginPath();
                     ctx.moveTo((hoverX + 1) * pixelSize, (hoverY + 1) * pixelSize);
-                    ctx.lineTo((hoverX + 1) * pixelSize, size);
+                    ctx.lineTo((hoverX + 1) * pixelSize, SIZE);
                     ctx.stroke();
                 }
             }
@@ -215,7 +212,7 @@
             xLabels.innerHTML = '';
             yLabels.innerHTML = '';
             
-            const labelWidth = 400 / n;
+            const labelWidth = SIZE / n;
             
             tokens.forEach((token, i) => {
                 const xLabel = document.createElement('div');
@@ -272,7 +269,6 @@
         function generateData() {
             const sizeInput = document.getElementById('sizeInput');
             n = parseInt(sizeInput.value) || 20;
-            n = Math.max(5, Math.min(100, n));
             
             tokens = generateRandomTokens(n);
             matrix = generateLowerTriangularMatrix(n);
