@@ -1,0 +1,287 @@
+<h1>Token Heatmap Viewer</h1><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Heatmap Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .heatmap-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px;
+            padding: 60px 20px 60px 80px;
+        }
+
+        canvas {
+            border: 1px solid #000;
+            cursor: crosshair;
+            image-rendering: pixelated;
+        }
+
+        .x-labels {
+            position: absolute;
+            bottom: 10px;
+            left: 80px;
+            display: flex;
+        }
+
+        .y-labels {
+            position: absolute;
+            left: 10px;
+            top: 60px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .label {
+            font-family: monospace;
+            font-size: 10px;
+            text-align: left;
+            overflow: hidden;
+            transition: background-color 0.1s;
+        }
+
+        .label.highlight {
+            background-color: #ffcccc;
+        }
+
+        .x-label {
+            writing-mode: vertical-rl;
+            width: 20px;
+            height: 50px;
+        }
+
+        .y-label {
+            width: 60px;
+            height: 20px;
+            line-height: 20px;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: #fff;
+            border: 1px solid #000;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            width: 120px;
+        }
+
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <h1>Token Heatmap Viewer</h1>
+    
+    <div>
+        <label>Size: </label>
+        <input type="number" id="sizeInput" value="20" min="5" max="100">
+        <button onclick="generateData()">Generate New Data</button>
+    </div>
+
+    <div class="heatmap-container" id="heatmapContainer">
+        <canvas id="heatmapCanvas"></canvas>
+        <div class="x-labels" id="xLabels"></div>
+        <div class="y-labels" id="yLabels"></div>
+        <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <script>
+        let n = 20;
+        let tokens = [];
+        let matrix = null;
+
+        const canvas = document.getElementById('heatmapCanvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        
+        ctx.imageSmoothingEnabled = false;
+
+        function generateRandomTokens(size) {
+            const prefixes = ['tok_', 'emb_', 'vec_', 'dim_', 'feat_'];
+            const words = ['cat', 'dog', 'tree', 'book', 'code', 'math', 'data', 'test'];
+            
+            return Array.from({length: size}, (_, i) => {
+                if (Math.random() < 0.5) {
+                    return `${prefixes[Math.floor(Math.random() * prefixes.length)]}${i}`;
+                } else {
+                    return `${words[Math.floor(Math.random() * words.length)]}_${Math.floor(Math.random() * 100)}`;
+                }
+            });
+        }
+
+        function generateLowerTriangularMatrix(size) {
+            const matrix = Array(size).fill(null).map(() => Array(size).fill(0));
+            
+            for (let i = 0; i < size; i++) {
+                let rowSum = 0;
+                // Generate random values for lower triangular part
+                for (let j = 0; j <= i; j++) {
+                    matrix[i][j] = Math.random();
+                    rowSum += matrix[i][j];
+                }
+                // Normalize to make row-stochastic
+                for (let j = 0; j <= i; j++) {
+                    matrix[i][j] /= rowSum;
+                }
+            }
+            return matrix;
+        }
+
+        function renderHeatmap(hoverX = -1, hoverY = -1) {
+            const size = 400;
+            canvas.width = size;
+            canvas.height = size;
+            
+            const pixelSize = size / n;
+            
+            // Draw each pixel as a rectangle to ensure pixelated appearance
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    const value = matrix[i][j];
+                    // Blues colormap: white to blue
+                    const intensity = Math.floor((1 - value) * 255);
+                    ctx.fillStyle = `rgb(${intensity}, ${intensity}, 255)`;
+                    ctx.fillRect(j * pixelSize, i * pixelSize, pixelSize, pixelSize);
+                }
+            }
+            
+            // Draw normal grid lines first
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i <= n; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * pixelSize);
+                ctx.lineTo(size, i * pixelSize);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(i * pixelSize, 0);
+                ctx.lineTo(i * pixelSize, size);
+                ctx.stroke();
+            }
+            
+            // Draw highlighted borders if hovering
+            if (hoverX >= 0 && hoverY >= 0) {
+                ctx.strokeStyle = '#ffaaaa';
+                ctx.lineWidth = 2;
+                
+                // Highlight the cell's own borders
+                ctx.strokeRect(hoverX * pixelSize, hoverY * pixelSize, pixelSize, pixelSize);
+                
+                // Highlight row (only to the left of hovered cell)
+                if (hoverX > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, hoverY * pixelSize);
+                    ctx.lineTo(hoverX * pixelSize, hoverY * pixelSize);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(0, (hoverY + 1) * pixelSize);
+                    ctx.lineTo(hoverX * pixelSize, (hoverY + 1) * pixelSize);
+                    ctx.stroke();
+                }
+                
+                // Highlight column (only below hovered cell)
+                if (hoverY < n - 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(hoverX * pixelSize, (hoverY + 1) * pixelSize);
+                    ctx.lineTo(hoverX * pixelSize, size);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo((hoverX + 1) * pixelSize, (hoverY + 1) * pixelSize);
+                    ctx.lineTo((hoverX + 1) * pixelSize, size);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function createAxisLabels() {
+            const xLabels = document.getElementById('xLabels');
+            const yLabels = document.getElementById('yLabels');
+            
+            xLabels.innerHTML = '';
+            yLabels.innerHTML = '';
+            
+            const labelWidth = 400 / n;
+            
+            tokens.forEach((token, i) => {
+                const xLabel = document.createElement('div');
+                xLabel.className = 'label x-label';
+                xLabel.textContent = token;
+                xLabel.style.width = labelWidth + 'px';
+                xLabels.appendChild(xLabel);
+                
+                const yLabel = document.createElement('div');
+                yLabel.className = 'label y-label';
+                yLabel.textContent = token;
+                yLabel.style.height = labelWidth + 'px';
+                yLabel.style.lineHeight = labelWidth + 'px';
+                yLabels.appendChild(yLabel);
+            });
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / rect.width * n);
+            const y = Math.floor((e.clientY - rect.top) / rect.height * n);
+            
+            if (x >= 0 && x < n && y >= 0 && y < n) {
+                const xToken = tokens[x];
+                const yToken = tokens[y];
+                const value = matrix[y][x].toFixed(3);
+                tooltip.innerHTML = `
+                    <div class="tooltip-row"><span>X:</span><span>${xToken}</span></div>
+                    <div class="tooltip-row"><span>Y:</span><span>${yToken}</span></div>
+                    <div class="tooltip-row"><span>Value:</span><span>${value}</span></div>
+                `;
+                tooltip.style.left = (e.clientX + 10) + 'px';
+                tooltip.style.top = (e.clientY - 10) + 'px';
+                tooltip.style.display = 'block';
+                
+                // Highlight axis labels
+                document.querySelectorAll('.label').forEach(label => label.classList.remove('highlight'));
+                document.querySelectorAll('.x-label')[x].classList.add('highlight');
+                document.querySelectorAll('.y-label')[y].classList.add('highlight');
+                
+                // Re-render with highlighting
+                renderHeatmap(x, y);
+            }
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            tooltip.style.display = 'none';
+            // Remove label highlights
+            document.querySelectorAll('.label').forEach(label => label.classList.remove('highlight'));
+            // Re-render without highlighting
+            renderHeatmap();
+        });
+
+        function generateData() {
+            const sizeInput = document.getElementById('sizeInput');
+            n = parseInt(sizeInput.value) || 20;
+            n = Math.max(5, Math.min(100, n));
+            
+            tokens = generateRandomTokens(n);
+            matrix = generateLowerTriangularMatrix(n);
+            
+            renderHeatmap();
+            createAxisLabels();
+        }
+
+        generateData();
+    </script>
+</body>
+</html>
