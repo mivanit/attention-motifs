@@ -3,6 +3,15 @@ body {
 	margin: 20px;
 }
 
+#controls {
+	margin-bottom: 20px;
+}
+
+#info {
+	font-family: monospace;
+	font-size: 14px;
+}
+
 .heatmap-container {
 	position: relative;
 	display: inline-block;

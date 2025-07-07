@@ -4,15 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Token Heatmap Viewer</title>
+    <title>Attention Pattern Viewer</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <div>
-        <label>Size: </label>
-        <input type="number" id="sizeInput" value="20" min="5" max="100">
-        <button onclick="heatmapViewer.generateData()">Generate New Data</button>
+    <div id="controls">
+        <div id="info"></div>
     </div>
     <div class="heatmap-container" id="heatmapContainer">
         <canvas id="heatmapCanvas"></canvas>
@@ -20,288 +18,35 @@
         <div class="y-labels" id="yLabels"></div>
         <div class="tooltip" id="tooltip"></div>
     </div>
+    <script src="pngLoader.js"></script>
+    <script src="dataLoader.js"></script>
+    <script src="viewer.js"></script>
     <script>
-        const heatmapViewer = (function () {
-            // Constants
-            const SIZE = 500;
-            const HM_grid_strokeStyle = '#ddd';
-            const HM_grid_lineWidth = 0.5;
-            const HM_highlight_strokeStyle = '#ffaaaa';
-            const HM_highlight_lineWidth = 2;
-            const THROTTLE_DELAY = 16; // ~60fps
-
-            // State
-            let n = 20;
-            let tokens = [];
-            let matrix = null;
-            let pixelSize = SIZE / n;
-            let cellBoundaries = [];
-            let baseCanvas = null;
-            let baseCtx = null;
-            let lastMouseTime = 0;
-            let animationFrame = null;
-            let labelElements = { x: [], y: [] };
-
-            // DOM elements
-            const canvas = document.getElementById('heatmapCanvas');
-            const ctx = canvas.getContext('2d');
-            const tooltip = document.getElementById('tooltip');
-            const xLabelsContainer = document.getElementById('xLabels');
-            const yLabelsContainer = document.getElementById('yLabels');
-
-            ctx.imageSmoothingEnabled = false;
-
-            // Initialize offscreen canvas for caching
-            function initBaseCanvas() {
-                baseCanvas = document.createElement('canvas');
-                baseCanvas.width = SIZE;
-                baseCanvas.height = SIZE;
-                baseCtx = baseCanvas.getContext('2d');
-                baseCtx.imageSmoothingEnabled = false;
-            }
-
-            function generateRandomTokens(size) {
-                return Array.from({ length: size }, (_, i) => `tok_${i}`);
-            }
-
-            function generateLowerTriangularMatrix(size) {
-                const matrix = new Float32Array(size * size);
-
-                for (let i = 0; i < size; i++) {
-                    let rowSum = 0;
-                    // Generate random values for lower triangular part
-                    for (let j = 0; j <= i; j++) {
-                        const idx = i * size + j;
-                        matrix[idx] = Math.random();
-                        rowSum += matrix[idx];
-                    }
-                    // Normalize to make row-stochastic
-                    for (let j = 0; j <= i; j++) {
-                        const idx = i * size + j;
-                        matrix[idx] /= rowSum;
-                    }
-                }
-                return matrix;
-            }
-
-            function cmap(value) {
-                // Blues colormap: white to blue
-                const intensity = Math.floor((1 - value) * 255);
-                return `rgb(${intensity}, ${intensity}, 255)`;
-            }
-
-            function precalculateBoundaries() {
-                cellBoundaries = [];
-                for (let i = 0; i <= n; i++) {
-                    cellBoundaries.push(i * pixelSize);
-                }
-            }
-
-            function renderBaseHeatmap() {
-                // Clear the base canvas
-                baseCtx.clearRect(0, 0, SIZE, SIZE);
-
-                // Draw heatmap cells
-                for (let i = 0; i < n; i++) {
-                    for (let j = 0; j < n; j++) {
-                        const value = matrix[i * n + j];
-                        baseCtx.fillStyle = cmap(value);
-                        baseCtx.fillRect(j * pixelSize, i * pixelSize, pixelSize, pixelSize);
-                    }
-                }
-
-                // Draw grid lines in one batch
-                baseCtx.strokeStyle = HM_grid_strokeStyle;
-                baseCtx.lineWidth = HM_grid_lineWidth;
-                baseCtx.beginPath();
-
-                for (let i = 0; i <= n; i++) {
-                    const pos = cellBoundaries[i];
-                    // Horizontal line
-                    baseCtx.moveTo(0, pos);
-                    baseCtx.lineTo(SIZE, pos);
-                    // Vertical line
-                    baseCtx.moveTo(pos, 0);
-                    baseCtx.lineTo(pos, SIZE);
-                }
-
-                baseCtx.stroke();
-            }
-
-            function renderHighlights(hoverX, hoverY) {
-                // Copy base heatmap
-                ctx.clearRect(0, 0, SIZE, SIZE);
-                ctx.drawImage(baseCanvas, 0, 0);
-
-                // Draw highlights if hovering
-                if (hoverX >= 0 && hoverY >= 0 && hoverX < n && hoverY < n) {
-                    ctx.strokeStyle = HM_highlight_strokeStyle;
-                    ctx.lineWidth = HM_highlight_lineWidth;
-
-                    const x1 = cellBoundaries[hoverX];
-                    const y1 = cellBoundaries[hoverY];
-                    const x2 = cellBoundaries[hoverX + 1];
-                    const y2 = cellBoundaries[hoverY + 1];
-
-                    // Highlight the cell's own borders
-                    ctx.strokeRect(x1, y1, pixelSize, pixelSize);
-
-                    ctx.beginPath();
-
-                    // Highlight row (only to the left of hovered cell)
-                    if (hoverX > 0) {
-                        ctx.moveTo(0, y1);
-                        ctx.lineTo(x1, y1);
-                        ctx.moveTo(0, y2);
-                        ctx.lineTo(x1, y2);
-                    }
-
-                    // Highlight column (only below hovered cell)
-                    if (hoverY < n - 1) {
-                        ctx.moveTo(x1, y2);
-                        ctx.lineTo(x1, SIZE);
-                        ctx.moveTo(x2, y2);
-                        ctx.lineTo(x2, SIZE);
-                    }
-
-                    ctx.stroke();
-                }
-            }
-
-            function createAxisLabels() {
-                // Clear existing labels
-                xLabelsContainer.innerHTML = '';
-                yLabelsContainer.innerHTML = '';
-                labelElements.x = [];
-                labelElements.y = [];
-
-                tokens.forEach((token, i) => {
-                    const xLabel = document.createElement('div');
-                    xLabel.className = 'label x-label';
-                    xLabel.textContent = token;
-                    xLabel.style.width = pixelSize + 'px';
-                    xLabelsContainer.appendChild(xLabel);
-                    labelElements.x.push(xLabel);
-
-                    const yLabel = document.createElement('div');
-                    yLabel.className = 'label y-label';
-                    yLabel.textContent = token;
-                    yLabel.style.height = pixelSize + 'px';
-                    yLabel.style.lineHeight = pixelSize + 'px';
-                    yLabelsContainer.appendChild(yLabel);
-                    labelElements.y.push(yLabel);
-                });
-            }
-
-            function updateHighlights(x, y) {
-                // Update label highlights
-                labelElements.x.forEach(label => label.classList.remove('highlight'));
-                labelElements.y.forEach(label => label.classList.remove('highlight'));
-
-                if (x >= 0 && x < n && y >= 0 && y < n) {
-                    labelElements.x[x].classList.add('highlight');
-                    labelElements.y[y].classList.add('highlight');
-                }
-
-                // Render highlights
-                renderHighlights(x, y);
-            }
-
-            function handleMouseMove(e) {
-                const now = Date.now();
-                if (now - lastMouseTime < THROTTLE_DELAY) {
-                    return;
-                }
-                lastMouseTime = now;
-
-                const rect = canvas.getBoundingClientRect();
-                const x = Math.floor((e.clientX - rect.left) / rect.width * n);
-                const y = Math.floor((e.clientY - rect.top) / rect.height * n);
-
-                if (x >= 0 && x < n && y >= 0 && y < n) {
-                    const xToken = tokens[x];
-                    const yToken = tokens[y];
-                    const value = matrix[y * n + x].toFixed(3);
-
-                    tooltip.innerHTML = `
-                        <div class="tooltip-row"><span>X:</span><span>${xToken}</span></div>
-                        <div class="tooltip-row"><span>Y:</span><span>${yToken}</span></div>
-                        <div class="tooltip-row"><span>Value:</span><span>${value}</span></div>
-                    `;
-                    tooltip.style.left = (e.clientX + 10) + 'px';
-                    tooltip.style.top = (e.clientY - 10) + 'px';
-                    tooltip.style.display = 'block';
-
-                    // Cancel any pending animation frame
-                    if (animationFrame) {
-                        cancelAnimationFrame(animationFrame);
-                    }
-
-                    // Schedule highlight update
-                    animationFrame = requestAnimationFrame(() => {
-                        updateHighlights(x, y);
-                        animationFrame = null;
-                    });
-                } else {
-                    handleMouseLeave();
-                }
-            }
-
-            function handleMouseLeave() {
-                tooltip.style.display = 'none';
-
-                // Cancel any pending animation frame
-                if (animationFrame) {
-                    cancelAnimationFrame(animationFrame);
-                    animationFrame = null;
-                }
-
-                // Remove highlights
-                labelElements.x.forEach(label => label.classList.remove('highlight'));
-                labelElements.y.forEach(label => label.classList.remove('highlight'));
-
-                // Render without highlights
-                renderHighlights(-1, -1);
-            }
-
-            function generateData() {
-                const sizeInput = document.getElementById('sizeInput');
-                n = parseInt(sizeInput.value) || 20;
-                pixelSize = SIZE / n;
-
-                tokens = generateRandomTokens(n);
-                matrix = generateLowerTriangularMatrix(n);
-
-                // Precalculate boundaries
-                precalculateBoundaries();
-
-                // Set canvas dimensions
-                canvas.width = SIZE;
-                canvas.height = SIZE;
-
-                // Render base heatmap to cache
-                renderBaseHeatmap();
-
-                // Initial render
-                renderHighlights(-1, -1);
-
-                // Create labels
-                createAxisLabels();
-            }
-
-            // Initialize
-            initBaseCanvas();
-            canvas.addEventListener('mousemove', handleMouseMove);
-            canvas.addEventListener('mouseleave', handleMouseLeave);
-
-            // Public API
-            return {
-                generateData: generateData
-            };
-        })();
-
-        // Initial generation
-        heatmapViewer.generateData();
+        // Parse URL parameters with defaults for debugging
+        const urlParams = new URLSearchParams(window.location.search);
+        const promptHash = urlParams.get('prompt') || '0NUMVE92ScCvyvMyUywBeQ';
+        const headParam = urlParams.get('head') || 'gemma-2b.L0.H0';
+        
+        // Parse head parameter: model.L{layer}.H{head}
+        const parts = headParam.split('.');
+        const model = parts[0];
+        const layerIdx = parseInt(parts[1].substring(1));
+        const headIdx = parseInt(parts[2].substring(1));
+        
+        // Update info
+        document.getElementById('info').innerHTML = 
+            `<p>Model: ${model} | Layer: ${layerIdx} | Head: ${headIdx} | Prompt hash: ${promptHash}</p>`;
+        
+        // Initialize viewer and load data
+        const viewer = new AttentionPatternViewer('heatmapContainer');
+        const dataLoader = new AttentionDataLoader();
+        
+        viewer.displayPattern(dataLoader, model, promptHash, layerIdx, headIdx);
+            // .catch(error => {
+            //     console.error('Error loading pattern:', error);
+            //     document.getElementById('info').innerHTML += 
+            //         `<p style="color: red;">Error: ${error.message}</p>`;
+            // });
     </script>
 </body>
 
