@@ -16,15 +16,11 @@ body {
 	position: relative;
 	display: inline-block;
 	margin: 20px;
-	padding: 60px 20px 60px 80px;
 }
 
 canvas {
 	border: 1px solid #000;
 	cursor: crosshair;
-	image-rendering: pixelated;
-	image-rendering: -moz-crisp-edges;
-	image-rendering: crisp-edges;
 }
 
 .x-labels {

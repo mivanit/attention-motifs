@@ -3,10 +3,17 @@
  * Displays PNG directly with overlay for highlights
  */
 
+// Global constants for consistent layout
+const LABEL_CONSTANTS = {
+    Y_LABEL_WIDTH: 80,
+    X_LABEL_HEIGHT: 60,
+    CANVAS_SIZE: 500
+};
+
 class AttentionPatternViewer {
     constructor(containerId) {
         // Constants
-        this.SIZE = 500;
+        this.SIZE = LABEL_CONSTANTS.CANVAS_SIZE;
         this.HM_highlight_strokeStyle = '#ff0000';
         this.HM_highlight_lineWidth = 2;
         this.THROTTLE_DELAY = 16; // ~60fps
@@ -27,11 +34,6 @@ class AttentionPatternViewer {
         // Create main canvas for PNG display
         this.canvas = document.getElementById('heatmapCanvas');
         this.ctx = this.canvas.getContext('2d');
-        this.ctx.imageSmoothingEnabled = false;
-        this.ctx.webkitImageSmoothingEnabled = false;
-        this.ctx.mozImageSmoothingEnabled = false;
-        this.ctx.msImageSmoothingEnabled = false;
-        this.ctx.oImageSmoothingEnabled = false;
 
         // Create overlay canvas for highlights
         this.overlayCanvas = document.createElement('canvas');
@@ -123,17 +125,19 @@ class AttentionPatternViewer {
         this.labelElements.x = [];
         this.labelElements.y = [];
 
-        this.tokens.forEach((token, i) => {
+        this.tokens.forEach((token) => {
             const xLabel = document.createElement('div');
             xLabel.className = 'label x-label';
             xLabel.textContent = token;
             xLabel.style.width = this.pixelSize + 'px';
+            xLabel.style.height = LABEL_CONSTANTS.X_LABEL_HEIGHT + 'px';
             this.xLabelsContainer.appendChild(xLabel);
             this.labelElements.x.push(xLabel);
 
             const yLabel = document.createElement('div');
             yLabel.className = 'label y-label';
             yLabel.textContent = token;
+            yLabel.style.width = LABEL_CONSTANTS.Y_LABEL_WIDTH + 'px';
             yLabel.style.height = this.pixelSize + 'px';
             yLabel.style.lineHeight = this.pixelSize + 'px';
             this.yLabelsContainer.appendChild(yLabel);
