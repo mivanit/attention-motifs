@@ -1,27 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Token Heatmap Viewer</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div>
         <label>Size: </label>
         <input type="number" id="sizeInput" value="20" min="5" max="100">
         <button onclick="heatmapViewer.generateData()">Generate New Data</button>
     </div>
-
     <div class="heatmap-container" id="heatmapContainer">
         <canvas id="heatmapCanvas"></canvas>
         <div class="x-labels" id="xLabels"></div>
         <div class="y-labels" id="yLabels"></div>
         <div class="tooltip" id="tooltip"></div>
     </div>
-
     <script>
-        const heatmapViewer = (function() {
+        const heatmapViewer = (function () {
             // Constants
             const SIZE = 500;
             const HM_grid_strokeStyle = '#ddd';
@@ -48,7 +48,7 @@
             const tooltip = document.getElementById('tooltip');
             const xLabelsContainer = document.getElementById('xLabels');
             const yLabelsContainer = document.getElementById('yLabels');
-            
+
             ctx.imageSmoothingEnabled = false;
 
             // Initialize offscreen canvas for caching
@@ -61,12 +61,12 @@
             }
 
             function generateRandomTokens(size) {
-                return Array.from({length: size}, (_, i) => `tok_${i}`);
+                return Array.from({ length: size }, (_, i) => `tok_${i}`);
             }
 
             function generateLowerTriangularMatrix(size) {
                 const matrix = new Float32Array(size * size);
-                
+
                 for (let i = 0; i < size; i++) {
                     let rowSum = 0;
                     // Generate random values for lower triangular part
@@ -100,7 +100,7 @@
             function renderBaseHeatmap() {
                 // Clear the base canvas
                 baseCtx.clearRect(0, 0, SIZE, SIZE);
-                
+
                 // Draw heatmap cells
                 for (let i = 0; i < n; i++) {
                     for (let j = 0; j < n; j++) {
@@ -109,12 +109,12 @@
                         baseCtx.fillRect(j * pixelSize, i * pixelSize, pixelSize, pixelSize);
                     }
                 }
-                
+
                 // Draw grid lines in one batch
                 baseCtx.strokeStyle = HM_grid_strokeStyle;
                 baseCtx.lineWidth = HM_grid_lineWidth;
                 baseCtx.beginPath();
-                
+
                 for (let i = 0; i <= n; i++) {
                     const pos = cellBoundaries[i];
                     // Horizontal line
@@ -124,7 +124,7 @@
                     baseCtx.moveTo(pos, 0);
                     baseCtx.lineTo(pos, SIZE);
                 }
-                
+
                 baseCtx.stroke();
             }
 
@@ -132,22 +132,22 @@
                 // Copy base heatmap
                 ctx.clearRect(0, 0, SIZE, SIZE);
                 ctx.drawImage(baseCanvas, 0, 0);
-                
+
                 // Draw highlights if hovering
                 if (hoverX >= 0 && hoverY >= 0 && hoverX < n && hoverY < n) {
                     ctx.strokeStyle = HM_highlight_strokeStyle;
                     ctx.lineWidth = HM_highlight_lineWidth;
-                    
+
                     const x1 = cellBoundaries[hoverX];
                     const y1 = cellBoundaries[hoverY];
                     const x2 = cellBoundaries[hoverX + 1];
                     const y2 = cellBoundaries[hoverY + 1];
-                    
+
                     // Highlight the cell's own borders
                     ctx.strokeRect(x1, y1, pixelSize, pixelSize);
-                    
+
                     ctx.beginPath();
-                    
+
                     // Highlight row (only to the left of hovered cell)
                     if (hoverX > 0) {
                         ctx.moveTo(0, y1);
@@ -155,7 +155,7 @@
                         ctx.moveTo(0, y2);
                         ctx.lineTo(x1, y2);
                     }
-                    
+
                     // Highlight column (only below hovered cell)
                     if (hoverY < n - 1) {
                         ctx.moveTo(x1, y2);
@@ -163,7 +163,7 @@
                         ctx.moveTo(x2, y2);
                         ctx.lineTo(x2, SIZE);
                     }
-                    
+
                     ctx.stroke();
                 }
             }
@@ -174,7 +174,7 @@
                 yLabelsContainer.innerHTML = '';
                 labelElements.x = [];
                 labelElements.y = [];
-                
+
                 tokens.forEach((token, i) => {
                     const xLabel = document.createElement('div');
                     xLabel.className = 'label x-label';
@@ -182,7 +182,7 @@
                     xLabel.style.width = pixelSize + 'px';
                     xLabelsContainer.appendChild(xLabel);
                     labelElements.x.push(xLabel);
-                    
+
                     const yLabel = document.createElement('div');
                     yLabel.className = 'label y-label';
                     yLabel.textContent = token;
@@ -197,12 +197,12 @@
                 // Update label highlights
                 labelElements.x.forEach(label => label.classList.remove('highlight'));
                 labelElements.y.forEach(label => label.classList.remove('highlight'));
-                
+
                 if (x >= 0 && x < n && y >= 0 && y < n) {
                     labelElements.x[x].classList.add('highlight');
                     labelElements.y[y].classList.add('highlight');
                 }
-                
+
                 // Render highlights
                 renderHighlights(x, y);
             }
@@ -213,16 +213,16 @@
                     return;
                 }
                 lastMouseTime = now;
-                
+
                 const rect = canvas.getBoundingClientRect();
                 const x = Math.floor((e.clientX - rect.left) / rect.width * n);
                 const y = Math.floor((e.clientY - rect.top) / rect.height * n);
-                
+
                 if (x >= 0 && x < n && y >= 0 && y < n) {
                     const xToken = tokens[x];
                     const yToken = tokens[y];
                     const value = matrix[y * n + x].toFixed(3);
-                    
+
                     tooltip.innerHTML = `
                         <div class="tooltip-row"><span>X:</span><span>${xToken}</span></div>
                         <div class="tooltip-row"><span>Y:</span><span>${yToken}</span></div>
@@ -231,12 +231,12 @@
                     tooltip.style.left = (e.clientX + 10) + 'px';
                     tooltip.style.top = (e.clientY - 10) + 'px';
                     tooltip.style.display = 'block';
-                    
+
                     // Cancel any pending animation frame
                     if (animationFrame) {
                         cancelAnimationFrame(animationFrame);
                     }
-                    
+
                     // Schedule highlight update
                     animationFrame = requestAnimationFrame(() => {
                         updateHighlights(x, y);
@@ -249,17 +249,17 @@
 
             function handleMouseLeave() {
                 tooltip.style.display = 'none';
-                
+
                 // Cancel any pending animation frame
                 if (animationFrame) {
                     cancelAnimationFrame(animationFrame);
                     animationFrame = null;
                 }
-                
+
                 // Remove highlights
                 labelElements.x.forEach(label => label.classList.remove('highlight'));
                 labelElements.y.forEach(label => label.classList.remove('highlight'));
-                
+
                 // Render without highlights
                 renderHighlights(-1, -1);
             }
@@ -268,23 +268,23 @@
                 const sizeInput = document.getElementById('sizeInput');
                 n = parseInt(sizeInput.value) || 20;
                 pixelSize = SIZE / n;
-                
+
                 tokens = generateRandomTokens(n);
                 matrix = generateLowerTriangularMatrix(n);
-                
+
                 // Precalculate boundaries
                 precalculateBoundaries();
-                
+
                 // Set canvas dimensions
                 canvas.width = SIZE;
                 canvas.height = SIZE;
-                
+
                 // Render base heatmap to cache
                 renderBaseHeatmap();
-                
+
                 // Initial render
                 renderHighlights(-1, -1);
-                
+
                 // Create labels
                 createAxisLabels();
             }
@@ -304,4 +304,5 @@
         heatmapViewer.generateData();
     </script>
 </body>
+
 </html>
