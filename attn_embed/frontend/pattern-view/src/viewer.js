@@ -429,22 +429,23 @@ class AttentionPatternViewer {
     }
 
     renderWhitespace(token) {
-        if (token === ' ') return '␣';
-        if (token === '\t') return '␉';
-        if (token === '\n') return '␤';
-        if (token === '\r') return '␍';
-        return token;
+        // Convert whitespace characters to visible symbols
+        return token.replace(/ /g, '␣')
+                   .replace(/\t/g, '␉')
+                   .replace(/\n/g, '␤')
+                   .replace(/\r/g, '␍');
     }
 
     renderTokensDisplay() {
         // Create individual token spans for click handling
         const tokenSpans = this.tokens.map((token, idx) => {
-            const isWhitespace = token === ' ' || token === '\t' || token === '\n' || token === '\r';
+            // Check if token is purely whitespace
+            const isWhitespace = /^[\s\n\r\t]+$/.test(token);
             const displayToken = this.renderWhitespace(token);
             const className = isWhitespace ? 'token whitespace' : 'token';
             const span = `<span class="${className}" data-index="${idx}">${displayToken}</span>`;
 
-            // Add line break after newline tokens
+            // Add line break after tokens that are purely newlines
             if (token === '\n') {
                 return span + '<br>';
             }
@@ -482,10 +483,20 @@ class AttentionPatternViewer {
         this.updateCellInfo(this.selectedCell.x, this.selectedCell.y);
     }
 
+    normalizeTokens(tokens) {
+        return tokens.map(token => {
+            // Replace unicode sequences within tokens
+            let normalized = token;
+            normalized = normalized.replace(/\u0120/g, ' ');    // GPT-2 space token
+            normalized = normalized.replace(/\u010a/g, '\n');   // GPT-2 newline token
+            return normalized;
+        });
+    }
+
     async displayPattern(dataLoader, model, promptHash, layerIdx, headIdx) {
         // Load prompt metadata
         const metadata = await dataLoader.loadPromptMetadata(model, promptHash);
-        this.tokens = metadata.tokens;
+        this.tokens = this.normalizeTokens(metadata.tokens);
         this.n = this.tokens.length;
         this.pixelSize = this.SIZE / this.n;
 
