@@ -15,7 +15,7 @@ class AttentionPatternViewer {
         // Constants
         this.SIZE = LABEL_CONSTANTS.CANVAS_SIZE;
         this.HM_highlight_strokeStyle = '#ff0000';
-        this.HM_highlight_lineWidth = 1;
+        this.HM_highlight_lineWidth = 0.5;
         this.HM_grid_strokeStyle = '#ddd';
         this.HM_grid_lineWidth = 0.2;
         this.THROTTLE_DELAY = 16; // ~60fps
@@ -437,7 +437,13 @@ class AttentionPatternViewer {
             const isWhitespace = token === ' ' || token === '\t' || token === '\n' || token === '\r';
             const displayToken = this.renderWhitespace(token);
             const className = isWhitespace ? 'token whitespace' : 'token';
-            return `<span class="${className}" data-index="${idx}">${displayToken}</span>`;
+            const span = `<span class="${className}" data-index="${idx}">${displayToken}</span>`;
+            
+            // Add line break after newline tokens
+            if (token === '\n') {
+                return span + '<br>';
+            }
+            return span;
         }).join('');
         
         this.tokensDisplay.innerHTML = tokenSpans;
