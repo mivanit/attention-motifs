@@ -13,15 +13,17 @@
         <div id="info"></div>
     </div>
     <div class="main-content">
-        <div class="heatmap-container" id="heatmapContainer">
-            <canvas id="heatmapCanvas"></canvas>
-            <div class="x-labels" id="xLabels"></div>
-            <div class="y-labels" id="yLabels"></div>
-            <div class="tooltip" id="tooltip"></div>
+        <div class="canvas-section">
+            <div class="cell-info" id="cellInfo"></div>
+            <div class="heatmap-container" id="heatmapContainer">
+                <canvas id="heatmapCanvas"></canvas>
+                <div class="x-labels" id="xLabels"></div>
+                <div class="y-labels" id="yLabels"></div>
+                <div class="tooltip" id="tooltip"></div>
+            </div>
         </div>
         <div class="tokens-display" id="tokensDisplay"></div>
     </div>
-    <div class="cell-info" id="cellInfo"></div>
     <script src="dataLoader.js"></script>
     <script src="viewer.js"></script>
     <script>

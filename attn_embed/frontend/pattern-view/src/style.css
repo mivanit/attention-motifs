@@ -10,6 +10,7 @@ body {
 #info {
 	font-family: monospace;
 	font-size: 14px;
+	text-align: center;
 }
 
 .main-content {
@@ -47,11 +48,11 @@ body {
 }
 
 .tokens-display .token.highlight-x {
-	background-color: #ffcccc;
+	border: 2px solid #ff0000;
 }
 
 .tokens-display .token.highlight-y {
-	background-color: #ccffcc;
+	border: 2px solid #00aa00;
 }
 
 .heatmap-container {
@@ -117,15 +118,20 @@ canvas {
 	display: none !important; /* Removed in favor of static cell info */
 }
 
+.canvas-section {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
 .cell-info {
-	margin: 20px;
 	padding: 10px;
 	border: 1px solid #ccc;
 	background: #f9f9f9;
 	font-family: monospace;
 	font-size: 14px;
-	min-height: 80px;
-	max-width: 600px;
+	min-height: 60px;
+	width: 500px;
 }
 
 .cell-info-row {

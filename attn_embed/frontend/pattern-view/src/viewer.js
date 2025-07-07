@@ -113,34 +113,35 @@ class AttentionPatternViewer {
 
         // Draw highlights if hovering
         if (hoverX >= 0 && hoverY >= 0 && hoverX < this.n && hoverY < this.n) {
-            this.overlayCtx.strokeStyle = this.HM_highlight_strokeStyle;
-            this.overlayCtx.lineWidth = this.HM_highlight_lineWidth;
-
             const x1 = hoverX * this.pixelSize;
             const y1 = hoverY * this.pixelSize;
 
-            // Highlight the cell's own borders
+            // Highlight the cell's own borders (red)
+            this.overlayCtx.strokeStyle = '#ff0000';
+            this.overlayCtx.lineWidth = this.HM_highlight_lineWidth;
             this.overlayCtx.strokeRect(x1, y1, this.pixelSize, this.pixelSize);
 
-            this.overlayCtx.beginPath();
-
-            // Highlight row (only to the left of hovered cell)
+            // Highlight row (only to the left of hovered cell) - green for Y
             if (hoverX > 0) {
+                this.overlayCtx.strokeStyle = '#00aa00';
+                this.overlayCtx.beginPath();
                 this.overlayCtx.moveTo(0, y1);
                 this.overlayCtx.lineTo(x1, y1);
                 this.overlayCtx.moveTo(0, y1 + this.pixelSize);
                 this.overlayCtx.lineTo(x1, y1 + this.pixelSize);
+                this.overlayCtx.stroke();
             }
 
-            // Highlight column (only below hovered cell)
+            // Highlight column (only below hovered cell) - red for X
             if (hoverY < this.n - 1) {
+                this.overlayCtx.strokeStyle = '#ff0000';
+                this.overlayCtx.beginPath();
                 this.overlayCtx.moveTo(x1, y1 + this.pixelSize);
                 this.overlayCtx.lineTo(x1, this.SIZE);
                 this.overlayCtx.moveTo(x1 + this.pixelSize, y1 + this.pixelSize);
                 this.overlayCtx.lineTo(x1 + this.pixelSize, this.SIZE);
+                this.overlayCtx.stroke();
             }
-
-            this.overlayCtx.stroke();
         }
     }
 
@@ -208,8 +209,26 @@ class AttentionPatternViewer {
         const tokens = this.tokensDisplay.querySelectorAll('.token');
         tokens.forEach((token, idx) => {
             token.classList.remove('highlight-x', 'highlight-y');
-            if (idx === x) token.classList.add('highlight-x');
-            if (idx === y) token.classList.add('highlight-y');
+            token.style.backgroundColor = '';
+            
+            if (idx === x) {
+                token.classList.add('highlight-x');
+            }
+            if (idx === y) {
+                token.classList.add('highlight-y');
+            }
+            
+            // Add value-based highlighting based on attention values
+            if (x >= 0 && y >= 0 && x < this.n && y < this.n) {
+                // Get the attention value for this token from the selected row
+                const attentionValue = this.getPixelValue(idx, y);
+                if (attentionValue > 0) {
+                    // Apply intensity-based background color
+                    const intensity = Math.min(1, attentionValue * 2); // Scale for visibility
+                    const alpha = intensity * 0.3; // Max 30% opacity
+                    token.style.backgroundColor = `rgba(255, 255, 0, ${alpha})`;
+                }
+            }
         });
     }
 
