@@ -37,7 +37,7 @@ class AttentionPatternViewer {
 
         // DOM elements
         this.container = document.getElementById(containerId);
-        
+
         // Set up grid layout with constants
         this.container.style.gridTemplateColumns = `${LABEL_CONSTANTS.Y_LABEL_WIDTH}px ${LABEL_CONSTANTS.CANVAS_SIZE}px`;
         this.container.style.gridTemplateRows = `${LABEL_CONSTANTS.CANVAS_SIZE}px ${LABEL_CONSTANTS.X_LABEL_HEIGHT}px`;
@@ -49,8 +49,8 @@ class AttentionPatternViewer {
         // no image smoothing for pixelated
         this.ctx.imageSmoothingEnabled = false;
         this.ctx.webkitImageSmoothingEnabled = false; // Safari
-        this.ctx.mozImageSmoothingEnabled  = false;   // Firefox
-        this.ctx.msImageSmoothingEnabled   = false;   // old Edge/IE
+        this.ctx.mozImageSmoothingEnabled = false;   // Firefox
+        this.ctx.msImageSmoothingEnabled = false;   // old Edge/IE
 
         // Create overlay canvas for highlights
         this.overlayCanvas = document.createElement('canvas');
@@ -77,7 +77,7 @@ class AttentionPatternViewer {
         this.canvas.addEventListener('click', (e) => this.handleClick(e));
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
         document.addEventListener('keyup', (e) => this.handleKeyUp(e));
-        
+
         // Set up token click handlers once
         this.tokensDisplay.addEventListener('click', (e) => this.handleTokenClick(e, 'x'));
         this.tokensDisplay.addEventListener('contextmenu', (e) => this.handleTokenClick(e, 'y'));
@@ -167,7 +167,7 @@ class AttentionPatternViewer {
 
         this.tokens.forEach((token) => {
             const displayToken = this.renderWhitespace(token);
-            
+
             const xLabel = document.createElement('div');
             xLabel.className = 'label x-label';
             xLabel.textContent = displayToken;
@@ -198,27 +198,27 @@ class AttentionPatternViewer {
                 this.labelElements.y[y].classList.add('highlight');
             }
         }
-        
+
         // Update token highlights
         this.updateTokenHighlights(x, y);
 
         // Render highlights
         this.renderHighlights(x, y);
     }
-    
+
     updateTokenHighlights(x, y) {
         const tokens = this.tokensDisplay.querySelectorAll('.token');
         tokens.forEach((token, idx) => {
             token.classList.remove('highlight-x', 'highlight-y');
             token.style.backgroundColor = '';
-            
+
             if (idx === x) {
                 token.classList.add('highlight-x');
             }
             if (idx === y) {
                 token.classList.add('highlight-y');
             }
-            
+
             // Add value-based highlighting based on attention values
             if (x >= 0 && y >= 0 && x < this.n && y < this.n) {
                 // Get the attention value for this token from the selected row
@@ -245,18 +245,18 @@ class AttentionPatternViewer {
         const rect = this.canvas.getBoundingClientRect();
         const x = Math.floor((e.clientX - rect.left) / rect.width * this.n);
         const y = Math.floor((e.clientY - rect.top) / rect.height * this.n);
-        
+
         if (x >= 0 && x < this.n && y >= 0 && y < this.n) {
             // Update cell info with hover position
             this.updateCellInfo(x, y, false);
-            
+
             // Don't update highlights in keyboard mode
             if (!this.keyboardMode) {
                 this.updateHighlightsFromMouse(e);
             }
         }
     }
-    
+
     updateHighlightsFromMouse(e) {
 
         const now = Date.now();
@@ -282,14 +282,14 @@ class AttentionPatternViewer {
             });
         }
     }
-    
+
 
     handleMouseLeave() {
         // Clear cell info if not in keyboard mode
         if (!this.keyboardMode) {
             this.cellInfo.innerHTML = '';
         }
-        
+
         // In keyboard mode, don't clear highlights
         if (this.keyboardMode) {
             return;
@@ -343,7 +343,7 @@ class AttentionPatternViewer {
 
         // Track key press
         this.keysPressed.add(e.key);
-        
+
         if (e.key === 'Escape') {
             // Exit keyboard mode
             this.keyboardMode = false;
@@ -357,7 +357,7 @@ class AttentionPatternViewer {
             }
             return;
         }
-        
+
         // Start continuous movement if not already running
         if (!this.keyRepeatInterval && this.isArrowKey(e.key)) {
             e.preventDefault();
@@ -370,39 +370,39 @@ class AttentionPatternViewer {
             }, 300); // 300ms delay before repeat
         }
     }
-    
+
     handleKeyUp(e) {
         this.keysPressed.delete(e.key);
-        
+
         // Stop continuous movement if no arrow keys pressed
         if (this.keyRepeatInterval && !this.hasArrowKeyPressed()) {
             clearInterval(this.keyRepeatInterval);
             this.keyRepeatInterval = null;
         }
     }
-    
+
     isArrowKey(key) {
         return ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key);
     }
-    
+
     hasArrowKeyPressed() {
         return Array.from(this.keysPressed).some(key => this.isArrowKey(key));
     }
-    
+
     moveSelection() {
         if (!this.selectedCell) return;
-        
+
         let dx = 0, dy = 0;
         const step = this.keysPressed.has('Control') ? 10 : 1;
-        
+
         if (this.keysPressed.has('ArrowLeft')) dx -= step;
         if (this.keysPressed.has('ArrowRight')) dx += step;
         if (this.keysPressed.has('ArrowUp')) dy -= step;
         if (this.keysPressed.has('ArrowDown')) dy += step;
-        
+
         const newX = Math.max(0, Math.min(this.n - 1, this.selectedCell.x + dx));
         const newY = Math.max(0, Math.min(this.n - 1, this.selectedCell.y + dy));
-        
+
         if (newX !== this.selectedCell.x || newY !== this.selectedCell.y) {
             this.selectedCell = { x: newX, y: newY };
             this.updateHighlights(newX, newY);
@@ -427,7 +427,7 @@ class AttentionPatternViewer {
             `;
         }
     }
-    
+
     renderWhitespace(token) {
         if (token === ' ') return '␣';
         if (token === '\t') return '␉';
@@ -443,41 +443,41 @@ class AttentionPatternViewer {
             const displayToken = this.renderWhitespace(token);
             const className = isWhitespace ? 'token whitespace' : 'token';
             const span = `<span class="${className}" data-index="${idx}">${displayToken}</span>`;
-            
+
             // Add line break after newline tokens
             if (token === '\n') {
                 return span + '<br>';
             }
             return span;
         }).join('');
-        
+
         this.tokensDisplay.innerHTML = tokenSpans;
     }
-    
+
     handleTokenClick(e, axis) {
         e.preventDefault();
         const tokenEl = e.target.closest('.token');
         if (!tokenEl) return;
-        
+
         const index = parseInt(tokenEl.dataset.index);
         if (isNaN(index) || index < 0 || index >= this.n) return;
-        
+
         // Enter keyboard mode if not already
         if (!this.keyboardMode) {
             this.keyboardMode = true;
         }
-        
+
         // Update selection
         if (!this.selectedCell) {
             this.selectedCell = { x: 0, y: 0 };
         }
-        
+
         if (axis === 'x') {
             this.selectedCell.x = index;
         } else {
             this.selectedCell.y = index;
         }
-        
+
         this.updateHighlights(this.selectedCell.x, this.selectedCell.y);
         this.updateCellInfo(this.selectedCell.x, this.selectedCell.y);
     }
@@ -526,7 +526,7 @@ class AttentionPatternViewer {
 
                 // Create labels
                 this.createAxisLabels();
-                
+
                 // Render tokens display
                 this.renderTokensDisplay();
 
