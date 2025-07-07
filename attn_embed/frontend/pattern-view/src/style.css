@@ -13,29 +13,33 @@ body {
 }
 
 .heatmap-container {
-	position: relative;
-	display: inline-block;
+	display: grid;
+	grid-template-areas: 
+		"y-labels canvas"
+		"empty x-labels";
 	margin: 20px;
+	gap: 0;
 }
 
 canvas {
+	grid-area: canvas;
 	border: 1px solid #000;
 	cursor: crosshair;
+	position: relative;
 }
 
 .x-labels {
-	position: absolute;
-	bottom: 10px;
-	left: 80px;
+	grid-area: x-labels;
 	display: flex;
+	align-items: flex-start;
 }
 
 .y-labels {
-	position: absolute;
-	left: 10px;
-	top: 60px;
+	grid-area: y-labels;
 	display: flex;
 	flex-direction: column;
+	align-items: flex-end;
+	justify-content: flex-start;
 }
 
 .label {

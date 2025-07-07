@@ -30,6 +30,10 @@ class AttentionPatternViewer {
 
         // DOM elements
         this.container = document.getElementById(containerId);
+        
+        // Set up grid layout with constants
+        this.container.style.gridTemplateColumns = `${LABEL_CONSTANTS.Y_LABEL_WIDTH}px ${LABEL_CONSTANTS.CANVAS_SIZE}px`;
+        this.container.style.gridTemplateRows = `${LABEL_CONSTANTS.CANVAS_SIZE}px ${LABEL_CONSTANTS.X_LABEL_HEIGHT}px`;
 
         // Create main canvas for PNG display
         this.canvas = document.getElementById('heatmapCanvas');
