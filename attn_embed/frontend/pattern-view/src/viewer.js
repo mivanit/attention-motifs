@@ -15,7 +15,9 @@ class AttentionPatternViewer {
         // Constants
         this.SIZE = LABEL_CONSTANTS.CANVAS_SIZE;
         this.HM_highlight_strokeStyle = '#ff0000';
-        this.HM_highlight_lineWidth = 2;
+        this.HM_highlight_lineWidth = 1;
+        this.HM_grid_strokeStyle = '#ddd';
+        this.HM_grid_lineWidth = 0.2;
         this.THROTTLE_DELAY = 16; // ~60fps
 
         // State
@@ -27,6 +29,8 @@ class AttentionPatternViewer {
         this.animationFrame = null;
         this.labelElements = { x: [], y: [] };
         this.pngImage = null;
+        this.selectedCell = null; // { x, y } or null
+        this.keyboardMode = false;
 
         // DOM elements
         this.container = document.getElementById(containerId);
@@ -38,6 +42,12 @@ class AttentionPatternViewer {
         // Create main canvas for PNG display
         this.canvas = document.getElementById('heatmapCanvas');
         this.ctx = this.canvas.getContext('2d');
+
+        // no image smoothing for pixelated
+        this.ctx.imageSmoothingEnabled = false;
+        this.ctx.webkitImageSmoothingEnabled = false; // Safari
+        this.ctx.mozImageSmoothingEnabled  = false;   // Firefox
+        this.ctx.msImageSmoothingEnabled   = false;   // old Edge/IE
 
         // Create overlay canvas for highlights
         this.overlayCanvas = document.createElement('canvas');
@@ -52,12 +62,15 @@ class AttentionPatternViewer {
         this.canvas.parentElement.appendChild(this.overlayCanvas);
 
         this.tooltip = document.getElementById('tooltip');
+        this.cellInfo = document.getElementById('cellInfo');
         this.xLabelsContainer = document.getElementById('xLabels');
         this.yLabelsContainer = document.getElementById('yLabels');
 
         // Set up event listeners
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         this.canvas.addEventListener('mouseleave', () => this.handleMouseLeave());
+        this.canvas.addEventListener('click', (e) => this.handleClick(e));
+        document.addEventListener('keydown', (e) => this.handleKeyDown(e));
     }
 
     precalculateBoundaries() {
@@ -73,8 +86,8 @@ class AttentionPatternViewer {
         this.overlayCtx.clearRect(0, 0, this.SIZE, this.SIZE);
 
         // Draw grid lines
-        this.overlayCtx.strokeStyle = '#ddd';
-        this.overlayCtx.lineWidth = 0.5;
+        this.overlayCtx.strokeStyle = this.HM_grid_strokeStyle;
+        this.overlayCtx.lineWidth = this.HM_grid_lineWidth;
         this.overlayCtx.beginPath();
 
         for (let i = 0; i <= this.n; i++) {
@@ -175,6 +188,11 @@ class AttentionPatternViewer {
     }
 
     handleMouseMove(e) {
+        // In keyboard mode, ignore mouse movement
+        if (this.keyboardMode) {
+            return;
+        }
+
         const now = Date.now();
         if (now - this.lastMouseTime < this.THROTTLE_DELAY) {
             return;
@@ -186,19 +204,6 @@ class AttentionPatternViewer {
         const y = Math.floor((e.clientY - rect.top) / rect.height * this.n);
 
         if (x >= 0 && x < this.n && y >= 0 && y < this.n) {
-            const xToken = this.tokens[x];
-            const yToken = this.tokens[y];
-            const value = this.getPixelValue(x, y).toFixed(3);
-
-            this.tooltip.innerHTML = `
-                <div class="tooltip-row"><span>X:</span><span>${xToken}</span></div>
-                <div class="tooltip-row"><span>Y:</span><span>${yToken}</span></div>
-                <div class="tooltip-row"><span>Value:</span><span>${value}</span></div>
-            `;
-            this.tooltip.style.left = (e.clientX + 10) + 'px';
-            this.tooltip.style.top = (e.clientY - 10) + 'px';
-            this.tooltip.style.display = 'block';
-
             // Cancel any pending animation frame
             if (this.animationFrame) {
                 cancelAnimationFrame(this.animationFrame);
@@ -215,7 +220,10 @@ class AttentionPatternViewer {
     }
 
     handleMouseLeave() {
-        this.tooltip.style.display = 'none';
+        // In keyboard mode, don't clear highlights
+        if (this.keyboardMode) {
+            return;
+        }
 
         // Cancel any pending animation frame
         if (this.animationFrame) {
@@ -229,6 +237,98 @@ class AttentionPatternViewer {
 
         // Render without highlights
         this.renderHighlights(-1, -1);
+    }
+
+    handleClick(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = Math.floor((e.clientX - rect.left) / rect.width * this.n);
+        const y = Math.floor((e.clientY - rect.top) / rect.height * this.n);
+
+        if (x >= 0 && x < this.n && y >= 0 && y < this.n) {
+            if (this.keyboardMode) {
+                // Exit keyboard mode on second click
+                this.keyboardMode = false;
+                this.selectedCell = null;
+                this.cellInfo.innerHTML = '';
+                // Let mouse position take over
+                this.handleMouseMove(e);
+            } else {
+                // Enter keyboard mode and select cell
+                this.keyboardMode = true;
+                this.selectedCell = { x, y };
+                this.updateHighlights(x, y);
+                this.updateCellInfo(x, y);
+                
+                // Hide tooltip since we're using static info now
+                this.tooltip.style.display = 'none';
+            }
+        }
+    }
+
+    handleKeyDown(e) {
+        // Only handle in keyboard mode
+        if (!this.keyboardMode || !this.selectedCell) {
+            return;
+        }
+
+        let newX = this.selectedCell.x;
+        let newY = this.selectedCell.y;
+
+        switch (e.key) {
+            case 'ArrowUp':
+                e.preventDefault();
+                newY = Math.max(0, newY - 1);
+                break;
+            case 'ArrowDown':
+                e.preventDefault();
+                newY = Math.min(this.n - 1, newY + 1);
+                break;
+            case 'ArrowLeft':
+                e.preventDefault();
+                newX = Math.max(0, newX - 1);
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                newX = Math.min(this.n - 1, newX + 1);
+                break;
+            case 'Escape':
+                // Exit keyboard mode
+                this.keyboardMode = false;
+                this.selectedCell = null;
+                this.updateHighlights(-1, -1);
+                this.cellInfo.innerHTML = '';
+                return;
+            default:
+                return;
+        }
+
+        // Update selection
+        this.selectedCell = { x: newX, y: newY };
+        this.updateHighlights(newX, newY);
+        this.updateCellInfo(newX, newY);
+    }
+
+    updateCellInfo(x, y) {
+        if (x >= 0 && x < this.n && y >= 0 && y < this.n) {
+            const xToken = this.tokens[x];
+            const yToken = this.tokens[y];
+            const value = this.getPixelValue(x, y).toFixed(3);
+
+            this.cellInfo.innerHTML = `
+                <div class="cell-info-row">
+                    <span>X:</span><span>${xToken} (position ${x})</span>
+                </div>
+                <div class="cell-info-row">
+                    <span>Y:</span><span>${yToken} (position ${y})</span>
+                </div>
+                <div class="cell-info-row">
+                    <span>Value:</span><span>${value}</span>
+                </div>
+                <div class="cell-info-row">
+                    <span>Mode:</span><span>Keyboard navigation (Arrow keys to move, Escape to exit)</span>
+                </div>
+            `;
+        }
     }
 
     async displayPattern(dataLoader, model, promptHash, layerIdx, headIdx) {
@@ -254,6 +354,12 @@ class AttentionPatternViewer {
                 this.canvas.height = this.SIZE;
                 this.overlayCanvas.width = this.SIZE;
                 this.overlayCanvas.height = this.SIZE;
+
+                // every canvas reside restores defaults, so we remove the smoothing again
+                this.ctx.imageSmoothingEnabled = false;
+                this.ctx.webkitImageSmoothingEnabled = false; // Safari
+                this.ctx.mozImageSmoothingEnabled = false; // Firefox
+                this.ctx.msImageSmoothingEnabled = false; // old Edge/IE
 
                 // Calculate pixel size based on fixed canvas size
                 this.pixelSize = this.SIZE / this.n;
