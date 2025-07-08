@@ -50,11 +50,11 @@ body {
 }
 
 .tokens-display .token.highlight-k {
-	border-bottom: 1px solid #ff0000;
+	border-bottom: 1px solid var(--k-axis, #ff0000);
 }
 
 .tokens-display .token.highlight-q {
-	border-bottom: 1px solid #00aa00;
+	border-bottom: 1px solid var(--q-axis, #00aa00);
 }
 
 .heatmap-container {
@@ -104,11 +104,11 @@ canvas {
 }
 
 .label.highlight-k {
-	background-color: #ffcccc;
+	background-color: var(--k-axis-light, #ffcccc);
 }
 
 .label.highlight-q {
-	background-color: #ccffcc;
+	background-color: var(--q-axis-light, #ccffcc);
 }
 
 .x-label {

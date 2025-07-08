@@ -3,22 +3,15 @@
  * Displays PNG directly with overlay for highlights
  */
 
-// Global constants for consistent layout
-const LABEL_CONSTANTS = {
-    Y_LABEL_WIDTH: 80,
-    X_LABEL_HEIGHT: 60,
-    CANVAS_SIZE: 500
-};
-
 class AttentionPatternViewer {
     constructor(containerId) {
-        // Constants
-        this.SIZE = LABEL_CONSTANTS.CANVAS_SIZE;
-        this.HM_highlight_strokeStyle = '#ff0000';
-        this.HM_highlight_lineWidth = 0.5;
-        this.HM_grid_strokeStyle = '#ddd';
-        this.HM_grid_lineWidth = 0.2;
-        this.THROTTLE_DELAY = 16; // ~60fps
+        // Constants from config
+        this.SIZE = CONFIG.layout.canvasSize;
+        this.HM_highlight_strokeStyle = CONFIG.visualization.highlightStrokeStyle;
+        this.HM_highlight_lineWidth = CONFIG.visualization.highlightLineWidth;
+        this.HM_grid_strokeStyle = CONFIG.visualization.gridStrokeStyle;
+        this.HM_grid_lineWidth = CONFIG.visualization.gridLineWidth;
+        this.THROTTLE_DELAY = CONFIG.visualization.throttleDelay;
 
         // State
         this.n = 0;
@@ -39,8 +32,8 @@ class AttentionPatternViewer {
         this.container = document.getElementById(containerId);
 
         // Set up grid layout with constants
-        this.container.style.gridTemplateColumns = `${LABEL_CONSTANTS.Y_LABEL_WIDTH}px ${LABEL_CONSTANTS.CANVAS_SIZE}px`;
-        this.container.style.gridTemplateRows = `${LABEL_CONSTANTS.CANVAS_SIZE}px ${LABEL_CONSTANTS.X_LABEL_HEIGHT}px`;
+        this.container.style.gridTemplateColumns = `${CONFIG.layout.yLabelWidth}px ${CONFIG.layout.canvasSize}px`;
+        this.container.style.gridTemplateRows = `${CONFIG.layout.canvasSize}px ${CONFIG.layout.xLabelHeight}px`;
 
         // Create main canvas for PNG display
         this.canvas = document.getElementById('heatmapCanvas');
@@ -118,13 +111,13 @@ class AttentionPatternViewer {
             const y1 = hoverY * this.pixelSize;
 
             // Highlight the cell's own borders (red)
-            this.overlayCtx.strokeStyle = '#ff0000';
+            this.overlayCtx.strokeStyle = CONFIG.visualization.colors.kAxis;
             this.overlayCtx.lineWidth = this.HM_highlight_lineWidth;
             this.overlayCtx.strokeRect(x1, y1, this.pixelSize, this.pixelSize);
 
             // Highlight row (only to the left of hovered cell) - green for Q
             if (hoverX > 0) {
-                this.overlayCtx.strokeStyle = '#00aa00';
+                this.overlayCtx.strokeStyle = CONFIG.visualization.colors.qAxis;
                 this.overlayCtx.beginPath();
                 this.overlayCtx.moveTo(0, y1);
                 this.overlayCtx.lineTo(x1, y1);
@@ -135,7 +128,7 @@ class AttentionPatternViewer {
 
             // Highlight column (only below hovered cell) - red for K
             if (hoverY < this.n - 1) {
-                this.overlayCtx.strokeStyle = '#ff0000';
+                this.overlayCtx.strokeStyle = CONFIG.visualization.colors.kAxis;
                 this.overlayCtx.beginPath();
                 this.overlayCtx.moveTo(x1, y1 + this.pixelSize);
                 this.overlayCtx.lineTo(x1, this.SIZE);
@@ -154,16 +147,16 @@ class AttentionPatternViewer {
         this.labelElements.y = [];
 
         // Hide labels if too many tokens
-        if (this.n > 30) {
+        if (this.n > CONFIG.layout.maxTokensForLabels) {
             // Adjust grid layout to account for missing labels
-            this.container.style.gridTemplateColumns = `0px ${LABEL_CONSTANTS.CANVAS_SIZE}px`;
-            this.container.style.gridTemplateRows = `${LABEL_CONSTANTS.CANVAS_SIZE}px 0px`;
+            this.container.style.gridTemplateColumns = `0px ${CONFIG.layout.canvasSize}px`;
+            this.container.style.gridTemplateRows = `${CONFIG.layout.canvasSize}px 0px`;
             return;
         }
 
         // Reset grid layout for labels
-        this.container.style.gridTemplateColumns = `${LABEL_CONSTANTS.Y_LABEL_WIDTH}px ${LABEL_CONSTANTS.CANVAS_SIZE}px`;
-        this.container.style.gridTemplateRows = `${LABEL_CONSTANTS.CANVAS_SIZE}px ${LABEL_CONSTANTS.X_LABEL_HEIGHT}px`;
+        this.container.style.gridTemplateColumns = `${CONFIG.layout.yLabelWidth}px ${CONFIG.layout.canvasSize}px`;
+        this.container.style.gridTemplateRows = `${CONFIG.layout.canvasSize}px ${CONFIG.layout.xLabelHeight}px`;
 
         this.tokens.forEach((token) => {
             const displayToken = this.renderWhitespace(token);
@@ -172,14 +165,14 @@ class AttentionPatternViewer {
             xLabel.className = 'label x-label';
             xLabel.textContent = displayToken;
             xLabel.style.width = this.pixelSize + 'px';
-            xLabel.style.height = LABEL_CONSTANTS.X_LABEL_HEIGHT + 'px';
+            xLabel.style.height = CONFIG.layout.xLabelHeight + 'px';
             this.xLabelsContainer.appendChild(xLabel);
             this.labelElements.x.push(xLabel);
 
             const yLabel = document.createElement('div');
             yLabel.className = 'label y-label';
             yLabel.textContent = displayToken;
-            yLabel.style.width = LABEL_CONSTANTS.Y_LABEL_WIDTH + 'px';
+            yLabel.style.width = CONFIG.layout.yLabelWidth + 'px';
             yLabel.style.height = this.pixelSize + 'px';
             yLabel.style.lineHeight = this.pixelSize + 'px';
             this.yLabelsContainer.appendChild(yLabel);
@@ -225,9 +218,9 @@ class AttentionPatternViewer {
                 const attentionValue = this.getPixelValue(idx, y);
                 if (attentionValue > 0) {
                     // Apply intensity-based background color
-                    const intensity = Math.min(1, attentionValue * 2); // Scale for visibility
-                    const alpha = intensity * 0.3; // Max 30% opacity
-                    token.style.backgroundColor = `rgba(173, 216, 230, ${alpha})`;
+                    const intensity = Math.min(1, attentionValue * CONFIG.visualization.tokenHighlight.intensityScale);
+                    const alpha = intensity * CONFIG.visualization.tokenHighlight.maxOpacity;
+                    token.style.backgroundColor = CONFIG.visualization.tokenHighlight.backgroundColor.replace('{alpha}', alpha);
                 }
             }
         });
@@ -365,9 +358,9 @@ class AttentionPatternViewer {
             this.moveSelection(); // Initial move
             setTimeout(() => {
                 if (this.hasArrowKeyPressed() && !this.keyRepeatInterval) {
-                    this.keyRepeatInterval = setInterval(() => this.moveSelection(), 100);
+                    this.keyRepeatInterval = setInterval(() => this.moveSelection(), CONFIG.visualization.keyboard.repeatInterval);
                 }
-            }, 300); // 300ms delay before repeat
+            }, CONFIG.visualization.keyboard.repeatDelay);
         }
     }
 
@@ -393,7 +386,7 @@ class AttentionPatternViewer {
         if (!this.selectedCell) return;
 
         let dx = 0, dy = 0;
-        const step = this.keysPressed.has('Control') ? 10 : 1;
+        const step = this.keysPressed.has('Control') ? CONFIG.visualization.keyboard.ctrlMoveStep : CONFIG.visualization.keyboard.moveStep;
 
         if (this.keysPressed.has('ArrowLeft')) dx -= step;
         if (this.keysPressed.has('ArrowRight')) dx += step;

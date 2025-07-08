@@ -3,11 +3,9 @@
  * Handles fetching attention patterns and prompt metadata
  */
 
-const DATA_BASE_PATH = '../../../../../data/patterns/';
-
 class AttentionDataLoader {
-    constructor(basePath = DATA_BASE_PATH) {
-        this.basePath = basePath;
+    constructor(basePath = null) {
+        this.basePath = basePath || CONFIG.data.basePath;
     }
 
     async loadAttentionPattern(model, promptHash, layerIdx, headIdx) {

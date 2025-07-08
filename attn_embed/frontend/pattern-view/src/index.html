@@ -24,37 +24,54 @@
         </div>
         <div class="tokens-display" id="tokensDisplay"></div>
     </div>
+    <script src="config.js"></script>
     <script src="matrix_png.js"></script>
     <script src="dataLoader.js"></script>
     <script src="viewer.js"></script>
     <script>
-        // Parse URL parameters with defaults for debugging
-        const urlParams = new URLSearchParams(window.location.search);
-        const promptHash = urlParams.get('prompt') || 'LQc1qlQHZHOVpI7zEWAeEA';
-        const headParam = urlParams.get('head') || 'gpt2-small.L0.H0';
+        // Initialize configuration system first
+        initConfig().then(() => {
+            // Set CSS variables from config
+            const root = document.documentElement;
+            root.style.setProperty('--k-axis', CONFIG.visualization.colors.kAxis);
+            root.style.setProperty('--q-axis', CONFIG.visualization.colors.qAxis);
+            root.style.setProperty('--k-axis-light', CONFIG.visualization.colors.kAxisLight);
+            root.style.setProperty('--q-axis-light', CONFIG.visualization.colors.qAxisLight);
 
-        // Parse head parameter: {model}.L{layer}.H{head}
-        const parts = headParam.split('.');
-        const model = parts[0];
+            // Parse URL parameters with defaults for debugging
+            const urlParams = new URLSearchParams(window.location.search);
+            const promptHash = urlParams.get('prompt') || 'LQc1qlQHZHOVpI7zEWAeEA';
+            const headParam = urlParams.get('head') || 'gpt2-small.L0.H0';
 
-        const layerIdx = parseInt(parts[1].substring(1));
-        const headIdx = parseInt(parts[2].substring(1));
+            // Parse head parameter: {model}.L{layer}.H{head}
+            const parts = headParam.split('.');
+            const model = parts[0];
 
-        // Update info (will be updated with token count after pattern loads)
-        const updateInfo = (tokenCount = null) => {
-            const tokenInfo = tokenCount ? ` | Tokens: ${tokenCount}` : '';
-            document.getElementById('info').innerHTML =
-                `<p>Model: ${model} | Layer: ${layerIdx} | Head: ${headIdx} | Prompt hash: ${promptHash}${tokenInfo}</p>`;
-        };
-        updateInfo();
+            const layerIdx = parseInt(parts[1].substring(1));
+            const headIdx = parseInt(parts[2].substring(1));
 
-        // Initialize viewer and load data
-        const viewer = new AttentionPatternViewer('heatmapContainer');
-        const dataLoader = new AttentionDataLoader();
+            // Update info (will be updated with token count after pattern loads)
+            const updateInfo = (tokenCount = null) => {
+                const tokenInfo = tokenCount ? ` | Tokens: ${tokenCount}` : '';
+                document.getElementById('info').innerHTML =
+                    `<p>Model: ${model} | Layer: ${layerIdx} | Head: ${headIdx} | Prompt hash: ${promptHash}${tokenInfo}</p>`;
+            };
+            updateInfo();
 
-        viewer.displayPattern(dataLoader, model, promptHash, layerIdx, headIdx).then(() => {
-            // Update info with token count after pattern loads
-            updateInfo(viewer.n);
+            // Initialize viewer and load data
+            const viewer = new AttentionPatternViewer('heatmapContainer');
+            const dataLoader = new AttentionDataLoader();
+
+            viewer.displayPattern(dataLoader, model, promptHash, layerIdx, headIdx).then(() => {
+                // Update info with token count after pattern loads
+                updateInfo(viewer.n);
+            });
+        }).catch(error => {
+            console.error('Failed to initialize config:', error);
+            // Continue with defaults if config fails
+            const viewer = new AttentionPatternViewer('heatmapContainer');
+            const dataLoader = new AttentionDataLoader();
+            // ... rest of fallback initialization
         });
     </script>
 </body>
