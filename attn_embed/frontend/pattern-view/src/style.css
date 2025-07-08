@@ -36,9 +36,8 @@ body {
 .tokens-display .token {
 	cursor: pointer;
 	padding: 1px 2px;
-	border-radius: 2px;
 	transition: background-color 0.1s;
-	border: 1px solid transparent;
+	border-bottom: 1px solid transparent;
 	box-sizing: border-box;
 }
 
@@ -50,12 +49,12 @@ body {
 	color: #999;
 }
 
-.tokens-display .token.highlight-x {
-	border: 1px solid #ff0000;
+.tokens-display .token.highlight-k {
+	border-bottom: 1px solid #ff0000;
 }
 
-.tokens-display .token.highlight-y {
-	border: 1px solid #00aa00;
+.tokens-display .token.highlight-q {
+	border-bottom: 1px solid #00aa00;
 }
 
 .heatmap-container {
@@ -104,8 +103,12 @@ canvas {
 	transition: background-color 0.1s;
 }
 
-.label.highlight {
+.label.highlight-k {
 	background-color: #ffcccc;
+}
+
+.label.highlight-q {
+	background-color: #ccffcc;
 }
 
 .x-label {

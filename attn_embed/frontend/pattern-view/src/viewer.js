@@ -79,8 +79,8 @@ class AttentionPatternViewer {
         document.addEventListener('keyup', (e) => this.handleKeyUp(e));
 
         // Set up token click handlers once
-        this.tokensDisplay.addEventListener('click', (e) => this.handleTokenClick(e, 'x'));
-        this.tokensDisplay.addEventListener('contextmenu', (e) => this.handleTokenClick(e, 'y'));
+        this.tokensDisplay.addEventListener('click', (e) => this.handleTokenClick(e, 'k'));
+        this.tokensDisplay.addEventListener('contextmenu', (e) => this.handleTokenClick(e, 'q'));
     }
 
     precalculateBoundaries() {
@@ -122,7 +122,7 @@ class AttentionPatternViewer {
             this.overlayCtx.lineWidth = this.HM_highlight_lineWidth;
             this.overlayCtx.strokeRect(x1, y1, this.pixelSize, this.pixelSize);
 
-            // Highlight row (only to the left of hovered cell) - green for Y
+            // Highlight row (only to the left of hovered cell) - green for Q
             if (hoverX > 0) {
                 this.overlayCtx.strokeStyle = '#00aa00';
                 this.overlayCtx.beginPath();
@@ -133,7 +133,7 @@ class AttentionPatternViewer {
                 this.overlayCtx.stroke();
             }
 
-            // Highlight column (only below hovered cell) - red for X
+            // Highlight column (only below hovered cell) - red for K
             if (hoverY < this.n - 1) {
                 this.overlayCtx.strokeStyle = '#ff0000';
                 this.overlayCtx.beginPath();
@@ -189,13 +189,13 @@ class AttentionPatternViewer {
 
     updateHighlights(x, y) {
         // Update label highlights
-        this.labelElements.x.forEach(label => label.classList.remove('highlight'));
-        this.labelElements.y.forEach(label => label.classList.remove('highlight'));
+        this.labelElements.x.forEach(label => label.classList.remove('highlight-k'));
+        this.labelElements.y.forEach(label => label.classList.remove('highlight-q'));
 
         if (x >= 0 && x < this.n && y >= 0 && y < this.n) {
             if (this.labelElements.x.length > 0) {
-                this.labelElements.x[x].classList.add('highlight');
-                this.labelElements.y[y].classList.add('highlight');
+                this.labelElements.x[x].classList.add('highlight-k');
+                this.labelElements.y[y].classList.add('highlight-q');
             }
         }
 
@@ -209,14 +209,14 @@ class AttentionPatternViewer {
     updateTokenHighlights(x, y) {
         const tokens = this.tokensDisplay.querySelectorAll('.token');
         tokens.forEach((token, idx) => {
-            token.classList.remove('highlight-x', 'highlight-y');
+            token.classList.remove('highlight-k', 'highlight-q');
             token.style.backgroundColor = '';
 
             if (idx === x) {
-                token.classList.add('highlight-x');
+                token.classList.add('highlight-k');
             }
             if (idx === y) {
-                token.classList.add('highlight-y');
+                token.classList.add('highlight-q');
             }
 
             // Add value-based highlighting based on attention values
@@ -302,8 +302,8 @@ class AttentionPatternViewer {
         }
 
         // Remove highlights
-        this.labelElements.x.forEach(label => label.classList.remove('highlight'));
-        this.labelElements.y.forEach(label => label.classList.remove('highlight'));
+        this.labelElements.x.forEach(label => label.classList.remove('highlight-k'));
+        this.labelElements.y.forEach(label => label.classList.remove('highlight-q'));
 
         // Clear token highlights
         this.updateTokenHighlights(-1, -1);
@@ -419,8 +419,8 @@ class AttentionPatternViewer {
             this.cellInfo.innerHTML = `
                 <table class="cell-info-table">
                     <tr>
-                        <td>X[${x}]: <span class="right">${xToken}</span></td>
-                        <td>Y[${y}]: <span class="right">${yToken}</span></td>
+                        <td>K[${x}]: <span class="right">${xToken}</span></td>
+                        <td>Q[${y}]: <span class="right">${yToken}</span></td>
                         <td>Value: <span class="right">${value}</span></td>
                     </tr>
                 </table>
@@ -473,7 +473,7 @@ class AttentionPatternViewer {
             this.selectedCell = { x: 0, y: 0 };
         }
 
-        if (axis === 'x') {
+        if (axis === 'k') {
             this.selectedCell.x = index;
         } else {
             this.selectedCell.y = index;
