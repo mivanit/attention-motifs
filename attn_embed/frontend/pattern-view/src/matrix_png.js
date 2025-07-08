@@ -22,6 +22,16 @@
  * natural order (row 0 at index 0).
  */
 
+function _pixel_avg(data, idx) {
+	// Convert pixel at `idx` to perceived luminance (gray value).
+	// Assumes data is Uint8ClampedArray with RGBA channels.
+	// console.log(`_pixel_avg: idx=${idx}`);
+	// console.log(data[idx], data[idx + 1], data[idx + 2]);
+	return (
+		(data[idx] + data[idx + 1] + data[idx + 2]) / 3
+	) / 255; // scale to [0,1]
+}
+
 async function pngToMatrix(url, n = null) {
 	// ---------- load & sanity‑check ------------------------------------------------
 	const img = new Image();
@@ -42,14 +52,19 @@ async function pngToMatrix(url, n = null) {
 	const ctx = canvas.getContext('2d');
 	ctx.drawImage(img, 0, 0);
 	const { data } = ctx.getImageData(0, 0, size, size); // Uint8ClampedArray
+	console.log(`PNG loaded: ${url} (${size}x${size})`);
+	console.log(`Matrix size: ${n}x${n}`);
+	console.log(`Pixel data length: ${data.length} bytes`);
+	console.log(data)
 
 	// ---------- calibration --------------------------------------------------------
-	const gray = (idx) =>
-		0.2126 * data[idx] + 0.7152 * data[idx + 1] + 0.0722 * data[idx + 2];
-
-	const gMin = gray(0);          // pixel (0,0)  -> scalar 1
-	const gMax = gray(4);          // pixel (1,0)  -> scalar 0
+	const gMax = _pixel_avg(data, 0);          // pixel (0,0)  -> scalar 1
+	const gMin = _pixel_avg(data, 4);          // pixel (1,0)  -> scalar 0
 	const denom = gMax - gMin || 1;
+
+	const pix_to_scalar = (data, idx) => (
+		_pixel_avg(data, idx) - gMin
+	) / denom; // scale to [0,1]
 
 	// ---------- extract matrix -----------------------------------------------------
 	const matrix = new Array(n);
@@ -58,11 +73,17 @@ async function pngToMatrix(url, n = null) {
 	for (let y = 0; y < n; ++y) {
 		const row = new Float32Array(n);            // zero‑filled
 		for (let x = 0; x <= y; ++x) {              // lower triangle incl. diag
-			const g = gray(rowStart + x * 4);
-			let v = (gMax - g) / denom;               // linear scaling to [0,1]
-			if (v < 0) v = 0;
-			else if (v > 1) v = 1;
+			let v = pix_to_scalar(data, rowStart + x * 4);
+			console.log(`Pixel (${x},${y}) -> value: ${v}`);
+			if (v < 0 || v > 1) {
+				throw new Error(`Invalid pixel value at (${x},${y}): ${v}`);
+			}
 			row[x] = v;
+		}
+		// normalize row to sum to 1
+		const rowSum = row.reduce((sum, val) => sum + val, 0);
+		for (let x = 0; x <= y; ++x) {
+			row[x] /= rowSum; // normalize to sum to 1
 		}
 		matrix[y] = Array.from(row);
 		rowStart += n * 4;

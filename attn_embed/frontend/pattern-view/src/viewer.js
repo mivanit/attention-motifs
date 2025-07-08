@@ -358,9 +358,9 @@ class AttentionPatternViewer {
             this.moveSelection(); // Initial move
             setTimeout(() => {
                 if (this.hasArrowKeyPressed() && !this.keyRepeatInterval) {
-                    this.keyRepeatInterval = setInterval(() => this.moveSelection(), CONFIG.visualization.keyboard.repeatInterval);
+                    this.keyRepeatInterval = setInterval(() => this.moveSelection(), 100);
                 }
-            }, CONFIG.visualization.keyboard.repeatDelay);
+            }, 300); // 300ms delay before repeat
         }
     }
 

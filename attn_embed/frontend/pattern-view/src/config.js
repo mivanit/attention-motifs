@@ -85,8 +85,8 @@ function getDefaultConfig() {
 			
 			// Token highlighting
 			tokenHighlight: {
-				maxOpacity: 0.3,
-				intensityScale: 2.0,
+				maxOpacity: 0.9,
+				intensityScale: 5.0,
 				backgroundColor: "rgba(173, 216, 230, {alpha})"
 			}
 		}
