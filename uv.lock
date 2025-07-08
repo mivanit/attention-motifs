@@ -217,7 +217,7 @@ requires-dist = [
     { name = "numba" },
     { name = "numpy", specifier = ">=1.26.1,<2.0.0" },
     { name = "pandas", specifier = ">=2.2.2" },
-    { name = "pattern-lens", specifier = ">=0.4.0" },
+    { name = "pattern-lens", specifier = ">=0.5.0" },
     { name = "pillow", specifier = ">=11.0.0" },
     { name = "plotly" },
     { name = "polars" },
@@ -1910,7 +1910,7 @@ wheels = [
 
 [[package]]
 name = "pattern-lens"
-version = "0.4.0"
+version = "0.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beartype" },
@@ -1929,9 +1929,9 @@ dependencies = [
     { name = "typeguard" },
     { name = "zanj" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/dc/76/51d575bd0c9de866ebe0642b1c9ffc5870aec235a353d4dc9608f4fc00a3/pattern_lens-0.4.0.tar.gz", hash = "sha256:86b912803781697df8e341e522395c156ea2acf4d585533b601421b5ab03285e", size = 58315540, upload-time = "2025-04-07T01:34:01.09Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/85/7f/8218768fb32eb1564ee50740934fe819613f3d4c493beb057653c1cb82c1/pattern_lens-0.5.0.tar.gz", hash = "sha256:812c2d9e00b10101ffe12587fab4d8b42cf78f9ef8d0859ff003a6bac3150a8b", size = 47524556, upload-time = "2025-07-08T23:48:42.153Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2b/d4/35179fea6fff2639ac30e8f1ee9886d1461e060b78af623dc656fcb5323c/pattern_lens-0.4.0-py3-none-any.whl", hash = "sha256:ecd506b056d6c5e7582538a65019a750d28a582cf41229a0ca41473b9e70c850", size = 51633, upload-time = "2025-04-07T01:32:20.379Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/72/152437c8a52ac88490a47c4d48a092b1833017cb5eac6bb316756ebd8888/pattern_lens-0.5.0-py3-none-any.whl", hash = "sha256:8f0e7670a2a6c2844528a576e2d83eb305fa0b1ccebe8bdce63750873036dc5c", size = 104956, upload-time = "2025-07-08T23:48:35.268Z" },
 ]
 
 [[package]]

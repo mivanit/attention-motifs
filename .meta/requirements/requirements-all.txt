@@ -333,7 +333,7 @@ parso==0.8.4
     # via jedi
 pathspec==0.12.1
     # via mypy
-pattern-lens==0.4.0
+pattern-lens==0.5.0
     # via attn-embed
 pdoc==15.0.4
 pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
