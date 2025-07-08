@@ -21,18 +21,10 @@ const URL_UPDATE_DEBOUNCE_DELAY = 500; // ms
 const FLOAT_COMPARISON_EPSILON = 0.001;
 
 // Keys to skip during URL serialization
-const URL_SKIP_PATHS = [
-	'data.cache',
-	'network.headers',
-	'tempData'
-];
+const URL_SKIP_PATHS = [];
 
 // Keys to skip during config comparison
-const COMPARISON_SKIP_KEYS = [
-	'timestamp',
-	'sessionId',
-	'tempData'
-];
+const COMPARISON_SKIP_KEYS = [];
 
 // For inline config overrides - replace this with external script if needed
 var INLINE_CONFIG = null;
@@ -51,21 +43,53 @@ let URL_UPDATE_TIMEOUT = null;
  */
 function getDefaultConfig() {
 	let default_cfg = {
-		head_viewing: "gpt2-small:L5:H5",
-		heads_display: null,
-		classification_mode: false,
-		current_classification: null,
-		table: {
-			n_nearby: 2,
-			n_share_class: 2
+		// Layout configuration
+		layout: {
+			yLabelWidth: 80,
+			xLabelHeight: 60,
+			canvasSize: 500,
+			maxTokensForLabels: 30  // Hide labels if more than this many tokens
 		},
-		n_prompts: 5,
-		pattern_size: 120,
-		prompts_url: "../../../../data/patterns/gpt2-small/prompts.jsonl",
-		patterns_path: "../../../../data/patterns/",
-		attnpedia_url: "ap.json",
-		headDistsnpy_url: "../../../../data/features/head_dists_raw/distances.npy",
-		headDistsmeta_url: "../../../../data/features/head_dists_raw/dists_meta.json",
+		
+		// Data configuration
+		data: {
+			basePath: "../../../../../data/patterns/"
+		},
+		
+		// Visualization configuration
+		visualization: {
+			// Canvas styling
+			highlightStrokeStyle: "#ff0000",
+			highlightLineWidth: 0.5,
+			gridStrokeStyle: "#ddd",
+			gridLineWidth: 0.2,
+			
+			// Colors for different axes
+			colors: {
+				kAxis: "#ff0000",      // Red for K (key) axis
+				qAxis: "#00aa00",      // Green for Q (query) axis
+				kAxisLight: "#ffcccc", // Light red for K axis labels
+				qAxisLight: "#ccffcc"  // Light green for Q axis labels
+			},
+			
+			// Performance settings
+			throttleDelay: 16,  // ~60fps for mouse updates
+			
+			// Keyboard navigation
+			keyboard: {
+				moveStep: 1,
+				ctrlMoveStep: 10,
+				repeatDelay: 300,    // Initial delay before key repeat
+				repeatInterval: 100  // Interval between repeats
+			},
+			
+			// Token highlighting
+			tokenHighlight: {
+				maxOpacity: 0.3,
+				intensityScale: 2.0,
+				backgroundColor: "rgba(173, 216, 230, {alpha})"
+			}
+		}
 	};
 
 	if (INLINE_CONFIG) {
@@ -355,7 +379,7 @@ function exportConfigToNewTab() {
 	const configText = getConfigAsJSON();
 	const blob = new Blob([configText], { type: 'application/json' });
 	const url = URL.createObjectURL(blob);
-	const newWindow = window.open(url, '_blank');
+	window.open(url, '_blank');
 
 	// Clean up the object URL after a delay
 	setTimeout(() => {
