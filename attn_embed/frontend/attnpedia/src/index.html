@@ -28,28 +28,87 @@
 
 <body>
     <div class="container" x-data="attentionApp" x-init="await init()">
+        <!-- Help button in top right -->
+        <div class="help-menu-corner">
+            <span class="help-button">?</span>
+            <div class="help-content">
+                <h3>Controls</h3>
+                <ul>
+                    <li><strong>Prompts:</strong> Number of prompt columns to display</li>
+                    <li><strong>Randomize:</strong> Show a random selection of prompts</li>
+                    <li><strong>Nearby heads:</strong> Number of heads similar to current</li>
+                    <li><strong>Same-class heads:</strong> Number of heads with same classification</li>
+                </ul>
+                <h3>Navigation</h3>
+                <ul>
+                    <li>Click head IDs to navigate between heads</li>
+                    <li>Click classification tags to view all heads of that type</li>
+                    <li>Click pattern images to view detailed pattern</li>
+                </ul>
+            </div>
+        </div>
+        
         <!-- Page Title Section -->
-        <div class="title-section">
-            <template x-if="!classification_mode">
-                <div>
-                    <h2 class="page-title">
-                        Current Head: <span class="head-name" x-text="current_head"></span><br>
-                        <a :href="getPatternLensLink()" target="_blank" class="pattern-lens-link">Pattern Lens</a>
-                    </h2>
-                </div>
-            </template>
-            <template x-if="classification_mode && current_classification">
-                <div x-data="classificationInfoComponent(current_classification)" x-init="await loadMetadata()">
-                    <h2 class="page-title" x-text="current_classification"></h2>
-                    <div class="classification-details" x-show="metadata.notes">
-                        <p x-text="metadata.notes"></p>
-                        <p><strong x-text="metadata.n_heads"></strong> heads</p>
-                        <template x-if="metadata.url">
-                            <p><a :href="metadata.url" target="_blank" x-text="metadata.url"></a></p>
-                        </template>
+        <div class="header-container">
+            <div class="title-section">
+                <template x-if="!classification_mode">
+                    <div>
+                        <h2 class="page-title">
+                            Current Head: <span class="head-name" x-text="current_head"></span><br>
+                            <a :href="getPatternLensLink()" target="_blank" class="pattern-lens-link" x-text="getPatternLensText()"></a>
+                        </h2>
                     </div>
+                </template>
+                <template x-if="classification_mode && current_classification">
+                    <div x-data="classificationInfoComponent(current_classification)" x-init="await loadMetadata()">
+                        <h2 class="page-title" x-text="current_classification"></h2>
+                        <div class="classification-details" x-show="metadata.notes">
+                            <p x-text="metadata.notes"></p>
+                            <p><strong x-text="metadata.n_heads"></strong> heads</p>
+                            <template x-if="metadata.url">
+                                <p><a :href="metadata.url" target="_blank" x-text="metadata.url"></a></p>
+                            </template>
+                        </div>
+                        <a :href="getPatternLensLinkForClassification()" target="_blank" class="pattern-lens-link" x-text="getPatternLensTextForClassification()"></a>
+                    </div>
+                </template>
+            </div>
+            
+            <div class="controls-section">
+                <div class="controls-grid">
+                    <div class="control-item">
+                        <label>Prompts:</label>
+                        <input type="number" x-model.number="n_prompts" @change="updatePrompts()" min="1" class="control-input">
+                    </div>
+                    <template x-if="!classification_mode">
+                        <div class="control-item">
+                            <label>Nearby heads:</label>
+                            <input type="number" x-model.number="table.n_nearby" @change="updateHeadsDisplay()" min="0" class="control-input">
+                        </div>
+                    </template>
+                    <template x-if="!classification_mode">
+                        <div class="control-item">
+                            <label>Most distant:</label>
+                            <input type="number" x-model.number="table.n_distant" @change="updateHeadsDisplay()" min="0" class="control-input">
+                        </div>
+                    </template>
+                    <div class="control-item">
+                        <button @click="randomizePrompts()" class="control-button full-width">Randomize prompts</button>
+                    </div>
+                    <template x-if="!classification_mode">
+                        <div class="control-item">
+                            <label>Same-class heads:</label>
+                            <input type="number" x-model.number="table.n_share_class" @change="updateHeadsDisplay()" min="0" class="control-input">
+                        </div>
+                    </template>
+                    <template x-if="!classification_mode">
+                        <div class="control-item">
+                            <label>Random heads:</label>
+                            <input type="number" x-model.number="table.n_random" @change="updateHeadsDisplay()" min="0" class="control-input">
+                        </div>
+                    </template>
                 </div>
-            </template>
+            </div>
         </div>
         
         <div class="section">
@@ -84,7 +143,10 @@
                             <td class="head-info">
                                 <a :href="getHeadLink(headRow.headId)" x-text="headRow.headId" class="head-link"></a>
                             </td>
-                            <td class="distance-cell" :style="`background-color: ${headRow.distanceColor}`" x-text="headRow.distanceText"></td>
+                            <td class="distance-cell" :style="`background-color: ${headRow.distanceColor}`">
+                                <div x-html="headRow.distanceText.replace('\\n', '<br>')"></div>
+                                <div class="distance-rank" x-text="`rank ${headRow.rank}`"></div>
+                            </td>
                             <td class="classifications-cell" :class="headRow.hasMatchingClassification ? 'matching-classification' : ''" 
                                 x-data="classificationComponent(headRow.headId)" x-init="await loadData()">
                                 <template x-if="classifications.length > 0">

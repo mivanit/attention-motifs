@@ -57,7 +57,9 @@ function getDefaultConfig() {
 		current_classification: null,
 		table: {
 			n_nearby: 2,
-			n_share_class: 2
+			n_share_class: 2,
+			n_distant: 0,
+			n_random: 0
 		},
 		n_prompts: 5,
 		pattern_size: 120,
