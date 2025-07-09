@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+  <!-- Background -->
+  <rect width="16" height="16" fill="#000011"/>
+  
+  <!-- 3D coordinate axes -->
+  <line x1="8" y1="8" x2="4" y2="12" stroke="#4444ff" stroke-linecap="round"/>
+  <line x1="8" y1="8" x2="8" y2="1" stroke="#44ff44" stroke-linecap="round"/>  
+  <line x1="8" y1="8" x2="15" y2="8" stroke="#ff4444" stroke-linecap="round"/>
+  
+  <!-- Data points scattered in 3D space -->
+  <circle cx="11" cy="3" r="1.2" fill="#00ff00"/>
+  <circle cx="8" cy="13" r="1" fill="#00ff00"/>
+  <circle cx="12" cy="11" r="1.2" fill="#00ff00"/>
+  <circle cx="4" cy="9" r="0.8" fill="#00ff00"/>
+  <circle cx="3" cy="3" r="1" fill="#00ff00"/>
+  <circle cx="12" cy="6" r="0.8" fill="#00ff00"/>
+</svg>

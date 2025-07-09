@@ -68,7 +68,32 @@ DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
 			"numericalPrefix": "pc.",
 			"defaultColorColumn": "activation.model",
 			"defaultSelectionColumn": "activation.model",
-			"hoverColumns": ["activation.cls", "activation.prompt"],
+			"hoverColumns": [
+				"activation.cls",
+				"activation.prompt",
+				"activation.n_ctx"
+			],
+			"selectedPoints": {
+				"size": 5,
+				"sizeMin": 0.1,
+				"sizeMax": 20,
+				"sizeStep": 0.1,
+				"opacityMin": 0.0,
+				"opacityStep": 0.01
+			},
+			"nonSelectedPoints": {
+				"size": 3,
+				"sizeMin": 0.1,
+				"sizeStep": 0.1,
+				"opacityMin": 0.00
+			},
+			"movement": {
+				"speed": 25,
+				"speedMin": 1,
+				"rollSpeed": 0.02,
+				"mouseSensitivity": 0.002,
+				"sprintMultiplier": 3
+			},
 			"rightClick": {
 				"mode": "url",
 				"url": {

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<!-- source repo: https://github.com/mivanit/js-embedding-vis -->
+<!-- /*$$$VERSION$$$*/ -->
+<html lang="en">
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+	<title>Embedding Explorer</title>
+	<!-- favicon -->
+	<link rel="icon" type="image/svg" href="favicon.svg">
+	<!-- libraries -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+	<!-- styles -->
+	<link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="notif.css">
+	<!-- code -->
+	<script src="config.js"></script>
+	<script src="notif.js"></script>
+	<script src="ColorUtil.js"></script>
+	<script src="DataFrame.js"></script>
+	<script src="DataModel.js"></script>
+	<script src="SelectionManager.js"></script>
+	<script src="VisState.js"></script>
+	<script src="ui.js"></script>
+	<script src="PointCloud.js"></script>
+	<script src="navball.js"></script>
+</head>
+
+<body>
+	<div id="container"><!-- single outer container -->
+		<div id="shortcuts"></div>
+		<!-- ---------- Help menu ---------- -->
+		<div id="helpMenu" class="menu">
+			<div class="help-section" id="helpInfo">
+				<!-- This will be populated from CONFIG.info.help -->
+			</div>
+			<div class="help-section">
+				<h3>Movement</h3>
+				<p>WASD - Move around the 3D space</p>
+				<p>Mouse - Look around (double-click to lock cursor)</p>
+				<p>Q / E - Roll camera left/right</p>
+				<p>Shift - Sprint (faster movement)</p>
+				<p>ESC - Exit mouse-look mode</p>
+			</div>
+			<div class="help-section">
+				<h3>Panels (press key to toggle)</h3>
+				<p>H - This help menu with controls and tips</p>
+				<p>M - Main controls menu for adjusting visualization</p>
+				<p>I - Info panel showing currently selected data points</p>
+				<p>L - Legend panel with color scheme and categories</p>
+				<p>N - Navigation panel with 3D compass and position</p>
+				<p>J - Performance stats (FPS, render info, camera position)</p>
+				<p>K - Toggle hover tooltips when pointing at data points</p>
+				<p>B - Toggle click-to-select functionality</p>
+				<p>O - Toggle right-click actions for point details</p>
+			</div>
+			<div class="help-section">
+				<h3>Data Interaction</h3>
+				<p>C - Cycle through available color-by columns</p>
+				<p>V - Cycle through available selection columns</p>
+				<p>Click - Select/deselect point (when click-select enabled)</p>
+				<p>Right-click - Open point data/URL (when right-click enabled)</p>
+				<p>Hover - Show point details tooltip (when hover enabled)</p>
+			</div>
+			<div class="help-section">
+				<h3>Configuration</h3>
+				<p>All settings are automatically saved to URL</p>
+				<p>Use "Export Current Config" button to get JSON file</p>
+				<p>URL parameters override config.json settings</p>
+				<p>Use "Reset Config" to return to loaded defaults</p>
+			</div>
+			<div class="help-section">
+				<h3>Source code / report issues:</h3>
+				<p><a href="https://github.com/mivanit/js-embedding-vis" style="color: #ffbb00"> github.com/mivanit/js-embedding-vis</a>
+			</div>
+			<div class="close-hint">Press H to close</div>
+		</div>
+		<!-- ---------- Enhanced Controls menu ---------- -->
+		<div id="controlsMenu" class="menu">
+			<!-- Column Selection - Side by Side -->
+			<div class="control-section">
+				<h4>Column Selection</h4>
+				<div class="column-selection">
+					<div class="column-item">
+						<label>Color by:</label>
+						<select id="colorBySelect"></select>
+					</div>
+					<div class="column-item">
+						<label>Select by:</label>
+						<select id="selectBySelect"></select>
+					</div>
+				</div>
+				<button id="applyColumns" style="width: 100%; margin-top: 10px;">Apply Column Choice</button>
+			</div>
+			<!-- Point Configuration - Side by Side -->
+			<div class="control-section">
+				<h4>Point Configuration</h4>
+				<div class="side-by-side">
+					<div class="point-config">
+						<h5>Selected Points</h5>
+						<div class="control-row-new">
+							<label>Size: <span class="value-display-right" id="pointSizeValue">6</span></label>
+							<div class="slider-container">
+								<input id="pointSize" type="range" min="1" max="20" step="1" value="6">
+							</div>
+						</div>
+						<div class="control-row-new">
+							<label>Opacity: <span class="value-display-right" id="opacityValue">1.0</span></label>
+							<div class="slider-container">
+								<input id="opacity" type="range" min="0.1" max="1" step="0.1" value="1.0">
+							</div>
+						</div>
+						<button id="randomizeColors" class="randomize-btn">Randomize Colors</button>
+					</div>
+					<div class="point-config">
+						<h5>Non-Selected Points</h5>
+						<div class="control-row-new">
+							<label>Size: <span class="value-display-right" id="nonSelPointSizeValue">4</span></label>
+							<div class="slider-container">
+								<input id="nonSelPointSize" type="range" min="1" max="20" step="1" value="4">
+							</div>
+						</div>
+						<div class="control-row-new">
+							<label>Opacity: <span class="value-display-right" id="nonSelOpacityValue">0.25</span></label>
+							<div class="slider-container">
+								<input id="nonSelOpacity" type="range" min="0.01" max="1" step="0.01" value="0.25">
+							</div>
+						</div>
+						<div class="control-row">
+							<label>Color:</label>
+							<input id="nonSelColor" type="color" value="#666666">
+						</div>
+					</div>
+				</div>
+			</div>
+			<!-- Movement -->
+			<div class="control-section">
+				<h4>Movement</h4>
+				<div class="control-row-new">
+					<label>Speed: <div class="slider-container">
+							<input id="speed" type="range" min="1" max="200" step="1" value="50">
+						</div>
+						<span class="value-display-right" id="speedValue">50</span></label>
+					</di v>
+				</div>
+				<!-- Axis Selection - Three Columns -->
+				<div class="control-section">
+					<h4>Axis Selection</h4>
+					<div class="axis-selection">
+						<div class="axis-item">
+							<label>X-Axis:</label>
+							<select id="xAxisSelect"></select>
+						</div>
+						<div class="axis-item">
+							<label>Y-Axis:</label>
+							<select id="yAxisSelect"></select>
+						</div>
+						<div class="axis-item">
+							<label>Z-Axis:</label>
+							<select id="zAxisSelect"></select>
+						</div>
+					</div>
+					<button id="applyAxes" style="width: 100%; margin-top: 10px;">Apply Axes</button>
+				</div>
+				<!-- Configuration -->
+				<div class="control-section">
+					<h4>Configuration</h4>
+					<div class="side-by-side">
+						<button id="exportConfigBtn" class="export-btn">Export Current Config</button>
+						<button id="resetConfigBtn" class="export-btn">Reset Config</button>
+					</div>
+				</div>
+				<div class="close-hint">Press M to close</div>
+			</div>
+		</div><!-- /#container -->
+		<!-- ---------- Info panel (center bottom) - for selected values only ---------- -->
+		<div id="infoMenu" class="menu">
+			<div id="selectedValuesContainer">
+				<h4 style="margin: 0 0 8px 0; color: #00ccff;" id="selectedValuesHeader">Selected Values:</h4>
+				<div id="selectedValuesGrid" style="display: grid; grid-template-columns: 1fr; gap: 4px; max-height: 200px; overflow-y: auto;"></div>
+				<div id="selectedValuesMetadata" style="margin-top: 8px; font-size: 10px; color: #888;"></div>
+			</div>
+			<div class="close-hint">Press I to close</div>
+		</div>
+		<!-- ---------- Legend panel (bottom left) - for color scheme and settings ---------- -->
+		<div id="legendMenu" class="menu">
+			<div id="columnInfoContainer">
+				<h4 style="margin: 0 0 8px 0; color: #00ccff;">Current Settings:</h4>
+				<div style="font-size: 11px; margin-bottom: 10px;">
+					<div>Color by: <span id="currentColorBy" style="color: #00ff00;"></span></div>
+					<div>Select by: <span id="currentSelectBy" style="color: #00ff00;"></span></div>
+				</div>
+			</div>
+			<div id="legendContainer">
+				<h4 style="margin: 0 0 8px 0; color: #00ccff;" id="legendHeader">Legend:</h4>
+				<div id="legendGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; max-height: 200px; overflow-y: auto;"></div>
+				<div id="legendMetadata" style="margin-top: 8px; font-size: 10px; color: #888;"></div>
+			</div>
+			<div class="close-hint">Press L to close</div>
+		</div>
+		<!-- ---------- Stats menu ---------- -->
+		<div id="statsMenu" class="menu">
+			<div class="stats-group">
+				<h3>Rendering Stats</h3>
+				<p>Points Rendered: <span id="renderedCount">0</span></p>
+				<p>FPS: <span id="fps">na</span></p>
+				<p>Frame Time: <span id="frameTime">na</span></p>
+			</div>
+			<div class="stats-group">
+				<h3>Camera Position</h3>
+				<p>X: <span id="statsPosX">na</span></p>
+				<p>Y: <span id="statsPosY">na</span></p>
+				<p>Z: <span id="statsPosZ">na</span></p>
+			</div>
+			<div class="close-hint">Press J to close</div>
+		</div>
+		<!-- ---------- Navigation bar with navball ---------- -->
+		<div id="navbar" class="menu">
+			<div id="navball-container">
+				<div class="navball-crosshair"></div>
+			</div>
+			<div class="nav-section">
+				<h4>Position</h4>
+				<div class="nav-row">
+					<span>X: <span id="posX">0.0</span></span>
+					<span>Y: <span id="posY">0.0</span></span>
+					<span>Z: <span id="posZ">0.0</span></span>
+				</div>
+			</div>
+		</div>
+		<!-- ---------- bootstrap script ---------- -->
+		<script>
+			document.addEventListener('DOMContentLoaded', async () => {
+				let sp = NOTIF.spinner('Starting up...');
+				await getConfig();
+
+				// Update page title from config
+				document.title = CONFIG.info.title;
+
+				// Update help info section
+				const helpInfoEl = document.getElementById('helpInfo');
+				if (helpInfoEl && CONFIG.info.help) {
+					helpInfoEl.innerHTML = `<p>${CONFIG.info.help}</p>`;
+				}
+
+				const model = await DataModel.load(CONFIG.dataFile, CONFIG.numericalPrefix);
+				const pointCloud = new PointCloud(model);
+				const uiManager = new UIManager(pointCloud);
+				pointCloud.setUIManager(uiManager);
+				sp.complete();
+				NOTIF.success('Ready! Press H for help.');
+			});
+		</script>
+</body>
+
+</html>
