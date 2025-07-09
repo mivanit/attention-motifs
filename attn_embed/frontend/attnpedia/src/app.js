@@ -221,6 +221,27 @@ document.addEventListener('alpine:init', () => {
 			return url.toString();
 		},
 
+		getPatternLink(headId, promptHash) {
+			// Generate pattern URL from template
+			const template = CONFIG.pattern_url_template;
+			if (!template) return '#';
+			
+			// Parse headId to get model, layer, and head number
+			const headInfo = HeadInfo.from_id(headId);
+			
+			// Replace placeholders in template
+			return template
+				.replace('{prompt_hash}', promptHash)
+				.replace('{model}', headInfo.model)
+				.replace('{layer}', headInfo.layer)
+				.replace('{head}', headInfo.head);
+		},
+
+		getPatternLensLink() {
+			// Return patternlens URL template
+			return CONFIG.patternlens_url_template || '#';
+		},
+
 		showPromptTooltip(event, prompt) {
 			// Hide existing tooltip
 			this.hidePromptTooltip();
@@ -269,6 +290,7 @@ document.addEventListener('alpine:init', () => {
 				loading: true,
 				imageUrl: null,
 				error: null,
+				patternLink: null,
 
 				async init() {
 					app.failureTracker.patterns.total++;
@@ -276,6 +298,7 @@ document.addEventListener('alpine:init', () => {
 						const headInfo = HeadInfo.from_id(headId);
 						const imageUrl_rel = await headInfo.get_pattern_url(promptHash);
 						this.imageUrl = `${CONFIG.patterns_path}/${imageUrl_rel}`;
+						this.patternLink = app.getPatternLink(headId, promptHash);
 						this.loading = false;
 					} catch (error) {
 						app.failureTracker.patterns.failed++;

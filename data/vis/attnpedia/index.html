@@ -19,6 +19,11 @@
     	background: #f8f9fa;
     }
     
+    a {
+    	color: blue;
+    	text-decoration: underline;
+    }
+    
     .container {
     	max-width: 1400px;
     	margin: 0 auto;
@@ -42,6 +47,7 @@
     	font-family: monospace;
     	color: #1565c0;
     }
+    
     
     .classification-details {
     	color: #666;
@@ -89,13 +95,12 @@
     	font-family: monospace;
     }
     
-    .head-link {
-    	color: #1565c0;
-    	text-decoration: none;
-    }
     
-    .head-link:hover {
-    	text-decoration: underline;
+    .pattern-link {
+    	display: block;
+    	margin: 0 auto;
+    	width: var(--pattern-size, 120px);
+    	height: var(--pattern-size, 120px);
     }
     
     .pattern-image {
@@ -488,11 +493,13 @@
     		},
     		n_prompts: 5,
     		pattern_size: 120,
-    		prompts_url: "patterns/gpt2-small/prompts.jsonl",
-    		patterns_path: "patterns/",
+    		prompts_url: "../../patterns/gpt2-small/prompts.jsonl",
+    		patterns_path: "../../patterns/",
     		attnpedia_url: "ap.json",
-    		headDistsnpy_url: "features/head_dists_raw/distances.npy",
-    		headDistsmeta_url: "features/head_dists_raw/dists_meta.json",
+    		headDistsnpy_url: "../../features/head_dists_raw/distances.npy",
+    		headDistsmeta_url: "../../features/head_dists_raw/dists_meta.json",
+    		pattern_url_template: "../../patterns/single.html?prompt={prompt_hash}&head={model}.L{layer}.H{head}",
+    		patternlens_url_template: "../../patterns/index.html?models={model}&heads-{model}=L{layer}H{head}",
     	};
     
     	if (INLINE_CONFIG) {
@@ -1990,6 +1997,27 @@
     			return url.toString();
     		},
     
+    		getPatternLink(headId, promptHash) {
+    			// Generate pattern URL from template
+    			const template = CONFIG.pattern_url_template;
+    			if (!template) return '#';
+    			
+    			// Parse headId to get model, layer, and head number
+    			const headInfo = HeadInfo.from_id(headId);
+    			
+    			// Replace placeholders in template
+    			return template
+    				.replace('{prompt_hash}', promptHash)
+    				.replace('{model}', headInfo.model)
+    				.replace('{layer}', headInfo.layer)
+    				.replace('{head}', headInfo.head);
+    		},
+    
+    		getPatternLensLink() {
+    			// Return patternlens URL template
+    			return CONFIG.patternlens_url_template || '#';
+    		},
+    
     		showPromptTooltip(event, prompt) {
     			// Hide existing tooltip
     			this.hidePromptTooltip();
@@ -2038,6 +2066,7 @@
     				loading: true,
     				imageUrl: null,
     				error: null,
+    				patternLink: null,
     
     				async init() {
     					app.failureTracker.patterns.total++;
@@ -2045,6 +2074,7 @@
     						const headInfo = HeadInfo.from_id(headId);
     						const imageUrl_rel = await headInfo.get_pattern_url(promptHash);
     						this.imageUrl = `${CONFIG.patterns_path}/${imageUrl_rel}`;
+    						this.patternLink = app.getPatternLink(headId, promptHash);
     						this.loading = false;
     					} catch (error) {
     						app.failureTracker.patterns.failed++;
@@ -2169,7 +2199,10 @@
         <div class="title-section">
             <template x-if="!classification_mode">
                 <div>
-                    <h2 class="page-title">Current Head: <span class="head-name" x-text="current_head"></span></h2>
+                    <h2 class="page-title">
+                        Current Head: <span class="head-name" x-text="current_head"></span><br>
+                        <a :href="getPatternLensLink()" target="_blank" class="pattern-lens-link">Pattern Lens</a>
+                    </h2>
                 </div>
             </template>
             <template x-if="classification_mode && current_classification">
@@ -2246,7 +2279,9 @@
                                         <div class="pattern-error" x-text="error"></div>
                                     </template>
                                     <template x-if="!loading && !error && imageUrl">
-                                        <img :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headRow.headId} on ${prompt.hash}`">
+                                        <a :href="patternLink" target="_blank" class="pattern-link">
+                                            <img :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headRow.headId} on ${prompt.hash}`">
+                                        </a>
                                     </template>
                                 </td>
                             </template>

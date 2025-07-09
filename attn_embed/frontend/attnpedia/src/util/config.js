@@ -61,11 +61,13 @@ function getDefaultConfig() {
 		},
 		n_prompts: 5,
 		pattern_size: 120,
-		prompts_url: "patterns/gpt2-small/prompts.jsonl",
-		patterns_path: "patterns/",
+		prompts_url: "../../patterns/gpt2-small/prompts.jsonl",
+		patterns_path: "../../patterns/",
 		attnpedia_url: "ap.json",
-		headDistsnpy_url: "features/head_dists_raw/distances.npy",
-		headDistsmeta_url: "features/head_dists_raw/dists_meta.json",
+		headDistsnpy_url: "../../features/head_dists_raw/distances.npy",
+		headDistsmeta_url: "../../features/head_dists_raw/dists_meta.json",
+		pattern_url_template: "../../patterns/single.html?prompt={prompt_hash}&head={model}.L{layer}.H{head}",
+		patternlens_url_template: "../../patterns/index.html?models={model}&heads-{model}=L{layer}H{head}",
 	};
 
 	if (INLINE_CONFIG) {

@@ -4,6 +4,11 @@ body {
 	background: #f8f9fa;
 }
 
+a {
+	color: blue;
+	text-decoration: underline;
+}
+
 .container {
 	max-width: 1400px;
 	margin: 0 auto;
@@ -27,6 +32,7 @@ body {
 	font-family: monospace;
 	color: #1565c0;
 }
+
 
 .classification-details {
 	color: #666;
@@ -74,13 +80,12 @@ body {
 	font-family: monospace;
 }
 
-.head-link {
-	color: #1565c0;
-	text-decoration: none;
-}
 
-.head-link:hover {
-	text-decoration: underline;
+.pattern-link {
+	display: block;
+	margin: 0 auto;
+	width: var(--pattern-size, 120px);
+	height: var(--pattern-size, 120px);
 }
 
 .pattern-image {
