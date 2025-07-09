@@ -1,1 +1,16 @@
-{}
+{
+	"dataFile": "../../../features/pca.jsonl",
+	"numericalPrefix": "pc.",
+	"defaultColorColumn": "activation.model",
+	"defaultSelectionColumn": "activation.model",
+	"hoverColumns": [
+		"activation.cls",
+		"activation.prompt"
+	],
+	"rightClick": {
+		"mode": "url",
+		"url": {
+			"template": "../../patterns/single.html?prompt={prompt_hash}&head={model}.L{layer}.H{head}"
+		}
+	}
+}

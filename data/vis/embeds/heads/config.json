@@ -1,1 +1,8 @@
-{}
+{
+	"rightClick": {
+		"mode": "url",
+		"url": {
+			"template": "../../attnpedia/index.html?head_viewing={model}~L{layer}~H{head}"
+		}
+	}
+}

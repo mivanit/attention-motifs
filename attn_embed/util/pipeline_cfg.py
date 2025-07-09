@@ -64,14 +64,29 @@ DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
 		path="embeds/patterns/",
 		cfg_path="config.json",
 		cfg={
-
+			"dataFile": "../../../features/pca.jsonl",
+			"numericalPrefix": "pc.",
+			"defaultColorColumn": "activation.model",
+			"defaultSelectionColumn": "activation.model",
+			"hoverColumns": ["activation.cls", "activation.prompt"],
+			"rightClick": {
+				"mode": "url",
+				"url": {
+					"template": "../../patterns/single.html?prompt={prompt_hash}&head={model}.L{layer}.H{head}"
+				}
+			}
 		},
 	),
 	embed_head=dict(
 		path="embeds/heads/",
 		cfg_path="config.json",
 		cfg={
-
+			"rightClick": {
+				"mode": "url",
+				"url": {
+					"template": "../../attnpedia/index.html?head_viewing={model}~L{layer}~H{head}"
+				}
+			}
 		},
 	)
 )
