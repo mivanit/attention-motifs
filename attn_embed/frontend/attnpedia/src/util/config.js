@@ -436,6 +436,45 @@ function resetConfigToLoaded() {
 }
 
 /**
+ * Reset CONFIG to the loaded config.json state but preserve head_viewing
+ * Useful for resetting UI state while keeping the current head selection
+ */
+function resetConfigPreserveHead() {
+	if (!CONFIG) {
+		console.warn("No current config available");
+		return;
+	}
+
+	// Store current head_viewing value
+	const currentHead = CONFIG.head_viewing;
+
+	// Reset to loaded config
+	if (!LOADED_CONFIG) {
+		console.warn("No loaded config available, resetting to defaults");
+		CONFIG = getDefaultConfig();
+	} else {
+		// Deep copy the loaded config back to CONFIG
+		CONFIG = JSON.parse(JSON.stringify(LOADED_CONFIG));
+	}
+
+	// Restore the head_viewing value
+	CONFIG.head_viewing = currentHead;
+
+	// Update URL with only head_viewing parameter
+	const url = new URL(window.location.pathname, window.location.origin);
+	url.searchParams.set('head_viewing', encodeForURL(currentHead));
+	window.history.replaceState({}, '', url.toString());
+
+	// Clear the URL update timeout if it exists
+	if (URL_UPDATE_TIMEOUT) {
+		clearTimeout(URL_UPDATE_TIMEOUT);
+		URL_UPDATE_TIMEOUT = null;
+	}
+
+	console.log("Config reset to loaded state with head_viewing preserved:", currentHead);
+}
+
+/**
  * Get a nested configuration value using dot notation
  * Example: getConfigValue("ui.showToolbar")
  * @param {string} path - Dot-separated path to config value

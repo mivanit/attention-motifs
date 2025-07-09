@@ -282,6 +282,9 @@ a {
 	top: 10px;
 	right: 10px;
 	z-index: 2000;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
 }
 
 .help-menu {
@@ -300,6 +303,25 @@ a {
 	font-weight: bold;
 	font-size: 14px;
 	cursor: help;
+}
+
+.reset-button {
+	display: inline-block;
+	width: 24px;
+	height: 24px;
+	line-height: 24px;
+	text-align: center;
+	background: #28a745;
+	color: white;
+	border: none;
+	border-radius: 50%;
+	font-size: 14px;
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.reset-button:hover {
+	background: #218838;
 }
 
 .help-content {

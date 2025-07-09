@@ -297,6 +297,9 @@
     	top: 10px;
     	right: 10px;
     	z-index: 2000;
+    	display: flex;
+    	flex-direction: column;
+    	gap: 5px;
     }
     
     .help-menu {
@@ -315,6 +318,25 @@
     	font-weight: bold;
     	font-size: 14px;
     	cursor: help;
+    }
+    
+    .reset-button {
+    	display: inline-block;
+    	width: 24px;
+    	height: 24px;
+    	line-height: 24px;
+    	text-align: center;
+    	background: #28a745;
+    	color: white;
+    	border: none;
+    	border-radius: 50%;
+    	font-size: 14px;
+    	cursor: pointer;
+    	transition: background-color 0.2s;
+    }
+    
+    .reset-button:hover {
+    	background: #218838;
     }
     
     .help-content {
@@ -1012,6 +1034,45 @@
     	}
     
     	console.log("Config reset to loaded state and URL cleared");
+    }
+    
+    /**
+     * Reset CONFIG to the loaded config.json state but preserve head_viewing
+     * Useful for resetting UI state while keeping the current head selection
+     */
+    function resetConfigPreserveHead() {
+    	if (!CONFIG) {
+    		console.warn("No current config available");
+    		return;
+    	}
+    
+    	// Store current head_viewing value
+    	const currentHead = CONFIG.head_viewing;
+    
+    	// Reset to loaded config
+    	if (!LOADED_CONFIG) {
+    		console.warn("No loaded config available, resetting to defaults");
+    		CONFIG = getDefaultConfig();
+    	} else {
+    		// Deep copy the loaded config back to CONFIG
+    		CONFIG = JSON.parse(JSON.stringify(LOADED_CONFIG));
+    	}
+    
+    	// Restore the head_viewing value
+    	CONFIG.head_viewing = currentHead;
+    
+    	// Update URL with only head_viewing parameter
+    	const url = new URL(window.location.pathname, window.location.origin);
+    	url.searchParams.set('head_viewing', encodeForURL(currentHead));
+    	window.history.replaceState({}, '', url.toString());
+    
+    	// Clear the URL update timeout if it exists
+    	if (URL_UPDATE_TIMEOUT) {
+    		clearTimeout(URL_UPDATE_TIMEOUT);
+    		URL_UPDATE_TIMEOUT = null;
+    	}
+    
+    	console.log("Config reset to loaded state with head_viewing preserved:", currentHead);
     }
     
     /**
@@ -2242,7 +2303,7 @@
     			// Create a new URL with the head_viewing parameter set to this head
     			// Preserve current settings when navigating
     			const url = new URL(window.location.href);
-    			url.searchParams.set('head_viewing', headId);
+    			url.searchParams.set('head_viewing', encodeForURL(headId));
     			url.searchParams.set('classification_mode', 'false');
     			url.searchParams.delete('current_classification');
     			url.searchParams.delete('heads_display');
@@ -2265,7 +2326,7 @@
     			// Create URL for classification mode
     			const url = new URL(window.location.href);
     			url.searchParams.set('classification_mode', 'true');
-    			url.searchParams.set('current_classification', classificationType);
+    			url.searchParams.set('current_classification', encodeForURL(classificationType));
     			url.searchParams.delete('heads_display'); // Let setupClassificationMode handle this
     			
     			// Preserve current settings
@@ -2641,14 +2702,29 @@
                     <li><strong>Randomize:</strong> Show a random selection of prompts</li>
                     <li><strong>Nearby heads:</strong> Number of heads similar to current</li>
                     <li><strong>Same-class heads:</strong> Number of heads with same classification</li>
+                    <li><strong>Most distant:</strong> Number of heads furthest from current</li>
+                    <li><strong>Random heads:</strong> Number of randomly selected heads</li>
                 </ul>
                 <h3>Navigation</h3>
                 <ul>
                     <li>Click head IDs to navigate between heads</li>
                     <li>Click classification tags to view all heads of that type</li>
                     <li>Click pattern images to view detailed pattern</li>
+                    <li>Use Pattern Lens links to compare multiple heads</li>
+                </ul>
+                <h3>Interface</h3>
+                <ul>
+                    <li><strong>Distance colors:</strong> Blue intensity shows head similarity</li>
+                    <li><strong>Orange highlight:</strong> Heads sharing classifications with current</li>
+                    <li><strong>Prompt tooltips:</strong> Hover column headers for full text</li>
+                    <li><strong>Classification tooltips:</strong> Hover tags for descriptions</li>
+                </ul>
+                <h3>Reset</h3>
+                <ul>
+                    <li><strong>Reset button (🔄):</strong> Resets all settings to default while preserving current head</li>
                 </ul>
             </div>
+            <button class="reset-button" @click="resetConfigPreserveHead(); location.reload();" title="Reset settings to default (preserves current head)">🔄</button>
         </div>
         
         <!-- Page Title Section -->
@@ -2658,7 +2734,7 @@
                     <div>
                         <h2 class="page-title">
                             Current Head: <span class="head-name" x-text="current_head"></span><br>
-                            <a :href="getPatternLensCurrentHeadLink()" target="_blank" class="pattern-lens-link">current head</a> | 
+                            Pattern Lens: <a :href="getPatternLensCurrentHeadLink()" target="_blank" class="pattern-lens-link">current head</a> | 
                             <a :href="getPatternLensAllHeadsLink()" target="_blank" class="pattern-lens-link">all displayed heads</a>
                         </h2>
                     </div>

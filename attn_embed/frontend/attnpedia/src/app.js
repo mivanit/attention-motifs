@@ -275,7 +275,7 @@ document.addEventListener('alpine:init', () => {
 			// Create a new URL with the head_viewing parameter set to this head
 			// Preserve current settings when navigating
 			const url = new URL(window.location.href);
-			url.searchParams.set('head_viewing', headId);
+			url.searchParams.set('head_viewing', encodeForURL(headId));
 			url.searchParams.set('classification_mode', 'false');
 			url.searchParams.delete('current_classification');
 			url.searchParams.delete('heads_display');
@@ -298,7 +298,7 @@ document.addEventListener('alpine:init', () => {
 			// Create URL for classification mode
 			const url = new URL(window.location.href);
 			url.searchParams.set('classification_mode', 'true');
-			url.searchParams.set('current_classification', classificationType);
+			url.searchParams.set('current_classification', encodeForURL(classificationType));
 			url.searchParams.delete('heads_display'); // Let setupClassificationMode handle this
 			
 			// Preserve current settings
