@@ -1,8 +1,38 @@
 {
+	"dataFile": "../../../features/head_embed.jsonl",
+	"numericalPrefix": "embed.",
+	"defaultColorColumn": "type.group",
+	"defaultSelectionColumn": "type.group",
+	"hoverColumns": [
+		"cls",
+		"type.primary",
+		"type.group"
+	],
+	"selectedPoints": {
+		"size": 5,
+		"sizeMin": 0.1,
+		"sizeMax": 20,
+		"sizeStep": 0.1,
+		"opacityMin": 0.0,
+		"opacityStep": 0.01
+	},
+	"nonSelectedPoints": {
+		"size": 3,
+		"sizeMin": 0.1,
+		"sizeStep": 0.1,
+		"opacityMin": 0.0
+	},
+	"movement": {
+		"speed": 25,
+		"speedMin": 1,
+		"rollSpeed": 0.02,
+		"mouseSensitivity": 0.002,
+		"sprintMultiplier": 3
+	},
 	"rightClick": {
 		"mode": "url",
 		"url": {
-			"template": "../../attnpedia/index.html?head_viewing={activation.model}~L{activation.layer}~H{activation.head}"
+			"template": "../../attnpedia/index.html?head_viewing={cls}"
 		}
 	}
 }

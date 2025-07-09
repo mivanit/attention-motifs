@@ -5,6 +5,7 @@ from attn_embed.pipeline.s2_features import compute_features
 from attn_embed.pipeline.s3b_feat_fig import feat_figures
 from attn_embed.pipeline.s4_head_dist import head_dists
 from attn_embed.pipeline.s5_head_embed import head_embed
+from attn_embed.pipeline.s5b_head_embed_plots import head_embed_plots
 from attn_embed.util.pipeline_cfg import PipelineConfig
 from attn_embed.pipeline.s3_feat_proc import feat_proc
 
@@ -36,6 +37,9 @@ def full_pipeline(cfg: PipelineConfig) -> None:
 	
 	# Step 5: head embeddings
 	head_embed(cfg)
+	
+	# Step 5b: head embedding plots
+	head_embed_plots(cfg)
 
 
 if __name__ == "__main__":

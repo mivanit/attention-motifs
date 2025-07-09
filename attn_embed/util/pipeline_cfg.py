@@ -175,6 +175,17 @@ class PipelineConfig:
 	# data processing
 	models: list[str]
 	pca_n_components: int = 16
+	
+	# head embedding configuration
+	embedding_methods: list[str] = field(
+		default_factory=lambda: ["isomap", "umap", "tsne", "pca"]
+	)
+	embedding_n_components_list: list[int] = field(
+		default_factory=lambda: [2, 3]
+	)
+	embedding_n_neighbors_list: list[int] = field(
+		default_factory=lambda: [2, 4, 8, 16, 32, 64]
+	)
 
 	# computing
 	n_proc: int
@@ -293,6 +304,15 @@ class PipelineConfig:
 			pca_n_components=data.get(
 				"pca_n_components", 16
 			),  # default to 16 if not specified
+			embedding_methods=data.get(
+				"embedding_methods", ["isomap", "umap", "tsne", "pca"]
+			),
+			embedding_n_components_list=data.get(
+				"embedding_n_components_list", [2, 3]
+			),
+			embedding_n_neighbors_list=data.get(
+				"embedding_n_neighbors_list", [2, 4, 8, 16, 32, 64]
+			),
 			prompts_min_chars=data["prompts_min_chars"],
 			prompts_max_chars=data["prompts_max_chars"],
 			device=data.get("device", "cpu"),  # default to 'cpu' if not specified

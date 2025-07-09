@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Head Embedding Visualizations</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .description {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .method-section { 
+            margin-bottom: 40px; 
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .method-title { 
+            font-size: 24px; 
+            font-weight: bold; 
+            margin-bottom: 15px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+        .dimension-section { 
+            margin-bottom: 25px; 
+        }
+        .dimension-title { 
+            font-size: 18px; 
+            font-weight: bold; 
+            margin-bottom: 15px;
+            color: #34495e;
+        }
+        .plots-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
+            gap: 20px; 
+        }
+        .plot-item { 
+            border: 1px solid #ddd; 
+            padding: 15px; 
+            text-align: center;
+            border-radius: 8px;
+            background-color: #fafafa;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .plot-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .plot-item img { 
+            max-width: 100%; 
+            height: auto;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .plot-title { 
+            font-weight: bold; 
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #2c3e50;
+        }
+        .plot-info {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+        .plot-links { 
+            margin-top: 15px; 
+        }
+        .plot-links a { 
+            display: inline-block; 
+            margin: 5px; 
+            padding: 8px 16px; 
+            background-color: #3498db; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 4px; 
+            font-size: 13px;
+            transition: background-color 0.2s ease;
+        }
+        .plot-links a:hover { 
+            background-color: #2980b9; 
+        }
+        .meta-info {
+            background-color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .meta-info h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Head Embedding Visualizations</h1>
+        <p class="description">
+            Interactive table of head embedding plots generated using different dimensionality reduction methods and parameters.
+        </p>
+        
+        <div class="meta-info">
+            <h3>About These Visualizations</h3>
+            <p>Each plot shows attention heads projected into 2D or 3D space using different embedding methods:</p>
+            <ul>
+                <li><strong>ISOMAP</strong>: Isometric mapping preserving geodesic distances</li>
+                <li><strong>UMAP</strong>: Uniform Manifold Approximation and Projection</li>
+                <li><strong>t-SNE</strong>: t-Distributed Stochastic Neighbor Embedding</li>
+                <li><strong>PCA</strong>: Principal Component Analysis</li>
+            </ul>
+            <p>Click "View Interactive 3D" to explore the embeddings in an interactive 3D visualization.</p>
+        </div>
+
+        <div id="embedding-plots">
+            <!-- Content will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // Load and display the embedding data
+        async function loadEmbeddingData() {
+            try {
+                const response = await fetch('head_embed_plots.json');
+                const data = await response.json();
+                displayEmbeddingPlots(data);
+            } catch (error) {
+                console.error('Error loading embedding data:', error);
+                document.getElementById('embedding-plots').innerHTML = 
+                    '<p style="color: red; text-align: center;">Error loading embedding data. Please check that head_embed_plots.json exists.</p>';
+            }
+        }
+
+        function displayEmbeddingPlots(data) {
+            const container = document.getElementById('embedding-plots');
+            let html = '';
+
+            // Group plots by method
+            const methodGroups = {};
+            data.plots.forEach(plot => {
+                if (!methodGroups[plot.method]) {
+                    methodGroups[plot.method] = {};
+                }
+                if (!methodGroups[plot.method][plot.n_components]) {
+                    methodGroups[plot.method][plot.n_components] = [];
+                }
+                methodGroups[plot.method][plot.n_components].push(plot);
+            });
+
+            // Generate HTML for each method
+            Object.keys(methodGroups).sort().forEach(method => {
+                html += `<div class="method-section">`;
+                html += `<div class="method-title">${method.toUpperCase()}</div>`;
+
+                Object.keys(methodGroups[method]).sort().forEach(nComponents => {
+                    html += `<div class="dimension-section">`;
+                    html += `<div class="dimension-title">${nComponents}D Embeddings</div>`;
+                    html += `<div class="plots-grid">`;
+
+                    // Sort by n_neighbors
+                    methodGroups[method][nComponents]
+                        .sort((a, b) => parseInt(a.n_neighbors) - parseInt(b.n_neighbors))
+                        .forEach(plot => {
+                            html += `
+                                <div class="plot-item">
+                                    <div class="plot-title">${plot.n_neighbors} neighbors</div>
+                                    <div class="plot-info">${plot.prefix}</div>
+                                    <img src="${plot.svg_filename}" alt="${plot.prefix}" loading="lazy">
+                                    <div class="plot-links">
+                                        <a href="${plot.embed_url}" target="_blank">View Interactive 3D</a>
+                                    </div>
+                                </div>
+                            `;
+                        });
+
+                    html += `</div></div>`;
+                });
+
+                html += `</div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', loadEmbeddingData);
+    </script>
+</body>
+</html>

@@ -17,6 +17,7 @@ def write_frontend(cfg: PipelineConfig) -> None:
 	ap_html: str = (frontend_resources_path / "attnpedia/index.html").read_text()
 	ap_data: str = (frontend_resources_path / "attnpedia/ap.json").read_text()
 	embed_html: str = (frontend_resources_path / "embeds/index.html").read_text()
+	head_embed_table_html: str = (frontend_resources_path / "head_embed_table/index.html").read_text()
 
 	vis_output_path: Path = cfg.vis_dir
 
