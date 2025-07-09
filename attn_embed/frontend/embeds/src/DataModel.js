@@ -60,7 +60,7 @@ class DataModel {
 
 				const resp = await fetch(filename);
 				if (!resp.ok) {
-					const errorMsg = `Failed to load data: ${resp.status} ${resp.statusText}`;
+					const errorMsg = `Failed to load data from ${filename}: ${resp.status} ${resp.statusText}`;
 					downloadSpinner.complete();
 					NOTIF.error(errorMsg, new Error(errorMsg));
 					throw new Error(errorMsg);
