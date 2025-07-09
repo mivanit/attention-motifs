@@ -1,20 +1,18 @@
-const HEADDISTSNPY_URL = CONFIG.headDistsnpy_url;
-const HEADDISTSMETA_URL = CONFIG.headDistsmeta_url;
 // TODO: fallback to getting from github?
 // || "https://raw.githubusercontent.com/<TODO>";
 
-async function _load_dists_meta(path_meta = HEADDISTSMETA_URL) {
-	const r = await fetch(path_meta);
+async function _load_dists_meta() {
+	const r = await fetch(CONFIG.headDistsmeta_url);
 	if (r.ok) {
 		const loaded = await r.json();
 		return loaded;
 	} else {
-		throw new Error(`Failed to load head embeddings data from ${path_meta}`);
+		throw new Error(`Failed to load head embeddings data from ${CONFIG.headDistsmeta_url}`);
 	}
 }
 
-async function _load_dists_npy(path_npy = HEADDISTSNPY_URL) {
-	return NDArray.load(path_npy);
+async function _load_dists_npy() {
+	return NDArray.load(CONFIG.headDistsnpy_url);
 }
 
 

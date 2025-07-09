@@ -1,9 +1,8 @@
-const PROMPTS_URL = CONFIG.prompts_url;
 // TODO: fallback to getting from github?
 // || "https://raw.githubusercontent.com/<TODO>";
 
-async function load_prompts(path = PROMPTS_URL) {
-	const r = await fetch(path);
+async function load_prompts() {
+	const r = await fetch(CONFIG.prompts_url);
 	if (r.ok) {
 		const text = await r.text();
 		const lines = text.trim().split('\n');
@@ -22,7 +21,7 @@ async function load_prompts(path = PROMPTS_URL) {
 		
 		return prompts;
 	} else {
-		throw new Error(`Failed to load prompts data from ${path}`);
+		throw new Error(`Failed to load prompts data from ${CONFIG.prompts_url}`);
 	}
 }
 

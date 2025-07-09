@@ -16,6 +16,7 @@ document.addEventListener('alpine:init', () => {
 		},
 
 		async init() {
+			await getConfig();
 			try {
 				this.attention_pedia = new AttentionPedia();
 				this.head_distances = new HeadDistances();

@@ -41,6 +41,41 @@ FIGURE_FNAMES: dict[FigureFilename, str] = dict(
 	head_dists="head-dists-heatmap.pdf",
 )
 
+DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
+	attentionpedia=dict(
+		path="attnpedia",
+		cfg_path="config.json",
+		cfg={
+			"head_viewing": "gpt2-small:L5:H5",
+			"table": {
+				"n_nearby": 2,
+				"n_share_class": 2
+			},
+			"n_prompts": 5,
+			"pattern_size": 120,
+			"attnpedia_url": "ap.json",
+			"headDistsmeta_url": "../../features/head_dists_raw/dists_meta.json",
+			"prompts_url": "../../patterns/gpt2-small/prompts.jsonl",
+			"headDistsnpy_url": "../../features/head_dists_raw/distances.npy",
+			"patterns_path": "../../patterns/",
+		},
+	),
+	embed_pattern=dict(
+		path="embeds/patterns/",
+		cfg_path="config.json",
+		cfg={
+
+		},
+	),
+	embed_head=dict(
+		path="embeds/heads/",
+		cfg_path="config.json",
+		cfg={
+
+		},
+	)
+)
+
 
 def _ser_path(path: Path) -> str | None:
 	"""Serialize a Path object to a string"""
@@ -78,6 +113,10 @@ class PipelineConfig:
 	features_dir: Path
 	data_fnames: dict[DataFilename, str] = field(
 		default_factory=lambda: DATA_FNAMES,
+	)
+	vis_dir: Path = Path("data/vis")
+	vis_configs: dict[str, str] = field(
+		default_factory=lambda: DEFAULT_VIS_CONFIGS,
 	)
 
 	# plotting/logging
@@ -173,6 +212,11 @@ class PipelineConfig:
 			prompts_file=Path(data["prompts_file"]),
 			patterns_dir=Path(data["patterns_dir"]),
 			features_dir=Path(data["features_dir"]),
+			vis_dir=Path(data.get("vis_dir", "data/vis")),
+			vis_configs={
+				**DEFAULT_VIS_CONFIGS,
+				**data.get("vis_configs", DEFAULT_VIS_CONFIGS),	
+			},
 			models=data["models"],
 			pca_n_components=data.get(
 				"pca_n_components", 16
@@ -256,6 +300,12 @@ class PipelineConfig:
 			"--features-dir", type=Path, help="Directory for extracted features"
 		)
 		parser.add_argument(
+			"--vis-dir",
+			type=Path,
+			default=None,
+			help="Directory for visualizations (default: 'vis')",
+		)
+		parser.add_argument(
 			"--device",
 			type=str,
 			default=None,
@@ -297,6 +347,8 @@ class PipelineConfig:
 			config.patterns_dir = args.patterns_dir
 		if args.features_dir is not None:
 			config.features_dir = args.features_dir
+		if args.vis_dir is not None:
+			config.vis_dir = args.vis_dir
 		if args.device is not None:
 			config.device = args.device
 		if args.force_overwrite is not None:

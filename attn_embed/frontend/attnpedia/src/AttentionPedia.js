@@ -1,9 +1,8 @@
-const ATTNPEDIA_URL = CONFIG.attnpedia_url;
 // TODO: fallback to getting from github?
 // || "https://raw.githubusercontent.com/<TODO>";
 
-async function load_attnpedia(path = ATTNPEDIA_URL) {
-	const r = await fetch(path);
+async function load_attnpedia() {
+	const r = await fetch(CONFIG.attnpedia_url);
 	if (r.ok) {
 		const loaded = await r.json();
 		return loaded;
