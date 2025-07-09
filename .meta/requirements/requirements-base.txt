@@ -302,7 +302,7 @@ pandas==2.3.0
     #   transformer-lens
 parso==0.8.4
     # via jedi
-pattern-lens==0.5.0
+pattern-lens @ git+https://github.com/mivanit/pattern-lens@b3a09450456543d07fee42e75fbadae289cbec76
     # via attn-embed
 pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
     # via ipython
