@@ -16,16 +16,30 @@ def head_embed(cfg: PipelineConfig) -> None:
     """Generate head embeddings from distance matrix."""
     pipeline_step_major("pipeline step 5: generate head embeddings")
     
+    print("DEBUG: Starting head embedding generation...")
+    
+    # Check if output file exists
+    output_path = cfg.data_path("head_embed")
+    if output_path.exists():
+        print(f"DEBUG: Output file already exists: {output_path}")
+        if not cfg.force_overwrite:
+            print("DEBUG: force_overwrite is False, but continuing anyway...")
+    
     # Load head distances from previous step
+    print("DEBUG: Loading head distances...")
     head_dists: DistanceTensorResult = DistanceTensorResult.read(
         cfg.data_path("head_dists_zanj")
     )
+    print(f"DEBUG: Loaded head distances: {head_dists.distances.shape}")
     
     # Load AttentionPedia for head type information
+    print("DEBUG: Loading AttentionPedia...")
     attentionpedia: AttentionPedia = AttentionPedia()
+    print("DEBUG: AttentionPedia loaded")
     
     # Create embeddings using multiple methods and parameters
     # This creates embeddings for all models in the data
+    print("DEBUG: Starting create_embedding_df_multi...")
     head_embed_df: pl.DataFrame = create_embedding_df_multi(
         head_dists=head_dists,
         attnpedia=attentionpedia,
@@ -35,9 +49,12 @@ def head_embed(cfg: PipelineConfig) -> None:
         match_model=None,  # Include all models
         save_path=None,  # We'll save manually to follow pipeline conventions
     )
+    print("DEBUG: create_embedding_df_multi completed successfully!")
     
     # Save embeddings for frontend visualization
+    print("DEBUG: Saving embeddings to file...")
     head_embed_df.write_ndjson(cfg.data_path("head_embed"))
+    print("DEBUG: Embeddings saved successfully!")
     
     if cfg.verbose > 0:
         print(f"Generated head embeddings: {head_embed_df.shape}")
