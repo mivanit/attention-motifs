@@ -1507,11 +1507,12 @@ am-frontend-ap-build:
 .PHONY: am-frontend-bundle
 am-frontend-bundle: am-frontend-ap-build
 	@echo "bundle embedding display files"
-	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/embeds-old/src/embeddings.html --output $(FRONTEND_DIR)/embeds-old/embeddings.html
 	$(PYTHON) -m js_embedding_vis --cfg-path $(FRONTEND_DIR)/embeds/config.json --out-path $(FRONTEND_DIR)/embeds/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_ATTNPEDIA_DIR)/src/index.html --output $(FRONTEND_ATTNPEDIA_DIR)/index.html
-	$(PYTHON) -m muutils.web.bundle_html attn_embed/frontend/pattern-view/src/index.html --output attn_embed/frontend/pattern-view/index.html
+
+# $(PYTHON) -m muutils.web.bundle_html attn_embed/frontend/pattern-view/src/index.html --output attn_embed/frontend/pattern-view/index.html
 # cp $(FRONTEND_DIR)/embeds-old/embeddings.html data/features/index.html
+# $(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/embeds-old/src/embeddings.html --output $(FRONTEND_DIR)/embeds-old/embeddings.html
 # cp $(FRONTEND_DIR)/embeds-old/embeddings.html data/head_embed/index.html
 
 
