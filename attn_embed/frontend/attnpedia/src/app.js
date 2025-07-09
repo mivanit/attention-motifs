@@ -36,7 +36,12 @@ document.addEventListener('alpine:init', () => {
 				
 				// Check if specific prompts are selected via URL
 				if (CONFIG.selected_prompts) {
-					const selectedHashes = CONFIG.selected_prompts.split(',');
+					let selectedHashes;
+					if (Array.isArray(CONFIG.selected_prompts)) {
+						selectedHashes = CONFIG.selected_prompts;
+					} else {
+						selectedHashes = CONFIG.selected_prompts.split(',');
+					}
 					this.prompts = this.allPrompts.filter(p => selectedHashes.includes(p.hash));
 					// If we couldn't find all the selected prompts, fall back to slice
 					if (this.prompts.length === 0) {
