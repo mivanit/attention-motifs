@@ -32,7 +32,7 @@ Outgoing connections:
 3D visualization of all attention patterns where each point represents a pattern.
 
 Outgoing connections:
-- [ ] **→ Single Pattern View** (each point - right click): Right-click on pattern points to go to single pattern view for that pattern
+- [x] **→ Single Pattern View** (each point - right click): Right-click on pattern points to go to single pattern view for that pattern
 
 ## Head Embedding Vis (`data/vis/embeds/heads/index.html`)
 
@@ -62,9 +62,10 @@ flowchart TD
     SPV -->|<span style='background-color: blue'>prompt hash</span>| PL
     SPV -->|<span style='background-color: blue'>head ID</span>| AP
 
+    PEV -->|<span style='background-color: blue'>each point - right click</span>| SPV
+
     %% Missing connections (dashed lines)
     AP -.->|<span style='background-color: red'>current/all heads selected</span>| PEV
     AP -.->|<span style='background-color: red'>current/all heads selected</span>| HEV
-    PEV -.->|<span style='background-color: red'>each point - right click</span>| SPV
     HEV -.->|<span style='background-color: red'>each point - right click</span>| AP
 ```
