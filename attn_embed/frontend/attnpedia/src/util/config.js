@@ -180,8 +180,38 @@ function setNestedConfigValue(obj, path, value) {
 }
 
 /**
+ * Encode a value for URL-friendly representation
+ * Handles head IDs by converting colons to tildes
+ * @param {any} value - Value to encode
+ * @returns {string} URL-friendly encoded value
+ */
+function encodeForURL(value) {
+	if (typeof value === 'string') {
+		// Convert head ID format from model:L#:H# to model~L#~H#
+		if (value.includes(':L') && value.includes(':H')) {
+			return value.replace(/:/g, '~');
+		}
+	}
+	return value;
+}
+
+/**
+ * Decode a value from URL-friendly representation
+ * Handles head IDs by converting tildes back to colons
+ * @param {string} value - URL-friendly encoded value
+ * @returns {any} Decoded value
+ */
+function decodeFromURL(value) {
+	// Check if this looks like a head ID (contains ~L and ~H)
+	if (typeof value === 'string' && value.includes('~L') && value.includes('~H')) {
+		return value.replace(/~/g, ':');
+	}
+	return value;
+}
+
+/**
  * Parse a string value from URL params into appropriate type
- * Handles arrays (comma-separated values), booleans, numbers, and strings
+ * Handles arrays (tilde-separated values), booleans, numbers, and strings
  * @param {string} value - String value from URL parameter
  * @returns {any} Parsed value
  */
@@ -190,9 +220,18 @@ function parseConfigValue(value) {
 	if (value === 'true') return true;
 	if (value === 'false') return false;
 
-	// Array (comma-separated) - but handle single values too
-	if (value.includes(',')) {
-		return value.split(',').map(v => v.trim()).filter(v => v.length > 0);
+	// Array (tilde-separated) - but handle single values too
+	if (value.includes('~')) {
+		const parts = value.split('~').map(v => v.trim()).filter(v => v.length > 0);
+		
+		// Check if this might be a single head ID that was encoded
+		if (parts.length === 3 && parts[1].startsWith('L') && parts[2].startsWith('H')) {
+			// This is likely a head ID, decode it back
+			return decodeFromURL(value);
+		}
+		
+		// Otherwise treat as array and decode each element
+		return parts.map(part => decodeFromURL(part));
 	}
 
 	// Number
@@ -200,8 +239,8 @@ function parseConfigValue(value) {
 		return parseFloat(value);
 	}
 
-	// String (including hex colors, URLs, etc.)
-	return value;
+	// String (including hex colors, URLs, etc.) - decode from URL format
+	return decodeFromURL(value);
 }
 
 /**
@@ -245,10 +284,13 @@ function generateURLParams() {
 		// Special handling for arrays
 		if (Array.isArray(value)) {
 			if (value.length > 0) {
-				params.set(path, value.join(','));
+				// Encode each array element for URL
+				const encodedValues = value.map(v => encodeForURL(v));
+				params.set(path, encodedValues.join('~'));
 			}
 		} else {
-			params.set(path, value.toString());
+			// Encode single value for URL
+			params.set(path, encodeForURL(value).toString());
 		}
 	}
 

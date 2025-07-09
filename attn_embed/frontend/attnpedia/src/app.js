@@ -40,7 +40,7 @@ document.addEventListener('alpine:init', () => {
 					if (Array.isArray(CONFIG.selected_prompts)) {
 						selectedHashes = CONFIG.selected_prompts;
 					} else {
-						selectedHashes = CONFIG.selected_prompts.split(',');
+						selectedHashes = CONFIG.selected_prompts.split('~');
 					}
 					this.prompts = this.allPrompts.filter(p => selectedHashes.includes(p.hash));
 					// If we couldn't find all the selected prompts, fall back to slice
@@ -288,7 +288,7 @@ document.addEventListener('alpine:init', () => {
 			url.searchParams.set('table.n_random', this.table.n_random.toString());
 			
 			// Preserve current prompts selection
-			const promptHashes = this.prompts.map(p => p.hash).join(',');
+			const promptHashes = this.prompts.map(p => p.hash).join('~');
 			url.searchParams.set('selected_prompts', promptHashes);
 			
 			return url.toString();
@@ -305,7 +305,7 @@ document.addEventListener('alpine:init', () => {
 			url.searchParams.set('n_prompts', this.n_prompts.toString());
 			
 			// Preserve current prompts selection
-			const promptHashes = this.prompts.map(p => p.hash).join(',');
+			const promptHashes = this.prompts.map(p => p.hash).join('~');
 			url.searchParams.set('selected_prompts', promptHashes);
 			
 			return url.toString();
