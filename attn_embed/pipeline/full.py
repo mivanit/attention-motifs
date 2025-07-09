@@ -1,5 +1,6 @@
 from attn_embed.pipeline.s1_activations import generate_activations
 from attn_embed.pipeline.s1b_render_patterns import render_patterns
+from attn_embed.pipeline.s1c_write_idxs import write_idxs
 from attn_embed.pipeline.s2_features import compute_features
 from attn_embed.pipeline.s3b_feat_fig import feat_figures
 from attn_embed.pipeline.s4_head_dist import head_dists
@@ -16,6 +17,9 @@ def full_pipeline(cfg: PipelineConfig) -> None:
 
 	# Step 1.b: Render patterns
 	render_patterns(cfg)
+
+	# Step 1.c: Write indexes
+	write_idxs(cfg)
 
 	# Step 2: Compute features
 	compute_features(cfg)
