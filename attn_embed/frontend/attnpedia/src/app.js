@@ -341,13 +341,20 @@ document.addEventListener('alpine:init', () => {
 			// Format head selection as L{layer}H{head}
 			const headSelection = `L${headInfo.layer}H${headInfo.head}`;
 			
-			// Replace placeholders in template
-			return template
-				.replace(/{model}/g, headInfo.model)
-				.replace(/{layer}/g, headInfo.layer)
-				.replace(/{head}/g, headInfo.head)
-				.replace(/{prompt_hashes}/g, promptHashes)
-				.replace(/heads-[^=]*=[^&]*/g, `heads-${headInfo.model}=${headSelection}`);
+			// Build URL with proper model and head parameters
+			const baseUrl = template.split('?')[0];
+			const params = new URLSearchParams();
+			
+			// Add models parameter
+			params.set('models', headInfo.model);
+			
+			// Add prompts parameter
+			params.set('prompts', promptHashes);
+			
+			// Add heads parameter for the model
+			params.set(`heads-${headInfo.model}`, headSelection);
+			
+			return `${baseUrl}?${params.toString()}`;
 		},
 
 		getPatternLensAllHeadsLink() {
@@ -355,25 +362,36 @@ document.addEventListener('alpine:init', () => {
 			const template = CONFIG.patternlens_url_template;
 			if (!template || !this.current_head) return '#';
 			
-			// Parse current head to get model info
-			const headInfo = HeadInfo.from_id(this.current_head);
-			
 			// Get all prompt hashes and join with ~
 			const promptHashes = this.prompts.map(p => p.hash).join('~');
 			
-			// Format all visible heads as L{layer}H{head}~L{layer}H{head}...
-			const allHeadSelections = this.heads_display_with_distances.map(h => {
+			// Group heads by model
+			const headsByModel = {};
+			this.heads_display_with_distances.forEach(h => {
 				const hInfo = HeadInfo.from_id(h.headId);
-				return `L${hInfo.layer}H${hInfo.head}`;
-			}).join('~');
+				if (!headsByModel[hInfo.model]) {
+					headsByModel[hInfo.model] = [];
+				}
+				headsByModel[hInfo.model].push(`L${hInfo.layer}H${hInfo.head}`);
+			});
 			
-			// Replace placeholders in template
-			return template
-				.replace(/{model}/g, headInfo.model)
-				.replace(/{layer}/g, headInfo.layer)
-				.replace(/{head}/g, headInfo.head)
-				.replace(/{prompt_hashes}/g, promptHashes)
-				.replace(/heads-[^=]*=[^&]*/g, `heads-${headInfo.model}=${allHeadSelections}`);
+			// Build URL with proper model and head parameters
+			const baseUrl = template.split('?')[0];
+			const params = new URLSearchParams();
+			
+			// Add models parameter
+			const models = Object.keys(headsByModel);
+			params.set('models', models.join('~'));
+			
+			// Add prompts parameter
+			params.set('prompts', promptHashes);
+			
+			// Add heads parameter for each model
+			models.forEach(model => {
+				params.set(`heads-${model}`, headsByModel[model].join('~'));
+			});
+			
+			return `${baseUrl}?${params.toString()}`;
 		},
 
 		getPatternLensLinkForClassification() {
@@ -382,21 +400,38 @@ document.addEventListener('alpine:init', () => {
 			if (!template) return '#';
 			
 			// For classification pages, we don't have a single current head
-			// We'll use the first head as model/layer reference
 			if (!this.heads_display_with_distances.length) return '#';
-			
-			const firstHead = this.heads_display_with_distances[0].headId;
-			const headInfo = HeadInfo.from_id(firstHead);
 			
 			// Get all prompt hashes and join with ~
 			const promptHashes = this.prompts.map(p => p.hash).join('~');
 			
-			// Replace placeholders in template
-			return template
-				.replace(/{model}/g, headInfo.model)
-				.replace(/{layer}/g, headInfo.layer)
-				.replace(/{head}/g, headInfo.head)
-				.replace(/{prompt_hashes}/g, promptHashes);
+			// Group heads by model
+			const headsByModel = {};
+			this.heads_display_with_distances.forEach(h => {
+				const hInfo = HeadInfo.from_id(h.headId);
+				if (!headsByModel[hInfo.model]) {
+					headsByModel[hInfo.model] = [];
+				}
+				headsByModel[hInfo.model].push(`L${hInfo.layer}H${hInfo.head}`);
+			});
+			
+			// Build URL with proper model and head parameters
+			const baseUrl = template.split('?')[0];
+			const params = new URLSearchParams();
+			
+			// Add models parameter
+			const models = Object.keys(headsByModel);
+			params.set('models', models.join('~'));
+			
+			// Add prompts parameter
+			params.set('prompts', promptHashes);
+			
+			// Add heads parameter for each model
+			models.forEach(model => {
+				params.set(`heads-${model}`, headsByModel[model].join('~'));
+			});
+			
+			return `${baseUrl}?${params.toString()}`;
 		},
 
 		getPatternLensTextForClassification() {
