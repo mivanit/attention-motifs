@@ -16,9 +16,18 @@ python {script_path} some/path/my_cfg.toml --prompts-n-samples 1000 --models gpt
 
 
 DataFilename = Literal[
-	"raw", "norms", "scaled", "pca", "pca_npy", "head_dists_zanj", "head_dists_raw", "head_embed"
+	"raw",
+	"norms",
+	"scaled",
+	"pca",
+	"pca_npy",
+	"head_dists_zanj",
+	"head_dists_raw",
+	"head_embed",
 ]
-FigureFilename = Literal["pca", "cov_full", "cov_reduced", "pca_all", "head_dists", "head_embed"]
+FigureFilename = Literal[
+	"pca", "cov_full", "cov_reduced", "pca_all", "head_dists", "head_embed"
+]
 
 PlotKwargKey = Literal["pca_all_dpi",]
 
@@ -49,10 +58,7 @@ DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
 		cfg_path="config.json",
 		cfg={
 			"head_viewing": "gpt2-small:L5:H5",
-			"table": {
-				"n_nearby": 2,
-				"n_share_class": 2
-			},
+			"table": {"n_nearby": 2, "n_share_class": 2},
 			"n_prompts": 5,
 			"pattern_size": 120,
 			"attnpedia_url": "ap.json",
@@ -70,38 +76,34 @@ DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
 			"numericalPrefix": "pc.",
 			"defaultColorColumn": "activation.model",
 			"defaultSelectionColumn": "activation.model",
-			"hoverColumns": [
-				"activation.cls",
-				"activation.prompt",
-				"activation.n_ctx"
-			],
+			"hoverColumns": ["activation.cls", "activation.prompt", "activation.n_ctx"],
 			"selectedPoints": {
 				"size": 5,
 				"sizeMin": 0.1,
 				"sizeMax": 20,
 				"sizeStep": 0.1,
 				"opacityMin": 0.0,
-				"opacityStep": 0.01
+				"opacityStep": 0.01,
 			},
 			"nonSelectedPoints": {
 				"size": 3,
 				"sizeMin": 0.1,
 				"sizeStep": 0.1,
-				"opacityMin": 0.00
+				"opacityMin": 0.00,
 			},
 			"movement": {
 				"speed": 25,
 				"speedMin": 1,
 				"rollSpeed": 0.02,
 				"mouseSensitivity": 0.002,
-				"sprintMultiplier": 3
+				"sprintMultiplier": 3,
 			},
 			"rightClick": {
 				"mode": "url",
 				"url": {
 					"template": "../../../patterns/single.html?prompt={activation.prompt}&head={activation.model}.L{activation.layer}.H{activation.head}"
-				}
-			}
+				},
+			},
 		},
 	),
 	embed_head=dict(
@@ -112,40 +114,34 @@ DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
 			"numericalPrefix": "embed.",
 			"defaultColorColumn": "type.group",
 			"defaultSelectionColumn": "type.group",
-			"hoverColumns": [
-				"cls",
-				"type.primary",
-				"type.group"
-			],
+			"hoverColumns": ["cls", "type.primary", "type.group"],
 			"selectedPoints": {
 				"size": 5,
 				"sizeMin": 0.1,
 				"sizeMax": 20,
 				"sizeStep": 0.1,
 				"opacityMin": 0.0,
-				"opacityStep": 0.01
+				"opacityStep": 0.01,
 			},
 			"nonSelectedPoints": {
 				"size": 3,
 				"sizeMin": 0.1,
 				"sizeStep": 0.1,
-				"opacityMin": 0.00
+				"opacityMin": 0.00,
 			},
 			"movement": {
 				"speed": 25,
 				"speedMin": 1,
 				"rollSpeed": 0.02,
 				"mouseSensitivity": 0.002,
-				"sprintMultiplier": 3
+				"sprintMultiplier": 3,
 			},
 			"rightClick": {
 				"mode": "url",
-				"url": {
-					"template": "../../attnpedia/index.html?head_viewing={cls}"
-				}
-			}
+				"url": {"template": "../../attnpedia/index.html?head_viewing={cls}"},
+			},
 		},
-	)
+	),
 )
 
 
@@ -175,14 +171,12 @@ class PipelineConfig:
 	# data processing
 	models: list[str]
 	pca_n_components: int = 16
-	
+
 	# head embedding configuration
 	embedding_methods: list[str] = field(
 		default_factory=lambda: ["isomap", "umap", "tsne", "pca"]
 	)
-	embedding_n_components_list: list[int] = field(
-		default_factory=lambda: [2, 3]
-	)
+	embedding_n_components_list: list[int] = field(default_factory=lambda: [2, 3])
 	embedding_n_neighbors_list: list[int] = field(
 		default_factory=lambda: [2, 4, 8, 16, 32, 64]
 	)
@@ -298,7 +292,7 @@ class PipelineConfig:
 			vis_dir=Path(data.get("vis_dir", "data/vis")),
 			vis_configs={
 				**DEFAULT_VIS_CONFIGS,
-				**data.get("vis_configs", DEFAULT_VIS_CONFIGS),	
+				**data.get("vis_configs", DEFAULT_VIS_CONFIGS),
 			},
 			models=data["models"],
 			pca_n_components=data.get(
@@ -307,9 +301,7 @@ class PipelineConfig:
 			embedding_methods=data.get(
 				"embedding_methods", ["isomap", "umap", "tsne", "pca"]
 			),
-			embedding_n_components_list=data.get(
-				"embedding_n_components_list", [2, 3]
-			),
+			embedding_n_components_list=data.get("embedding_n_components_list", [2, 3]),
 			embedding_n_neighbors_list=data.get(
 				"embedding_n_neighbors_list", [2, 4, 8, 16, 32, 64]
 			),

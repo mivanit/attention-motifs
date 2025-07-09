@@ -13,9 +13,9 @@ def write_idxs(cfg: PipelineConfig) -> None:
 				"links": {
 					# Navigate to Pattern Lens with prompt selected
 					"prompt": "index.html?prompts={prompt_hash}",
-					# Navigate to AttentionPedia with head selected  
-					"head": "../vis/attnpedia/index.html?head_viewing={model}~L{layer}~H{head}"
-				}
+					# Navigate to AttentionPedia with head selected
+					"head": "../vis/attnpedia/index.html?head_viewing={model}~L{layer}~H{head}",
+				},
 			},
 		},
 	)

@@ -34,10 +34,10 @@ def full_pipeline(cfg: PipelineConfig) -> None:
 
 	# Step 4: head distances
 	head_dists(cfg)
-	
+
 	# Step 5: head embeddings
 	head_embed(cfg)
-	
+
 	# Step 5b: head embedding plots
 	head_embed_plots(cfg)
 
