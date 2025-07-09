@@ -2,6 +2,15 @@
 
 > Note: we should attempt to make the needed connections with minimal changes to the code, instead working with the configuration files.
 
+
+misc todos:
+
+- [ ] default pipeline config should more accurately reflect all options
+- [ ] integrate s4b_write_frontend into full.py pipeline (currently manual via Makefile)
+- [ ] move head embedding table generation from s5b into s4b_write_frontend.py for consistency
+- [ ] add configuration validation for vis_configs and data file dependencies
+
+
 ## Pattern Lens (`data/patterns/index.html`)
 
 Allows comparing lots of patterns across many heads, models, etc. Uses tilde-separated URLs for compatibility and has model/head selection grids and prompt tables.
@@ -41,6 +50,18 @@ Outgoing connections:
 Outgoing connections:
 - [ ] **→ AttentionPedia** (each point - right click): Right-click on head points to go to attentionpedia for that head
 
+## Head Embedding Table (`head_embed_table.html`)
+
+Table view of all head embedding plots with SVG previews and links to 3D visualization.
+
+Other todos:
+- [ ] checkboxes/sliders for selecting methods, dims, neighbor counts, etc
+- [ ] no "see 3d" button on 2d stuff
+- [ ] clean up s5 scripts -- type hints, config stuff, etc
+
+Outgoing connections:
+- [x] **→ Head Embedding Vis** (embed links): Click embedding links to view in 3D visualization with specific parameters
+
 
 # interface relations diagram
 
@@ -54,6 +75,7 @@ flowchart TD
     AP[AttentionPedia<br/>vis/attnpedia/index.html]
     PEV[Pattern Embedding Vis<br/>vis/embeds/patterns/index.html]
     HEV[Head Embedding Vis<br/>vis/embeds/heads/index.html]
+    HET[Head Embedding Table<br/>head_embed_table.html]
 
     %% Existing connections (solid lines)
     PL -->|<span style='background-color: blue'>pattern images</span>| SPV
@@ -63,6 +85,7 @@ flowchart TD
     SPV -->|<span style='background-color: blue'>head ID</span>| AP
 
     PEV -->|<span style='background-color: blue'>each point - right click</span>| SPV
+    HET -->|<span style='background-color: blue'>embed links</span>| HEV
 
     %% Missing connections (dashed lines)
     AP -.->|<span style='background-color: red'>current/all heads selected</span>| PEV
