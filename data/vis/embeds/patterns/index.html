@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- source repo: https://github.com/mivanit/js-embedding-vis -->
-<!-- version: v0.1.0 -->
+<!-- /*$$$VERSION$$$*/ -->
 <html lang="en">
 
 <head>
@@ -781,38 +781,7 @@
 	<script>
 	var INLINE_CONFIG = null; // For inline config overrides
 	
-	var INLINE_CONFIG = {
-  "dataFile": "pca.jsonl",
-  "numericalPrefix": "pc.",
-  "defaultColorColumn": "activation.model",
-  "defaultSelectionColumn": "activation.model",
-  "hoverColumns": [
-    "activation.cls",
-    "activation.prompt",
-    "activation.n_ctx"
-  ],
-  "selectedPoints": {
-    "size": 5,
-    "sizeMin": 0.1,
-    "sizeMax": 20,
-    "sizeStep": 0.1,
-    "opacityMin": 0.0,
-    "opacityStep": 0.01
-  },
-  "nonSelectedPoints": {
-    "size": 3,
-    "sizeMin": 0.1,
-    "sizeStep": 0.1,
-    "opacityMin": 0.0
-  },
-  "movement": {
-    "speed": 25,
-    "speedMin": 1,
-    "rollSpeed": 0.02,
-    "mouseSensitivity": 0.002,
-    "sprintMultiplier": 3
-  }
-};
+	/*$$$INLINE_CONFIG$$$*/
 	
 	
 	/* global, mutable CONFIG + helper to merge an optional config.json */
