@@ -10,6 +10,12 @@ def write_idxs(cfg: PipelineConfig) -> None:
 		cfg_single={
 			"data": {
 				"attentionFilename": "attn.png",
+				"links": {
+					# Navigate to Pattern Lens with prompt selected
+					"prompt": "index.html?prompts={prompt_hash}",
+					# Navigate to AttentionPedia with head selected  
+					"head": "../vis/attnpedia/index.html?head_viewing={model}~L{layer}~H{head}"
+				}
 			},
 		},
 	)

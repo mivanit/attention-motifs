@@ -14,8 +14,8 @@ Outgoing connections:
 Shows a single pattern and its prompt in detail with interactive heatmap and token highlighting.
 
 Outgoing connections:
-- [ ] **→ Pattern Lens** (prompt hash): Click prompt hash to go to pattern lens with that prompt selected
-- [ ] **→ AttentionPedia** (head ID): Click head ID to go to attentionpedia for that head
+- [x] **→ Pattern Lens** (prompt hash): Click prompt hash to go to pattern lens with that prompt selected
+- [x] **→ AttentionPedia** (head ID): Click head ID to go to attentionpedia for that head
 
 ## AttentionPedia (`data/vis/attnpedia/index.html`)
 
@@ -59,10 +59,10 @@ flowchart TD
     PL -->|<span style='background-color: blue'>pattern images</span>| SPV
     AP -->|<span style='background-color: blue'>patterns in each cell</span>| SPV
     AP -->|<span style='background-color: blue'>current head <br/>or<br/> all displayed heads</span>| PL
+    SPV -->|<span style='background-color: blue'>prompt hash</span>| PL
+    SPV -->|<span style='background-color: blue'>head ID</span>| AP
 
     %% Missing connections (dashed lines)
-    SPV -.->|<span style='background-color: red'>prompt hash</span>| PL
-    SPV -.->|<span style='background-color: red'>head ID</span>| AP
     AP -.->|<span style='background-color: red'>current/all heads selected</span>| PEV
     AP -.->|<span style='background-color: red'>current/all heads selected</span>| HEV
     PEV -.->|<span style='background-color: red'>each point - right click</span>| SPV
