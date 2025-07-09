@@ -32,7 +32,7 @@
 	"rightClick": {
 		"mode": "url",
 		"url": {
-			"template": "../../patterns/single.html?prompt={prompt_hash}&head={model}.L{layer}.H{head}"
+			"template": "../../../patterns/single.html?prompt={activation.prompt}&head={activation.model}.L{activation.layer}.H{activation.head}"
 		}
 	}
 }

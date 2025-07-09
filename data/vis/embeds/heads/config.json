@@ -2,7 +2,7 @@
 	"rightClick": {
 		"mode": "url",
 		"url": {
-			"template": "../../attnpedia/index.html?head_viewing={model}~L{layer}~H{head}"
+			"template": "../../attnpedia/index.html?head_viewing={activation.model}~L{activation.layer}~H{activation.head}"
 		}
 	}
 }

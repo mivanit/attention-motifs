@@ -97,7 +97,7 @@ DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
 			"rightClick": {
 				"mode": "url",
 				"url": {
-					"template": "../../patterns/single.html?prompt={prompt_hash}&head={model}.L{layer}.H{head}"
+					"template": "../../../patterns/single.html?prompt={activation.prompt}&head={activation.model}.L{activation.layer}.H{activation.head}"
 				}
 			}
 		},
@@ -109,7 +109,7 @@ DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
 			"rightClick": {
 				"mode": "url",
 				"url": {
-					"template": "../../attnpedia/index.html?head_viewing={model}~L{layer}~H{head}"
+					"template": "../../attnpedia/index.html?head_viewing={activation.model}~L{activation.layer}~H{activation.head}"
 				}
 			}
 		},
