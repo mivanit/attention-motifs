@@ -121,6 +121,20 @@ document.addEventListener('alpine:init', () => {
 				const headsWithDistances = await this.head_distances.getHeadDistances(this.current_head, this.heads_display);
 				const maxDistance = Math.max(...headsWithDistances.map(h => h.distance || 0));
 				
+				// Get all possible heads for ranking
+				const allPossibleHeads = await this.head_distances.getNearestHeads(this.current_head, 999999);
+				const allHeadsSorted = allPossibleHeads.head_names.map((head, idx) => ({
+					head_name: head,
+					distance: allPossibleHeads.distances[idx]
+				})).sort((a, b) => a.distance - b.distance);
+				
+				// Create a map of head names to their rank among all heads
+				const headRankMap = new Map();
+				const totalHeads = allHeadsSorted.length;
+				allHeadsSorted.forEach((head, index) => {
+					headRankMap.set(head.head_name, index + 1);
+				});
+				
 				// Get current head classifications for matching
 				const currentHeadClassifications = await this.attention_pedia.get_head_types(this.current_head);
 				
@@ -141,7 +155,8 @@ document.addEventListener('alpine:init', () => {
 						distanceText: distance === 0 ? '0.000\n(Current)' : distance.toFixed(3),
 						distanceColor: this.getDistanceColor(distance, maxDistance),
 						hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head,
-						rank: newHeadsArray.length + 1
+						rank: headRankMap.get(item.head_name) || 0,
+						totalHeads: totalHeads
 					});
 				}
 				
@@ -156,6 +171,13 @@ document.addEventListener('alpine:init', () => {
 				head_name: head,
 				distance: allPossibleHeads.distances[idx]
 			})).sort((a, b) => a.distance - b.distance);
+			
+			// Create a map of head names to their rank among all heads
+			const headRankMap = new Map();
+			const totalHeads = allHeadsSorted.length;
+			allHeadsSorted.forEach((head, index) => {
+				headRankMap.set(head.head_name, index + 1);
+			});
 
 			// Now efficiently select what we need
 			const headsToShow = new Set();
@@ -227,7 +249,8 @@ document.addEventListener('alpine:init', () => {
 					distanceText: distance === 0 ? '0.000\n(Current)' : distance.toFixed(3),
 					distanceColor: this.getDistanceColor(distance, maxDistance),
 					hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head,
-					rank: newHeadsArray.length + 1
+					rank: headRankMap.get(item.head_name) || 0,
+					totalHeads: totalHeads
 				});
 			}
 			
@@ -299,13 +322,10 @@ document.addEventListener('alpine:init', () => {
 				.replace('{head}', headInfo.head);
 		},
 
-		getPatternLensLink() {
-			// Generate pattern lens URL from template
+		getPatternLensCurrentHeadLink() {
+			// Generate pattern lens URL for current head only
 			const template = CONFIG.patternlens_url_template;
-			if (!template) return '#';
-			
-			// If no current head, return the template as-is
-			if (!this.current_head) return template;
+			if (!template || !this.current_head) return '#';
 			
 			// Parse current head to get model, layer, and head number
 			const headInfo = HeadInfo.from_id(this.current_head);
@@ -313,22 +333,42 @@ document.addEventListener('alpine:init', () => {
 			// Get all prompt hashes and join with ~
 			const promptHashes = this.prompts.map(p => p.hash).join('~');
 			
+			// Format head selection as L{layer}H{head}
+			const headSelection = `L${headInfo.layer}H${headInfo.head}`;
+			
 			// Replace placeholders in template
 			return template
 				.replace(/{model}/g, headInfo.model)
 				.replace(/{layer}/g, headInfo.layer)
 				.replace(/{head}/g, headInfo.head)
-				.replace(/{prompt_hashes}/g, promptHashes);
+				.replace(/{prompt_hashes}/g, promptHashes)
+				.replace(/heads-[^=]*=[^&]*/g, `heads-${headInfo.model}=${headSelection}`);
 		},
 
-		getPatternLensText() {
-			// Generate text for Pattern Lens link
-			if (!this.current_head) return 'Pattern Lens';
+		getPatternLensAllHeadsLink() {
+			// Generate pattern lens URL for all displayed heads
+			const template = CONFIG.patternlens_url_template;
+			if (!template || !this.current_head) return '#';
 			
-			const currentHead = this.current_head;
-			const allVisibleHeads = this.heads_display_with_distances.map(h => h.headId).join(', ');
+			// Parse current head to get model info
+			const headInfo = HeadInfo.from_id(this.current_head);
 			
-			return `Pattern Lens: ${currentHead} | ${allVisibleHeads}`;
+			// Get all prompt hashes and join with ~
+			const promptHashes = this.prompts.map(p => p.hash).join('~');
+			
+			// Format all visible heads as L{layer}H{head}~L{layer}H{head}...
+			const allHeadSelections = this.heads_display_with_distances.map(h => {
+				const hInfo = HeadInfo.from_id(h.headId);
+				return `L${hInfo.layer}H${hInfo.head}`;
+			}).join('~');
+			
+			// Replace placeholders in template
+			return template
+				.replace(/{model}/g, headInfo.model)
+				.replace(/{layer}/g, headInfo.layer)
+				.replace(/{head}/g, headInfo.head)
+				.replace(/{prompt_hashes}/g, promptHashes)
+				.replace(/heads-[^=]*=[^&]*/g, `heads-${headInfo.model}=${allHeadSelections}`);
 		},
 
 		getPatternLensLinkForClassification() {

@@ -55,7 +55,8 @@
                     <div>
                         <h2 class="page-title">
                             Current Head: <span class="head-name" x-text="current_head"></span><br>
-                            <a :href="getPatternLensLink()" target="_blank" class="pattern-lens-link" x-text="getPatternLensText()"></a>
+                            <a :href="getPatternLensCurrentHeadLink()" target="_blank" class="pattern-lens-link">current head</a> | 
+                            <a :href="getPatternLensAllHeadsLink()" target="_blank" class="pattern-lens-link">all displayed heads</a>
                         </h2>
                     </div>
                 </template>
@@ -69,7 +70,7 @@
                                 <p><a :href="metadata.url" target="_blank" x-text="metadata.url"></a></p>
                             </template>
                         </div>
-                        <a :href="getPatternLensLinkForClassification()" target="_blank" class="pattern-lens-link" x-text="getPatternLensTextForClassification()"></a>
+                        <a :href="getPatternLensLinkForClassification()" target="_blank" class="pattern-lens-link">all displayed heads</a>
                     </div>
                 </template>
             </div>
@@ -116,7 +117,7 @@
                 <thead>
                     <tr>
                         <th>Head</th>
-                        <th>Distance</th>
+                        <th>Distance<br><span style="font-size: 10px; font-weight: normal;">rank /n_heads</span></th>
                         <th>Classifications</th>
                         <template x-for="prompt in prompts" :key="prompt.hash">
                             <th class="prompt-header" @mouseenter="showPromptTooltip($event, prompt)" @mouseleave="hidePromptTooltip()">
@@ -145,7 +146,7 @@
                             </td>
                             <td class="distance-cell" :style="`background-color: ${headRow.distanceColor}`">
                                 <div x-html="headRow.distanceText.replace('\\n', '<br>')"></div>
-                                <div class="distance-rank" x-text="`rank ${headRow.rank}`"></div>
+                                <div class="distance-rank" x-text="`${headRow.rank}/${headRow.totalHeads}`"></div>
                             </td>
                             <td class="classifications-cell" :class="headRow.hasMatchingClassification ? 'matching-classification' : ''" 
                                 x-data="classificationComponent(headRow.headId)" x-init="await loadData()">
