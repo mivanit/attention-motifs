@@ -16,9 +16,9 @@ python {script_path} some/path/my_cfg.toml --prompts-n-samples 1000 --models gpt
 
 
 DataFilename = Literal[
-	"raw", "norms", "scaled", "pca", "pca_npy", "head_dists_zanj", "head_dists_raw"
+	"raw", "norms", "scaled", "pca", "pca_npy", "head_dists_zanj", "head_dists_raw", "head_embed"
 ]
-FigureFilename = Literal["pca", "cov_full", "cov_reduced", "pca_all", "head_dists"]
+FigureFilename = Literal["pca", "cov_full", "cov_reduced", "pca_all", "head_dists", "head_embed"]
 
 PlotKwargKey = Literal["pca_all_dpi",]
 
@@ -31,6 +31,7 @@ DATA_FNAMES: dict[DataFilename, str] = dict(
 	pca_npy="pca.npy",
 	head_dists_zanj="head_dists.zanj",
 	head_dists_raw="head_dists_raw",
+	head_embed="head_embed.jsonl",
 )
 
 FIGURE_FNAMES: dict[FigureFilename, str] = dict(
@@ -39,6 +40,7 @@ FIGURE_FNAMES: dict[FigureFilename, str] = dict(
 	cov_reduced="covariance-reduced.pdf",
 	pca_all="pca-all.png",
 	head_dists="head-dists-heatmap.pdf",
+	head_embed="head-embed.pdf",
 )
 
 DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
@@ -106,10 +108,40 @@ DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
 		path="embeds/heads/",
 		cfg_path="config.json",
 		cfg={
+			"dataFile": "../../../features/head_embed.jsonl",
+			"numericalPrefix": "embed.",
+			"defaultColorColumn": "type.group",
+			"defaultSelectionColumn": "type.group",
+			"hoverColumns": [
+				"cls",
+				"type.primary",
+				"type.group"
+			],
+			"selectedPoints": {
+				"size": 5,
+				"sizeMin": 0.1,
+				"sizeMax": 20,
+				"sizeStep": 0.1,
+				"opacityMin": 0.0,
+				"opacityStep": 0.01
+			},
+			"nonSelectedPoints": {
+				"size": 3,
+				"sizeMin": 0.1,
+				"sizeStep": 0.1,
+				"opacityMin": 0.00
+			},
+			"movement": {
+				"speed": 25,
+				"speedMin": 1,
+				"rollSpeed": 0.02,
+				"mouseSensitivity": 0.002,
+				"sprintMultiplier": 3
+			},
 			"rightClick": {
 				"mode": "url",
 				"url": {
-					"template": "../../attnpedia/index.html?head_viewing={activation.model}~L{activation.layer}~H{activation.head}"
+					"template": "../../attnpedia/index.html?head_viewing={cls}"
 				}
 			}
 		},

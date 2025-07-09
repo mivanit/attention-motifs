@@ -29,9 +29,13 @@ beartype==0.14.1
     #   pattern-lens
     #   transformer-lens
 beautifulsoup4==4.13.4
-    # via attn-embed
+    # via
+    #   attn-embed
+    #   nbconvert
 better-abc==0.0.3
     # via transformer-lens
+bleach==6.2.0
+    # via nbconvert
 blinker==1.9.0
     # via flask
 bracex==2.6
@@ -80,6 +84,8 @@ debugpy==1.8.14
     # via ipykernel
 decorator==5.2.1
     # via ipython
+defusedxml==0.7.1
+    # via nbconvert
 dill==0.3.8
     # via
     #   datasets
@@ -165,6 +171,7 @@ jedi==0.19.2
 jinja2==3.1.6
     # via
     #   flask
+    #   nbconvert
     #   pdoc
     #   torch
 joblib==1.5.1
@@ -182,12 +189,18 @@ juliacall==0.9.25
 juliapkg==0.1.17
     # via juliacall
 jupyter-client==8.6.3
-    # via ipykernel
+    # via
+    #   ipykernel
+    #   nbclient
 jupyter-core==5.8.1
     # via
     #   ipykernel
     #   jupyter-client
+    #   nbclient
+    #   nbconvert
     #   nbformat
+jupyterlab-pygments==0.3.0
+    # via nbconvert
 jupyterlab-widgets==3.0.15
     # via ipywidgets
 kiwisolver==1.4.8
@@ -208,6 +221,7 @@ markdown-it-py==3.0.0
 markupsafe==3.0.2
     # via
     #   jinja2
+    #   nbconvert
     #   pdoc
     #   werkzeug
 matplotlib==3.10.3
@@ -220,6 +234,8 @@ matplotlib-inline==0.1.7
     #   ipython
 mdurl==0.1.2
     # via markdown-it-py
+mistune==3.1.3
+    # via nbconvert
 mpmath==1.3.0
     # via sympy
 multidict==6.5.1
@@ -240,8 +256,14 @@ mypy-extensions==1.1.0
     # via mypy
 narwhals==1.44.0
     # via plotly
+nbclient==0.10.2
+    # via nbconvert
+nbconvert==7.16.6
 nbformat==5.10.4
-    # via attn-embed
+    # via
+    #   attn-embed
+    #   nbclient
+    #   nbconvert
 nest-asyncio==1.6.0
     # via
     #   dash
@@ -317,6 +339,7 @@ packaging==25.0
     #   huggingface-hub
     #   ipykernel
     #   matplotlib
+    #   nbconvert
     #   plotly
     #   pytest
     #   tensorboard
@@ -329,6 +352,8 @@ pandas==2.3.0
     #   pattern-lens
     #   pysr
     #   transformer-lens
+pandocfilters==1.5.1
+    # via nbconvert
 parso==0.8.4
     # via jedi
 pathspec==0.12.1
@@ -392,6 +417,7 @@ pygments==2.19.2
     # via
     #   ipython
     #   ipython-pygments-lexers
+    #   nbconvert
     #   pdoc
     #   pytest
     #   rich
@@ -499,6 +525,8 @@ tensorboard-data-server==0.7.2
     # via tensorboard
 threadpoolctl==3.6.0
     # via scikit-learn
+tinycss2==1.4.0
+    # via bleach
 tokenizers==0.21.2
     # via transformers
 tomli==2.2.1 ; python_full_version <= '3.11'
@@ -532,6 +560,8 @@ traitlets==5.14.3
     #   jupyter-client
     #   jupyter-core
     #   matplotlib-inline
+    #   nbclient
+    #   nbconvert
     #   nbformat
 transformer-lens==2.16.1
     # via
@@ -584,6 +614,10 @@ wcmatch==10.1
     # via igittigitt
 wcwidth==0.2.13
     # via prompt-toolkit
+webencodings==0.5.1
+    # via
+    #   bleach
+    #   tinycss2
 werkzeug==3.0.6
     # via
     #   dash
