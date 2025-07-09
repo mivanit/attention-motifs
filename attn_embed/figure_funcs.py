@@ -45,6 +45,7 @@ from pattern_lens.figures import main as pl_main
 		"Shifted FFT (imag)": np.imag(fft_shifted),
 """
 
+
 @register_attn_figure_func
 @save_matrix_wrapper(fmt="png", normalize=True, cmap="Blues")
 def attn(attn_matrix: AttentionMatrix) -> Matrix2D:
