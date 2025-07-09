@@ -1515,6 +1515,12 @@ am-frontend-bundle: am-frontend-ap-build
 # $(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/embeds-old/src/embeddings.html --output $(FRONTEND_DIR)/embeds-old/embeddings.html
 # cp $(FRONTEND_DIR)/embeds-old/embeddings.html data/head_embed/index.html
 
+.PHONY: am-rebuild-interfaces
+am-rebuild-interfaces: am-frontend-bundle
+	@echo "rebuild the interfaces"
+	$(PYTHON) attn_embed/pipeline/s1c_write_idxs.py pipeline_cfg.toml
+	$(PYTHON) attn_embed/pipeline/s4b_write_frontend.py pipeline_cfg.toml
+
 
 .PHONY: am-server-embed
 am-server-embed: am-frontend-bundle
