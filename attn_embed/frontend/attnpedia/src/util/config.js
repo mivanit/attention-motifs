@@ -67,7 +67,7 @@ function getDefaultConfig() {
 		headDistsnpy_url: "../../features/head_dists_raw/distances.npy",
 		headDistsmeta_url: "../../features/head_dists_raw/dists_meta.json",
 		pattern_url_template: "../../patterns/single.html?prompt={prompt_hash}&head={model}.L{layer}.H{head}",
-		patternlens_url_template: "../../patterns/index.html?models={model}&heads-{model}=L{layer}H{head}",
+		patternlens_url_template: "../../patterns/index.html?models={model}&heads-{model}=L{layer}H{head}&prompts={prompt_hashes}",
 	};
 
 	if (INLINE_CONFIG) {

@@ -238,8 +238,25 @@ document.addEventListener('alpine:init', () => {
 		},
 
 		getPatternLensLink() {
-			// Return patternlens URL template
-			return CONFIG.patternlens_url_template || '#';
+			// Generate pattern lens URL from template
+			const template = CONFIG.patternlens_url_template;
+			if (!template) return '#';
+			
+			// If no current head, return the template as-is
+			if (!this.current_head) return template;
+			
+			// Parse current head to get model, layer, and head number
+			const headInfo = HeadInfo.from_id(this.current_head);
+			
+			// Get all prompt hashes and join with ~
+			const promptHashes = this.prompts.map(p => p.hash).join('~');
+			
+			// Replace placeholders in template
+			return template
+				.replace(/{model}/g, headInfo.model)
+				.replace(/{layer}/g, headInfo.layer)
+				.replace(/{head}/g, headInfo.head)
+				.replace(/{prompt_hashes}/g, promptHashes);
 		},
 
 		showPromptTooltip(event, prompt) {
