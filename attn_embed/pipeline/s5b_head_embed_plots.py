@@ -33,14 +33,6 @@ def head_embed_plots(cfg: PipelineConfig) -> None:
 	if cfg.verbose > 0:
 		print(f"Loaded head embeddings: {head_embed_df.shape}")
 
-	# write head embedding table
-	frontend_resources_path: Path = Path(
-		importlib.resources.files(attn_embed).joinpath("frontend"),  # type: ignore[arg-type]
-	)
-	head_embed_table_html: str = (
-		frontend_resources_path / "head_embed_table/index.html"
-	).read_text()
-	(cfg.figures_dir / "head_embed_table.html").write_text(head_embed_table_html)
 
 	# Generate figures if enabled
 	if cfg.do_figures:
@@ -112,9 +104,8 @@ def head_embed_plots(cfg: PipelineConfig) -> None:
 			plots_json_source = cfg.figures_dir / "head_embed_plots.json"
 			if plots_json_source.exists():
 				if cfg.verbose > 0:
-					print("SVG plots generated successfully")
-					print(f"Plots metadata available at: {plots_json_source}")
-					print("HTML frontend will be created by s4b_write_frontend.py")
+					print(f"SVG plots generated successfully, metadata at: {plots_json_source}")
+					print("HTML frontend created by s4b_write_frontend.py")
 			else:
 				print(
 					"Warning: head_embed_plots.json not found. Make sure s5_head_embed ran successfully."

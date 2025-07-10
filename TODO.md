@@ -9,6 +9,8 @@ misc todos:
 - [ ] integrate s4b_write_frontend into full.py pipeline (currently manual via Makefile)
 - [ ] move head embedding table generation from s5b into s4b_write_frontend.py for consistency
 - [ ] add configuration validation for vis_configs and data file dependencies
+- [ ] create a classifications page that lists all head classifications with links to their respective AttentionPedia pages
+- [ ] embedding visualizations: hovering over point sometimes doesnt work, the "hover radius" is much smaller than the point size. make the hover radius scale with the point size by some constant factor which we can configure in config.js
 
 
 ## Pattern Lens (`data/patterns/index.html`)
@@ -62,6 +64,13 @@ Other todos:
 Outgoing connections:
 - [x] **→ Head Embedding Vis** (embed links): Click embedding links to view in 3D visualization with specific parameters
 
+## Classifications Page (`data/classifications/index.html`)
+
+Lists all head classifications with links to view heads of each classification in AttentionPedia.
+
+Outgoing connections:
+- [ ] **→ AttentionPedia** (classification links): Click on classification to view AttentionPedia page filtered by that classification
+
 
 # interface relations diagram
 
@@ -76,19 +85,21 @@ flowchart TD
     PEV[Pattern Embedding Vis<br/>vis/embeds/patterns/index.html]
     HEV[Head Embedding Vis<br/>vis/embeds/heads/index.html]
     HET[Head Embedding Table<br/>head_embed_table.html]
+    CL[Classifications Page<br/>classifications/index.html]
 
     %% Existing connections (solid lines)
-    PL -->|<span style='background-color: blue'>pattern images</span>| SPV
-    AP -->|<span style='background-color: blue'>patterns in each cell</span>| SPV
-    AP -->|<span style='background-color: blue'>current head <br/>or<br/> all displayed heads</span>| PL
-    SPV -->|<span style='background-color: blue'>prompt hash</span>| PL
-    SPV -->|<span style='background-color: blue'>head ID</span>| AP
+    PL -->|pattern images| SPV
+    AP -->|patterns in each cell| SPV
+    AP -->|current head <br/>or<br/> all displayed heads| PL
+    SPV -->|prompt hash| PL
+    SPV -->|head ID| AP
 
-    PEV -->|<span style='background-color: blue'>each point - right click</span>| SPV
-    HET -->|<span style='background-color: blue'>embed links</span>| HEV
+    PEV -->|each point - right click| SPV
+    HET -->|embed links| HEV
 
     %% Missing connections (dashed lines)
     AP -.->|<span style='background-color: red'>current/all heads selected</span>| PEV
     AP -.->|<span style='background-color: red'>current/all heads selected</span>| HEV
     HEV -.->|<span style='background-color: red'>each point - right click</span>| AP
+    CL -.->|<span style='background-color: red'>classification links</span>| AP
 ```

@@ -113,6 +113,77 @@
             margin-top: 0;
             color: #2c3e50;
         }
+        .filters-section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid #dee2e6;
+        }
+        .filters-section h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        .filter-group {
+            margin-bottom: 20px;
+        }
+        .filter-group:last-child {
+            margin-bottom: 0;
+        }
+        .filter-label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #495057;
+            display: block;
+        }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .checkbox-item input[type="checkbox"] {
+            cursor: pointer;
+        }
+        .checkbox-item label {
+            cursor: pointer;
+            user-select: none;
+        }
+        .filter-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .filter-buttons button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s ease;
+        }
+        .btn-apply {
+            background-color: #3498db;
+            color: white;
+        }
+        .btn-apply:hover {
+            background-color: #2980b9;
+        }
+        .btn-reset {
+            background-color: #95a5a6;
+            color: white;
+        }
+        .btn-reset:hover {
+            background-color: #7f8c8d;
+        }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -134,18 +205,34 @@
             <p>Click "View Interactive 3D" to explore the embeddings in an interactive 3D visualization.</p>
         </div>
 
+        <div class="filters-section" id="filters-section">
+            <h3>Filter Visualizations</h3>
+            <div id="filter-controls">
+                <!-- Filters will be dynamically populated -->
+            </div>
+        </div>
+
         <div id="embedding-plots">
             <!-- Content will be populated by JavaScript -->
         </div>
     </div>
 
     <script>
+        let allPlots = [];
+        let filters = {
+            methods: [],
+            dimensions: [],
+            neighbors: []
+        };
+
         // Load and display the embedding data
         async function loadEmbeddingData() {
             try {
                 const response = await fetch('head_embed_plots.json');
                 const data = await response.json();
-                displayEmbeddingPlots(data);
+                allPlots = data.plots;
+                initializeFilters();
+                displayEmbeddingPlots(allPlots);
             } catch (error) {
                 console.error('Error loading embedding data:', error);
                 document.getElementById('embedding-plots').innerHTML = 
@@ -153,13 +240,133 @@
             }
         }
 
-        function displayEmbeddingPlots(data) {
+        function initializeFilters() {
+            // Extract unique values from data
+            const uniqueMethods = [...new Set(allPlots.map(p => p.method))].sort();
+            const uniqueDimensions = [...new Set(allPlots.map(p => p.n_components))].sort();
+            const uniqueNeighbors = [...new Set(allPlots.map(p => parseInt(p.n_neighbors)))].sort((a, b) => a - b);
+
+            // Initialize all filters as selected
+            filters.methods = [...uniqueMethods];
+            filters.dimensions = [...uniqueDimensions];
+            filters.neighbors = [...uniqueNeighbors];
+
+            // Build filter UI
+            const filterContainer = document.getElementById('filter-controls');
+            let html = '';
+
+            // Methods checkboxes
+            html += '<div class="filter-group">';
+            html += '<label class="filter-label">Methods:</label>';
+            html += '<div class="checkbox-group">';
+            uniqueMethods.forEach(method => {
+                html += `
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="method-${method}" value="${method}" checked>
+                        <label for="method-${method}">${method.toUpperCase()}</label>
+                    </div>
+                `;
+            });
+            html += '</div></div>';
+
+            // Dimensions checkboxes
+            html += '<div class="filter-group">';
+            html += '<label class="filter-label">Dimensions:</label>';
+            html += '<div class="checkbox-group">';
+            uniqueDimensions.forEach(dim => {
+                html += `
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="dim-${dim}" value="${dim}" checked>
+                        <label for="dim-${dim}">${dim}D</label>
+                    </div>
+                `;
+            });
+            html += '</div></div>';
+
+            // Neighbors checkboxes
+            html += '<div class="filter-group">';
+            html += '<label class="filter-label" style="cursor: pointer;" onclick="toggleNeighborCheckboxes()">Number of Neighbors:</label>';
+            html += '<div class="checkbox-group">';
+            uniqueNeighbors.forEach(neighbors => {
+                html += `
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="neighbors-${neighbors}" value="${neighbors}" checked>
+                        <label for="neighbors-${neighbors}">${neighbors}</label>
+                    </div>
+                `;
+            });
+            html += '</div></div>';
+
+            // Buttons
+            html += '<div class="filter-buttons">';
+            html += '<button class="btn-apply" onclick="applyFilters()">Apply Filters</button>';
+            html += '<button class="btn-reset" onclick="resetFilters()">Reset All</button>';
+            html += '</div>';
+
+            filterContainer.innerHTML = html;
+        }
+
+        function toggleNeighborCheckboxes() {
+            const checkboxes = document.querySelectorAll('input[id^="neighbors-"]');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            checkboxes.forEach(cb => {
+                cb.checked = !allChecked;
+            });
+        }
+
+        function applyFilters() {
+            // Get selected methods
+            filters.methods = [];
+            document.querySelectorAll('input[id^="method-"]:checked').forEach(cb => {
+                filters.methods.push(cb.value);
+            });
+
+            // Get selected dimensions
+            filters.dimensions = [];
+            document.querySelectorAll('input[id^="dim-"]:checked').forEach(cb => {
+                filters.dimensions.push(cb.value);
+            });
+
+            // Get selected neighbors
+            filters.neighbors = [];
+            document.querySelectorAll('input[id^="neighbors-"]:checked').forEach(cb => {
+                filters.neighbors.push(parseInt(cb.value));
+            });
+
+            // Filter plots
+            const filteredPlots = allPlots.filter(plot => {
+                const neighbors = parseInt(plot.n_neighbors);
+                return filters.methods.includes(plot.method) &&
+                       filters.dimensions.includes(plot.n_components) &&
+                       filters.neighbors.includes(neighbors);
+            });
+
+            displayEmbeddingPlots(filteredPlots);
+        }
+
+        function resetFilters() {
+            // Check all checkboxes
+            document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.checked = true;
+            });
+
+            // Apply filters
+            applyFilters();
+        }
+
+        function displayEmbeddingPlots(plots) {
             const container = document.getElementById('embedding-plots');
+            
+            if (plots.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No visualizations match the selected filters.</p>';
+                return;
+            }
+            
             let html = '';
 
             // Group plots by method
             const methodGroups = {};
-            data.plots.forEach(plot => {
+            plots.forEach(plot => {
                 if (!methodGroups[plot.method]) {
                     methodGroups[plot.method] = {};
                 }
@@ -189,7 +396,7 @@
                                     <div class="plot-info">${plot.prefix}</div>
                                     <img src="${plot.svg_filename}" alt="${plot.prefix}" loading="lazy">
                                     <div class="plot-links">
-                                        <a href="${plot.embed_url}" target="_blank">View Interactive 3D</a>
+                                        ${plot.n_components === '3' ? `<a href="${plot.embed_url}" target="_blank">View Interactive 3D</a>` : ''}
                                     </div>
                                 </div>
                             `;

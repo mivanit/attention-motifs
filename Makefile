@@ -1520,7 +1520,6 @@ am-rebuild-interfaces: am-frontend-bundle
 	@echo "rebuild the interfaces"
 	$(PYTHON) attn_embed/pipeline/s1c_write_idxs.py pipeline_cfg.toml
 	$(PYTHON) attn_embed/pipeline/s4b_write_frontend.py pipeline_cfg.toml
-	$(PYTHON) attn_embed/pipeline/s5b_head_embed_plots.py pipeline_cfg.toml 
 
 
 .PHONY: am-server-embed
