@@ -271,19 +271,6 @@
             });
             html += '</div></div>';
 
-            // Dimensions checkboxes
-            html += '<div class="filter-group">';
-            html += '<label class="filter-label">Dimensions:</label>';
-            html += '<div class="checkbox-group">';
-            uniqueDimensions.forEach(dim => {
-                html += `
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="dim-${dim}" value="${dim}" checked>
-                        <label for="dim-${dim}">${dim}D</label>
-                    </div>
-                `;
-            });
-            html += '</div></div>';
 
             // Neighbors checkboxes
             html += '<div class="filter-group">';
@@ -323,11 +310,8 @@
                 filters.methods.push(cb.value);
             });
 
-            // Get selected dimensions
-            filters.dimensions = [];
-            document.querySelectorAll('input[id^="dim-"]:checked').forEach(cb => {
-                filters.dimensions.push(cb.value);
-            });
+            // Only use 2D plots
+            filters.dimensions = ['2'];
 
             // Get selected neighbors
             filters.neighbors = [];
@@ -335,11 +319,11 @@
                 filters.neighbors.push(parseInt(cb.value));
             });
 
-            // Filter plots
+            // Filter plots (only 2D plots for display, but keep allPlots for 3D button lookup)
             const filteredPlots = allPlots.filter(plot => {
                 const neighbors = parseInt(plot.n_neighbors);
                 return filters.methods.includes(plot.method) &&
-                       filters.dimensions.includes(plot.n_components) &&
+                       plot.n_components === '2' &&
                        filters.neighbors.includes(neighbors);
             });
 
@@ -366,46 +350,43 @@
             
             let html = '';
 
-            // Group plots by method
+            // Group plots by method, only showing 2D
             const methodGroups = {};
-            plots.forEach(plot => {
+            plots.filter(plot => plot.n_components === '2').forEach(plot => {
                 if (!methodGroups[plot.method]) {
-                    methodGroups[plot.method] = {};
+                    methodGroups[plot.method] = [];
                 }
-                if (!methodGroups[plot.method][plot.n_components]) {
-                    methodGroups[plot.method][plot.n_components] = [];
-                }
-                methodGroups[plot.method][plot.n_components].push(plot);
+                methodGroups[plot.method].push(plot);
             });
 
             // Generate HTML for each method
             Object.keys(methodGroups).sort().forEach(method => {
                 html += `<div class="method-section">`;
                 html += `<div class="method-title">${method.toUpperCase()}</div>`;
+                html += `<div class="plots-grid">`;
 
-                Object.keys(methodGroups[method]).sort().forEach(nComponents => {
-                    html += `<div class="dimension-section">`;
-                    html += `<div class="dimension-title">${nComponents}D Embeddings</div>`;
-                    html += `<div class="plots-grid">`;
+                // Sort by n_neighbors and find corresponding 3D plot for button
+                methodGroups[method]
+                    .sort((a, b) => parseInt(a.n_neighbors) - parseInt(b.n_neighbors))
+                    .forEach(plot => {
+                        // Find the corresponding 3D plot for the button
+                        const plot3d = allPlots.find(p => 
+                            p.method === plot.method && 
+                            p.n_neighbors === plot.n_neighbors && 
+                            p.n_components === '3'
+                        );
+                        
+                        html += `
+                            <div class="plot-item">
+                                <div class="plot-title">${plot.n_neighbors} neighbors</div>
+                                <div class="plot-info">${plot.prefix}</div>
+                                ${plot3d ? `<a href="${plot3d.embed_url}" target="_blank" class="plot-3d-btn">3D</a>` : ''}
+                                <img src="${plot.svg_filename}" alt="${plot.prefix}" loading="lazy">
+                            </div>
+                        `;
+                    });
 
-                    // Sort by n_neighbors
-                    methodGroups[method][nComponents]
-                        .sort((a, b) => parseInt(a.n_neighbors) - parseInt(b.n_neighbors))
-                        .forEach(plot => {
-                            html += `
-                                <div class="plot-item">
-                                    <div class="plot-title">${plot.n_neighbors} neighbors</div>
-                                    <div class="plot-info">${plot.prefix}</div>
-                                    ${plot.n_components === '3' ? `<a href="${plot.embed_url}" target="_blank" class="plot-3d-btn">3D</a>` : ''}
-                                    <img src="${plot.svg_filename}" alt="${plot.prefix}" loading="lazy">
-                                </div>
-                            `;
-                        });
-
-                    html += `</div></div>`;
-                });
-
-                html += `</div>`;
+                html += `</div></div>`;
             });
 
             container.innerHTML = html;
