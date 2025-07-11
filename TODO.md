@@ -5,13 +5,15 @@
 
 misc todos:
 
-- [ ] default pipeline config should more accurately reflect all options
-- [ ] integrate s4b_write_frontend into full.py pipeline (currently manual via Makefile)
-- [ ] move head embedding table generation from s5b into s4b_write_frontend.py for consistency
-- [ ] add configuration validation for vis_configs and data file dependencies
-- [ ] create a classifications page that lists all head classifications with links to their respective AttentionPedia pages
-- [ ] embedding visualizations: hovering over point sometimes doesnt work, the "hover radius" is much smaller than the point size. make the hover radius scale with the point size by some constant factor which we can configure in config.js
-- [ ] clean up s5 scripts -- type hints, config stuff, etc
+- pages:
+    - [x] create a classifications page that lists all head classifications with links to their respective AttentionPedia pages
+    - [ ] embedding visualizations: hovering over point sometimes doesnt work, the "hover radius" is much smaller than the point size. make the hover radius scale with the point size by some constant factor which we can configure in config.js
+- python pipeline:
+    - [x] move head embedding table generation from s5b into s4b_write_frontend.py for consistency
+    - [ ] default pipeline config should more accurately reflect all options
+    - [ ] integrate s4b_write_frontend into full.py pipeline (currently manual via Makefile)
+    - [ ] add configuration validation for vis_configs and data file dependencies
+    - [ ] clean up s5 scripts -- type hints, config stuff, etc
 
 ## Pattern Lens (`data/patterns/index.html`)
 
@@ -35,6 +37,7 @@ Shows a given head and then a selection of nearby/random/distant (in embedding s
 Outgoing connections:
 - [x] **→ Single Pattern View** (patterns in each cell): Click on patterns in table cells to view detailed single pattern
 - [x] **→ Pattern Lens** (current head or all displayed heads): Use links at top to go to pattern lens for current head or all displayed heads
+- [x] **→ Classifications Page** (classification links): view classifications page
 - [ ] **→ Pattern Embedding Vis** (current/all heads selected): Add way to go to pattern embedding vis with current head/context selected
 - [ ] **→ Head Embedding Vis** (current/all heads selected): Add way to go to head embedding vis with current head/context selected
 
@@ -50,7 +53,7 @@ Outgoing connections:
 3D visualization where each point is a head in embedding space.
 
 Outgoing connections:
-- [ ] **→ AttentionPedia** (each point - right click): Right-click on head points to go to attentionpedia for that head
+- [x] **→ AttentionPedia** (each point - right click): Right-click on head points to go to attentionpedia for that head
 
 ## Head Embedding Table (`data/figures/head_embed_table.html`)
 
@@ -64,7 +67,7 @@ Outgoing connections:
 Lists all head classifications with links to view heads of each classification in AttentionPedia.
 
 Outgoing connections:
-- [ ] **→ AttentionPedia** (classification links): Click on classification to view AttentionPedia page filtered by that classification
+- [x] **→ AttentionPedia** (classification links): Click on classification to view AttentionPedia page filtered by that classification
 
 
 # interface relations diagram
@@ -79,7 +82,7 @@ flowchart TD
     AP[AttentionPedia<br/>vis/attnpedia/index.html]
     PEV[Pattern Embedding Vis<br/>vis/embeds/patterns/index.html]
     HEV[Head Embedding Vis<br/>vis/embeds/heads/index.html]
-    HET[Head Embedding Table<br/>figures/head_embed_table.html]a
+    HET[Head Embedding Table<br/>figures/head_embed_table.html]
     CL[Classifications Page<br/>]
 
     %% Existing connections (solid lines)
@@ -90,11 +93,12 @@ flowchart TD
     SPV -->|head ID| AP
 
     PEV -->|each point - right click| SPV
-    HET -->|embed links| HEV
+    HET -->|links to each variant| HEV
 
     %% Missing connections (dashed lines)
     AP -.->|<span style='background-color: red'>current/all heads selected</span>| PEV
     AP -.->|<span style='background-color: red'>current/all heads selected</span>| HEV
-    HEV -.->|<span style='background-color: red'>each point - right click</span>| AP
-    CL -.->|<span style='background-color: red'>classification links</span>| AP
+    HEV -->|each point - right click| AP
+    CL -->|classification links| AP
+    AP -->|link| CL
 ```
