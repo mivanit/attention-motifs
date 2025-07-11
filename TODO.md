@@ -65,12 +65,19 @@ Table view of all head embedding plots with SVG previews and links to 3D visuali
 Outgoing connections:
 - [x] **Head Embedding Vis** (embed links): Click embedding links to view in 3D visualization with specific parameters
 
-## Classifications Page
+## Classifications Page (`data/figures/classifications.html`)
 
 Lists all head classifications with links to view heads of each classification in AttentionPedia.
 
 Outgoing connections:
 - [x] **AttentionPedia** (classification links): Click on classification to view AttentionPedia page filtered by that classification
+
+## Model View (`data/figures/model_view.html`)
+
+Grid display of all heads for each model, colored by classification if any, allowing direct navigation to AttentionPedia.
+
+Outgoing connections:
+- [ ] **AttentionPedia** (click on head): Click on any head to go to AttentionPedia for that head
 
 
 # interface relations diagram
@@ -79,29 +86,52 @@ Outgoing connections:
 - dashed lines / red label: missing connections that should be added
 
 ```mermaid
-flowchart TD
-    PL[Pattern Lens<br/>patterns/index.html] 
-    SPV[Single Pattern View<br/>patterns/single.html]
-    AP[AttentionPedia<br/>vis/attnpedia/index.html]
-    PEV[Pattern Embedding Vis<br/>vis/embeds/patterns/index.html]
-    HEV[Head Embedding Vis<br/>vis/embeds/heads/index.html]
-    HET[Head Embedding Table<br/>figures/head_embed_table.html]
-    CL[Classifications Page<br/>]
+%%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
+flowchart LR
+    subgraph col1[" "]
+        direction TB
+        CL["<a href='data/figures/classifications.html'>Classifications Page</a>"]
+        MV["Model View"]
+    end
+    
+    subgraph col2[" "]
+        AP["<a href='data/vis/attnpedia/index.html'>AttentionPedia</a></br>f></br>f></br>f"]
+    end
+    
+    subgraph col3[" "]
+        direction TB
+        SPV["<a href='data/patterns/single.html'>Single Pattern View</a>"]
+        PL["<a href='data/patterns/index.html'>Pattern Lens</a>"]
+        HEV["<a href='data/vis/embeds/heads/index.html'>Head Embedding Vis</a>"]
+        PEV["<a href='data/vis/embeds/patterns/index.html'>Pattern Embedding Vis</a>"]
+        HET["<a href='data/figures/head_embed_table.html'>Head Embedding Table</a>"]
+    end
 
+    %% col1 ~~~ col2 ~~~ col3
+    
+    %% Style to hide subgraph borders
+    %% style col1 fill:none,stroke:none
+    %% style col2 fill:none,stroke:none
+    %% style col3 fill:none,stroke:none
+    %% style col4 fill:none,stroke:none
+    
     %% Existing connections (solid lines)
+    SPV -->|head ID| AP
+    SPV -->|prompt hash| PL
     PL -->|pattern images| SPV
     AP -->|patterns in each cell| SPV
     AP -->|current head <br/>or<br/> all displayed heads| PL
-    SPV -->|prompt hash| PL
-    SPV -->|head ID| AP
 
     PEV -->|each point - right click| SPV
     HET -->|links to each variant| HEV
 
-    %% Missing connections (dashed lines)
-    AP -.->|<span style='background-color: red'>current/all heads selected</span>| PEV
-    AP -.->|<span style='background-color: red'>current/all heads selected</span>| HEV
-    HEV -->|each point - right click| AP
     CL -->|classification links| AP
     AP -->|link| CL
+    HEV -->|each point - right click| AP
+
+    %% Missing connections (dashed lines)
+    SPV -.->|<span style='background-color: red'>just this pattern selected</span>| PEV
+    AP -.->|<span style='background-color: red'>current/all heads selected</span>| PEV
+    AP -.->|<span style='background-color: red'>current/all heads selected</span>| HEV
+    MV -.->|<span style='background-color: red'>click on head</span>| AP
 ```
