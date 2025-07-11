@@ -11,7 +11,7 @@ misc todos:
 - [ ] add configuration validation for vis_configs and data file dependencies
 - [ ] create a classifications page that lists all head classifications with links to their respective AttentionPedia pages
 - [ ] embedding visualizations: hovering over point sometimes doesnt work, the "hover radius" is much smaller than the point size. make the hover radius scale with the point size by some constant factor which we can configure in config.js
-
+- [ ] clean up s5 scripts -- type hints, config stuff, etc
 
 ## Pattern Lens (`data/patterns/index.html`)
 
@@ -52,19 +52,14 @@ Outgoing connections:
 Outgoing connections:
 - [ ] **→ AttentionPedia** (each point - right click): Right-click on head points to go to attentionpedia for that head
 
-## Head Embedding Table (`head_embed_table.html`)
+## Head Embedding Table (`data/figures/head_embed_table.html`)
 
 Table view of all head embedding plots with SVG previews and links to 3D visualization.
-
-Other todos:
-- [ ] checkboxes/sliders for selecting methods, dims, neighbor counts, etc
-- [ ] no "see 3d" button on 2d stuff
-- [ ] clean up s5 scripts -- type hints, config stuff, etc
 
 Outgoing connections:
 - [x] **→ Head Embedding Vis** (embed links): Click embedding links to view in 3D visualization with specific parameters
 
-## Classifications Page (`data/classifications/index.html`)
+## Classifications Page
 
 Lists all head classifications with links to view heads of each classification in AttentionPedia.
 
@@ -84,8 +79,8 @@ flowchart TD
     AP[AttentionPedia<br/>vis/attnpedia/index.html]
     PEV[Pattern Embedding Vis<br/>vis/embeds/patterns/index.html]
     HEV[Head Embedding Vis<br/>vis/embeds/heads/index.html]
-    HET[Head Embedding Table<br/>head_embed_table.html]
-    CL[Classifications Page<br/>classifications/index.html]
+    HET[Head Embedding Table<br/>figures/head_embed_table.html]a
+    CL[Classifications Page<br/>]
 
     %% Existing connections (solid lines)
     PL -->|pattern images| SPV

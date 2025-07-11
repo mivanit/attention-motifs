@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Head Classifications</title>
+        <!-- begin 'style.css' -->
+    <style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f5f5f5;
+        line-height: 1.6;
+    }
+    
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background-color: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    h1 {
+        color: #333;
+        margin-bottom: 10px;
+    }
+    
+    .description {
+        color: #666;
+        margin-bottom: 30px;
+        font-size: 16px;
+    }
+    
+    .controls {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        border: 1px solid #dee2e6;
+    }
+    
+    .search-bar {
+        width: 100%;
+        padding: 10px 15px;
+        font-size: 16px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+    
+    .search-bar:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+    }
+    
+    .paper-filters {
+        margin-top: 15px;
+    }
+    
+    .filter-title {
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #495057;
+    }
+    
+    .paper-checkbox {
+        display: inline-block;
+        margin-right: 20px;
+        margin-bottom: 10px;
+    }
+    
+    .paper-checkbox input[type="checkbox"] {
+        margin-right: 5px;
+        cursor: pointer;
+    }
+    
+    .paper-checkbox label {
+        cursor: pointer;
+        user-select: none;
+    }
+    
+    .paper-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background-color: #fafafa;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .paper-title {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #2c3e50;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .paper-info {
+        font-size: 14px;
+        color: #7f8c8d;
+        margin-bottom: 15px;
+    }
+    
+    .paper-info a {
+        color: #3498db;
+        text-decoration: none;
+    }
+    
+    .paper-info a:hover {
+        text-decoration: underline;
+    }
+    
+    .classification-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 15px;
+    }
+    
+    .classification-item {
+        background-color: white;
+        padding: 15px;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+    
+    .classification-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-color: #3498db;
+    }
+    
+    .classification-name {
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+    
+    .classification-heads {
+        font-size: 14px;
+        color: #7f8c8d;
+    }
+    
+    .head-count {
+        display: inline-block;
+        background-color: #3498db;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        margin-left: 5px;
+    }
+    
+    .no-results {
+        text-align: center;
+        color: #999;
+        padding: 40px;
+        font-size: 18px;
+    }
+    
+    .loading {
+        text-align: center;
+        color: #666;
+        padding: 40px;
+        font-size: 18px;
+    }
+    
+    .error {
+        color: #e74c3c;
+        text-align: center;
+        padding: 40px;
+    }
+    
+    .stats {
+        background-color: #ecf0f1;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        color: #34495e;
+    }
+    </style>
+    <!-- end 'style.css' -->
+</head>
+<body>
+    <div class="container">
+        <h1>Head Classifications</h1>
+        <p class="description">
+            Browse attention head classifications from various research papers. 
+            Click on any classification to view all heads of that type in AttentionPedia.
+        </p>
+        
+        <div class="controls">
+            <input type="text" 
+                   class="search-bar" 
+                   id="search-input" 
+                   placeholder="Search classifications (e.g., 'induction', 'name mover', 'previous token')...">
+            
+            <div class="paper-filters">
+                <div class="filter-title">Filter by Paper:</div>
+                <div id="paper-checkboxes">
+                    <!-- Checkboxes will be dynamically populated -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats" id="stats">
+            <!-- Stats will be dynamically populated -->
+        </div>
+        
+        <div id="classifications-container">
+            <div class="loading">Loading classifications...</div>
+        </div>
+    </div>
+
+        <!-- begin 'app.js' -->
+    <script>
+    let classificationsData = null;
+    let paperFilters = new Set();
+    
+    async function loadClassifications() {
+        try {
+            const response = await fetch('../vis/attnpedia/ap.json');
+            if (!response.ok) {
+                throw new Error('Failed to load classification data');
+            }
+            classificationsData = await response.json();
+            
+            // Initialize paper filters
+            initializePaperFilters();
+            
+            // Display classifications
+            displayClassifications();
+            
+            // Set up search functionality
+            setupSearch();
+            
+        } catch (error) {
+            console.error('Error loading classifications:', error);
+            document.getElementById('classifications-container').innerHTML = 
+                '<div class="error">Error loading classification data. Please check that ap.json exists.</div>';
+        }
+    }
+    
+    function initializePaperFilters() {
+        const papers = new Set();
+        
+        // Extract unique paper prefixes from classification types
+        Object.keys(classificationsData.type_metadata).forEach(type => {
+            const paperPrefix = type.split(':')[0];
+            papers.add(paperPrefix);
+        });
+        
+        // Initialize all papers as selected
+        paperFilters = new Set(papers);
+        
+        // Create checkboxes
+        const checkboxContainer = document.getElementById('paper-checkboxes');
+        let html = '';
+        
+        papers.forEach(paper => {
+            html += `
+                <span class="paper-checkbox">
+                    <input type="checkbox" 
+                           id="paper-${paper}" 
+                           value="${paper}" 
+                           checked 
+                           onchange="togglePaper('${paper}')">
+                    <label for="paper-${paper}">${paper}</label>
+                </span>
+            `;
+        });
+        
+        checkboxContainer.innerHTML = html;
+    }
+    
+    function togglePaper(paper) {
+        if (paperFilters.has(paper)) {
+            paperFilters.delete(paper);
+        } else {
+            paperFilters.add(paper);
+        }
+        displayClassifications();
+    }
+    
+    function setupSearch() {
+        const searchInput = document.getElementById('search-input');
+        searchInput.addEventListener('input', (e) => {
+            displayClassifications(e.target.value.toLowerCase());
+        });
+    }
+    
+    function displayClassifications(searchTerm = '') {
+        const container = document.getElementById('classifications-container');
+        const typeMetadata = classificationsData.type_metadata;
+        
+        // Group classifications by paper
+        const paperGroups = {};
+        
+        Object.entries(typeMetadata).forEach(([type, meta]) => {
+            const [paper, classification] = type.split(':');
+            
+            // Apply filters
+            if (!paperFilters.has(paper)) return;
+            if (searchTerm && !type.toLowerCase().includes(searchTerm)) return;
+            
+            if (!paperGroups[paper]) {
+                paperGroups[paper] = {
+                    url: meta.url,
+                    notes: meta.notes,
+                    model: meta.model,
+                    classifications: []
+                };
+            }
+            
+            paperGroups[paper].classifications.push({
+                type: type,
+                name: classification,
+                heads: meta.heads,
+                n_heads: meta.n_heads
+            });
+        });
+        
+        // Update stats
+        updateStats(paperGroups);
+        
+        // Generate HTML
+        if (Object.keys(paperGroups).length === 0) {
+            container.innerHTML = '<div class="no-results">No classifications match your search criteria.</div>';
+            return;
+        }
+        
+        let html = '';
+        
+        Object.entries(paperGroups).forEach(([paper, data]) => {
+            html += `
+                <div class="paper-section">
+                    <div class="paper-title">
+                        ${paper}
+                        <span class="head-count">${data.classifications.length} classifications</span>
+                    </div>
+                    <div class="paper-info">
+                        ${data.notes ? `${data.notes} • ` : ''}
+                        Model: ${data.model} • 
+                        <a href="${data.url}" target="_blank">View Paper</a>
+                    </div>
+                    <div class="classification-grid">
+            `;
+            
+            data.classifications.forEach(classification => {
+                const encodedType = encodeForURL(classification.type);
+                const attnPediaUrl = `../vis/attnpedia/index.html?classification_mode=true&current_classification=${encodedType}`;
+                
+                html += `
+                    <a href="${attnPediaUrl}" class="classification-item">
+                        <div class="classification-name">
+                            ${classification.name}
+                            <span class="head-count">${classification.n_heads}</span>
+                        </div>
+                        <div class="classification-heads">
+                            ${classification.heads.slice(0, 3).map(h => h.split(':').slice(1).join(':')).join(', ')}
+                            ${classification.heads.length > 3 ? '...' : ''}
+                        </div>
+                    </a>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    function updateStats(paperGroups) {
+        const totalPapers = Object.keys(paperGroups).length;
+        const totalClassifications = Object.values(paperGroups)
+            .reduce((sum, paper) => sum + paper.classifications.length, 0);
+        const totalHeads = Object.values(paperGroups)
+            .reduce((sum, paper) => 
+                sum + paper.classifications.reduce((s, c) => s + c.n_heads, 0), 0);
+        
+        document.getElementById('stats').innerHTML = `
+            Showing ${totalClassifications} classifications from ${totalPapers} papers, 
+            covering ${totalHeads} attention heads
+        `;
+    }
+    
+    function encodeForURL(str) {
+        // Replace colons with tildes for URL compatibility
+        return encodeURIComponent(str.replace(/:/g, '~'));
+    }
+    
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', loadClassifications);
+    </script>
+    <!-- end 'app.js' -->
+</body>
+</html>

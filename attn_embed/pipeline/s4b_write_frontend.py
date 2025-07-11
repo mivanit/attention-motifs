@@ -51,7 +51,7 @@ def write_frontend(cfg: PipelineConfig) -> None:
 		json.dumps(embed_head_vis_cfg["cfg"], indent="\t")
 	)
 
-	# write head embedding table (only used after s5b)
+	# write head embedding table and classifications page (only used after s5b)
 	frontend_resources_path: Path = Path(
 		importlib.resources.files(attn_embed).joinpath("frontend"),  # type: ignore[arg-type]
 	)
@@ -59,6 +59,11 @@ def write_frontend(cfg: PipelineConfig) -> None:
 		frontend_resources_path / "head_embed_table/index.html"
 	).read_text()
 	(cfg.figures_dir / "head_embed_table.html").write_text(head_embed_table_html)
+
+	classes_html: str = (
+		frontend_resources_path / "classes/index.html"
+	).read_text()
+	(cfg.figures_dir / "classifications.html").write_text(classes_html)
 
 
 if __name__ == "__main__":

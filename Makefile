@@ -1510,6 +1510,7 @@ am-frontend-bundle: am-frontend-ap-build
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/embeds/src/index.html --output $(FRONTEND_DIR)/embeds/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_ATTNPEDIA_DIR)/src/index.html --output $(FRONTEND_ATTNPEDIA_DIR)/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/head_embed_table/src/index.html --output $(FRONTEND_DIR)/head_embed_table/index.html
+	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/classes/src/index.html --output $(FRONTEND_DIR)/classes/index.html
 
 # $(PYTHON) -m muutils.web.bundle_html attn_embed/frontend/pattern-view/src/index.html --output attn_embed/frontend/pattern-view/index.html
 # cp $(FRONTEND_DIR)/embeds-old/embeddings.html data/features/index.html
