@@ -85,6 +85,49 @@ Outgoing connections:
 - solid lines / blue label: existing connections
 - dashed lines / red label: missing connections that should be added
 
+
+```mermaid
+%%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
+flowchart LR
+    %% MV["Model View"]
+    CL["<a href='data/figures/classifications.html'>Classifications Page</a>"]
+    AP["<a href='data/vis/attnpedia/index.html'>AttentionPedia</a>"]
+
+    CL ~~~ AP
+    
+    %% PL["<a href='data/patterns/index.html'>Pattern Lens</a>"]
+    PL@{img: "docs/resources/assets/diagram/pattern_lens.png", label: "<a href='data/patterns/index.html'>Pattern Lens</a>", pos: "t", w: 60, h: 160}
+    %% SPV["<a href='data/patterns/single.html'>Single Pattern View</a>"]
+    SPV@{img: "docs/resources/assets/diagram/single_pattern.png", label: "<a href='data/patterns/single.html'>Single Pattern View</a>", pos: "t", w: 60, h: 120}
+    
+    %% PEV["<a href='data/vis/embeds/patterns/index.html'>Pattern Embedding Vis</a>"]
+    PEV@{img: "docs/resources/assets/diagram/embed_patterns.png", label: "<a href='data/vis/embeds/patterns/index.html'>Pattern Embedding Vis</a>", pos: "t", w: 60, h: 120}
+    HEV["<a href='data/vis/embeds/heads/index.html'>Head Embedding Vis</a>"]
+    HET["<a href='data/figures/head_embed_table.html'>Head Embedding Table</a>"]
+
+    %% Existing connections (solid lines)
+    SPV -->|head ID| AP
+    SPV -->|prompt hash| PL
+    PL -->|pattern images| SPV
+    AP -->|patterns in each cell| SPV
+    AP -->|current head <br/>or<br/> all displayed heads| PL
+
+    PEV -->|each point - right click| SPV
+    HET -->|links to each variant| HEV
+
+    CL -->|classification links| AP
+    AP -->|link| CL
+    HEV -->|each point - right click| AP
+
+    %% Missing connections (dashed lines)
+    SPV -.->|<span style='background-color: red'>just this pattern selected</span>| PEV
+    AP -.->|<span style='background-color: red'>current/all heads selected</span>| PEV
+    AP -.->|<span style='background-color: red'>current/all heads selected</span>| HEV
+    %% MV -.->|<span style='background-color: red'>click on head</span>| AP
+```
+
+
+
 ```mermaid
 %%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
 flowchart LR
@@ -94,8 +137,11 @@ flowchart LR
         MV["Model View"]
     end
     
-    subgraph col2[" "]
-        AP["<a href='data/vis/attnpedia/index.html'>AttentionPedia</a></br>f></br>f></br>f"]
+    subgraph AP[" "]
+        direction LR
+        APH["<a href='data/vis/attnpedia/index.html'>AttentionPedia Heads</a>"]
+        APC["<a href='data/vis/attnpedia/index.html'>AttentionPedia Classes</a>"]
+        APH <--> APC
     end
     
     subgraph col3[" "]
@@ -116,7 +162,7 @@ flowchart LR
     %% style col4 fill:none,stroke:none
     
     %% Existing connections (solid lines)
-    SPV -->|head ID| AP
+    SPV -->|head ID| APH
     SPV -->|prompt hash| PL
     PL -->|pattern images| SPV
     AP -->|patterns in each cell| SPV
@@ -125,8 +171,8 @@ flowchart LR
     PEV -->|each point - right click| SPV
     HET -->|links to each variant| HEV
 
-    CL -->|classification links| AP
-    AP -->|link| CL
+    CL -->|classification links| APC
+    APC -->|link| CL
     HEV -->|each point - right click| AP
 
     %% Missing connections (dashed lines)
