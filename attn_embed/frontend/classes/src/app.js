@@ -123,9 +123,9 @@ function displayClassifications(searchTerm = '') {
                     <span class="head-count">${data.classifications.length} classifications</span>
                 </div>
                 <div class="paper-info">
-                    ${data.notes ? `${data.notes} • ` : ''}
-                    Model: ${data.model} • 
-                    <a href="${data.url}" target="_blank">View Paper</a>
+                    ${data.notes ? `<div>Note: ${data.notes}</div>` : ''}
+                    <div>Model: ${data.model}</div>
+                    <div>Paper: ${data.url}</div>
                 </div>
                 <div class="classification-grid">
         `;
@@ -165,15 +165,22 @@ function updateStats(paperGroups) {
         .reduce((sum, paper) => 
             sum + paper.classifications.reduce((s, c) => s + c.n_heads, 0), 0);
     
+    // Get unique models
+    const models = new Set();
+    Object.values(paperGroups).forEach(paper => {
+        models.add(paper.model);
+    });
+    
     document.getElementById('stats').innerHTML = `
         Showing ${totalClassifications} classifications from ${totalPapers} papers, 
-        covering ${totalHeads} attention heads
+        covering ${totalHeads} attention heads across ${models.size} models
     `;
 }
 
 function encodeForURL(str) {
-    // Replace colons with tildes for URL compatibility
-    return encodeURIComponent(str.replace(/:/g, '~'));
+    // Replace colons with tildes for URL compatibility, as expected by AttentionPedia
+    // This matches the encoding used in AttentionPedia's config.js
+    return str.replace(/:/g, '~');
 }
 
 // Load data when page loads

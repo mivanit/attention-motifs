@@ -42,6 +42,30 @@
     	border-radius: 8px;
     	box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     	flex: 1;
+    	position: relative;
+    }
+    
+    .classifications-link-container {
+    	position: absolute;
+    	top: 15px;
+    	right: 15px;
+    }
+    
+    .classifications-link {
+    	background-color: #3498db;
+    	color: white;
+    	padding: 6px 12px;
+    	border-radius: 4px;
+    	text-decoration: none;
+    	font-size: 13px;
+    	font-weight: bold;
+    	transition: background-color 0.2s ease;
+    }
+    
+    .classifications-link:hover {
+    	background-color: #2980b9;
+    	color: white;
+    	text-decoration: none;
     }
     
     .controls-section {
@@ -2724,6 +2748,9 @@
         <!-- Page Title Section -->
         <div class="header-container">
             <div class="title-section">
+                <div class="classifications-link-container">
+                    <a href="../../figures/classifications.html" class="classifications-link" title="Browse all head classifications">Classifications</a>
+                </div>
                 <template x-if="!classification_mode">
                     <div>
                         <h2 class="page-title">

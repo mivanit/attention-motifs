@@ -96,6 +96,11 @@ h1 {
     font-size: 14px;
     color: #7f8c8d;
     margin-bottom: 15px;
+    line-height: 1.4;
+}
+
+.paper-info div {
+    margin-bottom: 4px;
 }
 
 .paper-info a {
