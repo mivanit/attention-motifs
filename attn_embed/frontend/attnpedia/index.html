@@ -2212,12 +2212,17 @@
     						currentHeadClassifications.includes(cls)
     					);
     					
+    					// For current head, highlight if it has any classifications at all
+    					const shouldHighlight = item.head_name === this.current_head 
+    						? headClassifications.length > 0 
+    						: hasMatchingClassification;
+    					
     					newHeadsArray.push({
     						headId: item.head_name,
     						distance: distance,
     						distanceText: distance === 0 ? '0.000\n(Current)' : distance.toFixed(3),
     						distanceColor: this.getDistanceColor(distance, maxDistance),
-    						hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head,
+    						hasMatchingClassification: shouldHighlight,
     						rank: headRankMap.get(item.head_name) || 0,
     						totalHeads: totalHeads
     					});
@@ -2306,12 +2311,17 @@
     					currentHeadClassifications.includes(cls)
     				);
     				
+    				// For current head, highlight if it has any classifications at all
+    				const shouldHighlight = item.head_name === this.current_head 
+    					? headClassifications.length > 0 
+    					: hasMatchingClassification;
+    				
     				newHeadsArray.push({
     					headId: item.head_name,
     					distance: distance,
     					distanceText: distance === 0 ? '0.000\n(Current)' : distance.toFixed(3),
     					distanceColor: this.getDistanceColor(distance, maxDistance),
-    					hasMatchingClassification: hasMatchingClassification && item.head_name !== this.current_head,
+    					hasMatchingClassification: shouldHighlight,
     					rank: headRankMap.get(item.head_name) || 0,
     					totalHeads: totalHeads
     				});
