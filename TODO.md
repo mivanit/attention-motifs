@@ -22,54 +22,55 @@ misc todos:
 Allows comparing lots of patterns across many heads, models, etc. Uses tilde-separated URLs for compatibility and has model/head selection grids and prompt tables.
 
 Outgoing connections:
-- [x] **→ Single Pattern View** (pattern images): Click on pattern images to view detailed single pattern
+- [x] **Single Pattern View** (pattern images): Click on pattern images to view detailed single pattern
 
 ## Single Pattern View (`data/patterns/single.html`)
 
 Shows a single pattern and its prompt in detail with interactive heatmap and token highlighting.
 
 Outgoing connections:
-- [x] **→ Pattern Lens** (prompt hash): Click prompt hash to go to pattern lens with that prompt selected
-- [x] **→ AttentionPedia** (head ID): Click head ID to go to attentionpedia for that head
+- [x] **Pattern Lens** (prompt hash): Click prompt hash to go to pattern lens with that prompt selected
+- [x] **AttentionPedia** (head ID): Click head ID to go to attentionpedia for that head
+- [ ] **Pattern Embedding Vis** just this pattern selected
 
 ## AttentionPedia (`data/vis/attnpedia/index.html`)
 
 Shows a given head and then a selection of nearby/random/distant (in embedding space) heads, as well as heads with the same classification. These heads are the rows, columns are different prompts.
 
 Outgoing connections:
-- [x] **→ Single Pattern View** (patterns in each cell): Click on patterns in table cells to view detailed single pattern
-- [x] **→ Pattern Lens** (current head or all displayed heads): Use links at top to go to pattern lens for current head or all displayed heads
-- [x] **→ Classifications Page** (classification links): view classifications page
-- [ ] **→ Pattern Embedding Vis** (current/all heads selected): Add way to go to pattern embedding vis with current head/context selected
-- [ ] **→ Head Embedding Vis** (current/all heads selected): Add way to go to head embedding vis with current head/context selected
+- [x] **Single Pattern View** (patterns in each cell): Click on patterns in table cells to view detailed single pattern
+- [x] **Pattern Lens** (current head or all displayed heads): Use links at top to go to pattern lens for current head or all displayed heads
+- [x] **Classifications Page** (classification links): view classifications page
+- [ ] **Pattern Embedding Vis** (current/all heads selected): Add way to go to pattern embedding vis with current head/context selected
+- [ ] **Head Embedding Vis** (current/all heads selected): Add way to go to head embedding vis with current head/context selected
 
 ## Pattern Embedding Vis (`data/vis/embeds/patterns/index.html`)
 
 3D visualization of all attention patterns where each point represents a pattern.
 
 Outgoing connections:
-- [x] **→ Single Pattern View** (each point - right click): Right-click on pattern points to go to single pattern view for that pattern
+- [x] **Single Pattern View** (each point - right click): Right-click on pattern points to go to single pattern view for that pattern
 
 ## Head Embedding Vis (`data/vis/embeds/heads/index.html`)
 
 3D visualization where each point is a head in embedding space.
 
 Outgoing connections:
-- [x] **→ AttentionPedia** (each point - right click): Right-click on head points to go to attentionpedia for that head
+- [x] **AttentionPedia** (each point - right click): Right-click on head points to go to attentionpedia for that head
 
 ## Head Embedding Table (`data/figures/head_embed_table.html`)
 
 Table view of all head embedding plots with SVG previews and links to 3D visualization.
 
 Outgoing connections:
-- [x] **→ Head Embedding Vis** (embed links): Click embedding links to view in 3D visualization with specific parameters
+- [x] **Head Embedding Vis** (embed links): Click embedding links to view in 3D visualization with specific parameters
 
 ## Classifications Page
 
 Lists all head classifications with links to view heads of each classification in AttentionPedia.
 
 Outgoing connections:
-- [x] **→ AttentionPedia** (classification links): Click on classification to view AttentionPedia page filtered by that classification
+- [x] **AttentionPedia** (classification links): Click on classification to view AttentionPedia page filtered by that classification
 
 
 # interface relations diagram
