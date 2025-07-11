@@ -1,10 +1,8 @@
 import matplotlib.pyplot as plt
 import polars as pl
-import importlib.resources
 from pathlib import Path
 
 # attention-motifs
-import attn_embed
 from attn_embed.features.head_analysis import (
 	plot_head_embeddings_multi,
 	plot_head_embeddings,
@@ -32,7 +30,6 @@ def head_embed_plots(cfg: PipelineConfig) -> None:
 
 	if cfg.verbose > 0:
 		print(f"Loaded head embeddings: {head_embed_df.shape}")
-
 
 	# Generate figures if enabled
 	if cfg.do_figures:
@@ -104,7 +101,9 @@ def head_embed_plots(cfg: PipelineConfig) -> None:
 			plots_json_source = cfg.figures_dir / "head_embed_plots.json"
 			if plots_json_source.exists():
 				if cfg.verbose > 0:
-					print(f"SVG plots generated successfully, metadata at: {plots_json_source}")
+					print(
+						f"SVG plots generated successfully, metadata at: {plots_json_source}"
+					)
 					print("HTML frontend created by s4b_write_frontend.py")
 			else:
 				print(
