@@ -72,7 +72,7 @@
                         </h2>
                     </div>
                 </template>
-                <template x-if="classification_mode && current_classification">
+                <template x-if="classification_mode && current_classification && !classificationError">
                     <div x-data="classificationInfoComponent(current_classification)" x-init="await loadMetadata()">
                         <h2 class="page-title" x-text="current_classification"></h2>
                         <div class="classification-details" x-show="metadata.notes">
@@ -146,13 +146,27 @@
                             Loading attention heads data...
                         </td>
                     </tr>
-                    <tr x-show="!loading && heads_display_with_distances.length === 0">
+                    <!-- Classification error state -->
+                    <tr x-show="!loading && classificationError">
+                        <td :colspan="3 + prompts.length" style="text-align: center; padding: 40px;">
+                            <div style="color: #e74c3c; font-size: 18px; margin-bottom: 15px;">
+                                Classification not found: "<span x-text="classificationError"></span>"
+                            </div>
+                            <div style="color: #666; margin-bottom: 20px;">
+                                This classification does not exist in the dataset.
+                            </div>
+                            <a href="../../figures/classifications.html" style="display: inline-block; padding: 10px 20px; background-color: #3498db; color: white; text-decoration: none; border-radius: 4px;">
+                                Go to Classifications Page
+                            </a>
+                        </td>
+                    </tr>
+                    <tr x-show="!loading && !classificationError && heads_display_with_distances.length === 0">
                         <td :colspan="3 + prompts.length" style="text-align: center; padding: 20px; color: #666;">
                             No heads data available
                         </td>
                     </tr>
                     <template x-for="(headRow, index) in heads_display_with_distances" :key="headRow.headId || `gap-${index}`">
-                        <tr>
+                        <tr x-show="!classificationError">
                             <td class="head-info">
                                 <a :href="getHeadLink(headRow.headId)" x-text="headRow.headId" class="head-link"></a>
                             </td>

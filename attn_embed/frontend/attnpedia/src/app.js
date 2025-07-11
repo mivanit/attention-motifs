@@ -2,6 +2,7 @@ document.addEventListener('alpine:init', () => {
 	Alpine.data('attentionApp', () => ({
 		loading: true,
 		error: null,
+		classificationError: null,
 		prompts: [],
 		allPrompts: [],
 		allPromptsCount: 0,
@@ -88,7 +89,12 @@ document.addEventListener('alpine:init', () => {
 		async setupClassificationMode(classificationType) {
 			// Get all heads with this classification
 			const headsOfType = await this.attention_pedia.get_type_heads(classificationType);
-			if (!headsOfType || headsOfType.length === 0) return;
+			if (!headsOfType || headsOfType.length === 0) {
+				// Classification doesn't exist - show error
+				this.classificationError = classificationType;
+				this.loading = false;
+				return;
+			}
 			
 			// Find the best head for this classification (prefer heads with only this classification)
 			let bestHead = null;

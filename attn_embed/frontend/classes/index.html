@@ -362,8 +362,7 @@
             `;
             
             data.classifications.forEach(classification => {
-                const encodedType = encodeForURL(classification.type);
-                const attnPediaUrl = `../vis/attnpedia/index.html?classification_mode=true&current_classification=${encodedType}`;
+                const attnPediaUrl = `../vis/attnpedia/index.html?classification_mode=true&current_classification=${encodeURIComponent(classification.type)}`;
                 
                 html += `
                     <a href="${attnPediaUrl}" class="classification-item">
@@ -406,12 +405,6 @@
             Showing ${totalClassifications} classifications from ${totalPapers} papers, 
             covering ${totalHeads} attention heads across ${models.size} models
         `;
-    }
-    
-    function encodeForURL(str) {
-        // Replace colons with tildes for URL compatibility, as expected by AttentionPedia
-        // This matches the encoding used in AttentionPedia's config.js
-        return str.replace(/:/g, '~');
     }
     
     // Load data when page loads
