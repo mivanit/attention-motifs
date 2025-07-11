@@ -5,7 +5,7 @@ import numpy as np
 import polars as pl
 from jaxtyping import Float
 
-from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
+from attn_embed.pipeline.cfg import PipelineConfig, pipeline_step_major
 
 
 # attention-motifs

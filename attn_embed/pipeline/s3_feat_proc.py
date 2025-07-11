@@ -4,7 +4,7 @@ import polars as pl
 from muutils.dbg import dbg, dbg_tensor
 from sklearn.decomposition import PCA
 
-from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
+from attn_embed.pipeline.cfg import PipelineConfig, pipeline_step_major
 
 
 # attention-motifs

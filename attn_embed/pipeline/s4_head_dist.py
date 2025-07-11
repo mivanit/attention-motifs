@@ -6,7 +6,7 @@ from attn_embed.features.analysis import (
 	DistanceTensorResult,
 )
 
-from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
+from attn_embed.pipeline.cfg import PipelineConfig, pipeline_step_major
 
 
 def head_dists(cfg: PipelineConfig) -> None:

@@ -9,7 +9,7 @@ from attn_embed.features.head_analysis import (
 	plot_head_embeddings_multi,
 	plot_head_embeddings,
 )
-from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
+from attn_embed.pipeline.cfg import PipelineConfig, pipeline_step_major
 
 
 def get_embedding_prefixes(df: pl.DataFrame) -> list[str]:

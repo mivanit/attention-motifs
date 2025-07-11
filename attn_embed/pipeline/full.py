@@ -6,7 +6,7 @@ from attn_embed.pipeline.s3b_feat_fig import feat_figures
 from attn_embed.pipeline.s4_head_dist import head_dists
 from attn_embed.pipeline.s5_head_embed import head_embed
 from attn_embed.pipeline.s5b_head_embed_plots import head_embed_plots
-from attn_embed.util.pipeline_cfg import PipelineConfig
+from attn_embed.pipeline.cfg import PipelineConfig
 from attn_embed.pipeline.s3_feat_proc import feat_proc
 
 

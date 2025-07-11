@@ -1,5 +1,5 @@
 from pattern_lens.activations import activations_main
-from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
+from attn_embed.pipeline.cfg import PipelineConfig, pipeline_step_major
 
 
 def generate_activations(cfg: PipelineConfig) -> None:

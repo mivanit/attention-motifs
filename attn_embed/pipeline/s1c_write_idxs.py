@@ -1,6 +1,6 @@
 from pattern_lens.indexes import write_html_index
 
-from attn_embed.util.pipeline_cfg import PipelineConfig
+from attn_embed.pipeline.cfg import PipelineConfig
 
 
 def write_idxs(cfg: PipelineConfig) -> None:

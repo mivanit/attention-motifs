@@ -4,7 +4,7 @@ import importlib.resources
 
 
 import attn_embed
-from attn_embed.util.pipeline_cfg import PipelineConfig
+from attn_embed.pipeline.cfg import PipelineConfig
 
 
 def write_frontend(cfg: PipelineConfig) -> None:

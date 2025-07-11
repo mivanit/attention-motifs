@@ -5,7 +5,7 @@ import json
 from attn_embed.attnpedia.attnpedia import AttentionPedia
 from attn_embed.features.analysis import DistanceTensorResult
 from attn_embed.features.head_analysis import create_embedding_df_multi
-from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
+from attn_embed.pipeline.cfg import PipelineConfig, pipeline_step_major
 
 
 def get_embedding_prefixes(df: pl.DataFrame) -> list[str]:

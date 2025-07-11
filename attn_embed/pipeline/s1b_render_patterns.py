@@ -1,5 +1,5 @@
 from attn_embed.figure_funcs import _ensure_register
-from attn_embed.util.pipeline_cfg import PipelineConfig, pipeline_step_major
+from attn_embed.pipeline.cfg import PipelineConfig, pipeline_step_major
 from pattern_lens.figures import figures_main
 
 
