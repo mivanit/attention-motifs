@@ -40,6 +40,15 @@ models = [
 # number of components for PCA decomposition of activation features
 pca_n_components = 16
 
+# head embedding configuration
+# ============================================================
+# methods to use for head embeddings (uncomment to override defaults)
+# embedding_methods = ["isomap", "umap", "tsne", "pca"]
+# dimensions to generate for each embedding method (uncomment to override defaults)
+# embedding_n_components_list = [2, 3]
+# neighbor counts for manifold methods like isomap, umap (uncomment to override defaults)
+# embedding_n_neighbors_list = [2, 4, 8, 16, 32, 64]
+
 # computing
 # ============================================================
 # numbper of cpus to use for CPU tasks
@@ -71,4 +80,35 @@ verbose = 99
 # extra kwargs to pass to plotting functions. kind of messy
 [plot_kwargs]
 pca_all_dpi = 150
+
+# visualization configurations (uncomment to override defaults)
+# ============================================================
+# [vis_configs.attentionpedia]
+# path = "attnpedia"
+# cfg_path = "config.json"
+# [vis_configs.attentionpedia.cfg]
+# head_viewing = "gpt2-small:L5:H5"
+# n_prompts = 5
+# pattern_size = 120
+# attnpedia_url = "ap.json"
+# headDistsmeta_url = "../../features/head_dists_raw/dists_meta.json"
+# prompts_url = "../../patterns/gpt2-small/prompts.jsonl"
+# headDistsnpy_url = "../../features/head_dists_raw/distances.npy"
+# patterns_path = "../../patterns/"
+
+# [vis_configs.embed_pattern]
+# path = "embeds/patterns/"
+# cfg_path = "config.json"
+# [vis_configs.embed_pattern.cfg]
+# dataFile = "../../../features/pca.jsonl"
+# numericalPrefix = "pc."
+# defaultColorColumn = "activation.model"
+
+# [vis_configs.embed_head]
+# path = "embeds/heads/"
+# cfg_path = "config.json"
+# [vis_configs.embed_head.cfg]
+# dataFile = "../../../features/head_embed.jsonl"
+# numericalPrefix = "embed."
+# defaultColorColumn = "type.group"
 

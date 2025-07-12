@@ -1,5 +1,7 @@
 import polars as pl
 import json
+from pathlib import Path
+from typing import Any
 
 # attention-motifs
 from attn_embed.attnpedia.attnpedia import AttentionPedia
@@ -20,7 +22,17 @@ def get_embedding_prefixes(df: pl.DataFrame) -> list[str]:
 
 
 def parse_prefix_info(prefix: str) -> dict[str, str]:
-	"""Parse embedding prefix to extract method, dimensions, and neighbors."""
+	"""Parse embedding prefix to extract method, dimensions, and neighbors.
+	
+	Args:
+		prefix: Embedding prefix in format embed.{method}.d{n_components}.b{n_neighbors}
+		
+	Returns:
+		Dictionary with method, n_components, and n_neighbors as strings
+		
+	Raises:
+		ValueError: If prefix format is invalid
+	"""
 	# Format: embed.{method}.d{n_components}.b{n_neighbors}
 	parts = prefix.split(".")
 	if len(parts) != 4 or parts[0] != "embed":
@@ -37,8 +49,15 @@ def parse_prefix_info(prefix: str) -> dict[str, str]:
 	}
 
 
-def create_plots_metadata(prefixes: list[str]) -> dict:
-	"""Create JSON metadata for embedding plots."""
+def create_plots_metadata(prefixes: list[str]) -> dict[str, Any]:
+	"""Create JSON metadata for embedding plots.
+	
+	Args:
+		prefixes: List of embedding prefixes from DataFrame columns
+		
+	Returns:
+		Dictionary containing plots metadata and summary statistics
+	"""
 	plots = []
 
 	for prefix in prefixes:
@@ -70,7 +89,11 @@ def create_plots_metadata(prefixes: list[str]) -> dict:
 
 
 def head_embed(cfg: PipelineConfig) -> None:
-	"""Generate head embeddings from distance matrix."""
+	"""Generate head embeddings from distance matrix.
+	
+	Args:
+		cfg: Pipeline configuration containing embedding parameters
+	"""
 	pipeline_step_major("pipeline step 5: generate head embeddings")
 
 	# Load head distances from previous step
