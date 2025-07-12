@@ -5,17 +5,10 @@
 
 misc todos:
 
-- pages:
-    - [x] create a classifications page that lists all head classifications with links to their respective AttentionPedia pages
-    - [ ] embedding visualizations: hovering over point sometimes doesnt work, the "hover radius" is much smaller than the point size. make the hover radius scale with the point size by some constant factor which we can configure in config.js
-    - [ ] filter by model, layer in attentionpedia and classifications page?
-    - [ ] for each model, a nice display of all the heads (colored by classification, if any?) where you can click on a head to go to attentionpedia for that head
-- python pipeline:
-    - [x] move head embedding table generation from s5b into s4b_write_frontend.py for consistency
-    - [ ] default pipeline config `pipeline_cfg.toml` should more accurately reflect all options
-    - [ ] integrate s4b_write_frontend into full.py pipeline (currently manual via Makefile)
-    - [ ] add configuration validation for vis_configs and data file dependencies
-    - [ ] clean up s5 scripts -- type hints, config stuff, etc
+- [x] create a classifications page that lists all head classifications with links to their respective AttentionPedia pages
+- [ ] embedding visualizations: hovering over point sometimes doesnt work, the "hover radius" is much smaller than the point size. make the hover radius scale with the point size by some constant factor which we can configure in config.js
+- [ ] filter by model, layer in attentionpedia and classifications page?
+- [ ] for each model, a nice display of all the heads (colored by classification, if any?) where you can click on a head to go to attentionpedia for that head
 
 ## Pattern Lens (`data/patterns/index.html`)
 
