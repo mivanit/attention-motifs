@@ -4,6 +4,7 @@ from attn_embed.pipeline.s1c_write_idxs import write_idxs
 from attn_embed.pipeline.s2_features import compute_features
 from attn_embed.pipeline.s3b_feat_fig import feat_figures
 from attn_embed.pipeline.s4_head_dist import head_dists
+from attn_embed.pipeline.s4b_write_frontend import write_frontend
 from attn_embed.pipeline.s5_head_embed import head_embed
 from attn_embed.pipeline.s5b_head_embed_plots import head_embed_plots
 from attn_embed.pipeline.cfg import PipelineConfig
@@ -34,6 +35,9 @@ def full_pipeline(cfg: PipelineConfig) -> None:
 
 	# Step 4: head distances
 	head_dists(cfg)
+
+	# Step 4b: write frontend files
+	write_frontend(cfg)
 
 	# Step 5: head embeddings
 	head_embed(cfg)
