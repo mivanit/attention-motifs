@@ -106,69 +106,47 @@ config:
     layered:
       considerModelOrder: true
 ---
-graph LR
-    %% MV["Model View"]
-    subgraph colHead[" "]
-        direction TB
-        CL@{img: "docs/resources/assets/diagram/head_classes.png", label: "<a href='data/figures/classifications.html'>Classifications Page</a>", pos: "t", w: 60, h: 120}
-        HET@{img: "docs/resources/assets/diagram/head_embed_table.png", label: "<a href='data/figures/head_embed_table.html'>Head Embedding Table</a>", pos: "t", w: 60, h: 120}
-        HEV@{img: "docs/resources/assets/diagram/embed_heads.png", label: "<a href='data/vis/embeds/heads/index.html'>Head Embedding Vis</a>", pos: "t", w: 60, h: 120}
-
-        HET -->|links to each variant| HEV
-
-        CL ~~~ HET ~~~ HEV
-    end
-    
-    subgraph colAP[" "]
-        direction TB
-        AP@{img: "docs/resources/assets/diagram/attnpedia.png", label: "<a href='data/vis/attnpedia/index.html'>AttentionPedia</a>", pos: "t", w: 60, h: 120}
-    end
-    
-    subgraph colPattern[" "]
-        direction TB
-        PL@{img: "docs/resources/assets/diagram/pattern_lens.png", label: "<a href='data/patterns/index.html'>Pattern Lens</a>", pos: "t", w: 60, h: 160}
-        SPV@{img: "docs/resources/assets/diagram/single_pattern.png", label: "<a href='data/patterns/single.html'>Single Pattern View</a>", pos: "t", w: 60, h: 120}
-        PEV@{img: "docs/resources/assets/diagram/embed_patterns.png", label: "<a href='data/vis/embeds/patterns/index.html'>Pattern Embedding Vis</a>", pos: "t", w: 60, h: 120}
-
-        PL -->|pattern images| SPV
-        SPV -->|prompt hash| PL
-        SPV -.->|<span style='background-color: red'>just this pattern selected</span>| PEV
-        PEV -->|each point - right click| SPV
-
-        PL ~~~ SPV ~~~ PEV
-    end
-
-    colHead ~~~~ colAP ~~~~ colPattern
-
-    %% CL ~~~ AP
-    %% HEV ~~~ AP
-
-    %% AP ~~~ PEV ~~~ SPV
-    %% AP ~~~ PL ~~~ SPV
-    %% MV -.->|<span style='background-color: red'>click on head</span>| AP
+graph TD
+    %% heads
+    CL@{img: "docs/resources/assets/diagram/head_classes.png", label: "<a href='data/figures/classifications.html'>Classifications Page</a>", pos: "t", w: 60, h: 120}
+    HET@{img: "docs/resources/assets/diagram/head_embed_table.png", label: "<a href='data/figures/head_embed_table.html'>Head Embedding Table</a>", pos: "t", w: 60, h: 120}
+    HEV@{img: "docs/resources/assets/diagram/embed_heads.png", label: "<a href='data/vis/embeds/heads/index.html'>Head Embedding Vis</a>", pos: "t", w: 60, h: 120}
 
 
-    %% SPV -->|head ID| AP
-    %% AP -->|patterns in each cell| SPV
-    %% AP -->|current head <br/>or<br/> all displayed heads| PL
-    %% AP -.->|<span style='background-color: red'>current/all heads selected</span>| PEV
+    %% attnpedia
+    AP@{img: "docs/resources/assets/diagram/attnpedia.png", label: "<a href='data/vis/attnpedia/index.html'>AttentionPedia</a>", pos: "t", w: 60, h: 120}
+    MV["Model View"]
 
-    colPattern -->|head ID| colAP
-    colAP -->|patterns in each cell| colPattern
-    colAP -->|current head <br/>or<br/> all displayed heads| colPattern
-    colAP -.->|<span style='background-color: red'>current/all heads selected</span>| colPattern
+    %% patterns
+    PL@{img: "docs/resources/assets/diagram/pattern_lens.png", label: "<a href='data/patterns/index.html'>Pattern Lens</a>", pos: "t", w: 60, h: 160}
+    SPV@{img: "docs/resources/assets/diagram/single_pattern.png", label: "<a href='data/patterns/single.html'>Single Pattern View</a>", pos: "t", w: 60, h: 120}
+    PEV@{img: "docs/resources/assets/diagram/embed_patterns.png", label: "<a href='data/vis/embeds/patterns/index.html'>Pattern Embedding Vis</a>", pos: "t", w: 60, h: 120}
 
-    %% CL -->|classification links| AP
-    %% AP -->|link| CL
-    %% HEV -->|each point - right click| AP
-    %% AP -.->|<span style='background-color: red'>current/all heads selected</span>| HEV
+    %% within heads
+    HET -->|links to each variant| HEV
 
-    %% colAP -.->|<span style='background-color: red'>current/all heads selected</span>| colHead
-    colHead -->|classification links| colAP
-    colAP -->|link| colHead
-    %% colAP <---|test| colHead
-    colHead -->|<span style='background-color: red'>current/all heads selected</span>| colAP
-    colHead -->|each point - right click| colAP
+
+
+    %% within patterns
+    PL -->|pattern images| SPV
+    SPV -->|prompt hash| PL
+    SPV -.->|<span style='background-color: red'>just this pattern selected</span>| PEV
+    PEV -->|each point - right click| SPV
+
+    %% attnpedia
+    MV -.->|<span style='background-color: red'>click on head</span>| AP
+
+    %% patterns and attnpedia
+    SPV -->|head ID| AP
+    AP -->|patterns in each cell| SPV
+    AP -->|current head <br/>or<br/> all displayed heads| PL
+    AP -.->|<span style='background-color: red'>current/all heads selected</span>| PEV
+
+    %% attnpedia and heads
+    CL -->|classification links| AP
+    AP -->|link| CL
+    HEV -->|each point - right click| AP
+    AP -.->|<span style='background-color: red'>current/all heads selected</span>| HEV
 ```
 
 
