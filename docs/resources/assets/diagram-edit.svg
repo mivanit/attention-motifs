@@ -325,7 +325,9 @@
 			<g>
 				<path fill="none" stroke-width="0" stroke="none" d="M -100 -98 L 100 -98 L 100 98 L -100 98" />
 			</g>
-			<image transform="translate(-100,-62)" preserveAspectRatio="none" height="160" width="200" href="https://miv.name/pattern-lens/assets/diagram/pattern_lens.png" />
+			<a href="data/patterns/index.html">
+				<image transform="translate(-100,-62)" preserveAspectRatio="none" height="160" width="200" href="https://miv.name/pattern-lens/assets/diagram/pattern_lens.png" />
+			</a>
 		</g>
 		<g transform="translate(133.7,200)" id="flowchart-CL-0" class="image-shape default">
 			<g transform="translate(0,18)">
@@ -343,7 +345,9 @@
 			<g>
 				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
 			</g>
-			<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/head_classes.png" />
+			<a href="data/figures/classifications.html">
+				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/head_classes.png" />
+			</a>
 		</g>
 		<g transform="translate(129.5,386)" id="flowchart-HET-2" class="image-shape default">
 			<g transform="translate(0,18)">
@@ -361,7 +365,9 @@
 			<g>
 				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
 			</g>
-			<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/head_embed_table.png" />
+			<a href="data/figures/head_embed_table.html">
+				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/head_embed_table.png" />
+			</a>
 		</g>
 		<g transform="translate(632.8,412.3)" id="flowchart-AP-11" class="image-shape default">
 			<g transform="translate(0,18)">
@@ -379,7 +385,9 @@
 			<g>
 				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
 			</g>
-			<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/attnpedia.png" />
+			<a href="data/vis/attnpedia/index.html">
+				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/attnpedia.png" />
+			</a>
 		</g>
 		<g transform="translate(1258.3,437)" id="flowchart-SPV-15" class="image-shape default">
 			<g transform="translate(0,18)">
@@ -397,7 +405,9 @@
 			<g>
 				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
 			</g>
-			<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/single_pattern.png" />
+			<a href="data/patterns/single.html">
+				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/single_pattern.png" />
+			</a>
 		</g>
 		<g transform="translate(1289.3,677)" id="flowchart-PEV-17" class="image-shape default">
 			<g transform="translate(0,18)">
@@ -415,7 +425,9 @@
 			<g>
 				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
 			</g>
-			<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/embed_patterns.png" />
+			<a href="data/vis/embeds/patterns/index.html">
+				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/embed_patterns.png" />
+			</a>
 		</g>
 		<g transform="translate(124,626)" id="flowchart-HEV-4" class="image-shape default">
 			<g transform="translate(0,18)">
@@ -433,32 +445,44 @@
 			<g>
 				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
 			</g>
-			<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/embed_heads.png" />
+			<a href="data/vis/embeds/heads/index.html">
+				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/embed_heads.png" />
+			</a>
 		</g>
 	</g>
 	<g class="edges edgePaths">
-		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_HET_HEV_0_0" d="M 162.8 464 L 162.8 465.6 C 162.8 467.3 162.8 470.6 162.8 473.1 C 162.8 475.6 162.8 477.3 163.6 478.1 C 164.5 479 166.1 479 166.3 479 C 166.5 479 165.1 479 165.3 479 C 165.5 479 167.1 479 168 479.8 C 168.8 480.6 168.8 482.3 168.8 490.5 C 168.8 498.6 168.8 513.3 168.5 521.1 C 168.1 528.9 167.4 529.9 166.5 530.7 C 165.7 531.5 164.8 532.3 164 532.6 C 163.3 533 162.8 533 162.1 533.3 C 161.4 533.7 160.4 534.4 159.6 535.3 C 158.8 536.1 158.1 537 157.7 538.5 C 157.3 540 157.3 542 157.3 543 L 157.3 544" />
-		<path style="" class="edge-thickness-invisible edge-pattern-solid" id="L_CL_HET_0_0" d="M 133.7 278 L 133.7 280.5 C 133.7 283 133.7 288 133 290.5 C 132.3 293 130.9 293 130.2 295.5 C 129.5 298 129.5 303 129.5 305.5 L 129.5 308" />
-		<path style="" class="edge-thickness-invisible edge-pattern-solid" id="L_HET_HEV_2_0" d="M 96.1 464 L 96.1 465.6 C 96.1 467.3 96.1 470.6 95.8 472.8 C 95.4 474.9 94.7 475.9 93.9 476.7 C 93 477.5 92.1 478.3 91 478.6 C 89.9 479 88.6 479 87.5 479.3 C 86.4 479.7 85.4 480.4 84.6 481.3 C 83.8 482.1 83 483 82.7 490.8 C 82.3 498.6 82.3 513.3 82.3 521.5 C 82.3 529.6 82.3 531.3 83.1 532.1 C 84 533 85.6 533 86.2 533 C 86.8 533 86.2 533 86.8 533 C 87.3 533 89 533 89.8 533.8 C 90.7 534.6 90.7 536.3 90.7 538.8 C 90.7 541.3 90.7 544.6 90.7 546.3 L 90.7 548" />
-		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_PL_SPV_0_0" d="M 1208.3 275 L 1208.3 276.7 C 1208.3 278.3 1208.3 281.7 1207.9 283.8 C 1207.5 285.9 1206.8 286.9 1206 287.7 C 1205.2 288.6 1204.2 289.3 1195.2 289.6 C 1186.1 290 1168.9 290 1159.9 290.4 C 1150.8 290.7 1149.9 291.4 1149.1 292.3 C 1148.2 293.1 1147.5 294.1 1147.1 301.9 C 1146.8 309.7 1146.8 324.3 1147.1 332.1 C 1147.5 339.9 1148.2 340.9 1149.1 341.7 C 1149.9 342.6 1150.8 343.3 1159.9 343.6 C 1168.9 344 1186.1 344 1195.2 344.4 C 1204.2 344.7 1205.2 345.4 1206 346.3 C 1206.8 347.1 1207.5 348.1 1207.9 349.5 C 1208.3 351 1208.3 353 1208.3 354 L 1208.3 355" />
-		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_SPV_PL_0_0" d="M 1258.3 359 L 1258.3 279" />
-		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" id="L_SPV_PEV_0_0" d="M 1208.3 515 L 1208.3 516.7 C 1208.3 518.3 1208.3 521.7 1207.9 523.8 C 1207.5 525.9 1206.8 526.9 1206 527.7 C 1205.2 528.6 1204.2 529.3 1189.3 529.6 C 1174.5 530 1145.6 530 1130.8 530.4 C 1115.9 530.7 1114.9 531.4 1114.1 532.3 C 1113.3 533.1 1112.5 534.1 1112.2 541.9 C 1111.8 549.7 1111.8 564.3 1112.2 572.1 C 1112.5 579.9 1113.3 580.9 1114.1 581.7 C 1114.9 582.6 1115.9 583.3 1135.9 583.6 C 1156 584 1195.1 584 1215.2 584.4 C 1235.3 584.7 1236.2 585.4 1237 586.3 C 1237.9 587.1 1238.6 588.1 1239 589.5 C 1239.3 591 1239.3 593 1239.3 594 L 1239.3 595" />
-		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_PEV_SPV_0_0" d="M 1289.3 599 L 1289.3 588.3 C 1289.3 577.7 1289.3 556.3 1289 545.2 C 1288.6 534.1 1287.9 533.1 1287 532.3 C 1286.2 531.4 1285.3 530.7 1281.3 530.4 C 1277.3 530 1270.3 530 1266.3 529.6 C 1262.3 529.3 1261.4 528.6 1260.6 527.7 C 1259.7 526.9 1259 525.9 1258.6 524.5 C 1258.3 523 1258.3 521 1258.3 520 L 1258.3 519" />
-		<path style="" class="edge-thickness-invisible edge-pattern-solid" id="L_PL_SPV_2_0" d="M 1308.3 275 L 1308.3 276.7 C 1308.3 278.3 1308.3 281.7 1308.3 284.2 C 1308.3 286.7 1308.3 288.3 1309.1 289.2 C 1309.9 290 1311.6 290 1312.3 290 C 1312.9 290 1312.6 290 1313.3 290 C 1313.9 290 1315.6 290 1316.4 290.8 C 1317.3 291.7 1317.3 293.3 1317.3 301.5 C 1317.3 309.7 1317.3 324.3 1317.3 332.5 C 1317.3 340.7 1317.3 342.3 1316.4 343.2 C 1315.6 344 1313.9 344 1313.3 344 C 1312.6 344 1312.9 344 1312.3 344 C 1311.6 344 1309.9 344 1309.1 344.8 C 1308.3 345.7 1308.3 347.3 1308.3 349.8 C 1308.3 352.3 1308.3 355.7 1308.3 357.3 L 1308.3 359" />
-		<path style="" class="edge-thickness-invisible edge-pattern-solid" id="L_SPV_PEV_2_0" d="M 1308.3 515 L 1308.3 516.7 C 1308.3 518.3 1308.3 521.7 1308.6 523.8 C 1309 525.9 1309.7 526.9 1310.6 527.7 C 1311.4 528.6 1312.3 529.3 1323.3 529.6 C 1334.3 530 1355.3 530 1366.3 530.4 C 1377.3 530.7 1378.2 531.4 1379 532.3 C 1379.9 533.1 1380.6 534.1 1381 541.9 C 1381.3 549.7 1381.3 564.3 1381 572.1 C 1380.6 579.9 1379.9 580.9 1379 581.7 C 1378.2 582.6 1377.3 583.3 1371.5 583.6 C 1365.6 584 1355 584 1349.2 584.4 C 1343.4 584.7 1342.4 585.4 1341.6 586.3 C 1340.8 587.1 1340 588.1 1339.7 590.2 C 1339.3 592.3 1339.3 595.7 1339.3 597.3 L 1339.3 599" />
-		<path style="" class="edge-thickness-invisible edge-pattern-solid" id="L_colHead_colAP_0_0" d="M 251.3 165.1 L 253.4 165.1 C 255.5 165.1 259.6 165.1 262.2 165.5 C 264.8 165.9 265.7 166.6 266.5 167.4 C 267.4 168.3 268.1 169.2 268.5 179.8 C 268.8 190.4 268.8 210.7 269.2 221.3 C 269.5 231.9 270.3 232.9 271.1 233.7 C 271.9 234.6 272.9 235.3 290.6 235.6 C 308.3 236 342.8 236 380.2 236 C 417.6 236 458 236 478.6 236.4 C 499.3 236.7 500.2 237.4 501 238.3 C 501.9 239.1 502.6 240.1 503 250.6 C 503.3 261.2 503.3 281.3 503.7 291.9 C 504 302.4 504.8 303.3 505.6 304.2 C 506.4 305 507.4 305.7 509.9 306.1 C 512.5 306.5 516.6 306.5 518.7 306.5 L 520.8 306.5" />
-		<path style="" class="edge-thickness-invisible edge-pattern-solid" id="L_colAP_colPattern_0_0" d="M 744.8 306.5 L 746.9 306.5 C 749 306.5 753.1 306.5 755.7 306.1 C 758.3 305.7 759.2 305 760 304.2 C 760.9 303.3 761.6 302.4 762 289.6 C 762.3 276.9 762.3 252.3 762.7 239.6 C 763 226.8 763.8 225.9 764.6 225 C 765.4 224.2 766.4 223.5 787 223.1 C 807.6 222.8 848 222.8 885.4 222.8 C 922.8 222.8 957.3 222.8 975 222.4 C 992.8 222 993.7 221.3 994.5 220.5 C 995.4 219.6 996.1 218.7 996.5 205.7 C 996.8 192.8 996.8 167.8 997.2 154.8 C 997.5 141.9 998.3 140.9 999.1 140.1 C 999.9 139.3 1000.9 138.6 1003.4 138.2 C 1006 137.8 1010.1 137.8 1012.2 137.8 L 1014.3 137.8" />
-		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colPattern_colAP_0_0" d="M 1014.3 263.7 L 976.1 263.7 C 937.8 263.7 861.3 263.7 822.6 264 C 783.9 264.4 782.9 265.1 782.1 265.9 C 781.3 266.8 780.5 267.7 780.2 280.2 C 779.8 292.7 779.8 316.6 779.5 329.1 C 779.1 341.6 778.4 342.5 777.5 343.3 C 776.7 344.2 775.8 344.9 771 345.3 C 766.1 345.6 757.5 345.6 753.1 345.6 L 748.8 345.6" />
-		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colAP_colPattern_2_0" d="M 744.8 384.8 L 747.7 384.8 C 750.6 384.8 756.5 384.8 759.4 385.6 C 762.3 386.4 762.3 387.9 803.6 388.7 C 845 389.5 927.6 389.5 969 389.5 L 1010.3 389.5" />
-		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colAP_colPattern_3_0" d="M 744.8 424 L 749.8 424 C 754.8 424 764.8 424 770.3 424.3 C 775.8 424.7 776.7 425.4 777.5 426.2 C 778.4 427.1 779.1 428 779.5 434.5 C 779.8 441 779.8 453.1 780.2 459.6 C 780.5 466.1 781.3 467 782.1 467.8 C 782.9 468.7 783.9 469.4 818.8 469.8 C 853.8 470.1 922.8 470.1 957.8 470.5 C 992.8 470.9 993.7 471.6 994.5 472.4 C 995.4 473.2 996.1 474.2 996.5 480.5 C 996.8 486.9 996.8 498.6 997.2 504.9 C 997.5 511.3 998.3 512.2 999.1 513.1 C 999.9 513.9 1000.9 514.6 1002.8 515 C 1004.6 515.3 1007.5 515.3 1008.9 515.3 L 1010.3 515.3" />
-		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colAP_colPattern_4_0" d="M 744.8 463.1 L 746.9 463.1 C 749 463.1 753.1 463.1 755.7 463.5 C 758.3 463.8 759.2 464.6 760 465.4 C 760.9 466.2 761.6 467.2 762 495.7 C 762.3 524.1 762.3 580.2 762.7 608.6 C 763 637.1 763.8 638.1 764.6 638.9 C 765.4 639.7 766.4 640.4 807.3 640.8 C 848.3 641.2 929.3 641.2 969.8 641.2 L 1010.3 641.2" />
-		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colHead_colAP_2_0" d="M 251.3 275.3 L 289.6 275.3 C 327.8 275.3 404.3 275.3 443 275.7 C 481.8 276 482.7 276.8 483.5 277.6 C 484.4 278.4 485.1 279.4 485.5 289.9 C 485.8 300.4 485.8 320.5 486.2 331 C 486.5 341.6 487.3 342.5 488.1 343.3 C 488.9 344.2 489.9 344.9 494.7 345.3 C 499.5 345.6 508.1 345.6 512.5 345.6 L 516.8 345.6" />
-		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colAP_colHead_0_0" d="M 520.8 384.8 L 478.8 384.8 C 436.8 384.8 352.8 384.8 310.8 384.9 C 268.8 385 268.8 385.2 266.6 385.4 C 264.3 385.5 259.8 385.5 257.6 385.5 L 255.3 385.5" />
-		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colHead_colAP_3_0" d="M 251.3 495.6 L 253.4 495.6 C 255.5 495.6 259.6 495.6 262.2 495.3 C 264.8 494.9 265.7 494.2 266.5 493.4 C 267.4 492.5 268.1 491.6 268.5 486.7 C 268.8 481.8 268.8 473 269.2 468.1 C 269.5 463.3 270.3 462.3 271.1 461.5 C 271.9 460.7 272.9 459.9 307.8 459.6 C 342.8 459.2 411.8 459.2 446.8 458.8 C 481.8 458.5 482.7 457.8 483.5 456.9 C 484.4 456.1 485.1 455.1 485.5 450.5 C 485.8 445.8 485.8 437.4 486.2 432.7 C 486.5 428 487.3 427.1 488.1 426.2 C 488.9 425.4 489.9 424.7 494.7 424.3 C 499.5 424 508.1 424 512.5 424 L 516.8 424" />
-		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colHead_colAP_4_0" d="M 251.3 605.8 L 292.5 605.8 C 333.6 605.8 416 605.8 457.6 605.4 C 499.3 605.1 500.2 604.4 501 603.5 C 501.9 602.7 502.6 601.8 503 579.2 C 503.3 556.6 503.3 512.3 503.7 489.8 C 504 467.2 504.8 466.2 505.6 465.4 C 506.4 464.6 507.4 463.8 509.3 463.5 C 511.1 463.1 514 463.1 515.4 463.1 L 516.8 463.1" />
+		<!-- HET to HEV -->
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_HET_HEV_0_0" d="M 160 464 L 160 544" />
+
+		<!-- PL <> SPV -->
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_PL_SPV_0_0" d="M 1200 275 L 1200 355" />
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_SPV_PL_0_0" d="M 1290 359 L 1290 279" />
+
+		<!-- SPV <> PEV -->
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" id="L_SPV_PEV_0_0" d="M 1210 515 L 1210.3 595" />
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_PEV_SPV_0_0" d="M 1290 599 L 1290 519" />
+
+
+		<!-- SPV <> AP -->
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colPattern_colAP_0_0" d="M 1155 400 L 737 400" />
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colAP_colPattern_2_0" d="M 735 440 L 1155 440" />
+		
+		<!-- AP > pattern stuff -->
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colAP_colPattern_3_0" d="M 732 370 L 1155 150" />
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colAP_colPattern_4_0" d="M 735 463 L 1185 700" />
+
+
+		<!-- AP <> CL -->
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colHead_colAP_2_0" d="M 235 200 L 529 382" />
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colAP_colHead_0_0" d="M 532 420 L 238 250" />
+
+
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colHead_colAP_3_0" d="M 532 443 L 227 611" />
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colHead_colAP_4_0" d="M 225 655 L 530 479" />
 	</g>
+
 	<g class="edgeLabels">
-		<g transform="translate(168.8,506)" class="edgeLabel">
+		<g transform="translate(158,506)" class="edgeLabel">
 			<g transform="translate(-70.5,-12)" class="label">
 				<foreignObject height="24" width="141">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
@@ -481,7 +505,7 @@
 				</foreignObject>
 			</g>
 		</g>
-		<g transform="translate(1146.8,317)" class="edgeLabel">
+		<g transform="translate(1190,317)" class="edgeLabel">
 			<g transform="translate(-52.5,-12)" class="label">
 				<foreignObject height="24" width="105">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
@@ -490,7 +514,7 @@
 				</foreignObject>
 			</g>
 		</g>
-		<g transform="translate(1258.3,317)" class="edgeLabel">
+		<g transform="translate(1300,317)" class="edgeLabel">
 			<g transform="translate(-44,-12)" class="label">
 				<foreignObject height="24" width="88">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
@@ -499,7 +523,7 @@
 				</foreignObject>
 			</g>
 		</g>
-		<g transform="translate(1111.8,557)" class="edgeLabel">
+		<g transform="translate(1150,557)" class="edgeLabel">
 			<g transform="translate(-85.5,-12)" class="label">
 				<foreignObject height="24" width="171">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
@@ -508,7 +532,7 @@
 				</foreignObject>
 			</g>
 		</g>
-		<g transform="translate(1289.3,557)" class="edgeLabel">
+		<g transform="translate(1320,557)" class="edgeLabel">
 			<g transform="translate(-77,-12)" class="label">
 				<foreignObject height="24" width="154">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
@@ -545,7 +569,7 @@
 				</foreignObject>
 			</g>
 		</g>
-		<g transform="translate(888.3,263.2)" class="edgeLabel">
+		<g transform="translate(920,400)" class="edgeLabel">
 			<g transform="translate(-28,-12)" class="label">
 				<foreignObject height="24" width="56">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
@@ -554,7 +578,7 @@
 				</foreignObject>
 			</g>
 		</g>
-		<g transform="translate(888.3,389)" class="edgeLabel">
+		<g transform="translate(920,440)" class="edgeLabel">
 			<g transform="translate(-71,-12)" class="label">
 				<foreignObject height="24" width="142">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
@@ -563,7 +587,7 @@
 				</foreignObject>
 			</g>
 		</g>
-		<g transform="translate(888.3,469.6)" class="edgeLabel">
+		<g transform="translate(920,250)" class="edgeLabel">
 			<g transform="translate(-69,-36)" class="label">
 				<foreignObject height="72" width="138">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
@@ -572,7 +596,7 @@
 				</foreignObject>
 			</g>
 		</g>
-		<g transform="translate(888.3,640.7)" class="edgeLabel">
+		<g transform="translate(888.3,560.7)" class="edgeLabel">
 			<g transform="translate(-91,-12)" class="label">
 				<foreignObject height="24" width="182">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
@@ -581,7 +605,7 @@
 				</foreignObject>
 			</g>
 		</g>
-		<g transform="translate(377.3,274.8)" class="edgeLabel">
+		<g transform="translate(405,274)" class="edgeLabel">
 			<g transform="translate(-64.5,-12)" class="label">
 				<foreignObject height="24" width="129">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
@@ -590,7 +614,7 @@
 				</foreignObject>
 			</g>
 		</g>
-		<g transform="translate(377.3,384.3)" class="edgeLabel">
+		<g transform="translate(390,344)" class="edgeLabel">
 			<g transform="translate(-12.5,-12)" class="label">
 				<foreignObject height="24" width="25">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
@@ -599,7 +623,7 @@
 				</foreignObject>
 			</g>
 		</g>
-		<g transform="translate(377.3,458.7)" class="edgeLabel">
+		<g transform="translate(367,498)" class="edgeLabel">
 			<g transform="translate(-91,-12)" class="label">
 				<foreignObject height="24" width="182">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
@@ -608,7 +632,7 @@
 				</foreignObject>
 			</g>
 		</g>
-		<g transform="translate(377.3,605.3)" class="edgeLabel">
+		<g transform="translate(377,605)" class="edgeLabel">
 			<g transform="translate(-77,-12)" class="label">
 				<foreignObject height="24" width="154">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
