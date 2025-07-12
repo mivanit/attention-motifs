@@ -147,9 +147,9 @@ DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
 )
 
 
-
 def deep_merge_dicts(
-	dict1: dict, dict2: dict,
+	dict1: dict,
+	dict2: dict,
 ) -> dict:
 	"""Recursively merge two dictionaries into a new dict, with dict2 overwriting dict1"""
 	output: dict = deepcopy(dict1)
