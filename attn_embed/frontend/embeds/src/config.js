@@ -137,7 +137,13 @@ function getDefaultConfig() {
 			maxSelectedDisplay: 20,
 			hoverOffset: { x: 15, y: 15 },
 			shortcutStatusUpdateDelay: 100,
-			menuWidth: 350
+			menuWidth: 350,
+			// Initial shortcuts highlight animation
+			shortcutsHighlight: {
+				enabled: true,
+				duration: 3000,  // Duration in milliseconds
+				pulseSpeed: 1.5  // Speed of the pulse animation
+			}
 		},
 		// Right-click behavior configuration
 		rightClick: {

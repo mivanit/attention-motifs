@@ -56,6 +56,24 @@
 		margin-bottom: 0;
 	}
 	
+	/* Animated highlight for shortcuts on first load */
+	#shortcuts.highlight {
+		animation: shortcutsPulse var(--pulse-duration, 3s) var(--pulse-speed, 1.5s) ease-in-out;
+		border: 2px solid #ffaa00;
+		box-shadow: 0 0 15px #ffaa0080, inset 0 0 15px #ffaa0040;
+	}
+	
+	@keyframes shortcutsPulse {
+		0%, 100% {
+			border-color: #ffaa00;
+			box-shadow: 0 0 15px #ffaa0080, inset 0 0 15px #ffaa0040;
+		}
+		50% {
+			border-color: #ff6600;
+			box-shadow: 0 0 25px #ff6600ff, inset 0 0 25px #ff660060;
+		}
+	}
+	
 	/* Menu base styles */
 	.menu {
 		position: absolute;
@@ -918,7 +936,13 @@
 				maxSelectedDisplay: 20,
 				hoverOffset: { x: 15, y: 15 },
 				shortcutStatusUpdateDelay: 100,
-				menuWidth: 350
+				menuWidth: 350,
+				// Initial shortcuts highlight animation
+				shortcutsHighlight: {
+					enabled: true,
+					duration: 3000,  // Duration in milliseconds
+					pulseSpeed: 1.5  // Speed of the pulse animation
+				}
 			},
 			// Right-click behavior configuration
 			rightClick: {
@@ -1771,6 +1795,7 @@
 	
 			try {
 				let df;
+				let pbar = null;
 	
 				// Check if dataFile is null - use embedded data
 				if (filename === null || filename === undefined) {
@@ -1782,7 +1807,8 @@
 					}
 	
 					// Use embedded data directly
-					const pbar = NOTIF.pbar('Processing embedded data...');
+					spinner.complete();
+					pbar = NOTIF.pbar('Processing embedded data...');
 					pbar.progress(0.2);
 	
 					// Extract all unique column names from all rows
@@ -1809,7 +1835,7 @@
 					}
 	
 					downloadSpinner.complete();
-					const pbar = NOTIF.pbar('Processing data...');
+					pbar = NOTIF.pbar('Processing data...');
 	
 					pbar.progress(0.1);
 					const text = await resp.text();
@@ -1842,15 +1868,13 @@
 	
 				const result = new DataModel(df, numeric);
 	
-				if (filename === null || filename === undefined) {
-					spinner.complete();
-					NOTIF.success(`Loaded ${df.data.length} embedded data points with ${numeric.length} dimensions`);
-				} else {
-					const pbar = NOTIF.pbar('Processing data...');
+				// Complete progress bar and show success message
+				if (pbar) {
 					pbar.progress(1.0);
 					pbar.complete();
-					NOTIF.success(`Loaded ${df.data.length} data points with ${numeric.length} dimensions`);
 				}
+				
+				NOTIF.success(`Loaded ${df.data.length} data points with ${numeric.length} dimensions`);
 	
 				return result;
 			} catch (error) {
@@ -2241,7 +2265,7 @@
 	    /* ---------- shortcuts legend (top-right) - using CONFIG ---------- */
 	    _buildShortcutsLegend() {
 	        const sc = document.getElementById('shortcuts');
-	        sc.innerHTML = '<div>wasd – move</div><div>mouse + Q/E – roll</div>';
+	        sc.innerHTML = '<div>mouse - look around (2x click!)</div><div>wasd - move</div>';
 	
 	        Object.values(this.uiConfig).forEach(cfg => {
 	            const d = document.createElement('div');
@@ -4224,6 +4248,24 @@
 				pointCloud.setUIManager(uiManager);
 				sp.complete();
 				NOTIF.success('Ready! Press H for help.');
+				
+				// Highlight shortcuts menu on first load
+				if (CONFIG.ui.shortcutsHighlight.enabled) {
+					const shortcutsEl = document.getElementById('shortcuts');
+					if (shortcutsEl) {
+						// Set CSS custom properties for animation timing
+						shortcutsEl.style.setProperty('--pulse-duration', `${CONFIG.ui.shortcutsHighlight.duration}ms`);
+						shortcutsEl.style.setProperty('--pulse-speed', `${CONFIG.ui.shortcutsHighlight.pulseSpeed}s`);
+						
+						// Add highlight class
+						shortcutsEl.classList.add('highlight');
+						
+						// Remove highlight after animation completes
+						setTimeout(() => {
+							shortcutsEl.classList.remove('highlight');
+						}, CONFIG.ui.shortcutsHighlight.duration);
+					}
+				}
 			});
 		</script>
 </body>

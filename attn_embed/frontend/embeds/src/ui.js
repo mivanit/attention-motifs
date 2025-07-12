@@ -116,7 +116,7 @@ class UIManager {
     /* ---------- shortcuts legend (top-right) - using CONFIG ---------- */
     _buildShortcutsLegend() {
         const sc = document.getElementById('shortcuts');
-        sc.innerHTML = '<div>wasd – move</div><div>mouse + Q/E – roll</div>';
+        sc.innerHTML = '<div>mouse - look around (2x click!)</div><div>wasd - move</div>';
 
         Object.values(this.uiConfig).forEach(cfg => {
             const d = document.createElement('div');

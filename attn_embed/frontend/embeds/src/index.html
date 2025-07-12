@@ -250,6 +250,24 @@
 				pointCloud.setUIManager(uiManager);
 				sp.complete();
 				NOTIF.success('Ready! Press H for help.');
+				
+				// Highlight shortcuts menu on first load
+				if (CONFIG.ui.shortcutsHighlight.enabled) {
+					const shortcutsEl = document.getElementById('shortcuts');
+					if (shortcutsEl) {
+						// Set CSS custom properties for animation timing
+						shortcutsEl.style.setProperty('--pulse-duration', `${CONFIG.ui.shortcutsHighlight.duration}ms`);
+						shortcutsEl.style.setProperty('--pulse-speed', `${CONFIG.ui.shortcutsHighlight.pulseSpeed}s`);
+						
+						// Add highlight class
+						shortcutsEl.classList.add('highlight');
+						
+						// Remove highlight after animation completes
+						setTimeout(() => {
+							shortcutsEl.classList.remove('highlight');
+						}, CONFIG.ui.shortcutsHighlight.duration);
+					}
+				}
 			});
 		</script>
 </body>

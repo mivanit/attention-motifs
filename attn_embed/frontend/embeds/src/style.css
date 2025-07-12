@@ -38,6 +38,24 @@ body {
 	margin-bottom: 0;
 }
 
+/* Animated highlight for shortcuts on first load */
+#shortcuts.highlight {
+	animation: shortcutsPulse var(--pulse-duration, 3s) var(--pulse-speed, 1.5s) ease-in-out;
+	border: 2px solid #ffaa00;
+	box-shadow: 0 0 15px #ffaa0080, inset 0 0 15px #ffaa0040;
+}
+
+@keyframes shortcutsPulse {
+	0%, 100% {
+		border-color: #ffaa00;
+		box-shadow: 0 0 15px #ffaa0080, inset 0 0 15px #ffaa0040;
+	}
+	50% {
+		border-color: #ff6600;
+		box-shadow: 0 0 25px #ff6600ff, inset 0 0 25px #ff660060;
+	}
+}
+
 /* Menu base styles */
 .menu {
 	position: absolute;

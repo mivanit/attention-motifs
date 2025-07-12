@@ -29,6 +29,7 @@ class DataModel {
 
 		try {
 			let df;
+			let pbar = null;
 
 			// Check if dataFile is null - use embedded data
 			if (filename === null || filename === undefined) {
@@ -40,7 +41,8 @@ class DataModel {
 				}
 
 				// Use embedded data directly
-				const pbar = NOTIF.pbar('Processing embedded data...');
+				spinner.complete();
+				pbar = NOTIF.pbar('Processing embedded data...');
 				pbar.progress(0.2);
 
 				// Extract all unique column names from all rows
@@ -67,7 +69,7 @@ class DataModel {
 				}
 
 				downloadSpinner.complete();
-				const pbar = NOTIF.pbar('Processing data...');
+				pbar = NOTIF.pbar('Processing data...');
 
 				pbar.progress(0.1);
 				const text = await resp.text();
@@ -100,15 +102,13 @@ class DataModel {
 
 			const result = new DataModel(df, numeric);
 
-			if (filename === null || filename === undefined) {
-				spinner.complete();
-				NOTIF.success(`Loaded ${df.data.length} embedded data points with ${numeric.length} dimensions`);
-			} else {
-				const pbar = NOTIF.pbar('Processing data...');
+			// Complete progress bar and show success message
+			if (pbar) {
 				pbar.progress(1.0);
 				pbar.complete();
-				NOTIF.success(`Loaded ${df.data.length} data points with ${numeric.length} dimensions`);
 			}
+			
+			NOTIF.success(`Loaded ${df.data.length} data points with ${numeric.length} dimensions`);
 
 			return result;
 		} catch (error) {
