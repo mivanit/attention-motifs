@@ -1,232 +1,399 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
+  <head>
+    <title>3D Embedding Visualization</title>
+    <!-- Load Vue -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+    <!-- Load Plotly.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.2/plotly.min.js"></script>
+    <!-- Load utilities -->
+    <script src="array.js"></script>
+    <script src="dataframe.js"></script>
+    <script src="colorutil.js"></script>
+    <script src="logger.js"></script>
+    <script src="hover.js"></script>
+    <script src="plotutil.js"></script>
+    <script src="dataloader.js"></script>
+    <script src="clipboard.js"></script>
+    <script src="pl-interface.js"></script>
+    <script src="cfg.js"></script>
+    <!-- load main app -->
+    <script src="app.js"></script>
+    <!-- Load styles -->
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-<head>
-  <title>3D Embedding Visualization</title>
-  <!-- Load Vue -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
-  <!-- Load Plotly.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.2/plotly.min.js"></script>
-  <!-- Load utilities -->
-  <script src="array.js"></script>
-  <script src="dataframe.js"></script>
-  <script src="colorutil.js"></script>
-  <script src="logger.js"></script>
-  <script src="hover.js"></script>
-  <script src="plotutil.js"></script>
-  <script src="dataloader.js"></script>
-  <script src="clipboard.js"></script>
-  <script src="pl-interface.js"></script>
-  <script src="cfg.js"></script>
-  <!-- load main app -->
-  <script src="app.js"></script>
-  <!-- Load styles -->
-  <link rel="stylesheet" href="style.css">
-</head>
-
-<body>
-  <div id="app">
-    <h1>{{ title }}</h1>
-    <!-- Add this after the <h1>{{ title }}</h1> line (approximately line 25) -->
-    <div class="help-container">
-      <button id="help-button" class="help-button" @click="toggleHelpMenu">?</button>
-      <!-- Help Modal -->
-      <div class="help-modal" v-show="showHelpMenu">
-        <div class="help-modal-content">
-          <div class="help-modal-header">
-            <h2>Help - How to Use This Tool</h2>
-            <span class="help-close-button" @click="toggleHelpMenu">X</span>
-          </div>
-          <div class="help-modal-body">
-            <div class="help-section">
-              <h3>Basic Navigation</h3>
-              <ul>
-                <li><strong>Rotate the plot:</strong> Click and drag (if not over a point)</li>
-                <li><strong>Zoom:</strong> Scroll wheel or pinch gesture</li>
-                <li><strong>Pan:</strong> Right-click and drag (if not over a point)</li>
-                <li><strong>View details:</strong> Hover over points</li>
-              </ul>
+  <body>
+    <div id="app">
+      <h1>{{ title }}</h1>
+      <!-- Add this after the <h1>{{ title }}</h1> line (approximately line 25) -->
+      <div class="help-container">
+        <button id="help-button" class="help-button" @click="toggleHelpMenu">
+          ?
+        </button>
+        <!-- Help Modal -->
+        <div class="help-modal" v-show="showHelpMenu">
+          <div class="help-modal-content">
+            <div class="help-modal-header">
+              <h2>Help - How to Use This Tool</h2>
+              <span class="help-close-button" @click="toggleHelpMenu">X</span>
             </div>
-            <div class="help-section">
-              <h3>Data Selection and Visualization</h3>
-              <ul>
-                <li><strong>Select points:</strong> Click on points to select by category</li>
-                <li><strong>Copy point data:</strong> Right-click on a point</li>
-                <li><strong>Change color grouping:</strong> Use "Default color by" dropdown</li>
-                <li><strong>Change selection grouping:</strong> Use "Select by" dropdown</li>
-                <li><strong>Clear selection:</strong> Click "Clear Selection" button</li>
-                <li><strong>Change colors:</strong> Click "Regenerate Colors" button</li>
-              </ul>
+            <div class="help-modal-body">
+              <div class="help-section">
+                <h3>Basic Navigation</h3>
+                <ul>
+                  <li>
+                    <strong>Rotate the plot:</strong> Click and drag (if not
+                    over a point)
+                  </li>
+                  <li><strong>Zoom:</strong> Scroll wheel or pinch gesture</li>
+                  <li>
+                    <strong>Pan:</strong> Right-click and drag (if not over a
+                    point)
+                  </li>
+                  <li><strong>View details:</strong> Hover over points</li>
+                </ul>
+              </div>
+              <div class="help-section">
+                <h3>Data Selection and Visualization</h3>
+                <ul>
+                  <li>
+                    <strong>Select points:</strong> Click on points to select by
+                    category
+                  </li>
+                  <li>
+                    <strong>Copy point data:</strong> Right-click on a point
+                  </li>
+                  <li>
+                    <strong>Change color grouping:</strong> Use "Default color
+                    by" dropdown
+                  </li>
+                  <li>
+                    <strong>Change selection grouping:</strong> Use "Select by"
+                    dropdown
+                  </li>
+                  <li>
+                    <strong>Clear selection:</strong> Click "Clear Selection"
+                    button
+                  </li>
+                  <li>
+                    <strong>Change colors:</strong> Click "Regenerate Colors"
+                    button
+                  </li>
+                </ul>
+              </div>
+              <div class="help-section">
+                <h3>Visualization Controls</h3>
+                <ul>
+                  <li>
+                    <strong>Change 3D axes:</strong> Use X-Axis, Y-Axis, Z-Axis
+                    dropdowns to select different dimensions
+                  </li>
+                  <li>
+                    <strong>Adjust appearance:</strong> Use "Plot Configuration"
+                    panel to change point sizes and opacity
+                  </li>
+                  <li>
+                    <strong>Link to current view:</strong> Copy your current url
+                  </li>
+                </ul>
+              </div>
             </div>
-            <div class="help-section">
-              <h3>Visualization Controls</h3>
-              <ul>
-                <li><strong>Change 3D axes:</strong> Use X-Axis, Y-Axis, Z-Axis dropdowns to select different dimensions</li>
-                <li><strong>Adjust appearance:</strong> Use "Plot Configuration" panel to change point sizes and opacity</li>
-                <li><strong>Link to current view:</strong> Copy your current url</li>
-              </ul>
+          </div>
+        </div>
+      </div>
+      <!-- main controls -->
+      <div class="controls">
+        <div class="control-group">
+          <button @click="clearSelection">Clear Selection</button>
+          <button class="secondary" @click="regenerateColors">
+            Regenerate Colors
+          </button>
+        </div>
+        <div class="status-message">{{ statusMessage }}</div>
+      </div>
+      <!-- Column Selection Controls -->
+      <div class="column-controls">
+        <div class="column-control">
+          <label>Default color by:</label>
+          <div class="combo-select">
+            <input
+              type="text"
+              v-model="pendingColorByColumn"
+              @focus="showColorDropdown = true"
+              @blur="hideColorDropdownDelayed"
+              placeholder="Select column"
+            />
+            <div class="dropdown" v-if="showColorDropdown">
+              <div
+                v-for="column in availableColumns"
+                class="dropdown-item"
+                @mousedown.prevent="selectColorByColumn(column)"
+              >
+                {{ column }}
+              </div>
             </div>
           </div>
+          <button class="apply-button" @click="applyColorByColumn">
+            Apply
+          </button>
+        </div>
+        <div class="column-control">
+          <label>Select by:</label>
+          <div class="combo-select">
+            <input
+              type="text"
+              v-model="pendingSelectionColumn"
+              @focus="showSelectionDropdown = true"
+              @blur="hideSelectionDropdownDelayed"
+              placeholder="Select column"
+            />
+            <div class="dropdown" v-if="showSelectionDropdown">
+              <div
+                v-for="column in availableColumns"
+                class="dropdown-item"
+                @mousedown.prevent="selectSelectionColumn(column)"
+              >
+                {{ column }}
+              </div>
+            </div>
+          </div>
+          <button class="apply-button" @click="applySelectionColumn">
+            Apply
+          </button>
         </div>
       </div>
-    </div>
-    <!-- main controls -->
-    <div class="controls">
-      <div class="control-group">
-        <button @click="clearSelection">Clear Selection</button>
-        <button class="secondary" @click="regenerateColors">Regenerate Colors</button>
+      <!-- Axis Selection -->
+      <div class="axis-controls">
+        <div
+          v-for="(axis, axisName) in {x: 'X', y: 'Y', z: 'Z'}"
+          class="axis-control"
+        >
+          <label>{{ axisName }}-Axis:</label>
+          <select
+            v-model="pcaAxes[axis.toLowerCase()]"
+            @change="updatePlotAxes"
+          >
+            <option v-for="(_, index) in availablePcaAxes" :value="index">
+              {{ pcaColumnNames && pcaColumnNames.length > index ?
+              pcaColumnNames[index] : 'PC' + index }}
+            </option>
+          </select>
+        </div>
       </div>
-      <div class="status-message">{{ statusMessage }}</div>
-    </div>
-    <!-- Column Selection Controls -->
-    <div class="column-controls">
-      <div class="column-control">
-        <label>Default color by:</label>
-        <div class="combo-select">
-          <input type="text" v-model="pendingColorByColumn" @focus="showColorDropdown = true" @blur="hideColorDropdownDelayed" placeholder="Select column" />
-          <div class="dropdown" v-if="showColorDropdown">
-            <div v-for="column in availableColumns" class="dropdown-item" @mousedown.prevent="selectColorByColumn(column)"> {{ column }} </div>
+      <div id="plot-container" class="plot-container" ref="plotContainer">
+        <!-- Loading overlay -->
+        <div v-if="isLoading" class="loading-overlay">
+          <div class="loading-spinner"></div>
+          <h3>{{ loadingMessage }}</h3>
+          <p>{{ loadingDetail }}</p>
+          <div v-if="loadingProgress" class="loading-progress">
+            <div
+              class="loading-progress-bar"
+              :style="{ width: loadingProgressPercent + '%' }"
+            ></div>
+            <span class="loading-progress-percentage"
+              >{{ loadingProgressPercent }}%</span
+            >
           </div>
         </div>
-        <button class="apply-button" @click="applyColorByColumn">Apply</button>
-      </div>
-      <div class="column-control">
-        <label>Select by:</label>
-        <div class="combo-select">
-          <input type="text" v-model="pendingSelectionColumn" @focus="showSelectionDropdown = true" @blur="hideSelectionDropdownDelayed" placeholder="Select column" />
-          <div class="dropdown" v-if="showSelectionDropdown">
-            <div v-for="column in availableColumns" class="dropdown-item" @mousedown.prevent="selectSelectionColumn(column)"> {{ column }} </div>
-          </div>
+        <!-- Processing selection indicator -->
+        <div v-if="processingSelection" class="processing-indicator">
+          <div class="mini-spinner"></div>
+          <span>Processing selection...</span>
         </div>
-        <button class="apply-button" @click="applySelectionColumn">Apply</button>
-      </div>
-    </div>
-    <!-- Axis Selection -->
-    <div class="axis-controls">
-      <div v-for="(axis, axisName) in {x: 'X', y: 'Y', z: 'Z'}" class="axis-control">
-        <label>{{ axisName }}-Axis:</label>
-        <select v-model="pcaAxes[axis.toLowerCase()]" @change="updatePlotAxes">
-          <option v-for="(_, index) in availablePcaAxes" :value="index"> {{ pcaColumnNames && pcaColumnNames.length > index ? pcaColumnNames[index] : 'PC' + index }} </option>
-        </select>
-      </div>
-    </div>
-    <div id="plot-container" class="plot-container" ref="plotContainer">
-      <!-- Loading overlay -->
-      <div v-if="isLoading" class="loading-overlay">
-        <div class="loading-spinner"></div>
-        <h3>{{ loadingMessage }}</h3>
-        <p>{{ loadingDetail }}</p>
-        <div v-if="loadingProgress" class="loading-progress">
-          <div class="loading-progress-bar" :style="{ width: loadingProgressPercent + '%' }"></div>
-          <span class="loading-progress-percentage">{{ loadingProgressPercent }}%</span>
+        <!-- Plot updating indicator -->
+        <div
+          v-if="isUpdatingPlot && !processingSelection"
+          class="updating-indicator"
+        >
+          <div class="mini-spinner"></div>
+          <span>Updating plot...</span>
         </div>
       </div>
-      <!-- Processing selection indicator -->
-      <div v-if="processingSelection" class="processing-indicator">
-        <div class="mini-spinner"></div>
-        <span>Processing selection...</span>
-      </div>
-      <!-- Plot updating indicator -->
-      <div v-if="isUpdatingPlot && !processingSelection" class="updating-indicator">
-        <div class="mini-spinner"></div>
-        <span>Updating plot...</span>
-      </div>
-    </div>
-    <!-- Configuration Panel -->
-    <div class="config-panel">
-      <div class="config-header" @click="toggleConfigPanel">
-        <h3>Data Configuration</h3>
-        <span class="collapse-icon" :class="{ rotated: !showConfigPanel }">V</span>
-      </div>
-      <div class="config-content" v-show="showConfigPanel">
-        <div class="control-row">
-          <div class="control-label">File Path:</div>
-          <div class="control-input">
-            <input type="text" v-model="dataConfig.filePath" placeholder="Path to JSONL file">
-          </div>
+      <!-- Configuration Panel -->
+      <div class="config-panel">
+        <div class="config-header" @click="toggleConfigPanel">
+          <h3>Data Configuration</h3>
+          <span class="collapse-icon" :class="{ rotated: !showConfigPanel }"
+            >V</span
+          >
         </div>
-        <div class="control-row">
-          <div class="control-label">Numerical Prefix:</div>
-          <div class="control-input">
-            <input type="text" v-model="dataConfig.numericalPrefix" placeholder="Prefix for numerical columns (e.g., pc.)">
-          </div>
-        </div>
-        <div class="control-row">
-          <button @click="applyConfigChanges" class="apply-button">Apply Configuration</button>
-        </div>
-      </div>
-    </div>
-    <div>
-      <h3>Selected Values:</h3>
-      <div class="selection-display">
-        <template v-if="selectedValues.length === 0">None</template>
-        <span v-for="(val, i) in selectedValues" :key="val" class="selected-value" :style="{ backgroundColor: getSelectionColor(i) }"> {{ val }} <div class="remove-btn" @click="removeSelectedValue(val)" title="Remove">X</div>
-        </span>
-      </div>
-    </div>
-    <div class="config-display">
-      <div class="config-header" @click="toggleConfigCollapse">
-        <h3>Plot Configuration</h3>
-        <span class="collapse-icon" :class="{ rotated: configCollapsed }">V</span>
-      </div>
-      <div class="config-content" v-show="!configCollapsed">
-        <div class="config-section">
-          <h4>Non-selected Points</h4>
+        <div class="config-content" v-show="showConfigPanel">
           <div class="control-row">
-            <div class="control-label">Opacity:</div>
+            <div class="control-label">File Path:</div>
             <div class="control-input">
-              <input type="range" min="0" max="1" step="0.01" v-model.number="nonSelectedOpacity" @change="updatePlot">
-              <input type="number" min="0" max="1" step="0.01" v-model.number="nonSelectedOpacity" @change="updatePlot">
+              <input
+                type="text"
+                v-model="dataConfig.filePath"
+                placeholder="Path to JSONL file"
+              />
             </div>
           </div>
           <div class="control-row">
-            <div class="control-label">Size:</div>
+            <div class="control-label">Numerical Prefix:</div>
             <div class="control-input">
-              <input type="range" min="0.5" max="10" step="0.5" v-model.number="nonSelectedSize" @change="updatePlot">
-              <input type="number" min="0.5" max="10" step="0.5" v-model.number="nonSelectedSize" @change="updatePlot">
+              <input
+                type="text"
+                v-model="dataConfig.numericalPrefix"
+                placeholder="Prefix for numerical columns (e.g., pc.)"
+              />
             </div>
           </div>
           <div class="control-row">
-            <div class="control-label">Color:</div>
-            <div class="control-input">
-              <input type="color" v-model="nonSelectedColor" @change="updatePlot">
-            </div>
-          </div>
-        </div>
-        <div class="config-section">
-          <h4>Selected Points</h4>
-          <div class="control-row">
-            <div class="control-label">Opacity:</div>
-            <div class="control-input">
-              <input type="range" min="0" max="1" step="0.01" v-model.number="selectedOpacity" @change="updatePlot">
-              <input type="number" min="0" max="1" step="0.01" v-model.number="selectedOpacity" @change="updatePlot">
-            </div>
-          </div>
-          <div class="control-row">
-            <div class="control-label">Size:</div>
-            <div class="control-input">
-              <input type="range" min="0.5" max="10" step="0.5" v-model.number="selectedSize" @change="updatePlot">
-              <input type="number" min="0.5" max="10" step="0.5" v-model.number="selectedSize" @change="updatePlot">
-            </div>
+            <button @click="applyConfigChanges" class="apply-button">
+              Apply Configuration
+            </button>
           </div>
         </div>
       </div>
-    </div>
-    <div class="url-section">
-      <h3>Generated Link:</h3>
       <div>
-        <input type="text" v-model="baseUrl" placeholder="Enter base URL" />
-        <div class="generated-links" v-if="selectedValues.length > 0">
-          <h4>Combined Link:</h4>
-          <a :href="patternsUrl" target="_blank" class="generated-link"> {{ patternsUrl }} </a>
+        <h3>Selected Values:</h3>
+        <div class="selection-display">
+          <template v-if="selectedValues.length === 0">None</template>
+          <span
+            v-for="(val, i) in selectedValues"
+            :key="val"
+            class="selected-value"
+            :style="{ backgroundColor: getSelectionColor(i) }"
+          >
+            {{ val }}
+            <div
+              class="remove-btn"
+              @click="removeSelectedValue(val)"
+              title="Remove"
+            >
+              X
+            </div>
+          </span>
+        </div>
+      </div>
+      <div class="config-display">
+        <div class="config-header" @click="toggleConfigCollapse">
+          <h3>Plot Configuration</h3>
+          <span class="collapse-icon" :class="{ rotated: configCollapsed }"
+            >V</span
+          >
+        </div>
+        <div class="config-content" v-show="!configCollapsed">
+          <div class="config-section">
+            <h4>Non-selected Points</h4>
+            <div class="control-row">
+              <div class="control-label">Opacity:</div>
+              <div class="control-input">
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  v-model.number="nonSelectedOpacity"
+                  @change="updatePlot"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  v-model.number="nonSelectedOpacity"
+                  @change="updatePlot"
+                />
+              </div>
+            </div>
+            <div class="control-row">
+              <div class="control-label">Size:</div>
+              <div class="control-input">
+                <input
+                  type="range"
+                  min="0.5"
+                  max="10"
+                  step="0.5"
+                  v-model.number="nonSelectedSize"
+                  @change="updatePlot"
+                />
+                <input
+                  type="number"
+                  min="0.5"
+                  max="10"
+                  step="0.5"
+                  v-model.number="nonSelectedSize"
+                  @change="updatePlot"
+                />
+              </div>
+            </div>
+            <div class="control-row">
+              <div class="control-label">Color:</div>
+              <div class="control-input">
+                <input
+                  type="color"
+                  v-model="nonSelectedColor"
+                  @change="updatePlot"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="config-section">
+            <h4>Selected Points</h4>
+            <div class="control-row">
+              <div class="control-label">Opacity:</div>
+              <div class="control-input">
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  v-model.number="selectedOpacity"
+                  @change="updatePlot"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  v-model.number="selectedOpacity"
+                  @change="updatePlot"
+                />
+              </div>
+            </div>
+            <div class="control-row">
+              <div class="control-label">Size:</div>
+              <div class="control-input">
+                <input
+                  type="range"
+                  min="0.5"
+                  max="10"
+                  step="0.5"
+                  v-model.number="selectedSize"
+                  @change="updatePlot"
+                />
+                <input
+                  type="number"
+                  min="0.5"
+                  max="10"
+                  step="0.5"
+                  v-model.number="selectedSize"
+                  @change="updatePlot"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="url-section">
+        <h3>Generated Link:</h3>
+        <div>
+          <input type="text" v-model="baseUrl" placeholder="Enter base URL" />
+          <div class="generated-links" v-if="selectedValues.length > 0">
+            <h4>Combined Link:</h4>
+            <a :href="patternsUrl" target="_blank" class="generated-link">
+              {{ patternsUrl }}
+            </a>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-  <script>
-    // Mount the app to the container
-    app.mount('#app');
-  </script>
-</body>
-
+    <script>
+      // Mount the app to the container
+      app.mount("#app");
+    </script>
+  </body>
 </html>

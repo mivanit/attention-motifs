@@ -1,42 +1,45 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Head Classifications</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
     <div class="container">
-        <h1>Head Classifications</h1>
-        <p class="description">
-            Browse attention head classifications from various research papers. 
-            Click on any classification to view all heads of that type in AttentionPedia.
-        </p>
-        
-        <div class="controls">
-            <input type="text" 
-                   class="search-bar" 
-                   id="search-input" 
-                   placeholder="Search classifications (e.g., 'induction', 'name mover', 'previous token')...">
-            
-            <div class="paper-filters">
-                <div class="filter-title">Filter by Paper:</div>
-                <div id="paper-checkboxes">
-                    <!-- Checkboxes will be dynamically populated -->
-                </div>
-            </div>
+      <h1>Head Classifications</h1>
+      <p class="description">
+        Browse attention head classifications from various research papers.
+        Click on any classification to view all heads of that type in
+        AttentionPedia.
+      </p>
+
+      <div class="controls">
+        <input
+          type="text"
+          class="search-bar"
+          id="search-input"
+          placeholder="Search classifications (e.g., 'induction', 'name mover', 'previous token')..."
+        />
+
+        <div class="paper-filters">
+          <div class="filter-title">Filter by Paper:</div>
+          <div id="paper-checkboxes">
+            <!-- Checkboxes will be dynamically populated -->
+          </div>
         </div>
-        
-        <div class="stats" id="stats">
-            <!-- Stats will be dynamically populated -->
-        </div>
-        
-        <div id="classifications-container">
-            <div class="loading">Loading classifications...</div>
-        </div>
+      </div>
+
+      <div class="stats" id="stats">
+        <!-- Stats will be dynamically populated -->
+      </div>
+
+      <div id="classifications-container">
+        <div class="loading">Loading classifications...</div>
+      </div>
     </div>
 
     <script src="app.js"></script>
-</body>
+  </body>
 </html>

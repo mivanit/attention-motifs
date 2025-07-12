@@ -1,12 +1,12 @@
 /**
  * Configuration Handler
- * 
+ *
  * Provides a flexible configuration system with multiple override levels:
  * 1. Default configuration (lowest priority)
  * 2. Inline configuration override (INLINE_CONFIG)
  * 3. External config.json file
  * 4. URL parameters (highest priority)
- * 
+ *
  * Features:
  * - Deep merging of configuration objects
  * - URL parameter parsing with dot notation support
@@ -21,18 +21,10 @@ const URL_UPDATE_DEBOUNCE_DELAY = 500; // ms
 const FLOAT_COMPARISON_EPSILON = 0.001;
 
 // Keys to skip during URL serialization
-const URL_SKIP_PATHS = [
-	'data.cache',
-	'network.headers',
-	'tempData'
-];
+const URL_SKIP_PATHS = ["data.cache", "network.headers", "tempData"];
 
 // Keys to skip during config comparison
-const COMPARISON_SKIP_KEYS = [
-	'timestamp',
-	'sessionId',
-	'tempData'
-];
+const COMPARISON_SKIP_KEYS = ["timestamp", "sessionId", "tempData"];
 
 // For inline config overrides - replace this with external script if needed
 var INLINE_CONFIG = null;
@@ -50,35 +42,37 @@ let URL_UPDATE_TIMEOUT = null;
  * @returns {object} Default configuration
  */
 function getDefaultConfig() {
-	let default_cfg = {
-		head_viewing: "gpt2-small:L5:H5",
-		heads_display: null,
-		classification_mode: false,
-		current_classification: null,
-		table: {
-			n_nearby: 2,
-			n_share_class: 2,
-			n_distant: 0,
-			n_random: 0
-		},
-		n_prompts: 5,
-		pattern_size: 120,
-		prompts_url: "../../patterns/gpt2-small/prompts.jsonl",
-		patterns_path: "../../patterns/",
-		attnpedia_url: "ap.json",
-		headDistsnpy_url: "../../features/head_dists_raw/distances.npy",
-		headDistsmeta_url: "../../features/head_dists_raw/dists_meta.json",
-		pattern_url_template: "../../patterns/single.html?prompt={prompt_hash}&head={model}.L{layer}.H{head}",
-		patternlens_url_template: "../../patterns/index.html?models={model}&heads-{model}=L{layer}H{head}&prompts={prompt_hashes}",
-	};
+  let default_cfg = {
+    head_viewing: "gpt2-small:L5:H5",
+    heads_display: null,
+    classification_mode: false,
+    current_classification: null,
+    table: {
+      n_nearby: 2,
+      n_share_class: 2,
+      n_distant: 0,
+      n_random: 0,
+    },
+    n_prompts: 5,
+    pattern_size: 120,
+    prompts_url: "../../patterns/gpt2-small/prompts.jsonl",
+    patterns_path: "../../patterns/",
+    attnpedia_url: "ap.json",
+    headDistsnpy_url: "../../features/head_dists_raw/distances.npy",
+    headDistsmeta_url: "../../features/head_dists_raw/dists_meta.json",
+    pattern_url_template:
+      "../../patterns/single.html?prompt={prompt_hash}&head={model}.L{layer}.H{head}",
+    patternlens_url_template:
+      "../../patterns/index.html?models={model}&heads-{model}=L{layer}H{head}&prompts={prompt_hashes}",
+  };
 
-	if (INLINE_CONFIG) {
-		// If INLINE_CONFIG is set, merge it into the default config
-		deepMerge(default_cfg, INLINE_CONFIG);
-		console.log("Merged inline config overrides");
-	}
+  if (INLINE_CONFIG) {
+    // If INLINE_CONFIG is set, merge it into the default config
+    deepMerge(default_cfg, INLINE_CONFIG);
+    console.log("Merged inline config overrides");
+  }
 
-	return default_cfg;
+  return default_cfg;
 }
 
 /**
@@ -88,39 +82,41 @@ function getDefaultConfig() {
  * @returns {Promise<object>} resolved CONFIG object
  */
 async function getConfig() {
-	// Initialize with defaults
-	CONFIG = getDefaultConfig();
+  // Initialize with defaults
+  CONFIG = getDefaultConfig();
 
-	try {
-		// First, try to load config.json
-		const r = await fetch(CONFIG_FILE_PATH);
-		if (r.ok) {
-			const loaded = await r.json();
-			// Deep merge loaded config into CONFIG
-			deepMerge(CONFIG, loaded);
-			// Store a deep copy of the loaded config for URL comparison
-			LOADED_CONFIG = JSON.parse(JSON.stringify(CONFIG));
-			console.log("Loaded config.json");
-		} else {
-			console.warn("config.json not found, using defaults");
-			// If no config.json, use defaults for comparison
-			LOADED_CONFIG = JSON.parse(JSON.stringify(CONFIG));
-		}
-	} catch (e) {
-		// if the inline config is null, then failing to find config.json is fine
-		if (!INLINE_CONFIG) {
-			console.error("Config load error:", e);
-		} else {
-			console.warn("Failed to load config.json, but it's fine because an inline config was provided");
-		}
-		// On error, use defaults for comparison
-		LOADED_CONFIG = JSON.parse(JSON.stringify(CONFIG));
-	}
+  try {
+    // First, try to load config.json
+    const r = await fetch(CONFIG_FILE_PATH);
+    if (r.ok) {
+      const loaded = await r.json();
+      // Deep merge loaded config into CONFIG
+      deepMerge(CONFIG, loaded);
+      // Store a deep copy of the loaded config for URL comparison
+      LOADED_CONFIG = JSON.parse(JSON.stringify(CONFIG));
+      console.log("Loaded config.json");
+    } else {
+      console.warn("config.json not found, using defaults");
+      // If no config.json, use defaults for comparison
+      LOADED_CONFIG = JSON.parse(JSON.stringify(CONFIG));
+    }
+  } catch (e) {
+    // if the inline config is null, then failing to find config.json is fine
+    if (!INLINE_CONFIG) {
+      console.error("Config load error:", e);
+    } else {
+      console.warn(
+        "Failed to load config.json, but it's fine because an inline config was provided",
+      );
+    }
+    // On error, use defaults for comparison
+    LOADED_CONFIG = JSON.parse(JSON.stringify(CONFIG));
+  }
 
-	// Parse URL parameters and override CONFIG values (highest priority)
-	parseURLParams();
+  // Parse URL parameters and override CONFIG values (highest priority)
+  parseURLParams();
 
-	return CONFIG;
+  return CONFIG;
 }
 
 /**
@@ -129,14 +125,18 @@ async function getConfig() {
  * @param {object} source - Source object to merge from
  */
 function deepMerge(target, source) {
-	for (const key in source) {
-		if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-			if (!target[key]) target[key] = {};
-			deepMerge(target[key], source[key]);
-		} else {
-			target[key] = source[key];
-		}
-	}
+  for (const key in source) {
+    if (
+      source[key] &&
+      typeof source[key] === "object" &&
+      !Array.isArray(source[key])
+    ) {
+      if (!target[key]) target[key] = {};
+      deepMerge(target[key], source[key]);
+    } else {
+      target[key] = source[key];
+    }
+  }
 }
 
 /**
@@ -146,13 +146,13 @@ function deepMerge(target, source) {
  * @param {URLSearchParams} [params] - Optional URLSearchParams object, defaults to current URL
  */
 function parseURLParams(params = null) {
-	if (!params) {
-		params = new URLSearchParams(window.location.search);
-	}
+  if (!params) {
+    params = new URLSearchParams(window.location.search);
+  }
 
-	for (const [key, value] of params) {
-		setNestedConfigValue(CONFIG, key, parseConfigValue(value));
-	}
+  for (const [key, value] of params) {
+    setNestedConfigValue(CONFIG, key, parseConfigValue(value));
+  }
 }
 
 /**
@@ -163,20 +163,20 @@ function parseURLParams(params = null) {
  * @param {any} value - Value to set
  */
 function setNestedConfigValue(obj, path, value) {
-	const keys = path.split('.');
-	let current = obj;
+  const keys = path.split(".");
+  let current = obj;
 
-	for (let i = 0; i < keys.length - 1; i++) {
-		const key = keys[i];
-		if (!(key in current) || typeof current[key] !== 'object') {
-			current[key] = {};
-		}
-		current = current[key];
-	}
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    if (!(key in current) || typeof current[key] !== "object") {
+      current[key] = {};
+    }
+    current = current[key];
+  }
 
-	const finalKey = keys[keys.length - 1];
-	current[finalKey] = value;
-	console.log(`URL param override: ${path} = ${value}`);
+  const finalKey = keys[keys.length - 1];
+  current[finalKey] = value;
+  console.log(`URL param override: ${path} = ${value}`);
 }
 
 /**
@@ -186,13 +186,13 @@ function setNestedConfigValue(obj, path, value) {
  * @returns {string} URL-friendly encoded value
  */
 function encodeForURL(value) {
-	if (typeof value === 'string') {
-		// Convert head ID format from model:L#:H# to model~L#~H#
-		if (value.includes(':L') && value.includes(':H')) {
-			return value.replace(/:/g, '~');
-		}
-	}
-	return value;
+  if (typeof value === "string") {
+    // Convert head ID format from model:L#:H# to model~L#~H#
+    if (value.includes(":L") && value.includes(":H")) {
+      return value.replace(/:/g, "~");
+    }
+  }
+  return value;
 }
 
 /**
@@ -202,11 +202,15 @@ function encodeForURL(value) {
  * @returns {any} Decoded value
  */
 function decodeFromURL(value) {
-	// Check if this looks like a head ID (contains ~L and ~H)
-	if (typeof value === 'string' && value.includes('~L') && value.includes('~H')) {
-		return value.replace(/~/g, ':');
-	}
-	return value;
+  // Check if this looks like a head ID (contains ~L and ~H)
+  if (
+    typeof value === "string" &&
+    value.includes("~L") &&
+    value.includes("~H")
+  ) {
+    return value.replace(/~/g, ":");
+  }
+  return value;
 }
 
 /**
@@ -216,31 +220,38 @@ function decodeFromURL(value) {
  * @returns {any} Parsed value
  */
 function parseConfigValue(value) {
-	// Boolean
-	if (value === 'true') return true;
-	if (value === 'false') return false;
+  // Boolean
+  if (value === "true") return true;
+  if (value === "false") return false;
 
-	// Array (tilde-separated) - but handle single values too
-	if (value.includes('~')) {
-		const parts = value.split('~').map(v => v.trim()).filter(v => v.length > 0);
-		
-		// Check if this might be a single head ID that was encoded
-		if (parts.length === 3 && parts[1].startsWith('L') && parts[2].startsWith('H')) {
-			// This is likely a head ID, decode it back
-			return decodeFromURL(value);
-		}
-		
-		// Otherwise treat as array and decode each element
-		return parts.map(part => decodeFromURL(part));
-	}
+  // Array (tilde-separated) - but handle single values too
+  if (value.includes("~")) {
+    const parts = value
+      .split("~")
+      .map((v) => v.trim())
+      .filter((v) => v.length > 0);
 
-	// Number
-	if (!isNaN(value) && !isNaN(parseFloat(value))) {
-		return parseFloat(value);
-	}
+    // Check if this might be a single head ID that was encoded
+    if (
+      parts.length === 3 &&
+      parts[1].startsWith("L") &&
+      parts[2].startsWith("H")
+    ) {
+      // This is likely a head ID, decode it back
+      return decodeFromURL(value);
+    }
 
-	// String (including hex colors, URLs, etc.) - decode from URL format
-	return decodeFromURL(value);
+    // Otherwise treat as array and decode each element
+    return parts.map((part) => decodeFromURL(part));
+  }
+
+  // Number
+  if (!isNaN(value) && !isNaN(parseFloat(value))) {
+    return parseFloat(value);
+  }
+
+  // String (including hex colors, URLs, etc.) - decode from URL format
+  return decodeFromURL(value);
 }
 
 /**
@@ -249,16 +260,18 @@ function parseConfigValue(value) {
  * @param {number} [delay] - Debounce delay in milliseconds (uses global constant if not provided)
  */
 function updateURL(delay = URL_UPDATE_DEBOUNCE_DELAY) {
-	if (URL_UPDATE_TIMEOUT) {
-		clearTimeout(URL_UPDATE_TIMEOUT);
-	}
+  if (URL_UPDATE_TIMEOUT) {
+    clearTimeout(URL_UPDATE_TIMEOUT);
+  }
 
-	URL_UPDATE_TIMEOUT = setTimeout(() => {
-		const params = generateURLParams();
-		const newURL = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
-		window.history.replaceState({}, '', newURL);
-		URL_UPDATE_TIMEOUT = null;
-	}, delay);
+  URL_UPDATE_TIMEOUT = setTimeout(() => {
+    const params = generateURLParams();
+    const newURL =
+      window.location.pathname +
+      (params.toString() ? "?" + params.toString() : "");
+    window.history.replaceState({}, "", newURL);
+    URL_UPDATE_TIMEOUT = null;
+  }, delay);
 }
 
 /**
@@ -267,34 +280,34 @@ function updateURL(delay = URL_UPDATE_DEBOUNCE_DELAY) {
  * @returns {URLSearchParams} URL parameters representing config differences
  */
 function generateURLParams() {
-	if (!LOADED_CONFIG) {
-		// Fallback to default config if loaded config not available
-		return new URLSearchParams();
-	}
+  if (!LOADED_CONFIG) {
+    // Fallback to default config if loaded config not available
+    return new URLSearchParams();
+  }
 
-	const params = new URLSearchParams();
-	const differences = findConfigDifferences(CONFIG, LOADED_CONFIG);
+  const params = new URLSearchParams();
+  const differences = findConfigDifferences(CONFIG, LOADED_CONFIG);
 
-	for (const [path, value] of differences) {
-		// Skip certain fields that shouldn't be in URLs
-		if (shouldSkipInURL(path)) {
-			continue;
-		}
+  for (const [path, value] of differences) {
+    // Skip certain fields that shouldn't be in URLs
+    if (shouldSkipInURL(path)) {
+      continue;
+    }
 
-		// Special handling for arrays
-		if (Array.isArray(value)) {
-			if (value.length > 0) {
-				// Encode each array element for URL
-				const encodedValues = value.map(v => encodeForURL(v));
-				params.set(path, encodedValues.join('~'));
-			}
-		} else {
-			// Encode single value for URL
-			params.set(path, encodeForURL(value).toString());
-		}
-	}
+    // Special handling for arrays
+    if (Array.isArray(value)) {
+      if (value.length > 0) {
+        // Encode each array element for URL
+        const encodedValues = value.map((v) => encodeForURL(v));
+        params.set(path, encodedValues.join("~"));
+      }
+    } else {
+      // Encode single value for URL
+      params.set(path, encodeForURL(value).toString());
+    }
+  }
 
-	return params;
+  return params;
 }
 
 /**
@@ -303,7 +316,7 @@ function generateURLParams() {
  * @returns {boolean} True if should be skipped
  */
 function shouldSkipInURL(path) {
-	return URL_SKIP_PATHS.some(skipPath => path.startsWith(skipPath));
+  return URL_SKIP_PATHS.some((skipPath) => path.startsWith(skipPath));
 }
 
 /**
@@ -315,50 +328,57 @@ function shouldSkipInURL(path) {
  * @param {string} [prefix=''] - Current path prefix
  * @returns {Array<[string, any]>} Array of [path, value] differences
  */
-function findConfigDifferences(current, base, prefix = '') {
-	const differences = [];
+function findConfigDifferences(current, base, prefix = "") {
+  const differences = [];
 
-	for (const key in current) {
-		// Skip certain keys that shouldn't be compared
-		if (shouldSkipInComparison(key)) {
-			continue;
-		}
+  for (const key in current) {
+    // Skip certain keys that shouldn't be compared
+    if (shouldSkipInComparison(key)) {
+      continue;
+    }
 
-		const currentPath = prefix ? `${prefix}.${key}` : key;
-		const currentValue = current[key];
-		const baseValue = base[key];
+    const currentPath = prefix ? `${prefix}.${key}` : key;
+    const currentValue = current[key];
+    const baseValue = base[key];
 
-		if (Array.isArray(currentValue)) {
-			// Special handling for arrays
-			if (!Array.isArray(baseValue) || !arraysEqual(currentValue, baseValue)) {
-				differences.push([currentPath, currentValue]);
-			}
-		} else if (typeof currentValue === 'object' && currentValue !== null) {
-			if (typeof baseValue === 'object' && !Array.isArray(baseValue) && baseValue !== null) {
-				differences.push(...findConfigDifferences(currentValue, baseValue, currentPath));
-			} else {
-				// Base doesn't have this object, include all of current
-				differences.push([currentPath, JSON.stringify(currentValue)]);
-			}
-		} else {
-			// Compare primitive values with epsilon for floats
-			let valuesEqual = false;
+    if (Array.isArray(currentValue)) {
+      // Special handling for arrays
+      if (!Array.isArray(baseValue) || !arraysEqual(currentValue, baseValue)) {
+        differences.push([currentPath, currentValue]);
+      }
+    } else if (typeof currentValue === "object" && currentValue !== null) {
+      if (
+        typeof baseValue === "object" &&
+        !Array.isArray(baseValue) &&
+        baseValue !== null
+      ) {
+        differences.push(
+          ...findConfigDifferences(currentValue, baseValue, currentPath),
+        );
+      } else {
+        // Base doesn't have this object, include all of current
+        differences.push([currentPath, JSON.stringify(currentValue)]);
+      }
+    } else {
+      // Compare primitive values with epsilon for floats
+      let valuesEqual = false;
 
-			if (typeof currentValue === 'number' && typeof baseValue === 'number') {
-				// Use epsilon comparison for floats
-				valuesEqual = Math.abs(currentValue - baseValue) < FLOAT_COMPARISON_EPSILON;
-			} else {
-				// Direct comparison for other types
-				valuesEqual = currentValue === baseValue;
-			}
+      if (typeof currentValue === "number" && typeof baseValue === "number") {
+        // Use epsilon comparison for floats
+        valuesEqual =
+          Math.abs(currentValue - baseValue) < FLOAT_COMPARISON_EPSILON;
+      } else {
+        // Direct comparison for other types
+        valuesEqual = currentValue === baseValue;
+      }
 
-			if (!valuesEqual) {
-				differences.push([currentPath, currentValue]);
-			}
-		}
-	}
+      if (!valuesEqual) {
+        differences.push([currentPath, currentValue]);
+      }
+    }
+  }
 
-	return differences;
+  return differences;
 }
 
 /**
@@ -367,7 +387,7 @@ function findConfigDifferences(current, base, prefix = '') {
  * @returns {boolean} True if should be skipped
  */
 function shouldSkipInComparison(key) {
-	return COMPARISON_SKIP_KEYS.includes(key);
+  return COMPARISON_SKIP_KEYS.includes(key);
 }
 
 /**
@@ -377,11 +397,11 @@ function shouldSkipInComparison(key) {
  * @returns {boolean} True if arrays are equal
  */
 function arraysEqual(arr1, arr2) {
-	if (arr1.length !== arr2.length) return false;
-	for (let i = 0; i < arr1.length; i++) {
-		if (arr1[i] !== arr2[i]) return false;
-	}
-	return true;
+  if (arr1.length !== arr2.length) return false;
+  for (let i = 0; i < arr1.length; i++) {
+    if (arr1[i] !== arr2[i]) return false;
+  }
+  return true;
 }
 
 /**
@@ -390,7 +410,7 @@ function arraysEqual(arr1, arr2) {
  * @returns {string} Formatted JSON configuration
  */
 function getConfigAsJSON(indent = 2) {
-	return JSON.stringify(CONFIG, null, indent);
+  return JSON.stringify(CONFIG, null, indent);
 }
 
 /**
@@ -398,15 +418,15 @@ function getConfigAsJSON(indent = 2) {
  * Creates a downloadable JSON file with current config
  */
 function exportConfigToNewTab() {
-	const configText = getConfigAsJSON();
-	const blob = new Blob([configText], { type: 'application/json' });
-	const url = URL.createObjectURL(blob);
-	const newWindow = window.open(url, '_blank');
+  const configText = getConfigAsJSON();
+  const blob = new Blob([configText], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const newWindow = window.open(url, "_blank");
 
-	// Clean up the object URL after a delay
-	setTimeout(() => {
-		URL.revokeObjectURL(url);
-	}, 1000);
+  // Clean up the object URL after a delay
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1000);
 }
 
 /**
@@ -414,25 +434,25 @@ function exportConfigToNewTab() {
  * Useful for reverting all changes back to the original loaded state
  */
 function resetConfigToLoaded() {
-	if (!LOADED_CONFIG) {
-		console.warn("No loaded config available, resetting to defaults");
-		CONFIG = getDefaultConfig();
-	} else {
-		// Deep copy the loaded config back to CONFIG
-		CONFIG = JSON.parse(JSON.stringify(LOADED_CONFIG));
-	}
+  if (!LOADED_CONFIG) {
+    console.warn("No loaded config available, resetting to defaults");
+    CONFIG = getDefaultConfig();
+  } else {
+    // Deep copy the loaded config back to CONFIG
+    CONFIG = JSON.parse(JSON.stringify(LOADED_CONFIG));
+  }
 
-	// Clear URL parameters by navigating to clean URL
-	const cleanURL = window.location.pathname;
-	window.history.replaceState({}, '', cleanURL);
+  // Clear URL parameters by navigating to clean URL
+  const cleanURL = window.location.pathname;
+  window.history.replaceState({}, "", cleanURL);
 
-	// Clear the URL update timeout if it exists
-	if (URL_UPDATE_TIMEOUT) {
-		clearTimeout(URL_UPDATE_TIMEOUT);
-		URL_UPDATE_TIMEOUT = null;
-	}
+  // Clear the URL update timeout if it exists
+  if (URL_UPDATE_TIMEOUT) {
+    clearTimeout(URL_UPDATE_TIMEOUT);
+    URL_UPDATE_TIMEOUT = null;
+  }
 
-	console.log("Config reset to loaded state and URL cleared");
+  console.log("Config reset to loaded state and URL cleared");
 }
 
 /**
@@ -440,38 +460,41 @@ function resetConfigToLoaded() {
  * Useful for resetting UI state while keeping the current head selection
  */
 function resetConfigPreserveHead() {
-	if (!CONFIG) {
-		console.warn("No current config available");
-		return;
-	}
+  if (!CONFIG) {
+    console.warn("No current config available");
+    return;
+  }
 
-	// Store current head_viewing value
-	const currentHead = CONFIG.head_viewing;
+  // Store current head_viewing value
+  const currentHead = CONFIG.head_viewing;
 
-	// Reset to loaded config
-	if (!LOADED_CONFIG) {
-		console.warn("No loaded config available, resetting to defaults");
-		CONFIG = getDefaultConfig();
-	} else {
-		// Deep copy the loaded config back to CONFIG
-		CONFIG = JSON.parse(JSON.stringify(LOADED_CONFIG));
-	}
+  // Reset to loaded config
+  if (!LOADED_CONFIG) {
+    console.warn("No loaded config available, resetting to defaults");
+    CONFIG = getDefaultConfig();
+  } else {
+    // Deep copy the loaded config back to CONFIG
+    CONFIG = JSON.parse(JSON.stringify(LOADED_CONFIG));
+  }
 
-	// Restore the head_viewing value
-	CONFIG.head_viewing = currentHead;
+  // Restore the head_viewing value
+  CONFIG.head_viewing = currentHead;
 
-	// Update URL with only head_viewing parameter
-	const url = new URL(window.location.pathname, window.location.origin);
-	url.searchParams.set('head_viewing', encodeForURL(currentHead));
-	window.history.replaceState({}, '', url.toString());
+  // Update URL with only head_viewing parameter
+  const url = new URL(window.location.pathname, window.location.origin);
+  url.searchParams.set("head_viewing", encodeForURL(currentHead));
+  window.history.replaceState({}, "", url.toString());
 
-	// Clear the URL update timeout if it exists
-	if (URL_UPDATE_TIMEOUT) {
-		clearTimeout(URL_UPDATE_TIMEOUT);
-		URL_UPDATE_TIMEOUT = null;
-	}
+  // Clear the URL update timeout if it exists
+  if (URL_UPDATE_TIMEOUT) {
+    clearTimeout(URL_UPDATE_TIMEOUT);
+    URL_UPDATE_TIMEOUT = null;
+  }
 
-	console.log("Config reset to loaded state with head_viewing preserved:", currentHead);
+  console.log(
+    "Config reset to loaded state with head_viewing preserved:",
+    currentHead,
+  );
 }
 
 /**
@@ -482,18 +505,18 @@ function resetConfigPreserveHead() {
  * @returns {any} Configuration value or default
  */
 function getConfigValue(path, defaultValue = undefined) {
-	const keys = path.split('.');
-	let current = CONFIG;
+  const keys = path.split(".");
+  let current = CONFIG;
 
-	for (const key of keys) {
-		if (current && typeof current === 'object' && key in current) {
-			current = current[key];
-		} else {
-			return defaultValue;
-		}
-	}
+  for (const key of keys) {
+    if (current && typeof current === "object" && key in current) {
+      current = current[key];
+    } else {
+      return defaultValue;
+    }
+  }
 
-	return current;
+  return current;
 }
 
 /**
@@ -504,11 +527,11 @@ function getConfigValue(path, defaultValue = undefined) {
  * @param {boolean} [updateUrl=true] - Whether to update URL parameters
  */
 function setConfigValue(path, value, updateUrl = true) {
-	setNestedConfigValue(CONFIG, path, value);
+  setNestedConfigValue(CONFIG, path, value);
 
-	if (updateUrl) {
-		updateURL();
-	}
+  if (updateUrl) {
+    updateURL();
+  }
 }
 
 /**
@@ -517,13 +540,13 @@ function setConfigValue(path, value, updateUrl = true) {
  * @returns {Promise<object>} Resolved configuration object
  */
 async function initConfig() {
-	try {
-		return await getConfig();
-	} catch (error) {
-		console.error("Failed to initialize configuration:", error);
-		// Fallback to defaults
-		CONFIG = getDefaultConfig();
-		LOADED_CONFIG = JSON.parse(JSON.stringify(CONFIG));
-		return CONFIG;
-	}
+  try {
+    return await getConfig();
+  } catch (error) {
+    console.error("Failed to initialize configuration:", error);
+    // Fallback to defaults
+    CONFIG = getDefaultConfig();
+    LOADED_CONFIG = JSON.parse(JSON.stringify(CONFIG));
+    return CONFIG;
+  }
 }

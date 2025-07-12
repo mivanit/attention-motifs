@@ -1,21 +1,28 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<!-- note to AI assistants: if you are asked to modify this, 
+  <!-- note to AI assistants: if you are asked to modify this, 
  give modifications for the different scripts, css, html header, and html body all separately. 
  the joined file you see is bundled from those multiple source files
 -->
-<!-- header -->
+  <!-- header -->
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Attention Head Analysis</title>
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link rel="stylesheet" href="style/style.css">
-    <link rel="stylesheet" href="style/notif.css">
+    <script
+      defer
+      src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"
+    ></script>
+    <link rel="stylesheet" href="style/style.css" />
+    <link rel="stylesheet" href="style/notif.css" />
     <script src="util/config.js"></script>
-    <script>getConfig();</script>
-    <script>console.log(CONFIG);</script>
+    <script>
+      getConfig();
+    </script>
+    <script>
+      console.log(CONFIG);
+    </script>
     <script src="util/notif.js"></script>
     <script src="util/array.js"></script>
     <script src="AttentionPedia.js"></script>
@@ -24,303 +31,569 @@
     <script src="headInfo.js"></script>
     <script src="autocomplete.js"></script>
     <script src="app.js"></script>
-</head>
-<!-- body -->
+  </head>
+  <!-- body -->
 
-<body>
+  <body>
     <div class="container" x-data="attentionApp" x-init="await init()">
-        <!-- Help button in top right -->
-        <div class="help-menu-corner">
-            <span class="help-button">?</span>
-            <div class="help-content">
-                <h3>Controls</h3>
-                <ul>
-                    <li><strong>Top right controls:</strong> Adjust which heads and prompts are displayed</li>
-                </ul>
-                <h3>Navigation</h3>
-                <ul>
-                    <li>Click head IDs to navigate between heads</li>
-                    <li><strong>Classification tags:</strong> Hover for info, click to view all heads of that type</li>
-                    <li>Click pattern images to view detailed pattern</li>
-                    <li><strong>Pattern Lens links (top):</strong> Compare patterns across many heads/prompts more flexibly</li>
-                </ul>
-                <h3>Interface</h3>
-                <ul>
-                    <li><strong>Distance column:</strong> lighter colors correspond to a head which is closer </li>
-                    <li><strong>Classification column highlight:</strong> Orange for heads sharing classifications with the current head</li>
-                    <li><strong>Prompt tooltips:</strong> Hover column headers for full text, clicking the pattern also gives full text</li>
-                </ul>
-                <h3>Reset</h3>
-                <ul>
-                    <li><strong>Reset button (🔄):</strong> Resets all settings to default while preserving current head</li>
-                </ul>
-            </div>
-            <button class="reset-button" @click="resetConfigPreserveHead(); location.reload();" title="Reset settings to default (preserves current head)">🔄</button>
+      <!-- Help button in top right -->
+      <div class="help-menu-corner">
+        <span class="help-button">?</span>
+        <div class="help-content">
+          <h3>Controls</h3>
+          <ul>
+            <li>
+              <strong>Top right controls:</strong> Adjust which heads and
+              prompts are displayed
+            </li>
+          </ul>
+          <h3>Navigation</h3>
+          <ul>
+            <li>Click head IDs to navigate between heads</li>
+            <li>
+              <strong>Classification tags:</strong> Hover for info, click to
+              view all heads of that type
+            </li>
+            <li>Click pattern images to view detailed pattern</li>
+            <li>
+              <strong>Pattern Lens links (top):</strong> Compare patterns across
+              many heads/prompts more flexibly
+            </li>
+          </ul>
+          <h3>Interface</h3>
+          <ul>
+            <li>
+              <strong>Distance column:</strong> lighter colors correspond to a
+              head which is closer
+            </li>
+            <li>
+              <strong>Classification column highlight:</strong> Orange for heads
+              sharing classifications with the current head
+            </li>
+            <li>
+              <strong>Prompt tooltips:</strong> Hover column headers for full
+              text, clicking the pattern also gives full text
+            </li>
+          </ul>
+          <h3>Reset</h3>
+          <ul>
+            <li>
+              <strong>Reset button (🔄):</strong> Resets all settings to default
+              while preserving current head
+            </li>
+          </ul>
         </div>
-        
-        <!-- Page Title Section -->
-        <div class="header-container">
-            <div class="title-section">
-                <div class="classifications-link-container">
-                    <a href="../../figures/classifications.html" class="classifications-link" title="Browse all head classifications">View all classifications</a>
-                </div>
-                <template x-if="!classification_mode">
-                    <div>
-                        <h2 class="page-title">
-                            Current Head: <span class="head-name" x-text="current_head"></span>
-                        </h2>
-                        <div class="pattern-lens-links">
-                            Pattern Lens: <a :href="getPatternLensCurrentHeadLink()" target="_blank" class="pattern-lens-link">current head</a> | 
-                            <a :href="getPatternLensAllHeadsLink()" target="_blank" class="pattern-lens-link">all displayed heads</a>
-                        </div>
-                    </div>
-                </template>
-                <template x-if="classification_mode && current_classification && !classificationError">
-                    <div x-data="classificationInfoComponent(current_classification)" x-init="await loadMetadata()">
-                        <h2 class="page-title" x-text="current_classification"></h2>
-                        <div class="classification-details" x-show="metadata.notes">
-                            <p x-text="metadata.notes"></p>
-                            <p><strong x-text="metadata.n_heads"></strong> heads</p>
-                            <template x-if="metadata.url">
-                                <p><a :href="metadata.url" target="_blank" x-text="metadata.url"></a></p>
-                            </template>
-                        </div>
-                        Pattern Lens: <a :href="getPatternLensLinkForClassification()" target="_blank" class="pattern-lens-link">all displayed heads</a>
-                    </div>
-                </template>
+        <button
+          class="reset-button"
+          @click="resetConfigPreserveHead(); location.reload();"
+          title="Reset settings to default (preserves current head)"
+        >
+          🔄
+        </button>
+      </div>
+
+      <!-- Page Title Section -->
+      <div class="header-container">
+        <div class="title-section">
+          <div class="classifications-link-container">
+            <a
+              href="../../figures/classifications.html"
+              class="classifications-link"
+              title="Browse all head classifications"
+              >View all classifications</a
+            >
+          </div>
+          <template x-if="!classification_mode">
+            <div>
+              <h2 class="page-title">
+                Current Head:
+                <span class="head-name" x-text="current_head"></span>
+              </h2>
+              <div class="pattern-lens-links">
+                Pattern Lens:
+                <a
+                  :href="getPatternLensCurrentHeadLink()"
+                  target="_blank"
+                  class="pattern-lens-link"
+                  >current head</a
+                >
+                |
+                <a
+                  :href="getPatternLensAllHeadsLink()"
+                  target="_blank"
+                  class="pattern-lens-link"
+                  >all displayed heads</a
+                >
+              </div>
             </div>
-            
-            <div class="controls-section">
-                <!-- Head Search -->
-                <div class="head-search-container">
-                    <div class="head-search-row">
-                        <div class="head-search-input">
-                            <input type="text" 
-                                   x-model="head_search_query" 
-                                   @input="searchHeads()" 
-                                   @keydown="handleSearchKeydown($event)"
-                                   @focus="searchHeads()"
-                                   @blur="hideAutocomplete()"
-                                   placeholder="Search heads (e.g., gpt2-small:L5:H3)" 
-                                   class="head-search-field">
-                        </div>
-                        
-                        <div class="search-mode-toggle">
-                            <span class="search-mode-text" :class="{ 'active': search_mode === 'switch' }" @click="search_mode = 'switch'">
-                                Switch to
-                            </span>
-                            <span class="search-mode-separator">|</span>
-                            <span class="search-mode-text" :class="{ 'active': search_mode === 'add' }" @click="search_mode = 'add'">
-                                Add to current view
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <!-- Autocomplete suggestions -->
-                    <div x-show="autocomplete_visible && autocomplete_suggestions.length > 0" class="autocomplete-dropdown">
-                        <template x-for="(suggestion, index) in autocomplete_suggestions" :key="index">
-                            <div class="autocomplete-suggestion" 
-                                 :class="{ 
+          </template>
+          <template
+            x-if="classification_mode && current_classification && !classificationError"
+          >
+            <div
+              x-data="classificationInfoComponent(current_classification)"
+              x-init="await loadMetadata()"
+            >
+              <h2 class="page-title" x-text="current_classification"></h2>
+              <div class="classification-details" x-show="metadata.notes">
+                <p x-text="metadata.notes"></p>
+                <p><strong x-text="metadata.n_heads"></strong> heads</p>
+                <template x-if="metadata.url">
+                  <p>
+                    <a
+                      :href="metadata.url"
+                      target="_blank"
+                      x-text="metadata.url"
+                    ></a>
+                  </p>
+                </template>
+              </div>
+              Pattern Lens:
+              <a
+                :href="getPatternLensLinkForClassification()"
+                target="_blank"
+                class="pattern-lens-link"
+                >all displayed heads</a
+              >
+            </div>
+          </template>
+        </div>
+
+        <div class="controls-section">
+          <!-- Head Search -->
+          <div class="head-search-container">
+            <div class="head-search-row">
+              <div class="head-search-input">
+                <input
+                  type="text"
+                  x-model="head_search_query"
+                  @input="searchHeads()"
+                  @keydown="handleSearchKeydown($event)"
+                  @focus="searchHeads()"
+                  @blur="hideAutocomplete()"
+                  placeholder="Search heads (e.g., gpt2-small:L5:H3)"
+                  class="head-search-field"
+                />
+              </div>
+
+              <div class="search-mode-toggle">
+                <span
+                  class="search-mode-text"
+                  :class="{ 'active': search_mode === 'switch' }"
+                  @click="search_mode = 'switch'"
+                >
+                  Switch to
+                </span>
+                <span class="search-mode-separator">|</span>
+                <span
+                  class="search-mode-text"
+                  :class="{ 'active': search_mode === 'add' }"
+                  @click="search_mode = 'add'"
+                >
+                  Add to current view
+                </span>
+              </div>
+            </div>
+
+            <!-- Autocomplete suggestions -->
+            <div
+              x-show="autocomplete_visible && autocomplete_suggestions.length > 0"
+              class="autocomplete-dropdown"
+            >
+              <template
+                x-for="(suggestion, index) in autocomplete_suggestions"
+                :key="index"
+              >
+                <div
+                  class="autocomplete-suggestion"
+                  :class="{ 
                                      'selected': index === selected_suggestion_index,
                                      'error': !suggestion.valid
                                  }"
-                                 @click="selectSuggestion(suggestion)">
-                                <div class="suggestion-main">
-                                    <span class="suggestion-text" x-text="suggestion.text"></span>
-                                </div>
-                                <div class="suggestion-extra">
-                                    <span class="suggestion-display" x-text="suggestion.display"></span>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                    
-                    <!-- Matching existing heads -->
-                    <div x-show="matching_heads.length > 0 && !autocomplete_visible" class="head-search-results">
-                        <template x-for="headId in matching_heads" :key="headId">
-                            <div class="head-search-result" @click="navigateToHead(headId)" x-text="headId"></div>
-                        </template>
-                    </div>
+                  @click="selectSuggestion(suggestion)"
+                >
+                  <div class="suggestion-main">
+                    <span
+                      class="suggestion-text"
+                      x-text="suggestion.text"
+                    ></span>
+                  </div>
+                  <div class="suggestion-extra">
+                    <span
+                      class="suggestion-display"
+                      x-text="suggestion.display"
+                    ></span>
+                  </div>
                 </div>
-
-                <!-- Model and Layer Filters -->
-                <div class="filters-section">
-                    <div class="filters-row">
-                        <div class="filters-label">Filter Visible Heads:</div>
-                        <div class="filters-container">
-                        <div class="filter-dropdown">
-                        <button @click="toggleModelFilter()" class="filter-button" :class="{ 'filter-error': selected_models.size === 0 }">
-                            Models (<span x-text="selected_models.size"></span>/<span x-text="available_models.length"></span>)
-                            <span x-text="model_filter_open ? '▲' : '▼'"></span>
-                        </button>
-                        <div x-show="model_filter_open" class="filter-dropdown-content">
-                            <div class="filter-actions">
-                                <button @click="selectAllModels()" class="filter-action-btn">All</button>
-                                <button @click="selectNoModels()" class="filter-action-btn">None</button>
-                            </div>
-                            <div class="filter-options">
-                                <template x-for="model in available_models" :key="model">
-                                    <label class="filter-option">
-                                        <div class="filter-option-left">
-                                            <input type="checkbox" :checked="selected_models.has(model)" @change="toggleModelSelection(model)">
-                                            <span class="model-name" x-text="model"></span>
-                                        </div>
-                                        <span class="model-info" x-text="`(${models_data.find(m => m.model_name === model)?.n_layers || '?'} × ${models_data.find(m => m.model_name === model)?.n_heads || '?'})`"></span>
-                                    </label>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="filter-dropdown">
-                        <button @click="toggleLayerFilter()" class="filter-button" :class="{ 'filter-error': selected_layers.size === 0 }">
-                            Layers (<span x-text="selected_layers.size"></span>/<span x-text="available_layers.length"></span>)
-                            <span x-text="layer_filter_open ? '▲' : '▼'"></span>
-                        </button>
-                        <div x-show="layer_filter_open" class="filter-dropdown-content">
-                            <div class="filter-actions">
-                                <button @click="selectAllLayers()" class="filter-action-btn">All</button>
-                                <button @click="selectNoLayers()" class="filter-action-btn">None</button>
-                            </div>
-                            <div class="filter-options">
-                                <template x-for="layer in available_layers" :key="layer">
-                                    <label class="filter-option">
-                                        <input type="checkbox" :checked="selected_layers.has(layer)" @change="toggleLayerSelection(layer)">
-                                        <span>Layer <span x-text="layer"></span></span>
-                                    </label>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                    </div>
-                    </div>
-                </div>
-                
-                <div class="controls-grid">
-                    <div class="control-item">
-                        <label>Prompts:</label>
-                        <input type="number" x-model.number="n_prompts" @change="updatePrompts()" min="1" class="control-input">
-                    </div>
-                    <template x-if="!classification_mode">
-                        <div class="control-item" :class="{ 'disabled': hasExplicitHeads }">
-                            <label>Nearby heads:</label>
-                            <input type="number" x-model.number="table.n_nearby" @change="updateHeadsDisplay()" min="0" class="control-input" :disabled="hasExplicitHeads">
-                        </div>
-                    </template>
-                    <template x-if="!classification_mode">
-                        <div class="control-item" :class="{ 'disabled': hasExplicitHeads }">
-                            <label>Most distant:</label>
-                            <input type="number" x-model.number="table.n_distant" @change="updateHeadsDisplay()" min="0" class="control-input" :disabled="hasExplicitHeads">
-                        </div>
-                    </template>
-                    <div class="control-item">
-                        <button @click="randomizePrompts()" class="control-button full-width">Randomize prompts</button>
-                    </div>
-                    <template x-if="!classification_mode">
-                        <div class="control-item" :class="{ 'disabled': hasExplicitHeads }">
-                            <label>Same-class heads:</label>
-                            <input type="number" x-model.number="table.n_share_class" @change="updateHeadsDisplay()" min="0" class="control-input" :disabled="hasExplicitHeads">
-                        </div>
-                    </template>
-                    <template x-if="!classification_mode">
-                        <div class="control-item" :class="{ 'disabled': hasExplicitHeads }">
-                            <label>Random heads:</label>
-                            <input type="number" x-model.number="table.n_random" @change="updateHeadsDisplay()" min="0" class="control-input" :disabled="hasExplicitHeads">
-                        </div>
-                    </template>
-                </div>
+              </template>
             </div>
-        </div>
-        
-        <div class="section">
-            <table class="pattern-table">
-                <thead>
-                    <tr>
-                        <th>Head</th>
-                        <th>Distance<br><span style="font-size: 10px; font-weight: normal;">rank /n_heads</span></th>
-                        <th>Classifications</th>
-                        <template x-for="prompt in prompts" :key="prompt.hash">
-                            <th class="prompt-header" @mouseenter="showPromptTooltip($event, prompt)" @mouseleave="hidePromptTooltip()">
-                                <div class="prompt-hash" x-text="prompt.hash"></div>
-                                <div class="prompt-tokens" x-text="`${prompt.n_tokens} tokens`"></div>
-                            </th>
-                        </template>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Loading state -->
-                    <tr x-show="loading">
-                        <td :colspan="3 + prompts.length" style="text-align: center; padding: 20px; color: #666;">
-                            Loading attention heads data...
-                        </td>
-                    </tr>
-                    <!-- Classification error state -->
-                    <tr x-show="!loading && classificationError">
-                        <td :colspan="3 + prompts.length" style="text-align: center; padding: 40px;">
-                            <div style="color: #e74c3c; font-size: 18px; margin-bottom: 15px;">
-                                Classification not found: "<span x-text="classificationError"></span>"
-                            </div>
-                            <div style="color: #666; margin-bottom: 20px;">
-                                This classification does not exist in the dataset.
-                            </div>
-                            <a href="../../figures/classifications.html" style="display: inline-block; padding: 10px 20px; background-color: #3498db; color: white; text-decoration: none; border-radius: 4px;">
-                                Go to Classifications Page
-                            </a>
-                        </td>
-                    </tr>
-                    <tr x-show="!loading && !classificationError && heads_display_with_distances.length === 0">
-                        <td :colspan="3 + prompts.length" style="text-align: center; padding: 20px; color: #666;">
-                            No heads data available
-                        </td>
-                    </tr>
-                    <template x-for="(headRow, index) in heads_display_with_distances" :key="headRow.headId || `gap-${index}`">
-                        <tr x-show="!classificationError">
-                            <td class="head-info">
-                                <a :href="getHeadLink(headRow.headId)" x-text="headRow.headId" class="head-link"></a>
-                            </td>
-                            <td class="distance-cell" :style="`background-color: ${headRow.distanceColor}`">
-                                <div x-html="headRow.distanceText.replace('\\n', '<br>')"></div>
-                                <div class="distance-rank" x-text="`${headRow.rank}/${headRow.totalHeads}`"></div>
-                            </td>
-                            <td class="classifications-cell" :class="headRow.hasMatchingClassification ? 'matching-classification' : ''" 
-                                x-data="classificationComponent(headRow.headId)" x-init="await loadData()">
-                                <template x-if="classifications.length > 0">
-                                    <div>
-                                        <template x-for="(type, index) in classifications" :key="type">
-                                            <span class="classification-tag" 
-                                                  @mouseenter="showTooltip($event, type)" 
-                                                  @mouseleave="hideTooltip()"
-                                                  @click="(e) => { e.preventDefault(); window.location.href = getClassificationLink(type); }"
-                                                  x-text="type">
-                                            </span>
-                                        </template>
-                                    </div>
-                                </template>
-                                <template x-if="classifications.length === 0">
-                                    <span class="no-classifications">No classifications</span>
-                                </template>
-                            </td>
-                            <template x-for="prompt in prompts" :key="prompt.hash">
-                                <td x-data="patternComponent(headRow.headId, prompt.hash)" x-init="await init()">
-                                    <template x-if="loading">
-                                        <div class="pattern-loading">Loading...</div>
-                                    </template>
-                                    <template x-if="error">
-                                        <div class="pattern-error" x-text="error"></div>
-                                    </template>
-                                    <template x-if="!loading && !error && imageUrl">
-                                        <a :href="patternLink" target="_blank" class="pattern-link">
-                                            <img :src="imageUrl" class="pattern-image" :alt="`Pattern for ${headRow.headId} on ${prompt.hash}`">
-                                        </a>
-                                    </template>
-                                </td>
-                            </template>
-                        </tr>
-                    </template>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</body>
 
+            <!-- Matching existing heads -->
+            <div
+              x-show="matching_heads.length > 0 && !autocomplete_visible"
+              class="head-search-results"
+            >
+              <template x-for="headId in matching_heads" :key="headId">
+                <div
+                  class="head-search-result"
+                  @click="navigateToHead(headId)"
+                  x-text="headId"
+                ></div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Model and Layer Filters -->
+          <div class="filters-section">
+            <div class="filters-row">
+              <div class="filters-label">Filter Visible Heads:</div>
+              <div class="filters-container">
+                <div class="filter-dropdown">
+                  <button
+                    @click="toggleModelFilter()"
+                    class="filter-button"
+                    :class="{ 'filter-error': selected_models.size === 0 }"
+                  >
+                    Models (<span x-text="selected_models.size"></span>/<span
+                      x-text="available_models.length"
+                    ></span
+                    >)
+                    <span x-text="model_filter_open ? '▲' : '▼'"></span>
+                  </button>
+                  <div
+                    x-show="model_filter_open"
+                    class="filter-dropdown-content"
+                  >
+                    <div class="filter-actions">
+                      <button
+                        @click="selectAllModels()"
+                        class="filter-action-btn"
+                      >
+                        All
+                      </button>
+                      <button
+                        @click="selectNoModels()"
+                        class="filter-action-btn"
+                      >
+                        None
+                      </button>
+                    </div>
+                    <div class="filter-options">
+                      <template x-for="model in available_models" :key="model">
+                        <label class="filter-option">
+                          <div class="filter-option-left">
+                            <input
+                              type="checkbox"
+                              :checked="selected_models.has(model)"
+                              @change="toggleModelSelection(model)"
+                            />
+                            <span class="model-name" x-text="model"></span>
+                          </div>
+                          <span
+                            class="model-info"
+                            x-text="`(${models_data.find(m => m.model_name === model)?.n_layers || '?'} × ${models_data.find(m => m.model_name === model)?.n_heads || '?'})`"
+                          ></span>
+                        </label>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="filter-dropdown">
+                  <button
+                    @click="toggleLayerFilter()"
+                    class="filter-button"
+                    :class="{ 'filter-error': selected_layers.size === 0 }"
+                  >
+                    Layers (<span x-text="selected_layers.size"></span>/<span
+                      x-text="available_layers.length"
+                    ></span
+                    >)
+                    <span x-text="layer_filter_open ? '▲' : '▼'"></span>
+                  </button>
+                  <div
+                    x-show="layer_filter_open"
+                    class="filter-dropdown-content"
+                  >
+                    <div class="filter-actions">
+                      <button
+                        @click="selectAllLayers()"
+                        class="filter-action-btn"
+                      >
+                        All
+                      </button>
+                      <button
+                        @click="selectNoLayers()"
+                        class="filter-action-btn"
+                      >
+                        None
+                      </button>
+                    </div>
+                    <div class="filter-options">
+                      <template x-for="layer in available_layers" :key="layer">
+                        <label class="filter-option">
+                          <input
+                            type="checkbox"
+                            :checked="selected_layers.has(layer)"
+                            @change="toggleLayerSelection(layer)"
+                          />
+                          <span>Layer <span x-text="layer"></span></span>
+                        </label>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="controls-grid">
+            <div class="control-item">
+              <label>Prompts:</label>
+              <input
+                type="number"
+                x-model.number="n_prompts"
+                @change="updatePrompts()"
+                min="1"
+                class="control-input"
+              />
+            </div>
+            <template x-if="!classification_mode">
+              <div
+                class="control-item"
+                :class="{ 'disabled': hasExplicitHeads }"
+              >
+                <label>Nearby heads:</label>
+                <input
+                  type="number"
+                  x-model.number="table.n_nearby"
+                  @change="updateHeadsDisplay()"
+                  min="0"
+                  class="control-input"
+                  :disabled="hasExplicitHeads"
+                />
+              </div>
+            </template>
+            <template x-if="!classification_mode">
+              <div
+                class="control-item"
+                :class="{ 'disabled': hasExplicitHeads }"
+              >
+                <label>Most distant:</label>
+                <input
+                  type="number"
+                  x-model.number="table.n_distant"
+                  @change="updateHeadsDisplay()"
+                  min="0"
+                  class="control-input"
+                  :disabled="hasExplicitHeads"
+                />
+              </div>
+            </template>
+            <div class="control-item">
+              <button
+                @click="randomizePrompts()"
+                class="control-button full-width"
+              >
+                Randomize prompts
+              </button>
+            </div>
+            <template x-if="!classification_mode">
+              <div
+                class="control-item"
+                :class="{ 'disabled': hasExplicitHeads }"
+              >
+                <label>Same-class heads:</label>
+                <input
+                  type="number"
+                  x-model.number="table.n_share_class"
+                  @change="updateHeadsDisplay()"
+                  min="0"
+                  class="control-input"
+                  :disabled="hasExplicitHeads"
+                />
+              </div>
+            </template>
+            <template x-if="!classification_mode">
+              <div
+                class="control-item"
+                :class="{ 'disabled': hasExplicitHeads }"
+              >
+                <label>Random heads:</label>
+                <input
+                  type="number"
+                  x-model.number="table.n_random"
+                  @change="updateHeadsDisplay()"
+                  min="0"
+                  class="control-input"
+                  :disabled="hasExplicitHeads"
+                />
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <table class="pattern-table">
+          <thead>
+            <tr>
+              <th>Head</th>
+              <th>
+                Distance<br /><span style="font-size: 10px; font-weight: normal"
+                  >rank /n_heads</span
+                >
+              </th>
+              <th>Classifications</th>
+              <template x-for="prompt in prompts" :key="prompt.hash">
+                <th
+                  class="prompt-header"
+                  @mouseenter="showPromptTooltip($event, prompt)"
+                  @mouseleave="hidePromptTooltip()"
+                >
+                  <div class="prompt-hash" x-text="prompt.hash"></div>
+                  <div
+                    class="prompt-tokens"
+                    x-text="`${prompt.n_tokens} tokens`"
+                  ></div>
+                </th>
+              </template>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Loading state -->
+            <tr x-show="loading">
+              <td
+                :colspan="3 + prompts.length"
+                style="text-align: center; padding: 20px; color: #666"
+              >
+                Loading attention heads data...
+              </td>
+            </tr>
+            <!-- Classification error state -->
+            <tr x-show="!loading && classificationError">
+              <td
+                :colspan="3 + prompts.length"
+                style="text-align: center; padding: 40px"
+              >
+                <div
+                  style="color: #e74c3c; font-size: 18px; margin-bottom: 15px"
+                >
+                  Classification not found: "<span
+                    x-text="classificationError"
+                  ></span
+                  >"
+                </div>
+                <div style="color: #666; margin-bottom: 20px">
+                  This classification does not exist in the dataset.
+                </div>
+                <a
+                  href="../../figures/classifications.html"
+                  style="
+                    display: inline-block;
+                    padding: 10px 20px;
+                    background-color: #3498db;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 4px;
+                  "
+                >
+                  Go to Classifications Page
+                </a>
+              </td>
+            </tr>
+            <tr
+              x-show="!loading && !classificationError && heads_display_with_distances.length === 0"
+            >
+              <td
+                :colspan="3 + prompts.length"
+                style="text-align: center; padding: 20px; color: #666"
+              >
+                No heads data available
+              </td>
+            </tr>
+            <template
+              x-for="(headRow, index) in heads_display_with_distances"
+              :key="headRow.headId || `gap-${index}`"
+            >
+              <tr x-show="!classificationError">
+                <td class="head-info">
+                  <a
+                    :href="getHeadLink(headRow.headId)"
+                    x-text="headRow.headId"
+                    class="head-link"
+                  ></a>
+                </td>
+                <td
+                  class="distance-cell"
+                  :style="`background-color: ${headRow.distanceColor}`"
+                >
+                  <div
+                    x-html="headRow.distanceText.replace('\\n', '<br>')"
+                  ></div>
+                  <div
+                    class="distance-rank"
+                    x-text="`${headRow.rank}/${headRow.totalHeads}`"
+                  ></div>
+                </td>
+                <td
+                  class="classifications-cell"
+                  :class="headRow.hasMatchingClassification ? 'matching-classification' : ''"
+                  x-data="classificationComponent(headRow.headId)"
+                  x-init="await loadData()"
+                >
+                  <template x-if="classifications.length > 0">
+                    <div>
+                      <template
+                        x-for="(type, index) in classifications"
+                        :key="type"
+                      >
+                        <span
+                          class="classification-tag"
+                          @mouseenter="showTooltip($event, type)"
+                          @mouseleave="hideTooltip()"
+                          @click="(e) => { e.preventDefault(); window.location.href = getClassificationLink(type); }"
+                          x-text="type"
+                        >
+                        </span>
+                      </template>
+                    </div>
+                  </template>
+                  <template x-if="classifications.length === 0">
+                    <span class="no-classifications">No classifications</span>
+                  </template>
+                </td>
+                <template x-for="prompt in prompts" :key="prompt.hash">
+                  <td
+                    x-data="patternComponent(headRow.headId, prompt.hash)"
+                    x-init="await init()"
+                  >
+                    <template x-if="loading">
+                      <div class="pattern-loading">Loading...</div>
+                    </template>
+                    <template x-if="error">
+                      <div class="pattern-error" x-text="error"></div>
+                    </template>
+                    <template x-if="!loading && !error && imageUrl">
+                      <a
+                        :href="patternLink"
+                        target="_blank"
+                        class="pattern-link"
+                      >
+                        <img
+                          :src="imageUrl"
+                          class="pattern-image"
+                          :alt="`Pattern for ${headRow.headId} on ${prompt.hash}`"
+                        />
+                      </a>
+                    </template>
+                  </td>
+                </template>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </body>
 </html>
