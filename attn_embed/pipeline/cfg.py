@@ -255,7 +255,7 @@ class PipelineConfig:
 		assert self.prompts_max_chars >= self.prompts_min_chars, (
 			"prompts_max_chars must be greater than or equal to prompts_min_chars"
 		)
-		
+
 		# Basic validation for embedding parameters
 		valid_methods = {"isomap", "umap", "tsne", "pca"}
 		assert all(method in valid_methods for method in self.embedding_methods), (

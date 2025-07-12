@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import polars as pl
 from pathlib import Path
-from typing import Any
 
 # attention-motifs
 from attn_embed.features.head_analysis import (
@@ -13,10 +12,10 @@ from attn_embed.pipeline.cfg import PipelineConfig, pipeline_step_major
 
 def get_embedding_prefixes(df: pl.DataFrame) -> list[str]:
 	"""Extract all embedding prefixes from DataFrame columns.
-	
+
 	Args:
 		df: DataFrame with embedding columns in format embed.{method}.d{n_components}.b{n_neighbors}.dim.{i}
-		
+
 	Returns:
 		Sorted list of unique embedding prefixes
 	"""
@@ -31,7 +30,7 @@ def get_embedding_prefixes(df: pl.DataFrame) -> list[str]:
 
 def head_embed_plots(cfg: PipelineConfig) -> None:
 	"""Generate head embedding plots and HTML frontend.
-	
+
 	Args:
 		cfg: Pipeline configuration with plotting and output settings
 	"""

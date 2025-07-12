@@ -1,6 +1,5 @@
 import polars as pl
 import json
-from pathlib import Path
 from typing import Any
 
 # attention-motifs
@@ -23,13 +22,13 @@ def get_embedding_prefixes(df: pl.DataFrame) -> list[str]:
 
 def parse_prefix_info(prefix: str) -> dict[str, str]:
 	"""Parse embedding prefix to extract method, dimensions, and neighbors.
-	
+
 	Args:
 		prefix: Embedding prefix in format embed.{method}.d{n_components}.b{n_neighbors}
-		
+
 	Returns:
 		Dictionary with method, n_components, and n_neighbors as strings
-		
+
 	Raises:
 		ValueError: If prefix format is invalid
 	"""
@@ -51,10 +50,10 @@ def parse_prefix_info(prefix: str) -> dict[str, str]:
 
 def create_plots_metadata(prefixes: list[str]) -> dict[str, Any]:
 	"""Create JSON metadata for embedding plots.
-	
+
 	Args:
 		prefixes: List of embedding prefixes from DataFrame columns
-		
+
 	Returns:
 		Dictionary containing plots metadata and summary statistics
 	"""
@@ -90,7 +89,7 @@ def create_plots_metadata(prefixes: list[str]) -> dict[str, Any]:
 
 def head_embed(cfg: PipelineConfig) -> None:
 	"""Generate head embeddings from distance matrix.
-	
+
 	Args:
 		cfg: Pipeline configuration containing embedding parameters
 	"""
