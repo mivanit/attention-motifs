@@ -141,8 +141,8 @@ function getDefaultConfig() {
 			// Initial shortcuts highlight animation
 			shortcutsHighlight: {
 				enabled: true,
-				duration: 3000,  // Duration in milliseconds
-				pulseSpeed: 1.5  // Speed of the pulse animation
+				duration: 5000,  // Duration in milliseconds
+				pulseSpeed: 0.5  // Speed of the pulse animation
 			}
 		},
 		// Right-click behavior configuration

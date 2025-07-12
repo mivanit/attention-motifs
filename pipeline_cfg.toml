@@ -82,6 +82,9 @@ verbose = 99
 [plot_kwargs]
 pca_all_dpi = 150
 
+[vis_configs.embed_pattern.cfg]
+dataFile = "../../../features/pca.csv"
+
 # visualization configurations (uncomment to override defaults)
 # ============================================================
 # [vis_configs.attentionpedia]

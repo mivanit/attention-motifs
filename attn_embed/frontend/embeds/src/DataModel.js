@@ -75,7 +75,21 @@ class DataModel {
 				const text = await resp.text();
 
 				pbar.progress(0.3);
-				df = DataFrame.from_jsonl(text);
+				
+				// Determine file format based on extension
+				const fileExtension = filename.toLowerCase().split('.').pop();
+				if (fileExtension === 'csv') {
+					console.log(`Loading CSV file: ${filename}`);
+					df = DataFrame.from_csv(text);
+				} else if (fileExtension === 'jsonl') {
+					console.log(`Loading JSONL file: ${filename}`);
+					df = DataFrame.from_jsonl(text);
+				} else {
+					// Default to JSONL for backwards compatibility
+					console.warn(`Unknown file extension: .${fileExtension}, defaulting to JSONL parsing`);
+					df = DataFrame.from_jsonl(text);
+				}
+				
 				pbar.progress(0.6);
 			}
 
