@@ -22,6 +22,7 @@
     <script src="head_embeds.js"></script>
     <script src="prompts.js"></script>
     <script src="headInfo.js"></script>
+    <script src="autocomplete.js"></script>
     <script src="app.js"></script>
 </head>
 <!-- body -->
@@ -61,15 +62,17 @@
         <div class="header-container">
             <div class="title-section">
                 <div class="classifications-link-container">
-                    <a href="../../figures/classifications.html" class="classifications-link" title="Browse all head classifications">Classifications</a>
+                    <a href="../../figures/classifications.html" class="classifications-link" title="Browse all head classifications">View all classifications</a>
                 </div>
                 <template x-if="!classification_mode">
                     <div>
                         <h2 class="page-title">
-                            Current Head: <span class="head-name" x-text="current_head"></span><br>
+                            Current Head: <span class="head-name" x-text="current_head"></span>
+                        </h2>
+                        <div class="pattern-lens-links">
                             Pattern Lens: <a :href="getPatternLensCurrentHeadLink()" target="_blank" class="pattern-lens-link">current head</a> | 
                             <a :href="getPatternLensAllHeadsLink()" target="_blank" class="pattern-lens-link">all displayed heads</a>
-                        </h2>
+                        </div>
                     </div>
                 </template>
                 <template x-if="classification_mode && current_classification && !classificationError">
@@ -88,36 +91,141 @@
             </div>
             
             <div class="controls-section">
+                <!-- Head Search -->
+                <div class="head-search-container">
+                    <div class="head-search-row">
+                        <div class="head-search-input">
+                            <input type="text" 
+                                   x-model="head_search_query" 
+                                   @input="searchHeads()" 
+                                   @keydown="handleSearchKeydown($event)"
+                                   @focus="searchHeads()"
+                                   @blur="hideAutocomplete()"
+                                   placeholder="Search heads (e.g., gpt2-small:L5:H3)" 
+                                   class="head-search-field">
+                        </div>
+                        
+                        <div class="search-mode-toggle">
+                            <span class="search-mode-text" :class="{ 'active': search_mode === 'switch' }" @click="search_mode = 'switch'">
+                                Switch to
+                            </span>
+                            <span class="search-mode-separator">|</span>
+                            <span class="search-mode-text" :class="{ 'active': search_mode === 'add' }" @click="search_mode = 'add'">
+                                Add to current view
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Autocomplete suggestions -->
+                    <div x-show="autocomplete_visible && autocomplete_suggestions.length > 0" class="autocomplete-dropdown">
+                        <template x-for="(suggestion, index) in autocomplete_suggestions" :key="index">
+                            <div class="autocomplete-suggestion" 
+                                 :class="{ 
+                                     'selected': index === selected_suggestion_index,
+                                     'error': !suggestion.valid
+                                 }"
+                                 @click="selectSuggestion(suggestion)">
+                                <div class="suggestion-main">
+                                    <span class="suggestion-text" x-text="suggestion.text"></span>
+                                </div>
+                                <div class="suggestion-extra">
+                                    <span class="suggestion-display" x-text="suggestion.display"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- Matching existing heads -->
+                    <div x-show="matching_heads.length > 0 && !autocomplete_visible" class="head-search-results">
+                        <template x-for="headId in matching_heads" :key="headId">
+                            <div class="head-search-result" @click="navigateToHead(headId)" x-text="headId"></div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Model and Layer Filters -->
+                <div class="filters-section">
+                    <div class="filters-row">
+                        <div class="filters-label">Filter Visible Heads:</div>
+                        <div class="filters-container">
+                        <div class="filter-dropdown">
+                        <button @click="toggleModelFilter()" class="filter-button" :class="{ 'filter-error': selected_models.size === 0 }">
+                            Models (<span x-text="selected_models.size"></span>/<span x-text="available_models.length"></span>)
+                            <span x-text="model_filter_open ? '▲' : '▼'"></span>
+                        </button>
+                        <div x-show="model_filter_open" class="filter-dropdown-content">
+                            <div class="filter-actions">
+                                <button @click="selectAllModels()" class="filter-action-btn">All</button>
+                                <button @click="selectNoModels()" class="filter-action-btn">None</button>
+                            </div>
+                            <div class="filter-options">
+                                <template x-for="model in available_models" :key="model">
+                                    <label class="filter-option">
+                                        <div class="filter-option-left">
+                                            <input type="checkbox" :checked="selected_models.has(model)" @change="toggleModelSelection(model)">
+                                            <span class="model-name" x-text="model"></span>
+                                        </div>
+                                        <span class="model-info" x-text="`(${models_data.find(m => m.model_name === model)?.n_layers || '?'} × ${models_data.find(m => m.model_name === model)?.n_heads || '?'})`"></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-dropdown">
+                        <button @click="toggleLayerFilter()" class="filter-button" :class="{ 'filter-error': selected_layers.size === 0 }">
+                            Layers (<span x-text="selected_layers.size"></span>/<span x-text="available_layers.length"></span>)
+                            <span x-text="layer_filter_open ? '▲' : '▼'"></span>
+                        </button>
+                        <div x-show="layer_filter_open" class="filter-dropdown-content">
+                            <div class="filter-actions">
+                                <button @click="selectAllLayers()" class="filter-action-btn">All</button>
+                                <button @click="selectNoLayers()" class="filter-action-btn">None</button>
+                            </div>
+                            <div class="filter-options">
+                                <template x-for="layer in available_layers" :key="layer">
+                                    <label class="filter-option">
+                                        <input type="checkbox" :checked="selected_layers.has(layer)" @change="toggleLayerSelection(layer)">
+                                        <span>Layer <span x-text="layer"></span></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </div>
+                
                 <div class="controls-grid">
                     <div class="control-item">
                         <label>Prompts:</label>
                         <input type="number" x-model.number="n_prompts" @change="updatePrompts()" min="1" class="control-input">
                     </div>
                     <template x-if="!classification_mode">
-                        <div class="control-item">
+                        <div class="control-item" :class="{ 'disabled': hasExplicitHeads }">
                             <label>Nearby heads:</label>
-                            <input type="number" x-model.number="table.n_nearby" @change="updateHeadsDisplay()" min="0" class="control-input">
+                            <input type="number" x-model.number="table.n_nearby" @change="updateHeadsDisplay()" min="0" class="control-input" :disabled="hasExplicitHeads">
                         </div>
                     </template>
                     <template x-if="!classification_mode">
-                        <div class="control-item">
+                        <div class="control-item" :class="{ 'disabled': hasExplicitHeads }">
                             <label>Most distant:</label>
-                            <input type="number" x-model.number="table.n_distant" @change="updateHeadsDisplay()" min="0" class="control-input">
+                            <input type="number" x-model.number="table.n_distant" @change="updateHeadsDisplay()" min="0" class="control-input" :disabled="hasExplicitHeads">
                         </div>
                     </template>
                     <div class="control-item">
                         <button @click="randomizePrompts()" class="control-button full-width">Randomize prompts</button>
                     </div>
                     <template x-if="!classification_mode">
-                        <div class="control-item">
+                        <div class="control-item" :class="{ 'disabled': hasExplicitHeads }">
                             <label>Same-class heads:</label>
-                            <input type="number" x-model.number="table.n_share_class" @change="updateHeadsDisplay()" min="0" class="control-input">
+                            <input type="number" x-model.number="table.n_share_class" @change="updateHeadsDisplay()" min="0" class="control-input" :disabled="hasExplicitHeads">
                         </div>
                     </template>
                     <template x-if="!classification_mode">
-                        <div class="control-item">
+                        <div class="control-item" :class="{ 'disabled': hasExplicitHeads }">
                             <label>Random heads:</label>
-                            <input type="number" x-model.number="table.n_random" @change="updateHeadsDisplay()" min="0" class="control-input">
+                            <input type="number" x-model.number="table.n_random" @change="updateHeadsDisplay()" min="0" class="control-input" :disabled="hasExplicitHeads">
                         </div>
                     </template>
                 </div>

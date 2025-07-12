@@ -19,6 +19,22 @@ document.addEventListener('alpine:init', () => {
 			n_random: 0
 		},
 		
+		// Filtering state
+		models_data: [],
+		available_models: [],
+		available_layers: [],
+		selected_models: new Set(),
+		selected_layers: new Set(),
+		model_filter_open: false,
+		layer_filter_open: false,
+		head_search_query: '',
+		matching_heads: [],
+		autocomplete_suggestions: [],
+		autocomplete_visible: false,
+		selected_suggestion_index: -1,
+		head_autocomplete: null,
+		search_mode: 'switch', // 'switch' or 'add'
+		
 		// Error tracking for aggregated notifications
 		failureTracker: {
 			patterns: { failed: 0, total: 0 },
@@ -34,6 +50,12 @@ document.addEventListener('alpine:init', () => {
 				this.allPrompts = await this.prompts_loader.get_all();
 				this.allPromptsCount = this.allPrompts.length;
 				this.n_prompts = CONFIG.n_prompts || 5;
+				
+				// Load model data for filtering
+				await this.loadModelData();
+				
+				// Initialize autocomplete
+				this.head_autocomplete = new HeadAutocomplete(this.models_data, this.head_distances);
 				
 				// Check if specific prompts are selected via URL
 				if (CONFIG.selected_prompts) {
@@ -70,6 +92,19 @@ document.addEventListener('alpine:init', () => {
 				// Set pattern size CSS variable
 				const patternSize = CONFIG.pattern_size || 120;
 				document.documentElement.style.setProperty('--pattern-size', `${patternSize}px`);
+				
+				// Add click outside listener for dropdowns
+				document.addEventListener('click', (e) => {
+					if (!e.target.closest('.filter-dropdown')) {
+						this.model_filter_open = false;
+						this.layer_filter_open = false;
+					}
+					if (!e.target.closest('.head-search-container') && !e.target.closest('.search-mode-toggle')) {
+						this.matching_heads = [];
+						this.autocomplete_visible = false;
+						this.selected_suggestion_index = -1;
+					}
+				});
 				
 				await this.updateHeadsWithDistances();
 				this.loading = false;
@@ -117,8 +152,9 @@ document.addEventListener('alpine:init', () => {
 				this.current_head = bestHead;
 			}
 			
-			// Set heads_display to up to 99 heads of this classification
-			this.heads_display = headsOfType.slice(0, 99);
+			// Set heads_display to up to 99 heads of this classification (filtered)
+			const filteredHeadsOfType = headsOfType.filter(head => this.shouldShowHead(head));
+			this.heads_display = filteredHeadsOfType.slice(0, 99);
 		},
 
 		async updateHeadsWithDistances() {
@@ -129,7 +165,9 @@ document.addEventListener('alpine:init', () => {
 
 			// If heads_display is explicitly set, use it
 			if (this.heads_display && Array.isArray(this.heads_display)) {
-				const headsWithDistances = await this.head_distances.getHeadDistances(this.current_head, this.heads_display);
+				// Apply filtering to explicitly set heads
+				const filteredHeads = this.heads_display.filter(headId => this.shouldShowHead(headId));
+				const headsWithDistances = await this.head_distances.getHeadDistances(this.current_head, filteredHeads);
 				const maxDistance = Math.max(...headsWithDistances.map(h => h.distance || 0));
 				
 				// Get all possible heads for ranking
@@ -186,7 +224,7 @@ document.addEventListener('alpine:init', () => {
 			const allHeadsSorted = allPossibleHeads.head_names.map((head, idx) => ({
 				head_name: head,
 				distance: allPossibleHeads.distances[idx]
-			})).sort((a, b) => a.distance - b.distance);
+			})).filter(item => this.shouldShowHead(item.head_name)).sort((a, b) => a.distance - b.distance);
 			
 			// Create a map of head names to their rank among all heads
 			const headRankMap = new Map();
@@ -228,7 +266,8 @@ document.addEventListener('alpine:init', () => {
 				
 				for (const type of currentHeadTypes) {
 					const sameTypeHeads = await this.attention_pedia.get_type_heads(type);
-					sameTypeHeads.slice(0, n_share_class).forEach(head => {
+					const filteredSameTypeHeads = sameTypeHeads.filter(head => this.shouldShowHead(head));
+					filteredSameTypeHeads.slice(0, n_share_class).forEach(head => {
 						if (!headsToShow.has(head)) {
 							headsToShow.add(head);
 							sameClassHeads.add(head);
@@ -670,6 +709,282 @@ document.addEventListener('alpine:init', () => {
 			
 			// Reset failure tracker
 			this.resetFailureTracker();
+		},
+		
+		// Model and filtering methods
+		async loadModelData() {
+			try {
+				const response = await fetch('../../patterns/models.jsonl');
+				const text = await response.text();
+				const lines = text.trim().split('\n');
+				this.models_data = lines.map(line => JSON.parse(line));
+				
+				// Extract available models and layers
+				this.available_models = this.models_data.map(m => m.model_name).sort();
+				
+				// Initialize with all models selected
+				this.selected_models = new Set(this.available_models);
+				
+				// Calculate all available layers (will be updated when models selection changes)
+				this.updateAvailableLayers();
+				
+				// Initialize with all layers selected
+				this.selected_layers = new Set(this.available_layers);
+			} catch (error) {
+				console.error('Failed to load model data:', error);
+				// Fallback to empty arrays
+				this.available_models = [];
+				this.available_layers = [];
+			}
+		},
+		
+		toggleModelFilter() {
+			this.model_filter_open = !this.model_filter_open;
+			if (this.model_filter_open) {
+				this.layer_filter_open = false;
+			}
+		},
+		
+		toggleLayerFilter() {
+			this.layer_filter_open = !this.layer_filter_open;
+			if (this.layer_filter_open) {
+				this.model_filter_open = false;
+			}
+		},
+		
+		toggleModelSelection(model) {
+			if (this.selected_models.has(model)) {
+				this.selected_models.delete(model);
+			} else {
+				this.selected_models.add(model);
+			}
+			this.updateAvailableLayers();
+			this.applyFilters();
+		},
+		
+		toggleLayerSelection(layer) {
+			if (this.selected_layers.has(layer)) {
+				this.selected_layers.delete(layer);
+			} else {
+				this.selected_layers.add(layer);
+			}
+			this.applyFilters();
+		},
+		
+		selectAllModels() {
+			this.selected_models = new Set(this.available_models);
+			this.updateAvailableLayers();
+			this.applyFilters();
+		},
+		
+		selectNoModels() {
+			this.selected_models = new Set();
+			this.updateAvailableLayers();
+			this.applyFilters();
+		},
+		
+		selectAllLayers() {
+			this.selected_layers = new Set(this.available_layers);
+			this.applyFilters();
+		},
+		
+		selectNoLayers() {
+			this.selected_layers = new Set();
+			this.applyFilters();
+		},
+		
+		shouldShowHead(headId) {
+			// If models haven't loaded yet, show all heads
+			if (this.available_models.length === 0) {
+				return true;
+			}
+			
+			try {
+				const headInfo = HeadInfo.from_id(headId);
+				return this.selected_models.has(headInfo.model) && this.selected_layers.has(headInfo.layer);
+			} catch (error) {
+				// If there's an error parsing the head ID, show it by default
+				return true;
+			}
+		},
+		
+		async applyFilters() {
+			// Re-run the heads display logic with filtering
+			await this.updateHeadsWithDistances();
+		},
+		
+		async searchHeads() {
+			this.matching_heads = [];
+			if (!this.head_search_query.trim()) {
+				this.autocomplete_visible = false;
+				return;
+			}
+			
+			// Get autocomplete suggestions
+			if (this.head_autocomplete) {
+				this.autocomplete_suggestions = await this.head_autocomplete.getSuggestions(this.head_search_query);
+				this.autocomplete_visible = this.autocomplete_suggestions.length > 0;
+				this.selected_suggestion_index = -1;
+			}
+			
+			// Also search existing heads for partial matches
+			await this.head_distances._ensureLoaded();
+			const query = this.head_search_query.toLowerCase();
+			const allHeads = this.head_distances.head_dists_meta.cls_values;
+			
+			this.matching_heads = allHeads.filter(headId => {
+				return headId.toLowerCase().includes(query) && this.shouldShowHead(headId);
+			}).slice(0, 5); // Limit to 5 results since we also have autocomplete
+		},
+
+		async handleSearchKeydown(event) {
+			if (!this.autocomplete_visible || this.autocomplete_suggestions.length === 0) {
+				if (event.key === 'Enter' && this.head_search_query.trim()) {
+					// Try to navigate to the entered head if it's a complete ID
+					if (await this.head_autocomplete.headExists(this.head_search_query.trim())) {
+						this.navigateToHead(this.head_search_query.trim());
+					}
+				}
+				return;
+			}
+
+			if (event.key === 'ArrowDown') {
+				event.preventDefault();
+				this.selected_suggestion_index = Math.min(
+					this.selected_suggestion_index + 1,
+					this.autocomplete_suggestions.length - 1
+				);
+				this.scrollToSelectedSuggestion();
+			} else if (event.key === 'ArrowUp') {
+				event.preventDefault();
+				this.selected_suggestion_index = Math.max(this.selected_suggestion_index - 1, -1);
+				this.scrollToSelectedSuggestion();
+			} else if (event.key === 'Enter') {
+				event.preventDefault();
+				if (this.selected_suggestion_index >= 0) {
+					this.selectSuggestion(this.autocomplete_suggestions[this.selected_suggestion_index]);
+				}
+			} else if (event.key === 'Escape') {
+				this.autocomplete_visible = false;
+				this.selected_suggestion_index = -1;
+			}
+		},
+
+		selectSuggestion(suggestion) {
+			if (suggestion.valid && suggestion.type === 'head') {
+				// Complete head ID - navigate to it
+				this.navigateToHead(suggestion.completion);
+			} else {
+				// Partial completion - update search query
+				this.head_search_query = suggestion.completion;
+				this.searchHeads();
+			}
+		},
+
+		hideAutocomplete() {
+			setTimeout(() => {
+				this.autocomplete_visible = false;
+				this.selected_suggestion_index = -1;
+			}, 150); // Small delay to allow clicks
+		},
+
+		scrollToSelectedSuggestion() {
+			// Wait for next tick to ensure DOM is updated
+			this.$nextTick(() => {
+				const dropdown = document.querySelector('.autocomplete-dropdown');
+				const selectedElement = dropdown?.querySelector(`.autocomplete-suggestion:nth-child(${this.selected_suggestion_index + 1})`);
+				
+				if (dropdown && selectedElement) {
+					const dropdownRect = dropdown.getBoundingClientRect();
+					const elementRect = selectedElement.getBoundingClientRect();
+					
+					// Check if element is out of view
+					if (elementRect.top < dropdownRect.top) {
+						// Element is above visible area
+						dropdown.scrollTop = selectedElement.offsetTop;
+					} else if (elementRect.bottom > dropdownRect.bottom) {
+						// Element is below visible area
+						dropdown.scrollTop = selectedElement.offsetTop - dropdown.clientHeight + selectedElement.clientHeight;
+					}
+				}
+			});
+		},
+
+		updateAvailableLayers() {
+			// Calculate available layers based on currently selected models
+			const selectedModelData = this.models_data.filter(model => 
+				this.selected_models.has(model.model_name)
+			);
+			
+			if (selectedModelData.length === 0) {
+				this.available_layers = [];
+				this.selected_layers = new Set();
+				return;
+			}
+			
+			// Get maximum layer count among selected models
+			const maxLayers = Math.max(...selectedModelData.map(model => model.n_layers));
+			
+			// Update available layers
+			const newAvailableLayers = [];
+			for (let i = 0; i < maxLayers; i++) {
+				newAvailableLayers.push(i);
+			}
+			this.available_layers = newAvailableLayers;
+			
+			// Update selected layers to only include available ones
+			const newSelectedLayers = new Set();
+			for (const layer of this.selected_layers) {
+				if (this.available_layers.includes(layer)) {
+					newSelectedLayers.add(layer);
+				}
+			}
+			this.selected_layers = newSelectedLayers;
+		},
+		
+		navigateToHead(headId) {
+			if (this.search_mode === 'switch') {
+				// Navigate to the selected head (switch mode)
+				const url = new URL(window.location.href);
+				url.searchParams.set('head_viewing', encodeForURL(headId));
+				url.searchParams.set('classification_mode', 'false');
+				url.searchParams.delete('current_classification');
+				url.searchParams.delete('heads_display');
+				window.location.href = url.toString();
+			} else {
+				// Add to current view (add mode)
+				this.addHeadToCurrentView(headId);
+			}
+		},
+
+		addHeadToCurrentView(headId) {
+			// Add the head to the current heads display without navigating away
+			if (!this.heads_display || !Array.isArray(this.heads_display)) {
+				// If we don't have explicit heads_display, create one with current head plus the new one
+				this.heads_display = this.current_head ? [this.current_head] : [];
+			}
+			
+			// Check if head is already in display
+			if (!this.heads_display.includes(headId)) {
+				this.heads_display.push(headId);
+				// Update URL to reflect the explicit heads_display
+				const url = new URL(window.location.href);
+				const encodedHeads = this.heads_display.map(h => encodeForURL(h)).join('~');
+				url.searchParams.set('heads_display', encodedHeads);
+				window.history.replaceState({}, '', url.toString());
+				
+				this.updateHeadsWithDistances();
+			}
+			
+			// Clear search
+			this.head_search_query = '';
+			this.autocomplete_visible = false;
+			this.matching_heads = [];
+		},
+
+
+		get hasExplicitHeads() {
+			return this.heads_display && Array.isArray(this.heads_display) && this.heads_display.length > 0;
 		}
 	}));
 });

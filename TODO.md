@@ -9,9 +9,11 @@ misc todos:
 - [ ] embedding visualizations: 
   - [ ] hovering over point sometimes doesnt work, the "hover radius" is much smaller than the point size. make the hover radius scale with the point size by some constant factor which we can configure in config.js
   - [ ] make sure default configs are reasonable
-- [ ] filter by model, layer in attentionpedia and classifications page?
+- [x] filter by model, layer in attentionpedia and classifications page?
 - [ ] for each model, a nice display of all the heads (colored by classification, if any?) where you can click on a head to go to attentionpedia for that head
-- [ ] for pattern embeddings save and load from a reduced-precision csv file to save space
+- [x] for pattern embeddings save and load from a reduced-precision csv file to save space
+  - [x] save `pca.csv`
+  - [x] load `pca.csv` in the pattern embedding vis (we might still use jsonl for head embedding -- need to detect which loading func to use based on file extension)
 
 ## Pattern Lens (`data/patterns/index.html`)
 

@@ -74,7 +74,313 @@
     	border-radius: 8px;
     	box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     	flex: 1;
-    	min-width: 600px;
+    	max-width: 600px;
+    }
+    
+    /* Head Search Styles */
+    .head-search-container {
+    	margin-bottom: 15px;
+    	position: relative;
+    }
+    
+    .head-search-row {
+    	display: flex;
+    	gap: 10px;
+    	align-items: stretch;
+    	height: 36px;
+    }
+    
+    .head-search-input {
+    	position: relative;
+    	flex: 1;
+    	max-width: 350px;
+    }
+    
+    .head-search-field {
+    	width: 100%;
+    	height: 100%;
+    	padding: 8px 12px;
+    	border: 1px solid #ddd;
+    	border-radius: 4px;
+    	font-size: 14px;
+    	font-family: monospace;
+    	box-sizing: border-box;
+    }
+    
+    .head-search-results {
+    	position: absolute;
+    	top: 100%;
+    	left: 0;
+    	right: 0;
+    	background: white;
+    	border: 1px solid #ddd;
+    	border-top: none;
+    	border-radius: 0 0 4px 4px;
+    	max-height: 200px;
+    	overflow-y: auto;
+    	z-index: 1000;
+    	box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .head-search-result {
+    	padding: 8px 12px;
+    	cursor: pointer;
+    	font-family: monospace;
+    	font-size: 12px;
+    	border-bottom: 1px solid #eee;
+    }
+    
+    .head-search-result:hover {
+    	background: #f0f0f0;
+    }
+    
+    .head-search-result:last-child {
+    	border-bottom: none;
+    }
+    
+    /* Search Mode Toggle Styles */
+    .search-mode-toggle {
+    	flex: 0 0 auto;
+    	display: flex;
+    	align-items: center;
+    	gap: 8px;
+    	padding: 8px 12px;
+    	background: #f8f9fa;
+    	border: 1px solid #ddd;
+    	border-radius: 4px;
+    	font-size: 13px;
+    	height: 100%;
+    	box-sizing: border-box;
+    }
+    
+    .search-mode-text {
+    	cursor: pointer;
+    	padding: 4px 6px;
+    	border-radius: 3px;
+    	transition: all 0.2s ease;
+    	white-space: nowrap;
+    	color: #666;
+    }
+    
+    .search-mode-text:hover {
+    	background: #e9ecef;
+    	color: #333;
+    }
+    
+    .search-mode-text.active {
+    	background: #007bff;
+    	color: white;
+    	font-weight: 500;
+    }
+    
+    .search-mode-separator {
+    	color: #adb5bd;
+    	font-weight: 300;
+    }
+    
+    /* Autocomplete Dropdown Styles */
+    .autocomplete-dropdown {
+    	position: absolute;
+    	top: 100%;
+    	left: 0;
+    	right: 0;
+    	background: white;
+    	border: 1px solid #ddd;
+    	border-top: none;
+    	border-radius: 0 0 4px 4px;
+    	max-height: 300px;
+    	overflow-y: auto;
+    	z-index: 1001;
+    	box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .autocomplete-suggestion {
+    	padding: 8px 12px;
+    	cursor: pointer;
+    	border-bottom: 1px solid #eee;
+    	display: flex;
+    	justify-content: space-between;
+    	align-items: flex-start;
+    	flex-direction: column;
+    	gap: 2px;
+    }
+    
+    .autocomplete-suggestion:hover,
+    .autocomplete-suggestion.selected {
+    	background: #f0f0f0;
+    }
+    
+    .autocomplete-suggestion.error {
+    	background: #ffebee;
+    	color: #c62828;
+    }
+    
+    .autocomplete-suggestion.error:hover,
+    .autocomplete-suggestion.error.selected {
+    	background: #ffcdd2;
+    }
+    
+    .autocomplete-suggestion:last-child {
+    	border-bottom: none;
+    }
+    
+    .suggestion-main {
+    	display: flex;
+    	align-items: center;
+    	width: 100%;
+    }
+    
+    .suggestion-text {
+    	font-family: monospace;
+    	font-size: 12px;
+    	font-weight: bold;
+    }
+    
+    .suggestion-extra {
+    	width: 100%;
+    }
+    
+    .suggestion-display {
+    	font-size: 11px;
+    	color: #666;
+    	font-style: italic;
+    }
+    
+    /* Filter Section Styles */
+    .filters-section {
+    	margin-bottom: 15px;
+    	border-top: 1px solid #eee;
+    	padding-top: 15px;
+    }
+    
+    .filters-row {
+    	display: flex;
+    	align-items: center;
+    	gap: 15px;
+    }
+    
+    .filters-label {
+    	font-weight: bold;
+    	color: #333;
+    	font-size: 14px;
+    	flex: 0 0 auto;
+    }
+    
+    /* Filter Dropdown Styles */
+    .filters-container {
+    	display: flex;
+    	gap: 15px;
+    	flex-wrap: wrap;
+    	flex: 1;
+    }
+    
+    .filter-dropdown {
+    	position: relative;
+    	min-width: 180px;
+    }
+    
+    .filter-button {
+    	width: 100%;
+    	padding: 8px 12px;
+    	background: #f8f9fa;
+    	border: 1px solid #ddd;
+    	border-radius: 4px;
+    	font-size: 14px;
+    	cursor: pointer;
+    	display: flex;
+    	justify-content: space-between;
+    	align-items: center;
+    	transition: background-color 0.2s;
+    }
+    
+    .filter-button:hover {
+    	background: #e9ecef;
+    }
+    
+    .filter-button.filter-error {
+    	background: #ffebee;
+    	border-color: #ffcdd2;
+    	color: #c62828;
+    }
+    
+    .filter-button.filter-error:hover {
+    	background: #ffcdd2;
+    }
+    
+    .filter-dropdown-content {
+    	position: absolute;
+    	top: 100%;
+    	left: 0;
+    	right: 0;
+    	background: white;
+    	border: 1px solid #ddd;
+    	border-top: none;
+    	border-radius: 0 0 4px 4px;
+    	z-index: 1000;
+    	box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    	max-height: 250px;
+    	overflow-y: auto;
+    }
+    
+    .filter-actions {
+    	padding: 8px;
+    	border-bottom: 1px solid #eee;
+    	display: flex;
+    	gap: 8px;
+    }
+    
+    .filter-action-btn {
+    	padding: 4px 8px;
+    	background: #007bff;
+    	color: white;
+    	border: none;
+    	border-radius: 3px;
+    	font-size: 12px;
+    	cursor: pointer;
+    	flex: 1;
+    }
+    
+    .filter-action-btn:hover {
+    	background: #0056b3;
+    }
+    
+    .filter-options {
+    	padding: 8px;
+    }
+    
+    .filter-option {
+    	display: flex;
+    	align-items: center;
+    	justify-content: space-between;
+    	gap: 8px;
+    	padding: 4px 0;
+    	cursor: pointer;
+    	font-size: 13px;
+    }
+    
+    .filter-option:hover {
+    	background: #f8f9fa;
+    }
+    
+    .filter-option input[type="checkbox"] {
+    	margin: 0;
+    }
+    
+    .filter-option-left {
+    	display: flex;
+    	align-items: center;
+    	gap: 8px;
+    	flex: 1;
+    }
+    
+    .filter-option .model-name {
+    	flex: 1;
+    }
+    
+    .filter-option .model-info {
+    	color: #999;
+    	font-size: 11px;
+    	margin-left: auto;
     }
     
     .page-title {
@@ -86,6 +392,17 @@
     .head-name {
     	font-family: monospace;
     	color: #1565c0;
+    }
+    
+    .pattern-lens-links {
+    	font-size: 14px;
+    	color: #666;
+    	margin-top: 5px;
+    }
+    
+    .pattern-lens-links .pattern-lens-link {
+    	color: #1565c0;
+    	font-size: 14px;
     }
     
     
@@ -271,6 +588,8 @@
     	grid-template-columns: 1fr 1fr 1fr;
     	gap: 15px;
     	align-items: center;
+    	border-top: 1px solid #eee;
+    	padding-top: 15px;
     }
     
     .control-item {
@@ -313,6 +632,22 @@
     
     .control-button.full-width {
     	width: 100%;
+    }
+    
+    /* Disabled controls styling */
+    .control-item.disabled {
+    	opacity: 0.5;
+    	pointer-events: none;
+    }
+    
+    .control-item.disabled label {
+    	color: #999;
+    }
+    
+    .control-input:disabled {
+    	background-color: #f5f5f5;
+    	color: #999;
+    	cursor: not-allowed;
     }
     
     /* Help menu corner styling */
@@ -2048,6 +2383,200 @@
     }
     </script>
     <!-- end 'headInfo.js' -->
+        <!-- begin 'autocomplete.js' -->
+    <script>
+    /**
+     * Autocomplete functionality for head search input
+     * Provides smart suggestions based on available models, layers, and heads
+     */
+    
+    class HeadAutocomplete {
+        constructor(modelsData, headDistances) {
+            this.modelsData = modelsData;
+            this.headDistances = headDistances;
+            this.modelMap = new Map();
+            this.allHeads = [];
+            this.init();
+        }
+    
+        init() {
+            // Create a map for quick model lookups
+            this.modelsData.forEach(model => {
+                this.modelMap.set(model.model_name, model);
+            });
+        }
+    
+        async ensureHeadsLoaded() {
+            if (this.allHeads.length === 0) {
+                await this.headDistances._ensureLoaded();
+                this.allHeads = this.headDistances.head_dists_meta.cls_values;
+            }
+        }
+    
+        /**
+         * Get autocomplete suggestions based on current input
+         * @param {string} input - Current input text
+         * @returns {Array} Array of suggestion objects
+         */
+        async getSuggestions(input) {
+            if (!input.trim()) {
+                return [];
+            }
+    
+            await this.ensureHeadsLoaded();
+    
+            const colonCount = (input.match(/:/g) || []).length;
+            
+            if (colonCount === 0) {
+                return this.getModelSuggestions(input);
+            } else if (colonCount === 1) {
+                return this.getLayerSuggestions(input);
+            } else if (colonCount === 2) {
+                return this.getHeadSuggestions(input);
+            }
+            
+            return [];
+        }
+    
+        /**
+         * Get model name suggestions
+         * @param {string} input - Current input
+         * @returns {Array} Array of suggestion objects
+         */
+        getModelSuggestions(input) {
+            const modelNames = Array.from(this.modelMap.keys());
+            const filtered = modelNames.filter(name => 
+                name.toLowerCase().includes(input.toLowerCase())
+            ).slice(0, 8);
+    
+            return filtered.map(modelName => {
+                const model = this.modelMap.get(modelName);
+                const dimensions = model ? `${model.n_layers} layers × ${model.n_heads} heads` : '';
+                return {
+                    type: 'model',
+                    text: modelName,
+                    display: dimensions,
+                    completion: modelName + ':L',
+                    valid: true
+                };
+            });
+        }
+    
+        /**
+         * Get layer suggestions for a specific model
+         * @param {string} input - Current input (e.g., "gpt2-small:L")
+         * @returns {Array} Array of suggestion objects
+         */
+        getLayerSuggestions(input) {
+            const parts = input.split(':');
+            const modelName = parts[0];
+            const layerPrefix = parts[1] || '';
+    
+            const model = this.modelMap.get(modelName);
+            if (!model) {
+                return [{
+                    type: 'error',
+                    text: input,
+                    display: `Unknown model: ${modelName}`,
+                    completion: input,
+                    valid: false
+                }];
+            }
+    
+            // Generate layer suggestions
+            const suggestions = [];
+            for (let i = 0; i < model.n_layers; i++) {
+                const layerStr = `L${i}`;
+                if (layerStr.toLowerCase().startsWith(layerPrefix.toLowerCase())) {
+                    suggestions.push({
+                        type: 'layer',
+                        text: `${modelName}:${layerStr}`,
+                        display: `Layer ${i}`,
+                        completion: `${modelName}:${layerStr}:H`,
+                        valid: true
+                    });
+                }
+            }
+    
+            return suggestions.slice(0, 8);
+        }
+    
+        /**
+         * Get head suggestions for a specific model and layer
+         * @param {string} input - Current input (e.g., "gpt2-small:L5:H")
+         * @returns {Array} Array of suggestion objects
+         */
+        getHeadSuggestions(input) {
+            const parts = input.split(':');
+            const modelName = parts[0];
+            const layerPart = parts[1] || '';
+            const headPrefix = parts[2] || '';
+    
+            const model = this.modelMap.get(modelName);
+            if (!model) {
+                return [{
+                    type: 'error',
+                    text: input,
+                    display: `Unknown model: ${modelName}`,
+                    completion: input,
+                    valid: false
+                }];
+            }
+    
+            // Parse layer number
+            const layerMatch = layerPart.match(/^L(\d+)$/);
+            if (!layerMatch) {
+                return [{
+                    type: 'error',
+                    text: input,
+                    display: `Invalid layer format: ${layerPart}`,
+                    completion: input,
+                    valid: false
+                }];
+            }
+    
+            const layerNum = parseInt(layerMatch[1]);
+            if (layerNum >= model.n_layers) {
+                return [{
+                    type: 'error',
+                    text: input,
+                    display: `Layer ${layerNum} doesn't exist (max: ${model.n_layers - 1})`,
+                    completion: input,
+                    valid: false
+                }];
+            }
+    
+            // Generate head suggestions
+            const suggestions = [];
+            for (let i = 0; i < model.n_heads; i++) {
+                const headStr = `H${i}`;
+                if (headStr.toLowerCase().startsWith(headPrefix.toLowerCase())) {
+                    const fullHeadId = `${modelName}:L${layerNum}:H${i}`;
+                    suggestions.push({
+                        type: 'head',
+                        text: fullHeadId,
+                        display: `Head ${i}`,
+                        completion: fullHeadId,
+                        valid: true
+                    });
+                }
+            }
+    
+            return suggestions.slice(0, 8);
+        }
+    
+        /**
+         * Check if a complete head ID exists in the dataset
+         * @param {string} headId - Complete head ID to check
+         * @returns {boolean} True if head exists
+         */
+        async headExists(headId) {
+            await this.ensureHeadsLoaded();
+            return this.allHeads.includes(headId);
+        }
+    }
+    </script>
+    <!-- end 'autocomplete.js' -->
         <!-- begin 'app.js' -->
     <script>
     document.addEventListener('alpine:init', () => {
@@ -2071,6 +2600,22 @@
     			n_random: 0
     		},
     		
+    		// Filtering state
+    		models_data: [],
+    		available_models: [],
+    		available_layers: [],
+    		selected_models: new Set(),
+    		selected_layers: new Set(),
+    		model_filter_open: false,
+    		layer_filter_open: false,
+    		head_search_query: '',
+    		matching_heads: [],
+    		autocomplete_suggestions: [],
+    		autocomplete_visible: false,
+    		selected_suggestion_index: -1,
+    		head_autocomplete: null,
+    		search_mode: 'switch', // 'switch' or 'add'
+    		
     		// Error tracking for aggregated notifications
     		failureTracker: {
     			patterns: { failed: 0, total: 0 },
@@ -2086,6 +2631,12 @@
     				this.allPrompts = await this.prompts_loader.get_all();
     				this.allPromptsCount = this.allPrompts.length;
     				this.n_prompts = CONFIG.n_prompts || 5;
+    				
+    				// Load model data for filtering
+    				await this.loadModelData();
+    				
+    				// Initialize autocomplete
+    				this.head_autocomplete = new HeadAutocomplete(this.models_data, this.head_distances);
     				
     				// Check if specific prompts are selected via URL
     				if (CONFIG.selected_prompts) {
@@ -2122,6 +2673,19 @@
     				// Set pattern size CSS variable
     				const patternSize = CONFIG.pattern_size || 120;
     				document.documentElement.style.setProperty('--pattern-size', `${patternSize}px`);
+    				
+    				// Add click outside listener for dropdowns
+    				document.addEventListener('click', (e) => {
+    					if (!e.target.closest('.filter-dropdown')) {
+    						this.model_filter_open = false;
+    						this.layer_filter_open = false;
+    					}
+    					if (!e.target.closest('.head-search-container') && !e.target.closest('.search-mode-toggle')) {
+    						this.matching_heads = [];
+    						this.autocomplete_visible = false;
+    						this.selected_suggestion_index = -1;
+    					}
+    				});
     				
     				await this.updateHeadsWithDistances();
     				this.loading = false;
@@ -2169,8 +2733,9 @@
     				this.current_head = bestHead;
     			}
     			
-    			// Set heads_display to up to 99 heads of this classification
-    			this.heads_display = headsOfType.slice(0, 99);
+    			// Set heads_display to up to 99 heads of this classification (filtered)
+    			const filteredHeadsOfType = headsOfType.filter(head => this.shouldShowHead(head));
+    			this.heads_display = filteredHeadsOfType.slice(0, 99);
     		},
     
     		async updateHeadsWithDistances() {
@@ -2181,7 +2746,9 @@
     
     			// If heads_display is explicitly set, use it
     			if (this.heads_display && Array.isArray(this.heads_display)) {
-    				const headsWithDistances = await this.head_distances.getHeadDistances(this.current_head, this.heads_display);
+    				// Apply filtering to explicitly set heads
+    				const filteredHeads = this.heads_display.filter(headId => this.shouldShowHead(headId));
+    				const headsWithDistances = await this.head_distances.getHeadDistances(this.current_head, filteredHeads);
     				const maxDistance = Math.max(...headsWithDistances.map(h => h.distance || 0));
     				
     				// Get all possible heads for ranking
@@ -2238,7 +2805,7 @@
     			const allHeadsSorted = allPossibleHeads.head_names.map((head, idx) => ({
     				head_name: head,
     				distance: allPossibleHeads.distances[idx]
-    			})).sort((a, b) => a.distance - b.distance);
+    			})).filter(item => this.shouldShowHead(item.head_name)).sort((a, b) => a.distance - b.distance);
     			
     			// Create a map of head names to their rank among all heads
     			const headRankMap = new Map();
@@ -2280,7 +2847,8 @@
     				
     				for (const type of currentHeadTypes) {
     					const sameTypeHeads = await this.attention_pedia.get_type_heads(type);
-    					sameTypeHeads.slice(0, n_share_class).forEach(head => {
+    					const filteredSameTypeHeads = sameTypeHeads.filter(head => this.shouldShowHead(head));
+    					filteredSameTypeHeads.slice(0, n_share_class).forEach(head => {
     						if (!headsToShow.has(head)) {
     							headsToShow.add(head);
     							sameClassHeads.add(head);
@@ -2722,6 +3290,282 @@
     			
     			// Reset failure tracker
     			this.resetFailureTracker();
+    		},
+    		
+    		// Model and filtering methods
+    		async loadModelData() {
+    			try {
+    				const response = await fetch('../../patterns/models.jsonl');
+    				const text = await response.text();
+    				const lines = text.trim().split('\n');
+    				this.models_data = lines.map(line => JSON.parse(line));
+    				
+    				// Extract available models and layers
+    				this.available_models = this.models_data.map(m => m.model_name).sort();
+    				
+    				// Initialize with all models selected
+    				this.selected_models = new Set(this.available_models);
+    				
+    				// Calculate all available layers (will be updated when models selection changes)
+    				this.updateAvailableLayers();
+    				
+    				// Initialize with all layers selected
+    				this.selected_layers = new Set(this.available_layers);
+    			} catch (error) {
+    				console.error('Failed to load model data:', error);
+    				// Fallback to empty arrays
+    				this.available_models = [];
+    				this.available_layers = [];
+    			}
+    		},
+    		
+    		toggleModelFilter() {
+    			this.model_filter_open = !this.model_filter_open;
+    			if (this.model_filter_open) {
+    				this.layer_filter_open = false;
+    			}
+    		},
+    		
+    		toggleLayerFilter() {
+    			this.layer_filter_open = !this.layer_filter_open;
+    			if (this.layer_filter_open) {
+    				this.model_filter_open = false;
+    			}
+    		},
+    		
+    		toggleModelSelection(model) {
+    			if (this.selected_models.has(model)) {
+    				this.selected_models.delete(model);
+    			} else {
+    				this.selected_models.add(model);
+    			}
+    			this.updateAvailableLayers();
+    			this.applyFilters();
+    		},
+    		
+    		toggleLayerSelection(layer) {
+    			if (this.selected_layers.has(layer)) {
+    				this.selected_layers.delete(layer);
+    			} else {
+    				this.selected_layers.add(layer);
+    			}
+    			this.applyFilters();
+    		},
+    		
+    		selectAllModels() {
+    			this.selected_models = new Set(this.available_models);
+    			this.updateAvailableLayers();
+    			this.applyFilters();
+    		},
+    		
+    		selectNoModels() {
+    			this.selected_models = new Set();
+    			this.updateAvailableLayers();
+    			this.applyFilters();
+    		},
+    		
+    		selectAllLayers() {
+    			this.selected_layers = new Set(this.available_layers);
+    			this.applyFilters();
+    		},
+    		
+    		selectNoLayers() {
+    			this.selected_layers = new Set();
+    			this.applyFilters();
+    		},
+    		
+    		shouldShowHead(headId) {
+    			// If models haven't loaded yet, show all heads
+    			if (this.available_models.length === 0) {
+    				return true;
+    			}
+    			
+    			try {
+    				const headInfo = HeadInfo.from_id(headId);
+    				return this.selected_models.has(headInfo.model) && this.selected_layers.has(headInfo.layer);
+    			} catch (error) {
+    				// If there's an error parsing the head ID, show it by default
+    				return true;
+    			}
+    		},
+    		
+    		async applyFilters() {
+    			// Re-run the heads display logic with filtering
+    			await this.updateHeadsWithDistances();
+    		},
+    		
+    		async searchHeads() {
+    			this.matching_heads = [];
+    			if (!this.head_search_query.trim()) {
+    				this.autocomplete_visible = false;
+    				return;
+    			}
+    			
+    			// Get autocomplete suggestions
+    			if (this.head_autocomplete) {
+    				this.autocomplete_suggestions = await this.head_autocomplete.getSuggestions(this.head_search_query);
+    				this.autocomplete_visible = this.autocomplete_suggestions.length > 0;
+    				this.selected_suggestion_index = -1;
+    			}
+    			
+    			// Also search existing heads for partial matches
+    			await this.head_distances._ensureLoaded();
+    			const query = this.head_search_query.toLowerCase();
+    			const allHeads = this.head_distances.head_dists_meta.cls_values;
+    			
+    			this.matching_heads = allHeads.filter(headId => {
+    				return headId.toLowerCase().includes(query) && this.shouldShowHead(headId);
+    			}).slice(0, 5); // Limit to 5 results since we also have autocomplete
+    		},
+    
+    		async handleSearchKeydown(event) {
+    			if (!this.autocomplete_visible || this.autocomplete_suggestions.length === 0) {
+    				if (event.key === 'Enter' && this.head_search_query.trim()) {
+    					// Try to navigate to the entered head if it's a complete ID
+    					if (await this.head_autocomplete.headExists(this.head_search_query.trim())) {
+    						this.navigateToHead(this.head_search_query.trim());
+    					}
+    				}
+    				return;
+    			}
+    
+    			if (event.key === 'ArrowDown') {
+    				event.preventDefault();
+    				this.selected_suggestion_index = Math.min(
+    					this.selected_suggestion_index + 1,
+    					this.autocomplete_suggestions.length - 1
+    				);
+    				this.scrollToSelectedSuggestion();
+    			} else if (event.key === 'ArrowUp') {
+    				event.preventDefault();
+    				this.selected_suggestion_index = Math.max(this.selected_suggestion_index - 1, -1);
+    				this.scrollToSelectedSuggestion();
+    			} else if (event.key === 'Enter') {
+    				event.preventDefault();
+    				if (this.selected_suggestion_index >= 0) {
+    					this.selectSuggestion(this.autocomplete_suggestions[this.selected_suggestion_index]);
+    				}
+    			} else if (event.key === 'Escape') {
+    				this.autocomplete_visible = false;
+    				this.selected_suggestion_index = -1;
+    			}
+    		},
+    
+    		selectSuggestion(suggestion) {
+    			if (suggestion.valid && suggestion.type === 'head') {
+    				// Complete head ID - navigate to it
+    				this.navigateToHead(suggestion.completion);
+    			} else {
+    				// Partial completion - update search query
+    				this.head_search_query = suggestion.completion;
+    				this.searchHeads();
+    			}
+    		},
+    
+    		hideAutocomplete() {
+    			setTimeout(() => {
+    				this.autocomplete_visible = false;
+    				this.selected_suggestion_index = -1;
+    			}, 150); // Small delay to allow clicks
+    		},
+    
+    		scrollToSelectedSuggestion() {
+    			// Wait for next tick to ensure DOM is updated
+    			this.$nextTick(() => {
+    				const dropdown = document.querySelector('.autocomplete-dropdown');
+    				const selectedElement = dropdown?.querySelector(`.autocomplete-suggestion:nth-child(${this.selected_suggestion_index + 1})`);
+    				
+    				if (dropdown && selectedElement) {
+    					const dropdownRect = dropdown.getBoundingClientRect();
+    					const elementRect = selectedElement.getBoundingClientRect();
+    					
+    					// Check if element is out of view
+    					if (elementRect.top < dropdownRect.top) {
+    						// Element is above visible area
+    						dropdown.scrollTop = selectedElement.offsetTop;
+    					} else if (elementRect.bottom > dropdownRect.bottom) {
+    						// Element is below visible area
+    						dropdown.scrollTop = selectedElement.offsetTop - dropdown.clientHeight + selectedElement.clientHeight;
+    					}
+    				}
+    			});
+    		},
+    
+    		updateAvailableLayers() {
+    			// Calculate available layers based on currently selected models
+    			const selectedModelData = this.models_data.filter(model => 
+    				this.selected_models.has(model.model_name)
+    			);
+    			
+    			if (selectedModelData.length === 0) {
+    				this.available_layers = [];
+    				this.selected_layers = new Set();
+    				return;
+    			}
+    			
+    			// Get maximum layer count among selected models
+    			const maxLayers = Math.max(...selectedModelData.map(model => model.n_layers));
+    			
+    			// Update available layers
+    			const newAvailableLayers = [];
+    			for (let i = 0; i < maxLayers; i++) {
+    				newAvailableLayers.push(i);
+    			}
+    			this.available_layers = newAvailableLayers;
+    			
+    			// Update selected layers to only include available ones
+    			const newSelectedLayers = new Set();
+    			for (const layer of this.selected_layers) {
+    				if (this.available_layers.includes(layer)) {
+    					newSelectedLayers.add(layer);
+    				}
+    			}
+    			this.selected_layers = newSelectedLayers;
+    		},
+    		
+    		navigateToHead(headId) {
+    			if (this.search_mode === 'switch') {
+    				// Navigate to the selected head (switch mode)
+    				const url = new URL(window.location.href);
+    				url.searchParams.set('head_viewing', encodeForURL(headId));
+    				url.searchParams.set('classification_mode', 'false');
+    				url.searchParams.delete('current_classification');
+    				url.searchParams.delete('heads_display');
+    				window.location.href = url.toString();
+    			} else {
+    				// Add to current view (add mode)
+    				this.addHeadToCurrentView(headId);
+    			}
+    		},
+    
+    		addHeadToCurrentView(headId) {
+    			// Add the head to the current heads display without navigating away
+    			if (!this.heads_display || !Array.isArray(this.heads_display)) {
+    				// If we don't have explicit heads_display, create one with current head plus the new one
+    				this.heads_display = this.current_head ? [this.current_head] : [];
+    			}
+    			
+    			// Check if head is already in display
+    			if (!this.heads_display.includes(headId)) {
+    				this.heads_display.push(headId);
+    				// Update URL to reflect the explicit heads_display
+    				const url = new URL(window.location.href);
+    				const encodedHeads = this.heads_display.map(h => encodeForURL(h)).join('~');
+    				url.searchParams.set('heads_display', encodedHeads);
+    				window.history.replaceState({}, '', url.toString());
+    				
+    				this.updateHeadsWithDistances();
+    			}
+    			
+    			// Clear search
+    			this.head_search_query = '';
+    			this.autocomplete_visible = false;
+    			this.matching_heads = [];
+    		},
+    
+    
+    		get hasExplicitHeads() {
+    			return this.heads_display && Array.isArray(this.heads_display) && this.heads_display.length > 0;
     		}
     	}));
     });
@@ -2765,15 +3609,17 @@
         <div class="header-container">
             <div class="title-section">
                 <div class="classifications-link-container">
-                    <a href="../../figures/classifications.html" class="classifications-link" title="Browse all head classifications">Classifications</a>
+                    <a href="../../figures/classifications.html" class="classifications-link" title="Browse all head classifications">View all classifications</a>
                 </div>
                 <template x-if="!classification_mode">
                     <div>
                         <h2 class="page-title">
-                            Current Head: <span class="head-name" x-text="current_head"></span><br>
+                            Current Head: <span class="head-name" x-text="current_head"></span>
+                        </h2>
+                        <div class="pattern-lens-links">
                             Pattern Lens: <a :href="getPatternLensCurrentHeadLink()" target="_blank" class="pattern-lens-link">current head</a> | 
                             <a :href="getPatternLensAllHeadsLink()" target="_blank" class="pattern-lens-link">all displayed heads</a>
-                        </h2>
+                        </div>
                     </div>
                 </template>
                 <template x-if="classification_mode && current_classification && !classificationError">
@@ -2792,36 +3638,141 @@
             </div>
             
             <div class="controls-section">
+                <!-- Head Search -->
+                <div class="head-search-container">
+                    <div class="head-search-row">
+                        <div class="head-search-input">
+                            <input type="text" 
+                                   x-model="head_search_query" 
+                                   @input="searchHeads()" 
+                                   @keydown="handleSearchKeydown($event)"
+                                   @focus="searchHeads()"
+                                   @blur="hideAutocomplete()"
+                                   placeholder="Search heads (e.g., gpt2-small:L5:H3)" 
+                                   class="head-search-field">
+                        </div>
+                        
+                        <div class="search-mode-toggle">
+                            <span class="search-mode-text" :class="{ 'active': search_mode === 'switch' }" @click="search_mode = 'switch'">
+                                Switch to
+                            </span>
+                            <span class="search-mode-separator">|</span>
+                            <span class="search-mode-text" :class="{ 'active': search_mode === 'add' }" @click="search_mode = 'add'">
+                                Add to current view
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Autocomplete suggestions -->
+                    <div x-show="autocomplete_visible && autocomplete_suggestions.length > 0" class="autocomplete-dropdown">
+                        <template x-for="(suggestion, index) in autocomplete_suggestions" :key="index">
+                            <div class="autocomplete-suggestion" 
+                                 :class="{ 
+                                     'selected': index === selected_suggestion_index,
+                                     'error': !suggestion.valid
+                                 }"
+                                 @click="selectSuggestion(suggestion)">
+                                <div class="suggestion-main">
+                                    <span class="suggestion-text" x-text="suggestion.text"></span>
+                                </div>
+                                <div class="suggestion-extra">
+                                    <span class="suggestion-display" x-text="suggestion.display"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- Matching existing heads -->
+                    <div x-show="matching_heads.length > 0 && !autocomplete_visible" class="head-search-results">
+                        <template x-for="headId in matching_heads" :key="headId">
+                            <div class="head-search-result" @click="navigateToHead(headId)" x-text="headId"></div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Model and Layer Filters -->
+                <div class="filters-section">
+                    <div class="filters-row">
+                        <div class="filters-label">Filter Visible Heads:</div>
+                        <div class="filters-container">
+                        <div class="filter-dropdown">
+                        <button @click="toggleModelFilter()" class="filter-button" :class="{ 'filter-error': selected_models.size === 0 }">
+                            Models (<span x-text="selected_models.size"></span>/<span x-text="available_models.length"></span>)
+                            <span x-text="model_filter_open ? '▲' : '▼'"></span>
+                        </button>
+                        <div x-show="model_filter_open" class="filter-dropdown-content">
+                            <div class="filter-actions">
+                                <button @click="selectAllModels()" class="filter-action-btn">All</button>
+                                <button @click="selectNoModels()" class="filter-action-btn">None</button>
+                            </div>
+                            <div class="filter-options">
+                                <template x-for="model in available_models" :key="model">
+                                    <label class="filter-option">
+                                        <div class="filter-option-left">
+                                            <input type="checkbox" :checked="selected_models.has(model)" @change="toggleModelSelection(model)">
+                                            <span class="model-name" x-text="model"></span>
+                                        </div>
+                                        <span class="model-info" x-text="`(${models_data.find(m => m.model_name === model)?.n_layers || '?'} × ${models_data.find(m => m.model_name === model)?.n_heads || '?'})`"></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-dropdown">
+                        <button @click="toggleLayerFilter()" class="filter-button" :class="{ 'filter-error': selected_layers.size === 0 }">
+                            Layers (<span x-text="selected_layers.size"></span>/<span x-text="available_layers.length"></span>)
+                            <span x-text="layer_filter_open ? '▲' : '▼'"></span>
+                        </button>
+                        <div x-show="layer_filter_open" class="filter-dropdown-content">
+                            <div class="filter-actions">
+                                <button @click="selectAllLayers()" class="filter-action-btn">All</button>
+                                <button @click="selectNoLayers()" class="filter-action-btn">None</button>
+                            </div>
+                            <div class="filter-options">
+                                <template x-for="layer in available_layers" :key="layer">
+                                    <label class="filter-option">
+                                        <input type="checkbox" :checked="selected_layers.has(layer)" @change="toggleLayerSelection(layer)">
+                                        <span>Layer <span x-text="layer"></span></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </div>
+                
                 <div class="controls-grid">
                     <div class="control-item">
                         <label>Prompts:</label>
                         <input type="number" x-model.number="n_prompts" @change="updatePrompts()" min="1" class="control-input">
                     </div>
                     <template x-if="!classification_mode">
-                        <div class="control-item">
+                        <div class="control-item" :class="{ 'disabled': hasExplicitHeads }">
                             <label>Nearby heads:</label>
-                            <input type="number" x-model.number="table.n_nearby" @change="updateHeadsDisplay()" min="0" class="control-input">
+                            <input type="number" x-model.number="table.n_nearby" @change="updateHeadsDisplay()" min="0" class="control-input" :disabled="hasExplicitHeads">
                         </div>
                     </template>
                     <template x-if="!classification_mode">
-                        <div class="control-item">
+                        <div class="control-item" :class="{ 'disabled': hasExplicitHeads }">
                             <label>Most distant:</label>
-                            <input type="number" x-model.number="table.n_distant" @change="updateHeadsDisplay()" min="0" class="control-input">
+                            <input type="number" x-model.number="table.n_distant" @change="updateHeadsDisplay()" min="0" class="control-input" :disabled="hasExplicitHeads">
                         </div>
                     </template>
                     <div class="control-item">
                         <button @click="randomizePrompts()" class="control-button full-width">Randomize prompts</button>
                     </div>
                     <template x-if="!classification_mode">
-                        <div class="control-item">
+                        <div class="control-item" :class="{ 'disabled': hasExplicitHeads }">
                             <label>Same-class heads:</label>
-                            <input type="number" x-model.number="table.n_share_class" @change="updateHeadsDisplay()" min="0" class="control-input">
+                            <input type="number" x-model.number="table.n_share_class" @change="updateHeadsDisplay()" min="0" class="control-input" :disabled="hasExplicitHeads">
                         </div>
                     </template>
                     <template x-if="!classification_mode">
-                        <div class="control-item">
+                        <div class="control-item" :class="{ 'disabled': hasExplicitHeads }">
                             <label>Random heads:</label>
-                            <input type="number" x-model.number="table.n_random" @change="updateHeadsDisplay()" min="0" class="control-input">
+                            <input type="number" x-model.number="table.n_random" @change="updateHeadsDisplay()" min="0" class="control-input" :disabled="hasExplicitHeads">
                         </div>
                     </template>
                 </div>

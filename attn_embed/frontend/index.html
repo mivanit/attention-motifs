@@ -358,7 +358,7 @@
             </p>
             
             <div class="diagram-container">
-                <object data="diagram.svg" type="image/svg+xml" style="width: 100%; max-height: 600px;">
+                <object data="diagram.svg" type="image/svg+xml" style="width: 100%; max-height: 600px;" id="diagram-svg">
                     <img src="diagram.svg" alt="Interface Relations Diagram" style="width: 100%; max-height: 600px;">
                 </object>
             </div>
@@ -419,5 +419,33 @@
             </p>
         </footer>
     </div>
+    
+    <script>
+        // Handle SVG links to open in new tab instead of iframe
+        document.addEventListener('DOMContentLoaded', function() {
+            const svgObject = document.getElementById('diagram-svg');
+            
+            svgObject.addEventListener('load', function() {
+                try {
+                    const svgDoc = svgObject.contentDocument;
+                    if (svgDoc) {
+                        const links = svgDoc.querySelectorAll('a');
+                        links.forEach(link => {
+                            link.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                const href = this.getAttribute('href') || this.getAttribute('xlink:href');
+                                if (href) {
+                                    window.open(href, '_blank');
+                                }
+                            });
+                        });
+                    }
+                } catch (e) {
+                    // Cross-origin restrictions may prevent access to SVG content
+                    console.log('Cannot modify SVG links due to cross-origin restrictions');
+                }
+            });
+        });
+    </script>
 </body>
 </html>
