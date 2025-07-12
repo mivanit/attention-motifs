@@ -1507,7 +1507,7 @@ am-frontend-ap-build:
 .PHONY: am-frontend-format
 am-frontend-format:
 	@echo "format the frontend files"
-	npx prettier --write "attn_embed/frontend/**/*.{html,js,css}"
+	npx prettier --write "attn_embed/frontend/**/*.{html,js,css}" --log-level warn || true
 
 .PHONY: am-frontend-bundle
 am-frontend-bundle: am-frontend-format am-frontend-ap-build

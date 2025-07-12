@@ -1,36 +1,36 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Head Embedding Visualizations</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css" />
     <script src="app.js"></script>
-
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h1>Head Embedding Visualizations</h1>
-        <p class="description">
-            Table of head embedding plots generated using different dimensionality reduction methods and parameters.</br>
-            Click the "3D" buttons to see interactive 3D versions.
-        </p>
+      <h1>Head Embedding Visualizations</h1>
+      <p class="description">
+        Table of head embedding plots generated using different dimensionality
+        reduction methods and parameters. Click the "3D" buttons to see
+        interactive 3D versions.
+      </p>
 
-        <div class="filters-section" id="filters-section">
-            <h3>Filter Visualizations</h3>
-            <div id="filter-controls">
-                <!-- Filters will be dynamically populated -->
-            </div>
+      <div class="filters-section" id="filters-section">
+        <h3>Filter Visualizations</h3>
+        <div id="filter-controls">
+          <!-- Filters will be dynamically populated -->
         </div>
+      </div>
 
-        <div id="embedding-plots">
-            <!-- Content will be populated by JavaScript -->
-        </div>
+      <div id="embedding-plots">
+        <!-- Content will be populated by JavaScript -->
+      </div>
     </div>
 
     <script>
-        // Load data when page loads
-        document.addEventListener('DOMContentLoaded', loadEmbeddingData);
+      // Load data when page loads
+      document.addEventListener("DOMContentLoaded", loadEmbeddingData);
     </script>
-</body>
+  </body>
 </html>
