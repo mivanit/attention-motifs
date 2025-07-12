@@ -1,6 +1,6 @@
 # models -- which models to use
 models = [
-	# "tiny-stories-1M",
+	"tiny-stories-1M",
 	"pythia-14m",
 ]
 
@@ -8,6 +8,7 @@ models = [
 prompts_file = "data/text/pile_demo.jsonl"
 patterns_dir = "tests/.temp/patterns"
 features_dir = "tests/.temp/features"
+vis_dir = "tests/.temp/vis"
 
 # prompts -- how many, how to slice them
 prompts_n_samples = 2
@@ -20,3 +21,6 @@ device = "cuda:0"
 
 verbose = 99
 figures_dir = "tests/.temp/figures"
+
+
+embedding_n_neighbors_list = [2, 4]

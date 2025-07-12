@@ -64,6 +64,7 @@ device = "cuda:0"
 # where to put the data of features extracted from the patterns
 # see `DATA_FNAMES` for paths of data files relative to this directory
 features_dir = "data/features"
+vis_dir = "data/vis"
 # locations of data files relative to `features_dir`, probably don't modify this
 # data_fnames = {} 
 

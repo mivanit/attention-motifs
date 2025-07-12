@@ -52,9 +52,6 @@ def write_frontend(cfg: PipelineConfig) -> None:
 	)
 
 	# write head embedding table and classifications page (only used after s5b)
-	frontend_resources_path: Path = Path(
-		importlib.resources.files(attn_embed).joinpath("frontend"),  # type: ignore[arg-type]
-	)
 	head_embed_table_html: str = (
 		frontend_resources_path / "head_embed_table/index.html"
 	).read_text()
@@ -62,6 +59,12 @@ def write_frontend(cfg: PipelineConfig) -> None:
 
 	classes_html: str = (frontend_resources_path / "classes/index.html").read_text()
 	(cfg.figures_dir / "classifications.html").write_text(classes_html)
+
+	# write main index and diagram svg
+	main_index_html: str = (frontend_resources_path / "index.html").read_text()
+	(cfg.figures_dir / "index.html").write_text(main_index_html)
+	diagram_svg: str = (frontend_resources_path / "diagram.svg").read_text()
+	(cfg.figures_dir / "diagram.svg").write_text(diagram_svg)
 
 
 if __name__ == "__main__":
