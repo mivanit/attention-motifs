@@ -1,3 +1,4 @@
+from copy import deepcopy
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -116,16 +117,17 @@ DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
 			"defaultSelectionColumn": "type.group",
 			"hoverColumns": ["cls", "type.primary", "type.group"],
 			"selectedPoints": {
-				"size": 5,
+				"size": 20,
 				"sizeMin": 0.1,
-				"sizeMax": 20,
+				"sizeMax": 50,
 				"sizeStep": 0.1,
 				"opacityMin": 0.0,
 				"opacityStep": 0.01,
 			},
 			"nonSelectedPoints": {
-				"size": 3,
+				"size": 10,
 				"sizeMin": 0.1,
+				"sizeMax": 50,
 				"sizeStep": 0.1,
 				"opacityMin": 0.00,
 			},
@@ -143,6 +145,20 @@ DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
 		},
 	),
 )
+
+
+
+def deep_merge_dicts(
+	dict1: dict, dict2: dict,
+) -> dict:
+	"""Recursively merge two dictionaries into a new dict, with dict2 overwriting dict1"""
+	output: dict = deepcopy(dict1)
+	for key, value in dict2.items():
+		if isinstance(value, dict) and key in output and isinstance(output[key], dict):
+			output[key] = deep_merge_dicts(output[key], value)
+		else:
+			output[key] = value
+	return output
 
 
 def _ser_path(path: Path) -> str | None:
@@ -296,10 +312,10 @@ class PipelineConfig:
 			patterns_dir=Path(data["patterns_dir"]),
 			features_dir=Path(data["features_dir"]),
 			vis_dir=Path(data.get("vis_dir", "data/vis")),
-			vis_configs={
-				**DEFAULT_VIS_CONFIGS,
-				**data.get("vis_configs", DEFAULT_VIS_CONFIGS),
-			},
+			vis_configs=deep_merge_dicts(
+				DEFAULT_VIS_CONFIGS,
+				data.get("vis_configs", DEFAULT_VIS_CONFIGS),
+			),
 			models=data["models"],
 			pca_n_components=data.get(
 				"pca_n_components", 16

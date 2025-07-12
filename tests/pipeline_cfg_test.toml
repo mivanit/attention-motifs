@@ -24,3 +24,7 @@ figures_dir = "tests/.temp/figures"
 
 
 embedding_n_neighbors_list = [2, 4]
+
+[vis_configs.attentionpedia.cfg]
+head_viewing = "tiny-stories-1M:L0:H0"
+prompts_url = "../../patterns/tiny-stories-1M/prompts.jsonl"

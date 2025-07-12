@@ -62,9 +62,9 @@ def write_frontend(cfg: PipelineConfig) -> None:
 
 	# write main index and diagram svg
 	main_index_html: str = (frontend_resources_path / "index.html").read_text()
-	(cfg.figures_dir / "index.html").write_text(main_index_html)
+	(cfg.figures_dir / "../index.html").write_text(main_index_html)
 	diagram_svg: str = (frontend_resources_path / "diagram.svg").read_text()
-	(cfg.figures_dir / "diagram.svg").write_text(diagram_svg)
+	(cfg.figures_dir / "../diagram.svg").write_text(diagram_svg)
 
 
 if __name__ == "__main__":
