@@ -103,6 +103,12 @@ def compute_pca(
 	)
 	# save PCA as table
 	df_pca.write_ndjson(cfg.data_path("pca"))
+	df_pca.write_parquet(cfg.data_path("pca").with_suffix(".parquet"))
+	# write a CSV version with less precision, for the web interface
+	df_pca.write_csv(
+		cfg.data_path("pca").with_suffix(".csv"),
+		float_precision=6,
+	)
 
 	# importance table
 	df_importance: pl.DataFrame = pca_importance_table(

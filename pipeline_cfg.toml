@@ -38,7 +38,7 @@ models = [
 	# "tiny-stories-1M",
 ]
 # number of components for PCA decomposition of activation features
-pca_n_components = 16
+pca_n_components = 6
 
 # head embedding configuration
 # ============================================================
