@@ -1,0 +1,645 @@
+<svg aria-roledescription="flowchart-elk" role="graphics-document document" viewBox="4 4 1405.3125 771" style="max-width: 1405.31px; background-color: white" class="flowchart" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="100%" id="my-svg">
+	<rect width="100%" height="100%" fill="#ffffff"/>
+	<style>
+		#my-svg {
+			font-family: "trebuchet ms", verdana, arial, sans-serif;
+			font-size: 16px;
+			fill: #333;
+		}
+
+		@keyframes edge-animation-frame {
+			from {
+				stroke-dashoffset: 0;
+			}
+		}
+
+		@keyframes dash {
+			to {
+				stroke-dashoffset: 0;
+			}
+		}
+
+		#my-svg .edge-animation-slow {
+			stroke-dasharray: 9, 5 !important;
+			stroke-dashoffset: 900;
+			animation: dash 50s linear infinite;
+			stroke-linecap: round;
+		}
+
+		#my-svg .edge-animation-fast {
+			stroke-dasharray: 9, 5 !important;
+			stroke-dashoffset: 900;
+			animation: dash 20s linear infinite;
+			stroke-linecap: round;
+		}
+
+		#my-svg .error-icon {
+			fill: #552222;
+		}
+
+		#my-svg .error-text {
+			fill: #552222;
+			stroke: #552222;
+		}
+
+		#my-svg .edge-thickness-normal {
+			stroke-width: 1px;
+		}
+
+		#my-svg .edge-thickness-thick {
+			stroke-width: 3.5px;
+		}
+
+		#my-svg .edge-pattern-solid {
+			stroke-dasharray: 0;
+		}
+
+		#my-svg .edge-thickness-invisible {
+			stroke-width: 0;
+			fill: none;
+		}
+
+		#my-svg .edge-pattern-dashed {
+			stroke-dasharray: 3;
+		}
+
+		#my-svg .edge-pattern-dotted {
+			stroke-dasharray: 2;
+		}
+
+		#my-svg .marker {
+			fill: #333333;
+			stroke: #333333;
+		}
+
+		#my-svg .marker.cross {
+			stroke: #333333;
+		}
+
+		#my-svg svg {
+			font-family: "trebuchet ms", verdana, arial, sans-serif;
+			font-size: 16px;
+		}
+
+		#my-svg p {
+			margin: 0;
+		}
+
+		#my-svg .label {
+			font-family: "trebuchet ms", verdana, arial, sans-serif;
+			color: #333;
+		}
+
+		#my-svg .cluster-label text {
+			fill: #333;
+		}
+
+		#my-svg .cluster-label span {
+			color: #333;
+		}
+
+		#my-svg .cluster-label span p {
+			background-color: transparent;
+		}
+
+		#my-svg .label text,
+		#my-svg span {
+			fill: #333;
+			color: #333;
+		}
+
+		#my-svg .node rect,
+		#my-svg .node circle,
+		#my-svg .node ellipse,
+		#my-svg .node polygon,
+		#my-svg .node path {
+			fill: #ECECFF;
+			stroke: #9370DB;
+			stroke-width: 1px;
+		}
+
+		#my-svg .rough-node .label text,
+		#my-svg .node .label text,
+		#my-svg .image-shape .label,
+		#my-svg .icon-shape .label {
+			text-anchor: middle;
+		}
+
+		#my-svg .node .katex path {
+			fill: #000;
+			stroke: #000;
+			stroke-width: 1px;
+		}
+
+		#my-svg .rough-node .label,
+		#my-svg .node .label,
+		#my-svg .image-shape .label,
+		#my-svg .icon-shape .label {
+			text-align: center;
+		}
+
+		#my-svg .node.clickable {
+			cursor: pointer;
+		}
+
+		#my-svg .root .anchor path {
+			fill: #333333 !important;
+			stroke-width: 0;
+			stroke: #333333;
+		}
+
+		#my-svg .arrowheadPath {
+			fill: #333333;
+		}
+
+		#my-svg .edgePath .path {
+			stroke: #333333;
+			stroke-width: 2.0px;
+		}
+
+		#my-svg .flowchart-link {
+			stroke: #333333;
+			fill: none;
+		}
+
+		#my-svg .edgeLabel {
+			background-color: rgba(232, 232, 232, 0.8);
+			text-align: center;
+		}
+
+		#my-svg .edgeLabel p {
+			background-color: rgba(232, 232, 232, 0.8);
+		}
+
+		#my-svg .edgeLabel rect {
+			opacity: 0.5;
+			background-color: rgba(232, 232, 232, 0.8);
+			fill: rgba(232, 232, 232, 0.8);
+		}
+
+		#my-svg .labelBkg {
+			background-color: rgba(232, 232, 232, 0.5);
+		}
+
+		#my-svg .cluster rect {
+			fill: transparent;
+			stroke: transparent;
+			stroke-width: 1px;
+		}
+
+		#my-svg .cluster text {
+			fill: #333;
+		}
+
+		#my-svg .cluster span {
+			color: #333;
+		}
+
+		#my-svg div.mermaidTooltip {
+			position: absolute;
+			text-align: center;
+			max-width: 200px;
+			padding: 2px;
+			font-family: "trebuchet ms", verdana, arial, sans-serif;
+			font-size: 12px;
+			background: hsl(80, 100%, 96.2745098039%);
+			border: 1px solid #aaaa33;
+			border-radius: 2px;
+			pointer-events: none;
+			z-index: 100;
+		}
+
+		#my-svg .flowchartTitleText {
+			text-anchor: middle;
+			font-size: 18px;
+			fill: #333;
+		}
+
+		#my-svg rect.text {
+			fill: none;
+			stroke-width: 0;
+		}
+
+		#my-svg .icon-shape,
+		#my-svg .image-shape {
+			background-color: rgba(232, 232, 232, 0.8);
+			text-align: center;
+		}
+
+		#my-svg .icon-shape p,
+		#my-svg .image-shape p {
+			background-color: rgba(232, 232, 232, 0.8);
+			padding: 2px;
+		}
+
+		#my-svg .icon-shape rect,
+		#my-svg .image-shape rect {
+			opacity: 0.5;
+			background-color: rgba(232, 232, 232, 0.8);
+			fill: rgba(232, 232, 232, 0.8);
+		}
+
+		#my-svg .label-icon {
+			display: inline-block;
+			height: 1em;
+			overflow: visible;
+			vertical-align: -0.125em;
+		}
+
+		#my-svg .node .label-icon path {
+			fill: currentColor;
+			stroke: revert;
+			stroke-width: revert;
+		}
+
+		#my-svg :root {
+			--mermaid-font-family: "trebuchet ms", verdana, arial, sans-serif;
+		}
+	</style>
+	<g>
+		<marker orient="auto" markerHeight="8" markerWidth="8" markerUnits="userSpaceOnUse" refY="5" refX="5" viewBox="0 0 10 10" class="marker flowchart-elk" id="my-svg_flowchart-elk-pointEnd">
+			<path style="stroke-width: 1; stroke-dasharray: 1 0" class="arrowMarkerPath" d="M 0 0 L 10 5 L 0 10 z" />
+		</marker>
+		<marker orient="auto" markerHeight="8" markerWidth="8" markerUnits="userSpaceOnUse" refY="5" refX="4.5" viewBox="0 0 10 10" class="marker flowchart-elk" id="my-svg_flowchart-elk-pointStart">
+			<path style="stroke-width: 1; stroke-dasharray: 1 0" class="arrowMarkerPath" d="M 0 5 L 10 10 L 10 0 z" />
+		</marker>
+		<marker orient="auto" markerHeight="11" markerWidth="11" markerUnits="userSpaceOnUse" refY="5" refX="11" viewBox="0 0 10 10" class="marker flowchart-elk" id="my-svg_flowchart-elk-circleEnd">
+			<circle style="stroke-width: 1; stroke-dasharray: 1 0" class="arrowMarkerPath" r="5" cy="5" cx="5" />
+		</marker>
+		<marker orient="auto" markerHeight="11" markerWidth="11" markerUnits="userSpaceOnUse" refY="5" refX="-1" viewBox="0 0 10 10" class="marker flowchart-elk" id="my-svg_flowchart-elk-circleStart">
+			<circle style="stroke-width: 1; stroke-dasharray: 1 0" class="arrowMarkerPath" r="5" cy="5" cx="5" />
+		</marker>
+		<marker orient="auto" markerHeight="11" markerWidth="11" markerUnits="userSpaceOnUse" refY="5.2" refX="12" viewBox="0 0 11 11" class="marker cross flowchart-elk" id="my-svg_flowchart-elk-crossEnd">
+			<path style="stroke-width: 2; stroke-dasharray: 1 0" class="arrowMarkerPath" d="M 1 1 l 9 9 M 10 1 l -9 9" />
+		</marker>
+		<marker orient="auto" markerHeight="11" markerWidth="11" markerUnits="userSpaceOnUse" refY="5.2" refX="-1" viewBox="0 0 11 11" class="marker cross flowchart-elk" id="my-svg_flowchart-elk-crossStart">
+			<path style="stroke-width: 2; stroke-dasharray: 1 0" class="arrowMarkerPath" d="M 1 1 l 9 9 M 10 1 l -9 9" />
+		</marker>
+	</g>
+	<g class="subgraphs">
+		<g class="subgraph">
+			<g data-look="classic" id="colPattern" class="cluster">
+				<rect height="755" width="387" y="12" x="1014.3" style="" />
+				<g transform="translate(1207.8,12)" class="cluster-label">
+					<foreignObject height="0" width="0">
+						<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"></span></div>
+					</foreignObject>
+				</g>
+			</g>
+		</g>
+		<g class="subgraph">
+			<g data-look="classic" id="colAP" class="cluster">
+				<rect height="235" width="224" y="267.3" x="520.8" style="" />
+				<g transform="translate(632.8,267.3)" class="cluster-label">
+					<foreignObject height="0" width="0">
+						<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"></span></div>
+					</foreignObject>
+				</g>
+			</g>
+		</g>
+		<g class="subgraph">
+			<g data-look="classic" id="colHead" class="cluster">
+				<rect height="661" width="239.3" y="55" x="12" style="" />
+				<g transform="translate(131.7,55)" class="cluster-label">
+					<foreignObject height="0" width="0">
+						<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel"></span></div>
+					</foreignObject>
+				</g>
+			</g>
+		</g>
+	</g>
+	<g class="nodes">
+		<g transform="translate(1258.3,177)" id="flowchart-PL-13" class="image-shape default">
+			<g transform="translate(0,18)">
+				<path fill="#ececff" stroke-width="0" stroke="none" d="M -100 -80 L 100 -80 L 100 80 L -100 80" />
+				<path fill="none" stroke-width="1.3" stroke="#9370db" d="M -100 -80 C -28.9 -80 42.3 -80 100 -80 M -100 -80 C -22.1 -80 55.8 -80 100 -80 M 100 -80 C 100 -19 100 41.9 100 80 M 100 -80 C 100 -36 100 7.9 100 80 M 100 80 C 55.1 80 10.2 80 -100 80 M 100 80 C 39.1 80 -21.8 80 -100 80 M -100 80 C -100 33.9 -100 -12.2 -100 -80 M -100 80 C -100 33 -100 -14.1 -100 -80" />
+			</g>
+			<g transform="translate(-47,-98)" style="" class="label">
+				<rect />
+				<foreignObject height="28" width="94">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel">
+							<p><a href="patterns/index.html">Pattern Lens</a></p>
+						</span></div>
+				</foreignObject>
+			</g>
+			<g>
+				<path fill="none" stroke-width="0" stroke="none" d="M -100 -98 L 100 -98 L 100 98 L -100 98" />
+			</g>
+			<a href="patterns/index.html">
+				<image transform="translate(-100,-62)" preserveAspectRatio="none" height="160" width="200" href="https://miv.name/pattern-lens/assets/diagram/pattern_lens.png" />
+			</a>
+		</g>
+		<g transform="translate(133.7,200)" id="flowchart-CL-0" class="image-shape default">
+			<g transform="translate(0,18)">
+				<path fill="#ececff" stroke-width="0" stroke="none" d="M -100 -60 L 100 -60 L 100 60 L -100 60" />
+				<path fill="none" stroke-width="1.3" stroke="#9370db" d="M -100 -60 C -28.7 -60 42.7 -60 100 -60 M -100 -60 C -58.1 -60 -16.2 -60 100 -60 M 100 -60 C 100 -24.7 100 10.5 100 60 M 100 -60 C 100 -13.8 100 32.4 100 60 M 100 60 C 42.6 60 -14.8 60 -100 60 M 100 60 C 24 60 -52 60 -100 60 M -100 60 C -100 14.7 -100 -30.7 -100 -60 M -100 60 C -100 30.5 -100 1 -100 -60" />
+			</g>
+			<g transform="translate(-75,-78)" style="" class="label">
+				<rect />
+				<foreignObject height="28" width="150">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel">
+							<p><a href="figures/classifications.html">Classifications Page</a></p>
+						</span></div>
+				</foreignObject>
+			</g>
+			<g>
+				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
+			</g>
+			<a href="figures/classifications.html">
+				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/head_classes.png" />
+			</a>
+		</g>
+		<g transform="translate(129.5,386)" id="flowchart-HET-2" class="image-shape default">
+			<g transform="translate(0,18)">
+				<path fill="#ececff" stroke-width="0" stroke="none" d="M -100 -60 L 100 -60 L 100 60 L -100 60" />
+				<path fill="none" stroke-width="1.3" stroke="#9370db" d="M -100 -60 C -32.1 -60 35.8 -60 100 -60 M -100 -60 C -42.4 -60 15.1 -60 100 -60 M 100 -60 C 100 -31.8 100 -3.6 100 60 M 100 -60 C 100 -35.7 100 -11.5 100 60 M 100 60 C 56.9 60 13.7 60 -100 60 M 100 60 C 59.5 60 19.1 60 -100 60 M -100 60 C -100 34.2 -100 8.4 -100 -60 M -100 60 C -100 29.5 -100 -1.1 -100 -60" />
+			</g>
+			<g transform="translate(-86,-78)" style="" class="label">
+				<rect />
+				<foreignObject height="28" width="172">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel">
+							<p><a href="figures/head_embed_table.html">Head Embedding Table</a></p>
+						</span></div>
+				</foreignObject>
+			</g>
+			<g>
+				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
+			</g>
+			<a href="figures/head_embed_table.html">
+				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/head_embed_table.png" />
+			</a>
+		</g>
+		<g transform="translate(632.8,412.3)" id="flowchart-AP-11" class="image-shape default">
+			<g transform="translate(0,18)">
+				<path fill="#ececff" stroke-width="0" stroke="none" d="M -100 -60 L 100 -60 L 100 60 L -100 60" />
+				<path fill="none" stroke-width="1.3" stroke="#9370db" d="M -100 -60 C -59.2 -60 -18.5 -60 100 -60 M -100 -60 C -50.2 -60 -0.4 -60 100 -60 M 100 -60 C 100 -23.7 100 12.6 100 60 M 100 -60 C 100 -13.2 100 33.7 100 60 M 100 60 C 30.7 60 -38.6 60 -100 60 M 100 60 C 56.8 60 13.7 60 -100 60 M -100 60 C -100 16.4 -100 -27.3 -100 -60 M -100 60 C -100 31.1 -100 2.2 -100 -60" />
+			</g>
+			<g transform="translate(-54.5,-78)" style="" class="label">
+				<rect />
+				<foreignObject height="28" width="109">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel">
+							<p><a href="vis/attnpedia/index.html">AttentionPedia</a></p>
+						</span></div>
+				</foreignObject>
+			</g>
+			<g>
+				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
+			</g>
+			<a href="vis/attnpedia/index.html">
+				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/attnpedia.png" />
+			</a>
+		</g>
+		<g transform="translate(1258.3,437)" id="flowchart-SPV-15" class="image-shape default">
+			<g transform="translate(0,18)">
+				<path fill="#ececff" stroke-width="0" stroke="none" d="M -100 -60 L 100 -60 L 100 60 L -100 60" />
+				<path fill="none" stroke-width="1.3" stroke="#9370db" d="M -100 -60 C -51.3 -60 -2.7 -60 100 -60 M -100 -60 C -51.5 -60 -3 -60 100 -60 M 100 -60 C 100 -28.5 100 2.9 100 60 M 100 -60 C 100 -17.9 100 24.2 100 60 M 100 60 C 35.1 60 -29.8 60 -100 60 M 100 60 C 45.5 60 -8.9 60 -100 60 M -100 60 C -100 25.4 -100 -9.2 -100 -60 M -100 60 C -100 12.9 -100 -34.1 -100 -60" />
+			</g>
+			<g transform="translate(-72.5,-78)" style="" class="label">
+				<rect />
+				<foreignObject height="28" width="145">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel">
+							<p><a href="patterns/single.html">Single Pattern View</a></p>
+						</span></div>
+				</foreignObject>
+			</g>
+			<g>
+				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
+			</g>
+			<a href="patterns/single.html">
+				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/single_pattern.png" />
+			</a>
+		</g>
+		<g transform="translate(1289.3,677)" id="flowchart-PEV-17" class="image-shape default">
+			<g transform="translate(0,18)">
+				<path fill="#ececff" stroke-width="0" stroke="none" d="M -100 -60 L 100 -60 L 100 60 L -100 60" />
+				<path fill="none" stroke-width="1.3" stroke="#9370db" d="M -100 -60 C -23.5 -60 53 -60 100 -60 M -100 -60 C -59.4 -60 -18.9 -60 100 -60 M 100 -60 C 100 -15.6 100 28.8 100 60 M 100 -60 C 100 -29.2 100 1.6 100 60 M 100 60 C 53.1 60 6.1 60 -100 60 M 100 60 C 25.3 60 -49.5 60 -100 60 M -100 60 C -100 33.5 -100 7 -100 -60 M -100 60 C -100 18.2 -100 -23.6 -100 -60" />
+			</g>
+			<g transform="translate(-84,-78)" style="" class="label">
+				<rect />
+				<foreignObject height="28" width="168">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel">
+							<p><a href="vis/embeds/patterns/index.html">Pattern Embedding Vis</a></p>
+						</span></div>
+				</foreignObject>
+			</g>
+			<g>
+				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
+			</g>
+			<a href="vis/embeds/patterns/index.html">
+				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/embed_patterns.png" />
+			</a>
+		</g>
+		<g transform="translate(124,626)" id="flowchart-HEV-4" class="image-shape default">
+			<g transform="translate(0,18)">
+				<path fill="#ececff" stroke-width="0" stroke="none" d="M -100 -60 L 100 -60 L 100 60 L -100 60" />
+				<path fill="none" stroke-width="1.3" stroke="#9370db" d="M -100 -60 C -39.5 -60 21 -60 100 -60 M -100 -60 C -46.1 -60 7.9 -60 100 -60 M 100 -60 C 100 -21.8 100 16.4 100 60 M 100 -60 C 100 -26.6 100 6.7 100 60 M 100 60 C 51.3 60 2.5 60 -100 60 M 100 60 C 51.9 60 3.8 60 -100 60 M -100 60 C -100 16.4 -100 -27.2 -100 -60 M -100 60 C -100 34.2 -100 8.4 -100 -60" />
+			</g>
+			<g transform="translate(-78,-78)" style="" class="label">
+				<rect />
+				<foreignObject height="28" width="156">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel">
+							<p><a href="vis/embeds/heads/index.html">Head Embedding Vis</a></p>
+						</span></div>
+				</foreignObject>
+			</g>
+			<g>
+				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
+			</g>
+			<a href="vis/embeds/heads/index.html">
+				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/embed_heads.png" />
+			</a>
+		</g>
+	</g>
+	<g class="edges edgePaths">
+		<!-- HET to HEV -->
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_HET_HEV_0_0" d="M 160 464 L 160 544" />
+
+		<!-- PL <> SPV -->
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_PL_SPV_0_0" d="M 1200 275 L 1200 355" />
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_SPV_PL_0_0" d="M 1290 359 L 1290 279" />
+
+		<!-- SPV <> PEV -->
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" id="L_SPV_PEV_0_0" d="M 1210 515 L 1210.3 595" />
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_PEV_SPV_0_0" d="M 1290 599 L 1290 519" />
+
+
+		<!-- SPV <> AP -->
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colPattern_colAP_0_0" d="M 1155 400 L 737 400" />
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colAP_colPattern_2_0" d="M 735 440 L 1155 440" />
+		
+		<!-- AP > pattern stuff -->
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colAP_colPattern_3_0" d="M 732 370 L 1155 150" />
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colAP_colPattern_4_0" d="M 735 463 L 1185 700" />
+
+
+		<!-- AP <> CL -->
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colHead_colAP_2_0" d="M 235 200 L 529 382" />
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colAP_colHead_0_0" d="M 532 420 L 238 250" />
+
+
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colHead_colAP_3_0" d="M 532 443 L 227 611" />
+		<path marker-end="url(#my-svg_flowchart-elk-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_colHead_colAP_4_0" d="M 225 655 L 530 479" />
+	</g>
+
+	<g class="edgeLabels">
+		<g transform="translate(158,506)" class="edgeLabel">
+			<g transform="translate(-70.5,-12)" class="label">
+				<foreignObject height="24" width="141">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
+							<p>links to each variant</p>
+						</span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g class="edgeLabel">
+			<g transform="translate(0)" class="label">
+				<foreignObject height="0" width="0">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel"></span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g class="edgeLabel">
+			<g transform="translate(0)" class="label">
+				<foreignObject height="0" width="0">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel"></span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g transform="translate(1190,317)" class="edgeLabel">
+			<g transform="translate(-52.5,-12)" class="label">
+				<foreignObject height="24" width="105">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
+							<p>pattern images</p>
+						</span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g transform="translate(1300,317)" class="edgeLabel">
+			<g transform="translate(-44,-12)" class="label">
+				<foreignObject height="24" width="88">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
+							<p>prompt hash</p>
+						</span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g transform="translate(1150,557)" class="edgeLabel">
+			<g transform="translate(-85.5,-12)" class="label">
+				<foreignObject height="24" width="171">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
+							<p><span style="background-color: red">just this pattern selected</span></p>
+						</span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g transform="translate(1320,557)" class="edgeLabel">
+			<g transform="translate(-77,-12)" class="label">
+				<foreignObject height="24" width="154">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
+							<p>each point - right click</p>
+						</span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g class="edgeLabel">
+			<g transform="translate(0)" class="label">
+				<foreignObject height="0" width="0">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel"></span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g class="edgeLabel">
+			<g transform="translate(0)" class="label">
+				<foreignObject height="0" width="0">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel"></span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g class="edgeLabel">
+			<g transform="translate(0)" class="label">
+				<foreignObject height="0" width="0">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel"></span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g class="edgeLabel">
+			<g transform="translate(0)" class="label">
+				<foreignObject height="0" width="0">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel"></span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g transform="translate(920,400)" class="edgeLabel">
+			<g transform="translate(-28,-12)" class="label">
+				<foreignObject height="24" width="56">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
+							<p>head ID</p>
+						</span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g transform="translate(920,440)" class="edgeLabel">
+			<g transform="translate(-71,-12)" class="label">
+				<foreignObject height="24" width="142">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
+							<p>patterns in each cell</p>
+						</span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g transform="translate(920,250)" class="edgeLabel">
+			<g transform="translate(-69,-36)" class="label">
+				<foreignObject height="72" width="138">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
+							<p>current head <br />or<br />all displayed heads</p>
+						</span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g transform="translate(888.3,560.7)" class="edgeLabel">
+			<g transform="translate(-91,-12)" class="label">
+				<foreignObject height="24" width="182">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
+							<p><span style="background-color: red">current/all heads selected</span></p>
+						</span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g transform="translate(405,274)" class="edgeLabel">
+			<g transform="translate(-64.5,-12)" class="label">
+				<foreignObject height="24" width="129">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
+							<p>classification links</p>
+						</span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g transform="translate(390,344)" class="edgeLabel">
+			<g transform="translate(-12.5,-12)" class="label">
+				<foreignObject height="24" width="25">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
+							<p>link</p>
+						</span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g transform="translate(367,498)" class="edgeLabel">
+			<g transform="translate(-91,-12)" class="label">
+				<foreignObject height="24" width="182">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
+							<p><span style="background-color: red">current/all heads selected</span></p>
+						</span></div>
+				</foreignObject>
+			</g>
+		</g>
+		<g transform="translate(377,605)" class="edgeLabel">
+			<g transform="translate(-77,-12)" class="label">
+				<foreignObject height="24" width="154">
+					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="edgeLabel">
+							<p>each point - right click</p>
+						</span></div>
+				</foreignObject>
+			</g>
+		</g>
+	</g>
+</svg>

@@ -9,16 +9,17 @@
 		"type.group"
 	],
 	"selectedPoints": {
-		"size": 5,
+		"size": 20,
 		"sizeMin": 0.1,
-		"sizeMax": 20,
+		"sizeMax": 50,
 		"sizeStep": 0.1,
 		"opacityMin": 0.0,
 		"opacityStep": 0.01
 	},
 	"nonSelectedPoints": {
-		"size": 3,
+		"size": 10,
 		"sizeMin": 0.1,
+		"sizeMax": 50,
 		"sizeStep": 0.1,
 		"opacityMin": 0.0
 	},

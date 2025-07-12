@@ -6,9 +6,12 @@
 misc todos:
 
 - [x] create a classifications page that lists all head classifications with links to their respective AttentionPedia pages
-- [ ] embedding visualizations: hovering over point sometimes doesnt work, the "hover radius" is much smaller than the point size. make the hover radius scale with the point size by some constant factor which we can configure in config.js
+- [ ] embedding visualizations: 
+  - [ ] hovering over point sometimes doesnt work, the "hover radius" is much smaller than the point size. make the hover radius scale with the point size by some constant factor which we can configure in config.js
+  - [ ] make sure default configs are reasonable
 - [ ] filter by model, layer in attentionpedia and classifications page?
 - [ ] for each model, a nice display of all the heads (colored by classification, if any?) where you can click on a head to go to attentionpedia for that head
+- [ ] for pattern embeddings save and load from a reduced-precision csv file to save space
 
 ## Pattern Lens (`data/patterns/index.html`)
 
