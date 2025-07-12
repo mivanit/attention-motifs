@@ -318,14 +318,14 @@
 				<rect />
 				<foreignObject height="28" width="94">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel">
-							<p><a href="data/patterns/index.html">Pattern Lens</a></p>
+							<p><a href="patterns/index.html">Pattern Lens</a></p>
 						</span></div>
 				</foreignObject>
 			</g>
 			<g>
 				<path fill="none" stroke-width="0" stroke="none" d="M -100 -98 L 100 -98 L 100 98 L -100 98" />
 			</g>
-			<a href="data/patterns/index.html">
+			<a href="patterns/index.html">
 				<image transform="translate(-100,-62)" preserveAspectRatio="none" height="160" width="200" href="https://miv.name/pattern-lens/assets/diagram/pattern_lens.png" />
 			</a>
 		</g>
@@ -338,14 +338,14 @@
 				<rect />
 				<foreignObject height="28" width="150">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel">
-							<p><a href="data/figures/classifications.html">Classifications Page</a></p>
+							<p><a href="figures/classifications.html">Classifications Page</a></p>
 						</span></div>
 				</foreignObject>
 			</g>
 			<g>
 				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
 			</g>
-			<a href="data/figures/classifications.html">
+			<a href="figures/classifications.html">
 				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/head_classes.png" />
 			</a>
 		</g>
@@ -358,14 +358,14 @@
 				<rect />
 				<foreignObject height="28" width="172">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel">
-							<p><a href="data/figures/head_embed_table.html">Head Embedding Table</a></p>
+							<p><a href="figures/head_embed_table.html">Head Embedding Table</a></p>
 						</span></div>
 				</foreignObject>
 			</g>
 			<g>
 				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
 			</g>
-			<a href="data/figures/head_embed_table.html">
+			<a href="figures/head_embed_table.html">
 				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/head_embed_table.png" />
 			</a>
 		</g>
@@ -378,14 +378,14 @@
 				<rect />
 				<foreignObject height="28" width="109">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel">
-							<p><a href="data/vis/attnpedia/index.html">AttentionPedia</a></p>
+							<p><a href="vis/attnpedia/index.html">AttentionPedia</a></p>
 						</span></div>
 				</foreignObject>
 			</g>
 			<g>
 				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
 			</g>
-			<a href="data/vis/attnpedia/index.html">
+			<a href="vis/attnpedia/index.html">
 				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/attnpedia.png" />
 			</a>
 		</g>
@@ -398,14 +398,14 @@
 				<rect />
 				<foreignObject height="28" width="145">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel">
-							<p><a href="data/patterns/single.html">Single Pattern View</a></p>
+							<p><a href="patterns/single.html">Single Pattern View</a></p>
 						</span></div>
 				</foreignObject>
 			</g>
 			<g>
 				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
 			</g>
-			<a href="data/patterns/single.html">
+			<a href="patterns/single.html">
 				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/single_pattern.png" />
 			</a>
 		</g>
@@ -418,14 +418,14 @@
 				<rect />
 				<foreignObject height="28" width="168">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel">
-							<p><a href="data/vis/embeds/patterns/index.html">Pattern Embedding Vis</a></p>
+							<p><a href="vis/embeds/patterns/index.html">Pattern Embedding Vis</a></p>
 						</span></div>
 				</foreignObject>
 			</g>
 			<g>
 				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
 			</g>
-			<a href="data/vis/embeds/patterns/index.html">
+			<a href="vis/embeds/patterns/index.html">
 				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/embed_patterns.png" />
 			</a>
 		</g>
@@ -438,14 +438,14 @@
 				<rect />
 				<foreignObject height="28" width="156">
 					<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" class="labelBkg" xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel">
-							<p><a href="data/vis/embeds/heads/index.html">Head Embedding Vis</a></p>
+							<p><a href="vis/embeds/heads/index.html">Head Embedding Vis</a></p>
 						</span></div>
 				</foreignObject>
 			</g>
 			<g>
 				<path fill="none" stroke-width="0" stroke="none" d="M -100 -78 L 100 -78 L 100 78 L -100 78" />
 			</g>
-			<a href="data/vis/embeds/heads/index.html">
+			<a href="vis/embeds/heads/index.html">
 				<image transform="translate(-100,-42)" preserveAspectRatio="none" height="120" width="200" href="https://miv.name/pattern-lens/assets/diagram/embed_heads.png" />
 			</a>
 		</g>
