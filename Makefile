@@ -1504,13 +1504,20 @@ am-frontend-ap-build:
 # am-frontend-ap-clean:
 # 	rm -rf $(FRONTEND_ATTNPEDIA_BUILD_DIR)
 
+.PHONY: am-frontend-format
+am-frontend-format:
+	@echo "format the frontend files"
+	npx prettier --write "attn_embed/frontend/**/*.{html,js,css}"
+
 .PHONY: am-frontend-bundle
-am-frontend-bundle: am-frontend-ap-build
+am-frontend-bundle: am-frontend-format am-frontend-ap-build
 	@echo "bundle embedding display files"
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/embeds/src/index.html --output $(FRONTEND_DIR)/embeds/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_ATTNPEDIA_DIR)/src/index.html --output $(FRONTEND_ATTNPEDIA_DIR)/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/head_embed_table/src/index.html --output $(FRONTEND_DIR)/head_embed_table/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/classes/src/index.html --output $(FRONTEND_DIR)/classes/index.html
+
+
 
 # $(PYTHON) -m muutils.web.bundle_html attn_embed/frontend/pattern-view/src/index.html --output attn_embed/frontend/pattern-view/index.html
 # cp $(FRONTEND_DIR)/embeds-old/embeddings.html data/features/index.html
