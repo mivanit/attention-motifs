@@ -284,18 +284,10 @@
         </header>
 
         <div class="section">
-            <h2>What are Attention Motifs?</h2>
             <p>
-                This project investigates structure in the attention mechanisms of large language models. 
-                We provide interactive tools to view attention patterns across multiple model architectures.
+                This project investigates structure in the attention mechanisms of large language models. A lot of papers in interpretability involve manually inspecting attention patterns once heads of interest are identified. We aim to improve this process by providing a way to systematically embed attention patterns in a meaningful latent space, which we in turn use to embed the heads that produce them. We provide a suite of interactive tools to allow inspecting patterns produced by different heads, finding heads with similar patterns, looking through the embedding spaces, and looking at known classes of heads.
             </p>
             
-            <div class="highlight">
-                <p><strong>Key Insight:</strong> Attention heads don't just process information randomly—they exhibit 
-                systematic, interpretable patterns that can be categorized, visualized, and analyzed to understand 
-                how language models work internally.</p>
-            </div>
-
             <h3>Pipeline</h3>
             <div class="pipeline-steps">
                 <div class="pipeline-step">
@@ -362,8 +354,7 @@
             <h2>Interface Map</h2>
             <p>
                 The diagram below shows how all the analysis tools connect together. Click on any component 
-                to explore that interface. <strong>Solid lines</strong> represent existing connections, 
-                while <strong>dashed lines</strong> indicate planned future connections.
+                to explore that interface.
             </p>
             
             <div class="diagram-container">
@@ -382,13 +373,7 @@
                     <span>Planned connections</span>
                 </div>
             </div>
-        </div>
 
-        <div class="section">
-            <h2>Analysis Tools</h2>
-            <p>
-                Explore attention patterns and head behaviors through our interconnected suite of visualization tools:
-            </p>
             
             <div class="interface-grid">
                 <div class="interface-category">
@@ -396,20 +381,20 @@
                     <p>Tools for understanding attention heads and their classifications</p>
                     <ul class="interface-list">
                         <li><a href="figures/classifications.html">Classifications Page</a> - Browse all head types with links to examples</li>
-                        <li><a href="figures/head_embed_table.html">Head Embedding Table</a> - Compare embedding methods with SVG previews</li>
-                        <li><a href="vis/embeds/heads/index.html">Head Embedding Visualization</a> - 3D exploration of head similarities</li>
+                        <li><a href="figures/head_embed_table.html">Head Embedding Table</a> - Compare embedding methods in 2D with SVG previews</li>
+                        <li><a href="vis/embeds/heads/index.html">Head Embedding Visualization</a> - 3D exploration of head embeddings</li>
                     </ul>
                 </div>
 
                 <div class="interface-category">
                     <h4>AttentionPedia</h4>
-                    <p>The main interface connecting all analysis tools</p>
+                    <p>The main interface connecting all analysis tools.</p>
                     <ul class="interface-list">
                         <li><a href="vis/attnpedia/index.html">AttentionPedia</a> - Explore heads with similar patterns and classifications</li>
                     </ul>
                     <p style="margin-top: 15px; font-size: 0.9em; color: #666;">
                         <strong>AttentionPedia</strong> serves as the central hub, allowing you to examine any attention head 
-                        alongside similar heads, view multiple attention patterns side-by-side, and navigate to all other analysis tools.
+                        alongside similar (or un-similar!) heads, view multiple attention patterns side-by-side, and navigate to other analysis tools.
                     </p>
                 </div>
                 
@@ -418,7 +403,7 @@
                     <p>Tools for examining individual attention patterns</p>
                     <ul class="interface-list">
                         <li><a href="patterns/index.html">Pattern Lens</a> - Compare patterns across models and heads</li>
-                        <li><a href="patterns/single.html">Single Pattern View</a> - Detailed view of individual attention patterns</li>
+                        <li><a href="patterns/single.html">Single Pattern View</a> - Detailed view of individual attention patterns with their prompts</li>
                         <li><a href="vis/embeds/patterns/index.html">Pattern Embedding Visualization</a> - 3D space of all attention patterns</li>
                     </ul>
                 </div>
