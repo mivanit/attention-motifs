@@ -2,6 +2,7 @@
 models = [
 	"tiny-stories-1M",
 	"pythia-14m",
+	# "meta-llama/Llama-3.2-1B",
 ]
 
 # paths -- where to find stuff and where to save it
