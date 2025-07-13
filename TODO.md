@@ -5,6 +5,7 @@
 
 misc todos:
 
+- **IMPORTANT**: in attentionpedia, specifying a list of heads to view doesnt work because we use the same separator between heads and between model/lyr_idx/head_idx!
 - [x] create a classifications page that lists all head classifications with links to their respective AttentionPedia pages
 - [ ] embedding visualizations: 
   - [ ] hovering over point sometimes doesnt work, the "hover radius" is much smaller than the point size. make the hover radius scale with the point size by some constant factor which we can configure in config.js
