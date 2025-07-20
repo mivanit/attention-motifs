@@ -20,17 +20,54 @@ async function _load_dists_npy() {
 class HeadDistances {
   constructor() {
     this._is_loaded = false;
+    this._load_promise = null;
     this.head_dists_meta = null;
     this.head_dists_arr = null;
-    this._ensureLoaded();
+    // Don't start loading in constructor - let methods trigger it when needed
   }
 
   async _ensureLoaded() {
-    if (!this._is_loaded) {
-      this.head_dists_meta = await _load_dists_meta();
-      this.head_dists_arr = await _load_dists_npy();
-      this._is_loaded = true;
+    // If already loaded, return immediately
+    if (this._is_loaded) {
+      return;
     }
+
+    // If loading is in progress, wait for the existing promise
+    if (this._load_promise) {
+      return this._load_promise;
+    }
+
+    // Start loading and store the promise to prevent duplicate loads
+    this._load_promise = (async () => {
+      try {
+        const notif = NOTIF.pbar("Loading head distances data...");
+
+        // Load metadata first
+        this.head_dists_meta = await _load_dists_meta();
+        notif.progress(0.2);
+
+        // Load the large distances array
+        this.head_dists_arr = await _load_dists_npy();
+        notif.progress(1.0);
+
+        this._is_loaded = true;
+        notif.complete();
+        NOTIF.success("Head distances loaded successfully");
+      } catch (error) {
+        NOTIF.error("Failed to load head distances", error);
+        throw error;
+      }
+    })();
+
+    return this._load_promise;
+  }
+
+  isMetadataLoaded() {
+    return this.head_dists_meta !== null;
+  }
+
+  isFullyLoaded() {
+    return this._is_loaded;
   }
 
   get_head_idx(head_name) {

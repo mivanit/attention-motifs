@@ -177,6 +177,20 @@ document.addEventListener("alpine:init", () => {
         return;
       }
 
+      // Immediately show the current head while loading distances
+      this.heads_display_with_distances = [
+        {
+          headId: this.current_head,
+          distance: 0,
+          distanceText: "0.000\n(Current)",
+          distanceColor: "#4caf50",
+          hasMatchingClassification: false,
+          rank: 1,
+          totalHeads: 1,
+          isLoadingOthers: true,
+        },
+      ];
+
       // If heads_display is explicitly set, use it
       if (this.heads_display && Array.isArray(this.heads_display)) {
         // Apply filtering to explicitly set heads
