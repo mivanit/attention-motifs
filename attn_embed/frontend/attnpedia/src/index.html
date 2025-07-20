@@ -35,6 +35,18 @@
   <!-- body -->
 
   <body>
+    <!-- Navigation bar -->
+    <nav class="nav-bar">
+      <div class="nav-bar-content">
+        <a href="../../index.html">Home</a>
+        <a href="../../patterns/index.html">Pattern Lens</a>
+        <a href="../../figures/classifications.html">Classifications</a>
+        <a href="../../vis/embeds/patterns/index.html">Pattern Embeddings</a>
+        <a href="../../vis/embeds/heads/index.html">Head Embeddings</a>
+        <a href="../../figures/head_embed_table.html">Head Embedding Table</a>
+      </div>
+    </nav>
+
     <div class="container" x-data="attentionApp" x-init="await init()">
       <!-- Help button in top right -->
       <div class="help-menu-corner">
@@ -95,14 +107,6 @@
       <!-- Page Title Section -->
       <div class="header-container">
         <div class="title-section">
-          <div class="classifications-link-container">
-            <a
-              href="../../figures/classifications.html"
-              class="classifications-link"
-              title="Browse all head classifications"
-              >View all classifications</a
-            >
-          </div>
           <template x-if="!classification_mode">
             <div>
               <h2 class="page-title">

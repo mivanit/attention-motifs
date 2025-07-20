@@ -18,7 +18,8 @@
     <style>
     body {
       font-family: -apple-system, sans-serif;
-      margin: 20px;
+      margin: 0;
+      padding: 0;
       background: #f8f9fa;
     }
     
@@ -27,9 +28,35 @@
       text-decoration: underline;
     }
     
+    /* Navigation bar styles */
+    .nav-bar {
+      background: white;
+      border-bottom: 1px solid #ddd;
+      padding: 12px 0;
+      margin-bottom: 20px;
+    }
+    
+    .nav-bar-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    
+    .nav-bar a {
+      color: #1565c0;
+      text-decoration: underline;
+      margin: 0 15px;
+      font-size: 14px;
+    }
+    
+    .nav-bar a:hover {
+      color: #0d47a1;
+    }
+    
     .container {
       max-width: 1400px;
       margin: 0 auto;
+      padding: 0 20px;
       position: relative;
     }
     
@@ -46,29 +73,6 @@
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       flex: 1;
       position: relative;
-    }
-    
-    .classifications-link-container {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-    }
-    
-    .classifications-link {
-      background-color: #3498db;
-      color: white;
-      padding: 6px 12px;
-      border-radius: 4px;
-      text-decoration: none;
-      font-size: 13px;
-      font-weight: bold;
-      transition: background-color 0.2s ease;
-    }
-    
-    .classifications-link:hover {
-      background-color: #2980b9;
-      color: white;
-      text-decoration: none;
     }
     
     .controls-section {
@@ -3803,6 +3807,18 @@
   <!-- body -->
 
   <body>
+    <!-- Navigation bar -->
+    <nav class="nav-bar">
+      <div class="nav-bar-content">
+        <a href="../../index.html">Home</a>
+        <a href="../../patterns/index.html">Pattern Lens</a>
+        <a href="../../figures/classifications.html">Classifications</a>
+        <a href="../../vis/embeds/patterns/index.html">Pattern Embeddings</a>
+        <a href="../../vis/embeds/heads/index.html">Head Embeddings</a>
+        <a href="../../figures/head_embed_table.html">Head Embedding Table</a>
+      </div>
+    </nav>
+
     <div class="container" x-data="attentionApp" x-init="await init()">
       <!-- Help button in top right -->
       <div class="help-menu-corner">
@@ -3863,14 +3879,6 @@
       <!-- Page Title Section -->
       <div class="header-container">
         <div class="title-section">
-          <div class="classifications-link-container">
-            <a
-              href="../../figures/classifications.html"
-              class="classifications-link"
-              title="Browse all head classifications"
-              >View all classifications</a
-            >
-          </div>
           <template x-if="!classification_mode">
             <div>
               <h2 class="page-title">
