@@ -496,6 +496,11 @@ class DistanceTensorResult(SerializableDataclass):
 			path / "distances.npy",
 			self.mean_dists,
 		)
+		# reduced precision, to be faster
+		np.save(
+			path / "distances_f32.npy",
+			self.mean_dists.astype(np.float32),
+		)
 
 	@classmethod
 	def read(cls, path: Path | str, zanj: ZANJ | None = None) -> "DistanceTensorResult":
