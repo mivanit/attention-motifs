@@ -501,6 +501,10 @@ class DistanceTensorResult(SerializableDataclass):
 			path / "distances_f32.npy",
 			self.mean_dists.astype(np.float32),
 		)
+		np.save(
+			path / "distances_f16.npy",
+			self.mean_dists.astype(np.float16),
+		)
 
 	@classmethod
 	def read(cls, path: Path | str, zanj: ZANJ | None = None) -> "DistanceTensorResult":
