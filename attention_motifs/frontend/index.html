@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Motifs in Attention Patterns of Large Language Models</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "trebuchet ms", verdana, arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background-color: #fafafa;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      header {
+        text-align: center;
+        padding: 40px 0;
+        background: linear-gradient(135deg, #9370db, #ececff);
+        color: white;
+        margin-bottom: 40px;
+        border-radius: 8px;
+      }
+
+      header h1 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      header p {
+        font-size: 1.2em;
+        opacity: 0.9;
+      }
+
+      .links {
+        margin-top: 20px;
+      }
+
+      .links a {
+        color: white;
+        text-decoration: none;
+        padding: 10px 20px;
+        margin: 0 10px;
+        border: 2px solid white;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+      }
+
+      .links a:hover {
+        background: white;
+        color: #9370db;
+      }
+
+      .section {
+        margin-bottom: 50px;
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .section h2 {
+        color: #9370db;
+        font-size: 2em;
+        margin-bottom: 20px;
+        border-bottom: 3px solid #ececff;
+        padding-bottom: 10px;
+      }
+
+      .section h3 {
+        color: #666;
+        font-size: 1.4em;
+        margin: 25px 0 15px 0;
+      }
+
+      .diagram-container {
+        text-align: center;
+        margin: 30px 0;
+      }
+
+      .diagram-container svg {
+        max-width: 100%;
+        height: auto;
+        border: 2px solid #ececff;
+        border-radius: 8px;
+        background: white;
+      }
+
+      .legend {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .legend-line {
+        width: 40px;
+        height: 3px;
+        border-radius: 2px;
+      }
+
+      .solid-line {
+        background: #333;
+      }
+
+      .dashed-line {
+        background: repeating-linear-gradient(
+          to right,
+          #333 0px,
+          #333 6px,
+          transparent 6px,
+          transparent 12px
+        );
+      }
+
+      .interface-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 30px;
+        margin-top: 30px;
+      }
+
+      .interface-category {
+        background: #f8f9fa;
+        padding: 25px;
+        border-radius: 8px;
+        border-left: 5px solid #9370db;
+      }
+
+      .interface-category h4 {
+        color: #9370db;
+        font-size: 1.3em;
+        margin-bottom: 15px;
+      }
+
+      .interface-list {
+        list-style: none;
+      }
+
+      .interface-list li {
+        margin: 10px 0;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+      }
+
+      .interface-list li:last-child {
+        border-bottom: none;
+      }
+
+      .interface-list a {
+        color: #4169e1;
+        text-decoration: underline;
+        transition: color 0.3s ease;
+      }
+
+      .interface-list a:hover {
+        color: #9370db;
+      }
+
+      .pipeline-steps {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+      }
+
+      .pipeline-step {
+        background: #f0f0ff;
+        padding: 20px;
+        border-radius: 6px;
+        border-left: 4px solid #9370db;
+      }
+
+      .pipeline-step h4 {
+        color: #9370db;
+        margin-bottom: 10px;
+      }
+
+      .pipeline-step a {
+        color: #4169e1;
+        text-decoration: underline;
+        transition: color 0.3s ease;
+        display: inline-block;
+        margin: 2px 5px;
+      }
+
+      .pipeline-step a:hover {
+        color: #9370db;
+      }
+
+      .pipeline-step .link-group {
+        margin-top: 10px;
+      }
+
+      .pipeline-step .link-group strong {
+        display: block;
+        margin-bottom: 5px;
+        color: #666;
+      }
+
+      a {
+        color: #4169e1;
+        text-decoration: underline;
+      }
+
+      a:hover {
+        color: #9370db;
+      }
+
+      .quick-start {
+        background: linear-gradient(135deg, #ececff, #f8f9fa);
+        border: 2px solid #9370db;
+      }
+
+      .code-snippet {
+        background: #1e1e1e;
+        color: #f8f8f2;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: "Courier New", monospace;
+        margin: 15px 0;
+        overflow-x: auto;
+      }
+
+      .highlight {
+        background: linear-gradient(
+          120deg,
+          transparent 0%,
+          #ececff 30%,
+          #ececff 70%,
+          transparent 100%
+        );
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+      }
+
+      footer {
+        text-align: center;
+        padding: 30px;
+        color: #666;
+        font-style: italic;
+      }
+
+      @media (max-width: 768px) {
+        header h1 {
+          font-size: 2em;
+        }
+
+        .section {
+          padding: 20px;
+        }
+
+        .legend {
+          flex-direction: column;
+          align-items: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Motifs in Attention Patterns of Large Language Models</h1>
+        <p>Interactive supplement</p>
+        <div class="links">
+          <a href="https://attention-motifs.github.io">Website</a>
+          <a href="https://attention-motifs.github.io">Paper (coming soon!)</a>
+          <a href="https://github.com/attention-motifs">GitHub</a>
+        </div>
+      </header>
+
+      <div class="section">
+        <p>
+          This project investigates structure in the attention mechanisms of
+          large language models. A lot of papers in interpretability involve
+          manually inspecting attention patterns once heads of interest are
+          identified. We aim to improve this process by providing a way to
+          systematically embed attention patterns in a meaningful latent space,
+          which we in turn use to embed the heads that produce them. We provide
+          a suite of interactive tools to allow inspecting patterns produced by
+          different heads, finding heads with similar patterns, looking through
+          the embedding spaces, and looking at known classes of heads.
+        </p>
+
+        <h3>Pipeline</h3>
+        <div class="pipeline-steps">
+          <div class="pipeline-step">
+            <h4>1. Pattern Extraction</h4>
+            <p>
+              Generate attention patterns from multiple language models using
+              diverse text prompts.
+            </p>
+            <div class="link-group">
+              <strong>Tools:</strong>
+              <a href="patterns/index.html">Pattern Lens</a>
+              <a href="patterns/single.html">Single Pattern View</a>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <h4>2. Feature Extraction</h4>
+            <p>Compute handcrafted features from each attention pattern.</p>
+            <div class="link-group">
+              <strong>Figures:</strong>
+              <a href="figures/covariance-full.pdf">Full Covariance</a>
+              <a href="figures/covariance-reduced.pdf">Reduced Covariance</a>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <h4>3. Feature Analysis</h4>
+            <p>
+              Normalization and principal component analysis of the table of
+              features.
+            </p>
+            <div class="link-group">
+              <strong>Tools:</strong>
+              <a href="vis/embeds/patterns/index.html"
+                >Pattern Embedding Visualization</a
+              >
+            </div>
+            <div class="link-group">
+              <strong>Figures:</strong>
+              <a href="figures/pca.pdf">PCA Analysis</a>
+              <a href="figures/pca-all.png">PCA Overview</a>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <h4>4. Distances between heads</h4>
+            <p>
+              We now have a point cloud in PCA space for each head -- we can
+              compute distances between each cloud to get a distance matrix.
+            </p>
+            <div class="link-group">
+              <strong>Tools:</strong>
+              <a href="vis/attnpedia/index.html">AttentionPedia</a>
+            </div>
+            <div class="link-group">
+              <strong>Figures:</strong>
+              <a href="figures/head-dists-heatmap.pdf"
+                >Head Distances Heatmap</a
+              >
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <h4>5. Embeddings of heads</h4>
+            <p>
+              Use the distance matrix to get embeddings of heads in a meaningful
+              latent space.
+            </p>
+            <div class="link-group">
+              <strong>Tools:</strong>
+              <a href="vis/embeds/heads/index.html"
+                >Head Embedding Visualization</a
+              >
+              <a href="figures/head_embed_table.html">Head Embedding Table</a>
+              <a href="figures/classifications.html">Classifications Page</a>
+            </div>
+            <div class="link-group">
+              <strong>Figures:</strong>
+              <a href="figures/head-embed.pdf">Head Embeddings</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Interface Map</h2>
+        <p>
+          The diagram below shows how all the analysis tools connect together.
+          Click on any component to explore that interface.
+        </p>
+
+        <div class="diagram-container">
+          <object
+            data="diagram.svg"
+            type="image/svg+xml"
+            style="width: 100%; max-height: 600px"
+            id="diagram-svg"
+          >
+            <img
+              src="diagram.svg"
+              alt="Interface Relations Diagram"
+              style="width: 100%; max-height: 600px"
+            />
+          </object>
+        </div>
+
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-line solid-line"></div>
+            <span>Existing connections</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-line dashed-line"></div>
+            <span>Planned connections</span>
+          </div>
+        </div>
+
+        <div class="interface-grid">
+          <div class="interface-category">
+            <h4>Head Analysis</h4>
+            <p>
+              Tools for understanding attention heads and their classifications
+            </p>
+            <ul class="interface-list">
+              <li>
+                <a href="figures/classifications.html">Classifications Page</a>
+                - Browse all head types with links to examples
+              </li>
+              <li>
+                <a href="figures/head_embed_table.html">Head Embedding Table</a>
+                - Compare embedding methods in 2D with SVG previews
+              </li>
+              <li>
+                <a href="vis/embeds/heads/index.html"
+                  >Head Embedding Visualization</a
+                >
+                - 3D exploration of head embeddings
+              </li>
+            </ul>
+          </div>
+
+          <div class="interface-category">
+            <h4>AttentionPedia</h4>
+            <p>The main interface connecting all analysis tools.</p>
+            <ul class="interface-list">
+              <li>
+                <a href="vis/attnpedia/index.html">AttentionPedia</a> - Explore
+                heads with similar patterns and classifications
+              </li>
+            </ul>
+            <p style="margin-top: 15px; font-size: 0.9em; color: #666">
+              <strong>AttentionPedia</strong> serves as the central hub,
+              allowing you to examine any attention head alongside similar (or
+              un-similar!) heads, view multiple attention patterns side-by-side,
+              and navigate to other analysis tools.
+            </p>
+          </div>
+
+          <div class="interface-category">
+            <h4>Pattern Analysis</h4>
+            <p>Tools for examining individual attention patterns</p>
+            <ul class="interface-list">
+              <li>
+                <a href="patterns/index.html">Pattern Lens</a> - Compare
+                patterns across models and heads
+              </li>
+              <li>
+                <a href="patterns/single.html">Single Pattern View</a> -
+                Detailed view of individual attention patterns with their
+                prompts
+              </li>
+              <li>
+                <a href="vis/embeds/patterns/index.html"
+                  >Pattern Embedding Visualization</a
+                >
+                - 3D space of all attention patterns
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Handle SVG links to open in new tab instead of iframe
+      document.addEventListener("DOMContentLoaded", function () {
+        const svgObject = document.getElementById("diagram-svg");
+
+        svgObject.addEventListener("load", function () {
+          try {
+            const svgDoc = svgObject.contentDocument;
+            if (svgDoc) {
+              const links = svgDoc.querySelectorAll("a");
+              links.forEach((link) => {
+                link.addEventListener("click", function (e) {
+                  e.preventDefault();
+                  const href =
+                    this.getAttribute("href") ||
+                    this.getAttribute("xlink:href");
+                  if (href) {
+                    window.open(href, "_blank");
+                  }
+                });
+              });
+            }
+          } catch (e) {
+            // Cross-origin restrictions may prevent access to SVG content
+            console.log(
+              "Cannot modify SVG links due to cross-origin restrictions",
+            );
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

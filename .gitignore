@@ -1,3 +1,30 @@
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# demo output - lots of npz files and images
+docs/demo/**
+# pysr/juliacall will dump pickle files and csvs in here
+notebooks/outputs/**
+# tests temp dir
+tests/_temp/**
+tests/.temp/**
+notebooks/test.ipynb
+data/activations/**
+notebooks/*.zanj
+notebooks/trnbl-logs/**
+notebooks/tb-logs-convAE/**
+.hf-token
+notebooks/.hf-token
+notebooks/profiles/**
+notebooks/miv/**
+notebooks/wandb/**
+display/data/**
+*.pickle
+miv/**
+wandb/**
+.meta/local/**
+.numba-cache/
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

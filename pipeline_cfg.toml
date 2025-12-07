@@ -1,0 +1,118 @@
+# input paths
+# ============================================================
+# prompts file -- should be newline-delimited jsonl with each row having keys "text" and "meta"
+# example:
+# {"text": "Inorganic phosphate uptake in intact vacuoles isolated from suspension-cultured cells", "meta": {"pile_set_name": "PubMed Abstracts"}}
+prompts_file = "data/text/pile_demo.jsonl"
+# where to save patters -- both npz files of activations, and in step 1b png files of activation patterns
+# structure is:
+# `{patterns_dir}/{model_name}/prompts/{prompt_hash}/activations.npz`
+# `{patterns_dir}/{model_name}/prompts/{prompt_hash}/L{layer_idx}/H{head_idx}/attn.png`
+patterns_dir = "data/patterns"
+
+# prompts processing
+# ============================================================
+# how many total prompts to use
+prompts_n_samples = 128
+# minimum chars per prompt
+prompts_min_chars = 64
+# maximum chars per prompt
+prompts_max_chars = 512
+
+# data processing
+# ============================================================
+# which models to use (transformerlens names)
+models = [
+	# "pythia-410m",
+	"pythia-1b",
+	"gpt2-small",
+	"gpt2-medium",
+	# "gpt2-large",
+	"meta-llama/Llama-3.2-1B",
+	# "Llama-3.2-1B",
+	# "Llama-3.2-1B-Instruct",
+	"gemma-2b",
+	"gemma-2-2b",
+	# these are tiny and look weird
+	# "pythia-14m",
+	# "tiny-stories-1M",
+]
+# number of components for PCA decomposition of activation features
+pca_n_components = 6
+
+# head embedding configuration
+# ============================================================
+# methods to use for head embeddings (uncomment to override defaults)
+# embedding_methods = ["isomap", "umap", "tsne", "pca"]
+# dimensions to generate for each embedding method (uncomment to override defaults)
+# embedding_n_components_list = [2, 3]
+# neighbor counts for manifold methods like isomap, umap (uncomment to override defaults)
+# embedding_n_neighbors_list = [2, 4, 8, 16, 32, 64]
+
+# computing
+# ============================================================
+# numbper of cpus to use for CPU tasks
+n_proc = 12
+# whether to force an overwrite of existing attention patterns
+force_overwrite = false
+# device to use for torch tensors -- generally "cpu", "cuda", or "mps"
+# can be set thru cli with `--device`
+device = "cuda:0"
+
+# output paths
+# ============================================================
+# where to put the data of features extracted from the patterns
+# see `DATA_FNAMES` for paths of data files relative to this directory
+features_dir = "data/features"
+vis_dir = "data/vis"
+# locations of data files relative to `features_dir`, probably don't modify this
+# data_fnames = {} 
+
+# plotting/logging
+# ============================================================
+# directory to save figures in
+figures_dir = "data/figures"
+# locations of figures relative to `figures_dir`, probably don't modify this
+# figure_fnames {}
+
+# verbosity level for logging
+verbose = 99
+
+# extra kwargs to pass to plotting functions. kind of messy
+[plot_kwargs]
+pca_all_dpi = 150
+
+[vis_configs.embed_pattern.cfg]
+dataFile = "../../../features/pca.csv"
+
+# visualization configurations (uncomment to override defaults)
+# ============================================================
+# [vis_configs.attentionpedia]
+# path = "attnpedia"
+# cfg_path = "config.json"
+# [vis_configs.attentionpedia.cfg]
+# head_viewing = "gpt2-small:L5:H5"
+# n_prompts = 5
+# pattern_size = 120
+# attnpedia_url = "ap.json"
+# headDistsmeta_url = "../../features/head_dists_raw/dists_meta.json"
+# prompts_url = "../../patterns/gpt2-small/prompts.jsonl"
+# headDistsnpy_url = "../../features/head_dists_raw/distances.npy"
+# patterns_path = "../../patterns/"
+
+# [vis_configs.embed_pattern]
+# path = "embeds/patterns/"
+# cfg_path = "config.json"
+# [vis_configs.embed_pattern.cfg]
+# dataFile = "../../../features/pca.jsonl"
+# numericalPrefix = "pc."
+# defaultColorColumn = "activation.model"
+
+# [vis_configs.embed_head]
+# path = "embeds/heads/"
+# cfg_path = "config.json"
+# [vis_configs.embed_head.cfg]
+# dataFile = "../../../features/head_embed.jsonl"
+# numericalPrefix = "embed."
+# defaultColorColumn = "type.group"
+

@@ -1,0 +1,367 @@
+{
+	"head_to_types": {
+		"gpt2-small:L2:H2": [
+			"IOI:Previous Token"
+		],
+		"gpt2-small:L4:H11": [
+			"IOI:Previous Token",
+			"SAE-survey:Previous Token"
+		],
+		"gpt2-small:L0:H1": [
+			"IOI:Duplicate Token",
+			"greater-than:Static-Year Retriever"
+		],
+		"gpt2-small:L3:H0": [
+			"IOI:Duplicate Token",
+			"SAE-survey:Duplicate Token"
+		],
+		"gpt2-small:L0:H10": [
+			"IOI:Duplicate Token"
+		],
+		"gpt2-small:L5:H5": [
+			"IOI:Induction",
+			"SAE-survey:Induction",
+			"greater-than:YY Identifier"
+		],
+		"gpt2-small:L6:H9": [
+			"IOI:Induction",
+			"SAE-survey:Induction",
+			"greater-than:YY Identifier"
+		],
+		"gpt2-small:L5:H8": [
+			"IOI:Induction"
+		],
+		"gpt2-small:L5:H9": [
+			"IOI:Induction"
+		],
+		"gpt2-small:L7:H3": [
+			"IOI:S-Inhibition"
+		],
+		"gpt2-small:L7:H9": [
+			"IOI:S-Inhibition"
+		],
+		"gpt2-small:L8:H6": [
+			"IOI:S-Inhibition"
+		],
+		"gpt2-small:L8:H10": [
+			"IOI:S-Inhibition"
+		],
+		"gpt2-small:L10:H7": [
+			"IOI:Negative Name Mover",
+			"SAE-survey:Copy Suppression"
+		],
+		"gpt2-small:L11:H10": [
+			"IOI:Negative Name Mover"
+		],
+		"gpt2-small:L9:H9": [
+			"IOI:Name Mover"
+		],
+		"gpt2-small:L9:H6": [
+			"IOI:Name Mover"
+		],
+		"gpt2-small:L10:H0": [
+			"IOI:Name Mover"
+		],
+		"gpt2-small:L9:H0": [
+			"IOI:Backup Name Mover"
+		],
+		"gpt2-small:L9:H7": [
+			"IOI:Backup Name Mover"
+		],
+		"gpt2-small:L10:H1": [
+			"IOI:Backup Name Mover"
+		],
+		"gpt2-small:L10:H2": [
+			"IOI:Backup Name Mover"
+		],
+		"gpt2-small:L10:H6": [
+			"IOI:Backup Name Mover"
+		],
+		"gpt2-small:L10:H10": [
+			"IOI:Backup Name Mover"
+		],
+		"gpt2-small:L11:H2": [
+			"IOI:Backup Name Mover"
+		],
+		"gpt2-small:L11:H9": [
+			"IOI:Backup Name Mover"
+		],
+		"gpt2-small:L5:H1": [
+			"SAE-survey:Induction",
+			"greater-than:YY Identifier"
+		],
+		"gpt2-small:L7:H2": [
+			"SAE-survey:Induction"
+		],
+		"gpt2-small:L7:H10": [
+			"SAE-survey:Induction",
+			"greater-than:YY Identifier"
+		],
+		"gpt2-small:L0:H5": [
+			"SAE-survey:Duplicate Token",
+			"greater-than:Static-Year Retriever"
+		],
+		"gpt2-small:L9:H1": [
+			"SAE-survey:Successor",
+			"SAE-survey:Long Range Context Tracking",
+			"greater-than:YY Identifier"
+		],
+		"gpt2-small:L8:H8": [
+			"greater-than:YY Identifier"
+		],
+		"gpt2-small:L8:H11": [
+			"greater-than:YY Identifier"
+		],
+		"gpt2-small:L0:H3": [
+			"greater-than:Static-Year Retriever"
+		]
+	},
+	"type_to_heads": {
+		"IOI:Previous Token": [
+			"gpt2-small:L2:H2",
+			"gpt2-small:L4:H11"
+		],
+		"IOI:Duplicate Token": [
+			"gpt2-small:L0:H1",
+			"gpt2-small:L3:H0",
+			"gpt2-small:L0:H10"
+		],
+		"IOI:Induction": [
+			"gpt2-small:L5:H5",
+			"gpt2-small:L6:H9",
+			"gpt2-small:L5:H8",
+			"gpt2-small:L5:H9"
+		],
+		"IOI:S-Inhibition": [
+			"gpt2-small:L7:H3",
+			"gpt2-small:L7:H9",
+			"gpt2-small:L8:H6",
+			"gpt2-small:L8:H10"
+		],
+		"IOI:Negative Name Mover": [
+			"gpt2-small:L10:H7",
+			"gpt2-small:L11:H10"
+		],
+		"IOI:Name Mover": [
+			"gpt2-small:L9:H9",
+			"gpt2-small:L9:H6",
+			"gpt2-small:L10:H0"
+		],
+		"IOI:Backup Name Mover": [
+			"gpt2-small:L9:H0",
+			"gpt2-small:L9:H7",
+			"gpt2-small:L10:H1",
+			"gpt2-small:L10:H2",
+			"gpt2-small:L10:H6",
+			"gpt2-small:L10:H10",
+			"gpt2-small:L11:H2",
+			"gpt2-small:L11:H9"
+		],
+		"SAE-survey:Induction": [
+			"gpt2-small:L5:H1",
+			"gpt2-small:L5:H5",
+			"gpt2-small:L6:H9",
+			"gpt2-small:L7:H2",
+			"gpt2-small:L7:H10"
+		],
+		"SAE-survey:Previous Token": [
+			"gpt2-small:L4:H11"
+		],
+		"SAE-survey:Copy Suppression": [
+			"gpt2-small:L10:H7"
+		],
+		"SAE-survey:Duplicate Token": [
+			"gpt2-small:L3:H0",
+			"gpt2-small:L0:H5"
+		],
+		"SAE-survey:Successor": [
+			"gpt2-small:L9:H1"
+		],
+		"SAE-survey:Long Range Context Tracking": [
+			"gpt2-small:L9:H1"
+		],
+		"greater-than:YY Identifier": [
+			"gpt2-small:L5:H1",
+			"gpt2-small:L5:H5",
+			"gpt2-small:L8:H8",
+			"gpt2-small:L6:H9",
+			"gpt2-small:L7:H10",
+			"gpt2-small:L8:H11",
+			"gpt2-small:L9:H1"
+		],
+		"greater-than:Static-Year Retriever": [
+			"gpt2-small:L0:H1",
+			"gpt2-small:L0:H3",
+			"gpt2-small:L0:H5"
+		]
+	},
+	"type_metadata": {
+		"IOI:Previous Token": {
+			"url": "https://arxiv.org/pdf/2211.00593",
+			"notes": "IOI: indirect object identification",
+			"model": "gpt2-small",
+			"n_heads": 2,
+			"heads": [
+				"gpt2-small:L2:H2",
+				"gpt2-small:L4:H11"
+			]
+		},
+		"IOI:Duplicate Token": {
+			"url": "https://arxiv.org/pdf/2211.00593",
+			"notes": "IOI: indirect object identification",
+			"model": "gpt2-small",
+			"n_heads": 3,
+			"heads": [
+				"gpt2-small:L0:H1",
+				"gpt2-small:L3:H0",
+				"gpt2-small:L0:H10"
+			]
+		},
+		"IOI:Induction": {
+			"url": "https://arxiv.org/pdf/2211.00593",
+			"notes": "IOI: indirect object identification",
+			"model": "gpt2-small",
+			"n_heads": 4,
+			"heads": [
+				"gpt2-small:L5:H5",
+				"gpt2-small:L6:H9",
+				"gpt2-small:L5:H8",
+				"gpt2-small:L5:H9"
+			]
+		},
+		"IOI:S-Inhibition": {
+			"url": "https://arxiv.org/pdf/2211.00593",
+			"notes": "IOI: indirect object identification",
+			"model": "gpt2-small",
+			"n_heads": 4,
+			"heads": [
+				"gpt2-small:L7:H3",
+				"gpt2-small:L7:H9",
+				"gpt2-small:L8:H6",
+				"gpt2-small:L8:H10"
+			]
+		},
+		"IOI:Negative Name Mover": {
+			"url": "https://arxiv.org/pdf/2211.00593",
+			"notes": "IOI: indirect object identification",
+			"model": "gpt2-small",
+			"n_heads": 2,
+			"heads": [
+				"gpt2-small:L10:H7",
+				"gpt2-small:L11:H10"
+			]
+		},
+		"IOI:Name Mover": {
+			"url": "https://arxiv.org/pdf/2211.00593",
+			"notes": "IOI: indirect object identification",
+			"model": "gpt2-small",
+			"n_heads": 3,
+			"heads": [
+				"gpt2-small:L9:H9",
+				"gpt2-small:L9:H6",
+				"gpt2-small:L10:H0"
+			]
+		},
+		"IOI:Backup Name Mover": {
+			"url": "https://arxiv.org/pdf/2211.00593",
+			"notes": "IOI: indirect object identification",
+			"model": "gpt2-small",
+			"n_heads": 8,
+			"heads": [
+				"gpt2-small:L9:H0",
+				"gpt2-small:L9:H7",
+				"gpt2-small:L10:H1",
+				"gpt2-small:L10:H2",
+				"gpt2-small:L10:H6",
+				"gpt2-small:L10:H10",
+				"gpt2-small:L11:H2",
+				"gpt2-small:L11:H9"
+			]
+		},
+		"SAE-survey:Induction": {
+			"url": "https://www.alignmentforum.org/posts/xmegeW5mqiBsvoaim",
+			"notes": "Survey of all 144 attention heads in GPT-2 small using Sparse Autoencoders (SAEs); identifies head-level roles via top-10 feature analysis and introduces new classes like 'long prefix induction'.",
+			"model": "gpt2-small",
+			"n_heads": 5,
+			"heads": [
+				"gpt2-small:L5:H1",
+				"gpt2-small:L5:H5",
+				"gpt2-small:L6:H9",
+				"gpt2-small:L7:H2",
+				"gpt2-small:L7:H10"
+			]
+		},
+		"SAE-survey:Previous Token": {
+			"url": "https://www.alignmentforum.org/posts/xmegeW5mqiBsvoaim",
+			"notes": "Survey of all 144 attention heads in GPT-2 small using Sparse Autoencoders (SAEs); identifies head-level roles via top-10 feature analysis and introduces new classes like 'long prefix induction'.",
+			"model": "gpt2-small",
+			"n_heads": 1,
+			"heads": [
+				"gpt2-small:L4:H11"
+			]
+		},
+		"SAE-survey:Copy Suppression": {
+			"url": "https://www.alignmentforum.org/posts/xmegeW5mqiBsvoaim",
+			"notes": "Survey of all 144 attention heads in GPT-2 small using Sparse Autoencoders (SAEs); identifies head-level roles via top-10 feature analysis and introduces new classes like 'long prefix induction'.",
+			"model": "gpt2-small",
+			"n_heads": 1,
+			"heads": [
+				"gpt2-small:L10:H7"
+			]
+		},
+		"SAE-survey:Duplicate Token": {
+			"url": "https://www.alignmentforum.org/posts/xmegeW5mqiBsvoaim",
+			"notes": "Survey of all 144 attention heads in GPT-2 small using Sparse Autoencoders (SAEs); identifies head-level roles via top-10 feature analysis and introduces new classes like 'long prefix induction'.",
+			"model": "gpt2-small",
+			"n_heads": 2,
+			"heads": [
+				"gpt2-small:L3:H0",
+				"gpt2-small:L0:H5"
+			]
+		},
+		"SAE-survey:Successor": {
+			"url": "https://www.alignmentforum.org/posts/xmegeW5mqiBsvoaim",
+			"notes": "Survey of all 144 attention heads in GPT-2 small using Sparse Autoencoders (SAEs); identifies head-level roles via top-10 feature analysis and introduces new classes like 'long prefix induction'.",
+			"model": "gpt2-small",
+			"n_heads": 1,
+			"heads": [
+				"gpt2-small:L9:H1"
+			]
+		},
+		"SAE-survey:Long Range Context Tracking": {
+			"url": "https://www.alignmentforum.org/posts/xmegeW5mqiBsvoaim",
+			"notes": "Survey of all 144 attention heads in GPT-2 small using Sparse Autoencoders (SAEs); identifies head-level roles via top-10 feature analysis and introduces new classes like 'long prefix induction'.",
+			"model": "gpt2-small",
+			"n_heads": 1,
+			"heads": [
+				"gpt2-small:L9:H1"
+			]
+		},
+		"greater-than:YY Identifier": {
+			"url": "https://arxiv.org/abs/2305.00586",
+			"notes": "Greater-than operation in year-span prediction task",
+			"model": "gpt2-small",
+			"n_heads": 7,
+			"heads": [
+				"gpt2-small:L5:H1",
+				"gpt2-small:L5:H5",
+				"gpt2-small:L8:H8",
+				"gpt2-small:L6:H9",
+				"gpt2-small:L7:H10",
+				"gpt2-small:L8:H11",
+				"gpt2-small:L9:H1"
+			]
+		},
+		"greater-than:Static-Year Retriever": {
+			"url": "https://arxiv.org/abs/2305.00586",
+			"notes": "Greater-than operation in year-span prediction task",
+			"model": "gpt2-small",
+			"n_heads": 3,
+			"heads": [
+				"gpt2-small:L0:H1",
+				"gpt2-small:L0:H3",
+				"gpt2-small:L0:H5"
+			]
+		}
+	}
+}
