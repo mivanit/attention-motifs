@@ -81,8 +81,8 @@ dependencies = [
 	default-groups = ["dev", "lint"]
 
 [project.urls]
-	Homepage = "https://miv.name/attention-motifs"
-	Documentation = "https://miv.name/attention-motifs"
+	Homepage = "https://attention-motifs.github.io"
+	Documentation = "https://attention-motifs.github.io"
 	Repository = "https://github.com/mivanit/attention-motifs"
 	Issues = "https://github.com/mivanit/attention-motifs/issues"
 
