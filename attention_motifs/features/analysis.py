@@ -512,6 +512,49 @@ class DistanceTensorResult(SerializableDataclass):
 			zanj = ZANJ()
 		return zanj.read(path)
 
+	@classmethod
+	def read_raw(
+		cls,
+		path: Path | str,
+		precision: str = "f64",
+	) -> "DistanceTensorResult":
+		"""Load from raw json + npy files saved by save_raw.
+
+		Parameters
+		----------
+		path
+			Directory containing dists_meta.json and distances*.npy files.
+		precision
+			Which precision file to load: "f64" (default), "f32", or "f16".
+
+		Returns
+		-------
+		DistanceTensorResult
+			Loaded result with is_reduced=True.
+		"""
+		path = Path(path)
+
+		# Load metadata
+		with open(path / "dists_meta.json", "r") as f:
+			meta = json.load(f)
+
+		# Load distances based on precision
+		if precision == "f64":
+			distances = np.load(path / "distances.npy")
+		elif precision == "f32":
+			distances = np.load(path / "distances_f32.npy")
+		elif precision == "f16":
+			distances = np.load(path / "distances_f16.npy")
+		else:
+			raise ValueError(f"Unknown precision: {precision}. Use 'f64', 'f32', or 'f16'.")
+
+		return cls(
+			cls_values=meta["cls_values"],
+			prompt_values=meta["prompt_values"],
+			distances=distances,
+			is_reduced=True,
+		)
+
 	@property
 	def n_heads(self) -> int:
 		n: int = len(self.cls_values)

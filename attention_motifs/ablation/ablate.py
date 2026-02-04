@@ -254,18 +254,18 @@ class HeadAblator:
             for layer, layer_heads in heads_by_layer.items()
         ]
 
-        # Register hooks
-        hook_handles = []
+        # Register hooks by adding to the hook point's fwd_hooks list
         for hook_name, hook_fn in hooks:
-            handle = self.model.hook_dict[hook_name].add_hook(hook_fn)
-            hook_handles.append(handle)
+            self.model.hook_dict[hook_name].add_hook(hook_fn)
 
         try:
             yield
         finally:
-            # Remove hooks
-            for handle in hook_handles:
-                handle.remove()
+            # Remove our hooks (they are the last ones added to each hook point)
+            for hook_name, _ in hooks:
+                hook_point = self.model.hook_dict[hook_name]
+                if hook_point.fwd_hooks:
+                    hook_point.fwd_hooks.pop()
 
     def run_with_ablation(
         self,

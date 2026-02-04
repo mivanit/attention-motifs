@@ -11,6 +11,7 @@ from attention_motifs.ablation.candidates import (
     CandidateHeads,
     get_known_induction_heads,
     find_candidate_induction_heads,
+    get_control_heads,
 )
 from attention_motifs.ablation.ablate import (
     AblationMethod,
@@ -34,6 +35,7 @@ __all__ = [
     "CandidateHeads",
     "get_known_induction_heads",
     "find_candidate_induction_heads",
+    "get_control_heads",
     # ablate
     "AblationMethod",
     "HeadAblator",
