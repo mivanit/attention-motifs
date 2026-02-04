@@ -1,5 +1,5 @@
 from attention_motifs.figure_funcs import _ensure_register
-from attention_motifs.pipeline.cfg import PipelineConfig, pipeline_step_major
+from attention_motifs.pipeline.cfg import PipelineConfig, pipeline_step_major, pipeline_model_progress
 from pattern_lens.figures import figures_main
 
 
@@ -7,7 +7,7 @@ def render_patterns(cfg: PipelineConfig) -> None:
 	pipeline_step_major("pipeline step 1.b: render patterns")
 	n_models: int = len(cfg.models)
 	for idx, model in enumerate(cfg.models):
-		print(f"processing model {idx + 1} / {n_models}: {model}")
+		pipeline_model_progress(idx, n_models, model)
 		figures_main(
 			model_name=model,
 			save_path=cfg.patterns_dir,

@@ -1,6 +1,6 @@
 from transformer_lens import HookedTransformer
 
-from attention_motifs.pipeline.cfg import PipelineConfig, pipeline_step_major
+from attention_motifs.pipeline.cfg import PipelineConfig, pipeline_step_major, pipeline_model_progress
 
 
 def download_models(cfg: PipelineConfig) -> None:
@@ -8,7 +8,7 @@ def download_models(cfg: PipelineConfig) -> None:
 	print(f"Using configuration:\n{cfg}")
 	print(f"# Will download {len(cfg.models)} models: {cfg.models}")
 	for idx, model_name in enumerate(cfg.models):
-		print(f"\t # Downloading model {idx + 1}/{len(cfg.models)}: {model_name}")
+		pipeline_model_progress(idx, len(cfg.models), model_name)
 		model = HookedTransformer.from_pretrained(model_name)
 		del model  # Free memory after downloading
 

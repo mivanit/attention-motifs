@@ -37,16 +37,32 @@ PROMPT_HASH_MAX: int = 2**PROMPT_HASH_BITS
 PATTERN_DTYPE: torch.dtype = torch.float16
 
 
-try:
-	with open(".hf-token", "r") as hf_tok_f:
-		os.environ["HF_TOKEN"] = hf_tok_f.read().strip()
-	HF_TOKEN = os.environ.get("HF_TOKEN", "")
-	if not HF_TOKEN.startswith("hf_"):
-		raise ValueError("Invalid Hugging Face token")
-except Exception as e:
+def _load_hf_token() -> str:
+	"""Load HuggingFace token from file and set HF_TOKEN env var."""
+	for token_path in [".hf-token", ".meta/local/.hf-token"]:
+		try:
+			with open(token_path, "r") as f:
+				token = f.read().strip()
+			if not token.startswith("hf_"):
+				raise ValueError("Invalid Hugging Face token")
+			os.environ["HF_TOKEN"] = token
+			print(f"Loaded HF token from {token_path}")
+			return token
+		except FileNotFoundError:
+			continue
+		except Exception as e:
+			warnings.warn(
+				f"Failed to get Hugging Face token -- info about certain models will be limited\n{e}"
+			)
+			return ""
 	warnings.warn(
-		f"Failed to get Hugging Face token -- info about certain models will be limited\n{e}"
+		"Failed to get Hugging Face token -- info about certain models will be limited\n"
+		"Token not found in .hf-token or .meta/local/.hf-token"
 	)
+	return ""
+
+
+HF_TOKEN: str = _load_hf_token()
 
 
 def b64encode(data: bytes) -> str:

@@ -1,5 +1,5 @@
 from pattern_lens.activations import activations_main
-from attention_motifs.pipeline.cfg import PipelineConfig, pipeline_step_major
+from attention_motifs.pipeline.cfg import PipelineConfig, pipeline_step_major, pipeline_model_progress
 
 
 def generate_activations(cfg: PipelineConfig) -> None:
@@ -8,7 +8,7 @@ def generate_activations(cfg: PipelineConfig) -> None:
 	idx: int
 	model_name: str
 	for idx, model_name in enumerate(cfg.models):
-		print(f"processing model {idx + 1} / {n_models}: {model_name}")
+		pipeline_model_progress(idx, n_models, model_name)
 		activations_main(
 			model_name=model_name,
 			save_path=cfg.patterns_dir,

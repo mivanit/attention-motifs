@@ -476,3 +476,8 @@ def pipeline_step_major(msg: str) -> None:
 	print(f"\033[94m{'=' * term_width}\033[m")
 	print(f"\033[94m{msg.center(term_width)}\033[m")
 	print(f"\033[94m{'=' * term_width}\033[m")
+
+
+def pipeline_model_progress(idx: int, total: int, name: str) -> None:
+	"""Print model progress in cyan for visibility"""
+	print(f"\033[96mprocessing model {idx + 1} / {total}: {name}\033[m")
