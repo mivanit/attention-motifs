@@ -41,7 +41,7 @@ dependencies = [
 	"zanj>=0.3.1",
 	"trnbl[tensorboard]>=0.1.1",
     # TL
-    "transformer-lens>=2.10.0",
+    "transformer-lens>=2.17.0",
     # this TL dep not listed? is this in an extra?
     "typeguard>=4.4.1",
 	# see https://github.com/pydantic/pydantic/issues/11348
