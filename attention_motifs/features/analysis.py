@@ -25,15 +25,7 @@ from muutils.json_serialize import (
 )
 from zanj import ZANJ
 
-
-def parse_cls(cls_: str) -> tuple[str, int, int]:
-	"""
-	Split ``{model}:L{layer}:H{head}`` into (model, layer, head).
-	"""
-	model_part, layer_part, head_part = cls_.split(":")
-	layer = int(layer_part[1:])  # drop leading "L"
-	head = int(head_part[1:])  # drop leading "H"
-	return model_part, layer, head
+from attention_motifs.attnpedia import parse_cls
 
 
 def null_stats(df: pl.DataFrame) -> pl.DataFrame:

@@ -26,6 +26,67 @@ if not ATTNPEDIA_GROUPS_PATH.is_file():
 	warnings.warn(f"attpedia groups json does not exist: {ATTNPEDIA_GROUPS_PATH = }.")
 
 
+def parse_head(head_id: str) -> tuple[int, int]:
+	"""Parse head ID string to (layer, head) tuple.
+
+	Parameters
+	----------
+	head_id
+		String in format 'L{layer}:H{head}' or '{model}:L{layer}:H{head}'.
+
+	Returns
+	-------
+	tuple[int, int]
+		(layer, head) indices.
+	"""
+	parts = head_id.split(":")
+	if len(parts) == 2:
+		layer_part, head_part = parts
+	elif len(parts) == 3:
+		_, layer_part, head_part = parts
+	else:
+		raise ValueError(f"Invalid head string format: {head_id}")
+
+	layer = int(layer_part.removeprefix("L"))
+	head = int(head_part.removeprefix("H"))
+	return layer, head
+
+
+def parse_cls(cls_: str) -> tuple[str, int, int]:
+	"""Parse full head ID string to (model, layer, head) tuple.
+
+	Parameters
+	----------
+	cls_
+		String in format '{model}:L{layer}:H{head}'.
+
+	Returns
+	-------
+	tuple[str, int, int]
+		(model, layer, head).
+	"""
+	model_part, layer_part, head_part = cls_.split(":")
+	layer = int(layer_part.removeprefix("L"))
+	head = int(head_part.removeprefix("H"))
+	return model_part, layer, head
+
+
+def heads_from_strings(head_strs: list[str]) -> list[tuple[int, int]]:
+	"""Convert list of head strings to (layer, head) tuples.
+
+	Parameters
+	----------
+	head_strs
+		List of strings like ['L5:H5', 'L6:H9'] or ['gpt2-small:L5:H5'].
+
+	Returns
+	-------
+	list[tuple[int, int]]
+		List of (layer, head) tuples.
+	"""
+	return [parse_head(s) for s in head_strs]
+
+
 AttentionPediaSchema = list[
 	dict[
 		# all values are strings, except for the "classes" key
@@ -72,9 +133,7 @@ class AttentionPedia:
 
 			for head_cls in group["classes"]:
 				for h in head_cls["heads"]:
-					h_split: tuple[str, str] = tuple(h.split(":"))
-					layer_idx: int = int(h_split[0].removeprefix("L"))
-					head_idx: int = int(h_split[1].removeprefix("H"))
+					layer_idx, head_idx = parse_head(h)
 
 					df_raw.append(
 						{

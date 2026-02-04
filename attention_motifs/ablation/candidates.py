@@ -72,12 +72,15 @@ class CandidateHeads:
         Raw neighbor data: dict mapping reference head to list of neighbors.
     k_neighbors
         Number of neighbors considered per reference head.
+    model_n_layers
+        Dict mapping model name to number of layers in that model.
     """
 
     reference_heads: list[str]
     candidates_by_model: dict[str, list[tuple[str, float]]] = field(default_factory=dict)
     all_neighbors: dict[str, list[tuple[str, float]]] = field(default_factory=dict)
     k_neighbors: int = 10
+    model_n_layers: dict[str, int] = field(default_factory=dict)
 
     def get_top_candidates(
         self,
@@ -126,8 +129,10 @@ class CandidateHeads:
         """Convert candidates to a Polars DataFrame."""
         rows: list[dict] = []
         for model, candidates in self.candidates_by_model.items():
+            n_layers = self.model_n_layers.get(model, 1)
             for head, score in candidates:
                 _, layer, head_idx = parse_cls(head)
+                layer_depth = layer / (n_layers - 1) if n_layers > 1 else 0.0
                 rows.append(
                     {
                         "head": head,
@@ -135,9 +140,41 @@ class CandidateHeads:
                         "layer": layer,
                         "head_idx": head_idx,
                         "score": score,
+                        "layer_depth": layer_depth,
                     }
                 )
         return pl.DataFrame(rows).sort("score", descending=True)
+
+    @classmethod
+    def read(cls, filename: Path | str) -> "CandidateHeads":
+        """Load candidate heads from a saved file."""
+        import json
+
+        path = Path(filename)
+        data = json.loads(path.read_text())
+        return cls(
+            reference_heads=data["reference_heads"],
+            candidates_by_model=data["candidates_by_model"],
+            all_neighbors=data.get("all_neighbors", {}),
+            k_neighbors=data.get("k_neighbors", 10),
+            model_n_layers=data.get("model_n_layers", {}),
+        )
+
+    def save(self, path: Path | str) -> None:
+        """Save candidate heads to a file."""
+        import json
+
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        data = {
+            "reference_heads": self.reference_heads,
+            "candidates_by_model": self.candidates_by_model,
+            "all_neighbors": self.all_neighbors,
+            "k_neighbors": self.k_neighbors,
+            "model_n_layers": self.model_n_layers,
+        }
+        path.write_text(json.dumps(data, indent=2))
 
 
 def find_candidate_induction_heads(
@@ -179,6 +216,12 @@ def find_candidate_induction_heads(
     # Filter to only reference heads that exist in the distance matrix
     available_heads = set(distance_result.cls_values)
     reference_heads = [h for h in reference_heads if h in available_heads]
+
+    # Compute n_layers per model from cls_values
+    model_n_layers: dict[str, int] = {}
+    for head in distance_result.cls_values:
+        model, layer, _ = parse_cls(head)
+        model_n_layers[model] = max(model_n_layers.get(model, 0), layer + 1)
 
     if not reference_heads:
         raise ValueError(
@@ -243,6 +286,7 @@ def find_candidate_induction_heads(
         candidates_by_model=dict(candidates_by_model),
         all_neighbors=all_neighbors,
         k_neighbors=k_neighbors,
+        model_n_layers=model_n_layers,
     )
 
 
@@ -310,33 +354,3 @@ def get_control_heads(
 
     else:
         raise ValueError(f"Unknown method: {method}")
-
-
-def load_candidates_from_file(path: Path | str) -> CandidateHeads:
-    """Load candidate heads from a saved file."""
-    import json
-
-    path = Path(path)
-    data = json.loads(path.read_text())
-    return CandidateHeads(
-        reference_heads=data["reference_heads"],
-        candidates_by_model=data["candidates_by_model"],
-        all_neighbors=data.get("all_neighbors", {}),
-        k_neighbors=data.get("k_neighbors", 10),
-    )
-
-
-def save_candidates_to_file(candidates: CandidateHeads, path: Path | str) -> None:
-    """Save candidate heads to a file."""
-    import json
-
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    data = {
-        "reference_heads": candidates.reference_heads,
-        "candidates_by_model": candidates.candidates_by_model,
-        "all_neighbors": candidates.all_neighbors,
-        "k_neighbors": candidates.k_neighbors,
-    }
-    path.write_text(json.dumps(data, indent=2))

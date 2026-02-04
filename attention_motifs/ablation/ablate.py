@@ -21,6 +21,11 @@ except ImportError:
     HookedTransformer = None
     HookPoint = None
 
+from attention_motifs.attnpedia import parse_head, heads_from_strings
+
+# Backwards compatibility alias
+parse_head_string = parse_head
+
 
 class AblationMethod(Enum):
     """Methods for ablating attention heads."""
@@ -346,45 +351,3 @@ class HeadAblator:
         )
 
 
-def parse_head_string(head_str: str) -> tuple[int, int]:
-    """Parse a head string like 'L5:H5' into (layer, head) tuple.
-
-    Parameters
-    ----------
-    head_str
-        String in format 'L{layer}:H{head}' or '{model}:L{layer}:H{head}'.
-
-    Returns
-    -------
-    tuple[int, int]
-        (layer, head) indices.
-    """
-    parts = head_str.split(":")
-    if len(parts) == 2:
-        # Format: L5:H5
-        layer_part, head_part = parts
-    elif len(parts) == 3:
-        # Format: gpt2-small:L5:H5
-        _, layer_part, head_part = parts
-    else:
-        raise ValueError(f"Invalid head string format: {head_str}")
-
-    layer = int(layer_part.removeprefix("L"))
-    head = int(head_part.removeprefix("H"))
-    return layer, head
-
-
-def heads_from_strings(head_strs: list[str]) -> list[tuple[int, int]]:
-    """Convert list of head strings to (layer, head) tuples.
-
-    Parameters
-    ----------
-    head_strs
-        List of strings like ['L5:H5', 'L6:H9'] or ['gpt2-small:L5:H5'].
-
-    Returns
-    -------
-    list[tuple[int, int]]
-        List of (layer, head) tuples.
-    """
-    return [parse_head_string(s) for s in head_strs]
