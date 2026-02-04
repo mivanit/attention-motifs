@@ -5,6 +5,7 @@ docs/demo/**
 # pysr/juliacall will dump pickle files and csvs in here
 notebooks/outputs/**
 # tests temp dir
+notebooks/figures/**
 tests/_temp/**
 tests/.temp/**
 notebooks/test.ipynb
