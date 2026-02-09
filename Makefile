@@ -1516,6 +1516,7 @@ am-frontend-bundle: am-frontend-format am-frontend-ap-build
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_ATTNPEDIA_DIR)/src/index.html --output $(FRONTEND_ATTNPEDIA_DIR)/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/head_embed_table/src/index.html --output $(FRONTEND_DIR)/head_embed_table/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/classes/src/index.html --output $(FRONTEND_DIR)/classes/index.html
+	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/clustering/src/index.html --output $(FRONTEND_DIR)/clustering/index.html
 
 
 
