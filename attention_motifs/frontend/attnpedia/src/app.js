@@ -41,11 +41,18 @@ document.addEventListener("alpine:init", () => {
       classifications: { failed: 0, total: 0 },
     },
 
+    // Clustering state
+    clustering: null,
+    clustering_available: false,
+    n_clusters: 10,
+    show_cluster_colors: true,
+
     async init() {
       await getConfig();
       try {
         this.attention_pedia = new AttentionPedia();
         this.head_distances = new HeadDistances();
+        this.clustering = new ClusteringLoader();
         this.prompts_loader = new PromptsLoader();
         this.allPrompts = await this.prompts_loader.get_all();
         this.allPromptsCount = this.allPrompts.length;
@@ -116,6 +123,13 @@ document.addEventListener("alpine:init", () => {
             this.selected_suggestion_index = -1;
           }
         });
+
+        // Initialize clustering (non-blocking)
+        this.clustering_available = await this.clustering.isAvailable();
+        if (this.clustering_available) {
+          this.n_clusters = CONFIG.default_n_clusters || 10;
+          await this.clustering.setNClusters(this.n_clusters);
+        }
 
         await this.updateHeadsWithDistances();
         this.loading = false;
@@ -1111,6 +1125,26 @@ document.addEventListener("alpine:init", () => {
         Array.isArray(this.heads_display) &&
         this.heads_display.length > 0
       );
+    },
+
+    // Clustering methods
+    async getClusterColor(headId) {
+      if (!this.clustering_available || !this.show_cluster_colors) {
+        return "transparent";
+      }
+      return await this.clustering.getColor(headId);
+    },
+
+    async updateNClusters() {
+      if (!this.clustering_available) return;
+      this.n_clusters = Math.max(2, Math.min(100, this.n_clusters));
+      await this.clustering.setNClusters(this.n_clusters);
+      // Force re-render of cluster colors
+      await this.updateHeadsWithDistances();
+    },
+
+    toggleClusterColors() {
+      this.show_cluster_colors = !this.show_cluster_colors;
     },
   }));
 });

@@ -5,6 +5,7 @@ from attention_motifs.pipeline.s2_features import compute_features
 from attention_motifs.pipeline.s3b_feat_fig import feat_figures
 from attention_motifs.pipeline.s4_head_dist import head_dists
 from attention_motifs.pipeline.s4b_write_frontend import write_frontend
+from attention_motifs.pipeline.s4c_clustering import head_clustering
 from attention_motifs.pipeline.s5_head_embed import head_embed
 from attention_motifs.pipeline.s5b_head_embed_plots import head_embed_plots
 from attention_motifs.pipeline.cfg import PipelineConfig
@@ -38,6 +39,9 @@ def full_pipeline(cfg: PipelineConfig) -> None:
 
 	# Step 4b: write frontend files
 	write_frontend(cfg)
+
+	# Step 4c: hierarchical clustering
+	head_clustering(cfg)
 
 	# Step 5: head embeddings
 	head_embed(cfg)

@@ -434,6 +434,29 @@
                 />
               </div>
             </template>
+            <!-- Clustering controls -->
+            <template x-if="clustering_available">
+              <div class="control-item">
+                <label>Clusters:</label>
+                <input
+                  type="number"
+                  x-model.number="n_clusters"
+                  @change="updateNClusters()"
+                  min="2"
+                  max="100"
+                  class="control-input"
+                />
+              </div>
+            </template>
+            <template x-if="clustering_available">
+              <div class="control-item">
+                <button
+                  class="control-button"
+                  @click="toggleClusterColors()"
+                  x-text="show_cluster_colors ? 'Hide Clusters' : 'Show Clusters'"
+                ></button>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -521,7 +544,12 @@
               :key="headRow.headId || `gap-${index}`"
             >
               <tr x-show="!classificationError">
-                <td class="head-info">
+                <td
+                  class="head-info"
+                  x-data="{ clusterColor: 'transparent' }"
+                  x-init="clusterColor = await getClusterColor(headRow.headId)"
+                  :style="`border-left: 4px solid ${clusterColor}`"
+                >
                   <a
                     :href="getHeadLink(headRow.headId)"
                     x-text="headRow.headId"

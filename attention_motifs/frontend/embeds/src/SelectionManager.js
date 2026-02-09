@@ -28,7 +28,7 @@ class SelectionManager {
 
     // Get base color from colorBy column (with caching)
     const colorValue = row[this.state.colorBy];
-    const baseColor = this._getColorCached(colorValue);
+    const baseColor = this._getColorCached(colorValue, rowId);
 
     // Apply selection highlighting
     if (treatAsSelected) {
@@ -52,7 +52,16 @@ class SelectionManager {
     }
   }
 
-  _getColorCached(value) {
+  _getColorCached(value, rowId = null) {
+    // Check for cluster coloring mode
+    if (this.state.colorByCluster && window.CLUSTERING && rowId !== null) {
+      const row = this.model.row(rowId);
+      const headId = row.cls || row.headId || row["activation.cls"];
+      if (headId) {
+        return window.CLUSTERING.getColorSync(headId);
+      }
+    }
+
     const cacheKey = `${this.state.colorBy}:${value}`;
 
     if (!this._colorCache.has(cacheKey)) {

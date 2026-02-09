@@ -365,6 +365,9 @@ class UIManager {
       });
     }
 
+    // Initialize clustering and add toggle button if available
+    this._initClusteringControls();
+
     // Setup dropdowns
     this._setupDropdowns();
 
@@ -373,6 +376,59 @@ class UIManager {
       this.pointCloud.camera.aspect = window.innerWidth / window.innerHeight;
       this.pointCloud.camera.updateProjectionMatrix();
       this.pointCloud.renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  }
+
+  async _initClusteringControls() {
+    // Initialize clustering in state
+    await this.pointCloud.state.initClustering();
+
+    if (!this.pointCloud.state.clusteringAvailable) {
+      return;
+    }
+
+    // Find the randomize colors button to insert after it
+    const randomizeBtn = document.getElementById("randomizeColors");
+    if (!randomizeBtn) return;
+
+    // Create cluster toggle button
+    const clusterBtn = document.createElement("button");
+    clusterBtn.id = "toggleClusterColors";
+    clusterBtn.className = "randomize-btn";
+    clusterBtn.style.marginTop = "8px";
+    clusterBtn.textContent = "Color by Cluster";
+
+    // Create cluster count input
+    const clusterControls = document.createElement("div");
+    clusterControls.style.marginTop = "8px";
+    clusterControls.style.display = "none";
+    clusterControls.innerHTML = `
+      <label style="font-size: 12px; display: flex; align-items: center; gap: 8px;">
+        Clusters:
+        <input type="number" id="nClustersInput" value="10" min="2" max="100"
+               style="width: 60px; padding: 4px;">
+      </label>
+    `;
+
+    // Insert after randomize button
+    randomizeBtn.parentNode.insertBefore(clusterBtn, randomizeBtn.nextSibling);
+    clusterBtn.parentNode.insertBefore(clusterControls, clusterBtn.nextSibling);
+
+    // Handle cluster toggle
+    clusterBtn.addEventListener("click", () => {
+      this.pointCloud.state.toggleClusterColoring();
+      const isClusterMode = this.pointCloud.state.colorByCluster;
+      clusterBtn.textContent = isClusterMode
+        ? "Color by Column"
+        : "Color by Cluster";
+      clusterControls.style.display = isClusterMode ? "block" : "none";
+    });
+
+    // Handle cluster count change
+    const nClustersInput = clusterControls.querySelector("#nClustersInput");
+    nClustersInput.addEventListener("change", async (e) => {
+      const n = parseInt(e.target.value) || 10;
+      await this.pointCloud.state.setNClusters(n);
     });
   }
 

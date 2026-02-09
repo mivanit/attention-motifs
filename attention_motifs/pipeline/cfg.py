@@ -25,6 +25,7 @@ DataFilename = Literal[
 	"head_dists_zanj",
 	"head_dists_raw",
 	"head_embed",
+	"clustering",
 ]
 FigureFilename = Literal[
 	"pca", "cov_full", "cov_reduced", "pca_all", "head_dists", "head_embed"
@@ -42,6 +43,7 @@ DATA_FNAMES: dict[DataFilename, str] = dict(
 	head_dists_zanj="head_dists.zanj",
 	head_dists_raw="head_dists_raw",
 	head_embed="head_embed.jsonl",
+	clustering="clustering",
 )
 
 FIGURE_FNAMES: dict[FigureFilename, str] = dict(
