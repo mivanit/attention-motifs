@@ -203,6 +203,7 @@ class PipelineConfig:
 	n_proc: int
 	force_overwrite: bool = False
 	device: str = "cpu"
+	smart_mode: bool = False
 
 	# output paths
 	features_dir: Path
@@ -240,6 +241,37 @@ class PipelineConfig:
 				"figures_dir is not set, this means figures should be disabled"
 			)
 		return self.figures_dir / self.figures_fnames[fname]
+
+	def compute_hash(self) -> str:
+		"""Compute a stable SHA-256 hash of the configuration.
+
+		The hash is computed from a canonicalized JSON representation
+		of config fields that affect output content. Runtime settings
+		like n_proc, device, verbose are excluded.
+		"""
+		import hashlib
+		import json
+
+		# Fields that affect output content (exclude runtime settings)
+		config_dict: dict = dict(
+			prompts_file=str(self.prompts_file),
+			patterns_dir=str(self.patterns_dir),
+			prompts_n_samples=self.prompts_n_samples,
+			prompts_min_chars=self.prompts_min_chars,
+			prompts_max_chars=self.prompts_max_chars,
+			models=sorted(self.models),
+			pca_n_components=self.pca_n_components,
+			embedding_methods=sorted(self.embedding_methods),
+			embedding_n_components_list=sorted(self.embedding_n_components_list),
+			embedding_n_neighbors_list=sorted(self.embedding_n_neighbors_list),
+			features_dir=str(self.features_dir),
+			vis_dir=str(self.vis_dir),
+			figures_dir=str(self.figures_dir) if self.figures_dir else None,
+		)
+
+		json_str: str = json.dumps(config_dict, sort_keys=True)
+		hash_digest: str = hashlib.sha256(json_str.encode("utf-8")).hexdigest()
+		return hash_digest
 
 	def validate_cfg(self) -> None:
 		# TODO: check models actually exist in TransformerLens?
@@ -436,6 +468,11 @@ class PipelineConfig:
 			default=1,
 			help="Verbosity level (default: 1). Higher values mean more output",
 		)
+		parser.add_argument(
+			"--smart",
+			action="store_true",
+			help="Enable smart mode: skip previously completed steps if config unchanged",
+		)
 
 		args: argparse.Namespace = parser.parse_args(argv)
 
@@ -463,6 +500,8 @@ class PipelineConfig:
 			config.force_overwrite = args.force_overwrite
 		if args.figures_dir is not None:
 			config.figures_dir = args.figures_dir
+		if args.smart:
+			config.smart_mode = True
 
 		# 3. Final sanity check
 		config.validate_cfg()
