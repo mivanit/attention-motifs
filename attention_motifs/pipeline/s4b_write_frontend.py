@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import importlib.resources
 
+from js_embedding_vis import fetch_jev
 
 import attention_motifs
 from attention_motifs.pipeline.cfg import PipelineConfig
@@ -15,7 +16,7 @@ def write_frontend(cfg: PipelineConfig) -> None:
 
 	ap_html: str = (frontend_resources_path / "attnpedia/index.html").read_text()
 	ap_data: str = (frontend_resources_path / "attnpedia/ap.json").read_text()
-	embed_html: str = (frontend_resources_path / "embeds/index.html").read_text()
+	embed_html: str = fetch_jev()
 	head_embed_table_html: str = (
 		frontend_resources_path / "head_embed_table/index.html"
 	).read_text()
