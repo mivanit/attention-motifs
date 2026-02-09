@@ -347,8 +347,8 @@ class PipelineConfig:
 		return config
 
 	@classmethod
-	def from_toml(cls, path: Path) -> "PipelineConfig":
-		"""Load configuration from a TOML file"""
+	def read(cls, path: Path) -> "PipelineConfig":
+		"""Load configuration from a TOML file."""
 		with path.open("rb") as f:
 			data: dict = tomllib.load(f)
 		return cls.load(data)
@@ -438,7 +438,7 @@ class PipelineConfig:
 		args: argparse.Namespace = parser.parse_args(argv)
 
 		# 1. Load the base configuration from the TOML file
-		config: PipelineConfig = cls.from_toml(args.config_path)
+		config: PipelineConfig = cls.read(args.config_path)
 
 		# 2. Apply any command-line overrides
 		if args.models is not None:

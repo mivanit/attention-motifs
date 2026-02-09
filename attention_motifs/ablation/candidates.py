@@ -146,11 +146,11 @@ class CandidateHeads:
         return pl.DataFrame(rows).sort("score", descending=True)
 
     @classmethod
-    def read(cls, filename: Path | str) -> "CandidateHeads":
+    def read(cls, path: Path | str) -> "CandidateHeads":
         """Load candidate heads from a saved file."""
         import json
 
-        path = Path(filename)
+        path = Path(path)
         data = json.loads(path.read_text())
         return cls(
             reference_heads=data["reference_heads"],

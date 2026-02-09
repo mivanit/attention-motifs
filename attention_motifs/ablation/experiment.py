@@ -99,7 +99,7 @@ class ExperimentResults:
 
     def to_dataframe(self) -> pl.DataFrame:
         """Convert results to Polars DataFrame."""
-        rows = [r.to_dict() for r in self.results]
+        rows = [r.serialize() for r in self.results]
         return pl.DataFrame(rows)
 
     def save(self, path: Path | str) -> None:
@@ -119,7 +119,7 @@ class ExperimentResults:
             },
             "baseline_loss": self.baseline_loss,
             "baseline_icl": self.baseline_icl,
-            "results": [r.to_dict() for r in self.results],
+            "results": [r.serialize() for r in self.results],
         }
         path.write_text(json.dumps(data, indent=2))
 

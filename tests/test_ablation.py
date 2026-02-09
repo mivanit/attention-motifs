@@ -340,7 +340,7 @@ class TestAblationResult:
             ablated_icl_score=-0.1,
             icl_degradation=0.2,
         )
-        d = result.to_dict()
+        d = result.serialize()
         assert d["head"] == "test:L0:H0"
         assert d["ablation_method"] == "mean"
         assert d["loss_increase"] == 1.0

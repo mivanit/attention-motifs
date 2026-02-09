@@ -71,7 +71,7 @@ class AblationResult:
     ablated_icl_score: float
     icl_degradation: float
 
-    def to_dict(self) -> dict:
+    def serialize(self) -> dict:
         """Convert to dictionary."""
         return {
             "head": self.head,
