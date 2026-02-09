@@ -18,6 +18,10 @@ def vec_features(
 		dbg_tensor(arr)
 		raise ValueError(f"Input arr must be 1-dimensional, got {arr.shape}")
 
+	# Guard against NaN values which cause histogram to fail
+	if np.any(np.isnan(arr)):
+		arr = np.nan_to_num(arr, nan=0.0)
+
 	n: int = arr.size
 
 	dist_features: dict[str, float] = dict()

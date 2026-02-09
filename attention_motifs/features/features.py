@@ -178,7 +178,14 @@ def scalar_feature_table(
 def gram_features(A: Float[np.ndarray, "n_ctx n_ctx"]) -> dict[str, float]:
 	# dbg_tensor(A)
 	bins: Bins = Bins(n_bins=32, start=0.0, stop=1.0)
-	x_hist, _ = np.histogram(A.flatten(), bins.edges, density=True)
+	A_flat: Float[np.ndarray, " n"] = A.flatten()
+	# Guard against NaN in input
+	if np.any(np.isnan(A_flat)):
+		A_flat = np.nan_to_num(A_flat, nan=0.5)
+	x_hist, _ = np.histogram(A_flat, bins.edges, density=True)
+	# Guard against NaN from empty histogram (when all values outside bin range)
+	if np.any(np.isnan(x_hist)):
+		x_hist = np.nan_to_num(x_hist, nan=0.0)
 	return prefix_dict(
 		vec_features(x_hist),
 		prefix="hist",
@@ -190,7 +197,9 @@ def compute_scalar_features(
 	A: Float[np.ndarray, "n_ctx n_ctx"],
 ) -> dict[str, float]:
 	# dbg_tensor(A)
-	A_log: Float[np.ndarray, "n_ctx n_ctx"] = np.nan_to_num(np.log(A + 1e-9), nan=-10)
+	A_log: Float[np.ndarray, "n_ctx n_ctx"] = np.nan_to_num(
+		np.log(A + 1e-9), nan=-10, neginf=-20, posinf=0
+	)
 	# dbg_tensor(A_log)
 
 	A_skew: Float[np.ndarray, "n_ctx n_ctx"] = skew_lt(A)
