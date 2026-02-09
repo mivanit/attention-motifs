@@ -60,6 +60,12 @@ def write_frontend(cfg: PipelineConfig) -> None:
 	classes_html: str = (frontend_resources_path / "classes/index.html").read_text()
 	(cfg.figures_dir / "classifications.html").write_text(classes_html)
 
+	# write clustering dendrogram
+	clustering_html: str = (frontend_resources_path / "clustering/index.html").read_text()
+	clustering_dir: Path = cfg.vis_dir / "clustering"
+	clustering_dir.mkdir(parents=True, exist_ok=True)
+	(clustering_dir / "index.html").write_text(clustering_html)
+
 	# write main index and diagram svg
 	main_index_html: str = (frontend_resources_path / "index.html").read_text()
 	(cfg.figures_dir / "../index.html").write_text(main_index_html)

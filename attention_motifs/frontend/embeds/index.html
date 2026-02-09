@@ -1993,7 +1993,7 @@
     
         // Get base color from colorBy column (with caching)
         const colorValue = row[this.state.colorBy];
-        const baseColor = this._getColorCached(colorValue);
+        const baseColor = this._getColorCached(colorValue, rowId);
     
         // Apply selection highlighting
         if (treatAsSelected) {
@@ -2017,7 +2017,16 @@
         }
       }
     
-      _getColorCached(value) {
+      _getColorCached(value, rowId = null) {
+        // Check for cluster coloring mode
+        if (this.state.colorByCluster && window.CLUSTERING && rowId !== null) {
+          const row = this.model.row(rowId);
+          const headId = row.cls || row.headId || row["activation.cls"];
+          if (headId) {
+            return window.CLUSTERING.getColorSync(headId);
+          }
+        }
+    
         const cacheKey = `${this.state.colorBy}:${value}`;
     
         if (!this._colorCache.has(cacheKey)) {
@@ -2136,6 +2145,10 @@
         /* store *values* (categories) now, not row indices */
         this.selection = new Set();
     
+        /* cluster coloring mode */
+        this.colorByCluster = false;
+        this.clusteringAvailable = false;
+    
         // Initialize selection from CONFIG if specified
         // Handle both array and single value cases from URL parsing
         if (CONFIG.selectedValues) {
@@ -2238,6 +2251,29 @@
     
       _fire(type) {
         this.dispatchEvent(new Event(type));
+      }
+    
+      /** Initialize clustering support */
+      async initClustering() {
+        if (window.CLUSTERING) {
+          this.clusteringAvailable = await window.CLUSTERING.isAvailable();
+        }
+      }
+    
+      /** Toggle cluster coloring mode */
+      toggleClusterColoring() {
+        if (!this.clusteringAvailable) return;
+        this.colorByCluster = !this.colorByCluster;
+        this._fire("vis");
+      }
+    
+      /** Set number of clusters */
+      async setNClusters(n) {
+        if (!this.clusteringAvailable || !window.CLUSTERING) return;
+        await window.CLUSTERING.setNClusters(n);
+        if (this.colorByCluster) {
+          this._fire("vis");
+        }
       }
     }
     
@@ -2612,6 +2648,9 @@
           });
         }
     
+        // Initialize clustering and add toggle button if available
+        this._initClusteringControls();
+    
         // Setup dropdowns
         this._setupDropdowns();
     
@@ -2620,6 +2659,59 @@
           this.pointCloud.camera.aspect = window.innerWidth / window.innerHeight;
           this.pointCloud.camera.updateProjectionMatrix();
           this.pointCloud.renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+      }
+    
+      async _initClusteringControls() {
+        // Initialize clustering in state
+        await this.pointCloud.state.initClustering();
+    
+        if (!this.pointCloud.state.clusteringAvailable) {
+          return;
+        }
+    
+        // Find the randomize colors button to insert after it
+        const randomizeBtn = document.getElementById("randomizeColors");
+        if (!randomizeBtn) return;
+    
+        // Create cluster toggle button
+        const clusterBtn = document.createElement("button");
+        clusterBtn.id = "toggleClusterColors";
+        clusterBtn.className = "randomize-btn";
+        clusterBtn.style.marginTop = "8px";
+        clusterBtn.textContent = "Color by Cluster";
+    
+        // Create cluster count input
+        const clusterControls = document.createElement("div");
+        clusterControls.style.marginTop = "8px";
+        clusterControls.style.display = "none";
+        clusterControls.innerHTML = `
+          <label style="font-size: 12px; display: flex; align-items: center; gap: 8px;">
+            Clusters:
+            <input type="number" id="nClustersInput" value="10" min="2" max="100"
+                   style="width: 60px; padding: 4px;">
+          </label>
+        `;
+    
+        // Insert after randomize button
+        randomizeBtn.parentNode.insertBefore(clusterBtn, randomizeBtn.nextSibling);
+        clusterBtn.parentNode.insertBefore(clusterControls, clusterBtn.nextSibling);
+    
+        // Handle cluster toggle
+        clusterBtn.addEventListener("click", () => {
+          this.pointCloud.state.toggleClusterColoring();
+          const isClusterMode = this.pointCloud.state.colorByCluster;
+          clusterBtn.textContent = isClusterMode
+            ? "Color by Column"
+            : "Color by Cluster";
+          clusterControls.style.display = isClusterMode ? "block" : "none";
+        });
+    
+        // Handle cluster count change
+        const nClustersInput = clusterControls.querySelector("#nClustersInput");
+        nClustersInput.addEventListener("change", async (e) => {
+          const n = parseInt(e.target.value) || 10;
+          await this.pointCloud.state.setNClusters(n);
         });
       }
     
@@ -4576,8 +4668,6 @@
         </div>
       </div>
     </div>
-    <!-- clustering support -->
-    <script src="src/clustering.js"></script>
     <!-- ---------- bootstrap script ---------- -->
     <script>
       document.addEventListener("DOMContentLoaded", async () => {

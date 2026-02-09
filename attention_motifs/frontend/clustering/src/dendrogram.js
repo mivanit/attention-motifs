@@ -115,7 +115,9 @@ function setupSVG() {
   const heightPerHead = 15;
   dendrogramState.height = Math.max(
     minHeight,
-    dendrogramState.nHeads * heightPerHead + dendrogramState.margin.top + dendrogramState.margin.bottom
+    dendrogramState.nHeads * heightPerHead +
+      dendrogramState.margin.top +
+      dendrogramState.margin.bottom,
   );
   dendrogramState.width = containerRect.width;
 
@@ -140,7 +142,10 @@ function setupSVG() {
   // Create main group for content
   dendrogramState.g = svg
     .append("g")
-    .attr("transform", `translate(${dendrogramState.margin.left},${dendrogramState.margin.top})`);
+    .attr(
+      "transform",
+      `translate(${dendrogramState.margin.left},${dendrogramState.margin.top})`,
+    );
 
   dendrogramState.svg = svg;
 }
@@ -328,7 +333,10 @@ function renderDendrogram(assignments, cutHeight = null) {
 
   // Scale x by height for proper dendrogram proportions
   const maxHeight = tree.height;
-  const xScale = d3.scaleLinear().domain([0, maxHeight]).range([0, innerWidth - 100]);
+  const xScale = d3
+    .scaleLinear()
+    .domain([0, maxHeight])
+    .range([0, innerWidth - 100]);
 
   // Assign x position based on height
   root.each((d) => {
@@ -460,7 +468,7 @@ function updateLegend(assignments) {
         <span>Cluster ${clusterId}</span>
         <span class="legend-count">(${count})</span>
       </div>
-    `
+    `,
     )
     .join("");
 }

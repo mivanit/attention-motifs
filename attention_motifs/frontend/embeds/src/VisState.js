@@ -21,10 +21,6 @@ class VisState extends EventTarget {
     /* store *values* (categories) now, not row indices */
     this.selection = new Set();
 
-    /* cluster coloring mode */
-    this.colorByCluster = false;
-    this.clusteringAvailable = false;
-
     // Initialize selection from CONFIG if specified
     // Handle both array and single value cases from URL parsing
     if (CONFIG.selectedValues) {
@@ -127,28 +123,5 @@ class VisState extends EventTarget {
 
   _fire(type) {
     this.dispatchEvent(new Event(type));
-  }
-
-  /** Initialize clustering support */
-  async initClustering() {
-    if (window.CLUSTERING) {
-      this.clusteringAvailable = await window.CLUSTERING.isAvailable();
-    }
-  }
-
-  /** Toggle cluster coloring mode */
-  toggleClusterColoring() {
-    if (!this.clusteringAvailable) return;
-    this.colorByCluster = !this.colorByCluster;
-    this._fire("vis");
-  }
-
-  /** Set number of clusters */
-  async setNClusters(n) {
-    if (!this.clusteringAvailable || !window.CLUSTERING) return;
-    await window.CLUSTERING.setNClusters(n);
-    if (this.colorByCluster) {
-      this._fire("vis");
-    }
   }
 }

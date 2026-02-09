@@ -2727,11 +2727,18 @@
           classifications: { failed: 0, total: 0 },
         },
     
+        // Clustering state
+        clustering: null,
+        clustering_available: false,
+        n_clusters: 10,
+        show_cluster_colors: true,
+    
         async init() {
           await getConfig();
           try {
             this.attention_pedia = new AttentionPedia();
             this.head_distances = new HeadDistances();
+            this.clustering = new ClusteringLoader();
             this.prompts_loader = new PromptsLoader();
             this.allPrompts = await this.prompts_loader.get_all();
             this.allPromptsCount = this.allPrompts.length;
@@ -2802,6 +2809,13 @@
                 this.selected_suggestion_index = -1;
               }
             });
+    
+            // Initialize clustering (non-blocking)
+            this.clustering_available = await this.clustering.isAvailable();
+            if (this.clustering_available) {
+              this.n_clusters = CONFIG.default_n_clusters || 10;
+              await this.clustering.setNClusters(this.n_clusters);
+            }
     
             await this.updateHeadsWithDistances();
             this.loading = false;
@@ -3798,6 +3812,26 @@
             this.heads_display.length > 0
           );
         },
+    
+        // Clustering methods
+        async getClusterColor(headId) {
+          if (!this.clustering_available || !this.show_cluster_colors) {
+            return "transparent";
+          }
+          return await this.clustering.getColor(headId);
+        },
+    
+        async updateNClusters() {
+          if (!this.clustering_available) return;
+          this.n_clusters = Math.max(2, Math.min(100, this.n_clusters));
+          await this.clustering.setNClusters(this.n_clusters);
+          // Force re-render of cluster colors
+          await this.updateHeadsWithDistances();
+        },
+    
+        toggleClusterColors() {
+          this.show_cluster_colors = !this.show_cluster_colors;
+        },
       }));
     });
     
@@ -4206,6 +4240,29 @@
                 />
               </div>
             </template>
+            <!-- Clustering controls -->
+            <template x-if="clustering_available">
+              <div class="control-item">
+                <label>Clusters:</label>
+                <input
+                  type="number"
+                  x-model.number="n_clusters"
+                  @change="updateNClusters()"
+                  min="2"
+                  max="100"
+                  class="control-input"
+                />
+              </div>
+            </template>
+            <template x-if="clustering_available">
+              <div class="control-item">
+                <button
+                  class="control-button"
+                  @click="toggleClusterColors()"
+                  x-text="show_cluster_colors ? 'Hide Clusters' : 'Show Clusters'"
+                ></button>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -4293,7 +4350,12 @@
               :key="headRow.headId || `gap-${index}`"
             >
               <tr x-show="!classificationError">
-                <td class="head-info">
+                <td
+                  class="head-info"
+                  x-data="{ clusterColor: 'transparent' }"
+                  x-init="clusterColor = await getClusterColor(headRow.headId)"
+                  :style="`border-left: 4px solid ${clusterColor}`"
+                >
                   <a
                     :href="getHeadLink(headRow.headId)"
                     x-text="headRow.headId"

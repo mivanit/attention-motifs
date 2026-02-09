@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hierarchical Clustering - Attention Heads</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <nav class="nav-bar">
+      <div class="nav-bar-content">
+        <a href="../attnpedia/index.html">AttentionPedia</a>
+        <a href="../embeds/heads/index.html">3D Embeddings</a>
+        <a href="../classes/index.html">Classifications</a>
+        <span class="nav-current">Clustering</span>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h1>Hierarchical Clustering of Attention Heads</h1>
+
+      <div class="controls">
+        <div class="control-group">
+          <label for="n-clusters">Number of Clusters:</label>
+          <input type="range" id="n-clusters" min="2" max="50" value="10" />
+          <span id="n-clusters-value">10</span>
+        </div>
+        <div class="control-group">
+          <label for="cut-height">Cut Height:</label>
+          <input
+            type="range"
+            id="cut-height"
+            min="0"
+            max="100"
+            value="50"
+            step="0.1"
+          />
+          <span id="cut-height-value">--</span>
+        </div>
+        <div class="control-group">
+          <button id="reset-zoom">Reset Zoom</button>
+          <button id="export-svg">Export SVG</button>
+        </div>
+      </div>
+
+      <div class="stats" id="stats"></div>
+
+      <div id="dendrogram-container">
+        <svg id="dendrogram"></svg>
+      </div>
+
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <script src="clusterState.js"></script>
+    <script src="dendrogram.js"></script>
+    <script>
+      // Initialize with config from URL or defaults
+      const urlParams = new URLSearchParams(window.location.search);
+      const config = {
+        clusteringMetaUrl:
+          urlParams.get("meta") ||
+          "../../features/clustering/clustering_meta.json",
+        linkageUrl:
+          urlParams.get("linkage") || "../../features/clustering/linkage.json",
+        defaultNClusters: parseInt(urlParams.get("n_clusters") || "10"),
+      };
+
+      // Initialize dendrogram
+      initDendrogram(config);
+    </script>
+  </body>
+</html>
