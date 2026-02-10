@@ -30,6 +30,7 @@
     <script src="prompts.js"></script>
     <script src="headInfo.js"></script>
     <script src="autocomplete.js"></script>
+    <script src="clustering.js"></script>
     <script src="app.js"></script>
   </head>
   <!-- body -->
@@ -434,6 +435,23 @@
                 />
               </div>
             </template>
+            <!-- Same-cluster heads control -->
+            <template x-if="clustering_available && !classification_mode">
+              <div
+                class="control-item"
+                :class="{ 'disabled': hasExplicitHeads }"
+              >
+                <label>Same-cluster heads:</label>
+                <input
+                  type="number"
+                  x-model.number="table.n_same_cluster"
+                  @change="updateHeadsDisplay()"
+                  min="0"
+                  class="control-input"
+                  :disabled="hasExplicitHeads"
+                />
+              </div>
+            </template>
             <!-- Clustering controls -->
             <template x-if="clustering_available">
               <div class="control-item">
@@ -455,6 +473,13 @@
                   @click="toggleClusterColors()"
                   x-text="show_cluster_colors ? 'Hide Clusters' : 'Show Clusters'"
                 ></button>
+              </div>
+            </template>
+            <!-- Cluster statistics -->
+            <template x-if="clustering_available && cluster_stats">
+              <div class="control-item cluster-stats">
+                <span class="stats-label">Cluster sizes:</span>
+                <span class="stats-value" x-text="cluster_stats"></span>
               </div>
             </template>
           </div>

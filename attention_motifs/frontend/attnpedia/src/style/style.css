@@ -638,6 +638,21 @@ a {
   cursor: not-allowed;
 }
 
+/* Cluster statistics */
+.cluster-stats {
+  font-size: 11px;
+  color: #666;
+}
+
+.cluster-stats .stats-label {
+  font-weight: 500;
+  margin-right: 4px;
+}
+
+.cluster-stats .stats-value {
+  font-family: monospace;
+}
+
 /* Help menu corner styling */
 .help-menu-corner {
   position: fixed;

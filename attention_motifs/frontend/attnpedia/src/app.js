@@ -15,6 +15,7 @@ document.addEventListener("alpine:init", () => {
     table: {
       n_nearby: 2,
       n_share_class: 2,
+      n_same_cluster: 2,
       n_distant: 0,
       n_random: 0,
     },
@@ -46,6 +47,7 @@ document.addEventListener("alpine:init", () => {
     clustering_available: false,
     n_clusters: 10,
     show_cluster_colors: true,
+    cluster_stats: null,
 
     async init() {
       await getConfig();
@@ -91,6 +93,7 @@ document.addEventListener("alpine:init", () => {
         this.current_classification = CONFIG.current_classification || null;
         this.table.n_nearby = CONFIG.table?.n_nearby || 2;
         this.table.n_share_class = CONFIG.table?.n_share_class || 2;
+        this.table.n_same_cluster = CONFIG.table?.n_same_cluster || 2;
         this.table.n_distant = CONFIG.table?.n_distant || 0;
         this.table.n_random = CONFIG.table?.n_random || 0;
 
@@ -129,6 +132,7 @@ document.addEventListener("alpine:init", () => {
         if (this.clustering_available) {
           this.n_clusters = CONFIG.default_n_clusters || 10;
           await this.clustering.setNClusters(this.n_clusters);
+          await this.updateClusterStats();
         }
 
         await this.updateHeadsWithDistances();
@@ -353,6 +357,26 @@ document.addEventListener("alpine:init", () => {
         }
       }
 
+      // Add same-cluster heads
+      const n_same_cluster = this.table.n_same_cluster;
+      if (n_same_cluster > 0 && this.clustering_available) {
+        const currentClusterId = await this.clustering.getClusterId(
+          this.current_head,
+        );
+        if (currentClusterId !== undefined) {
+          const sameClusterHeads =
+            await this.clustering.getHeadsInCluster(currentClusterId);
+          const filteredClusterHeads = sameClusterHeads.filter(
+            (head) => head !== this.current_head && this.shouldShowHead(head),
+          );
+          filteredClusterHeads.slice(0, n_same_cluster).forEach((head) => {
+            if (!headsToShow.has(head)) {
+              headsToShow.add(head);
+            }
+          });
+        }
+      }
+
       // Get final distances for selected heads
       const finalHeadsWithDistances =
         await this.head_distances.getHeadDistances(
@@ -430,6 +454,10 @@ document.addEventListener("alpine:init", () => {
       url.searchParams.set(
         "table.n_share_class",
         this.table.n_share_class.toString(),
+      );
+      url.searchParams.set(
+        "table.n_same_cluster",
+        this.table.n_same_cluster.toString(),
       );
       url.searchParams.set("table.n_distant", this.table.n_distant.toString());
       url.searchParams.set("table.n_random", this.table.n_random.toString());
@@ -807,6 +835,7 @@ document.addEventListener("alpine:init", () => {
       // Update URL
       setConfigValue("table.n_nearby", this.table.n_nearby);
       setConfigValue("table.n_share_class", this.table.n_share_class);
+      setConfigValue("table.n_same_cluster", this.table.n_same_cluster);
       setConfigValue("table.n_distant", this.table.n_distant);
       setConfigValue("table.n_random", this.table.n_random);
 
@@ -1139,8 +1168,30 @@ document.addEventListener("alpine:init", () => {
       if (!this.clustering_available) return;
       this.n_clusters = Math.max(2, Math.min(100, this.n_clusters));
       await this.clustering.setNClusters(this.n_clusters);
+      // Update cluster statistics
+      await this.updateClusterStats();
       // Force re-render of cluster colors
       await this.updateHeadsWithDistances();
+    },
+
+    async updateClusterStats() {
+      if (!this.clustering_available) {
+        this.cluster_stats = null;
+        return;
+      }
+      const sizes = await this.clustering.getClusterSizes();
+      if (!sizes || sizes.length === 0) {
+        this.cluster_stats = null;
+        return;
+      }
+      // Sort sizes descending and format as compact string
+      const sortedSizes = [...sizes].sort((a, b) => b - a);
+      const minSize = Math.min(...sizes);
+      const maxSize = Math.max(...sizes);
+      const avgSize = (sizes.reduce((a, b) => a + b, 0) / sizes.length).toFixed(
+        1,
+      );
+      this.cluster_stats = `${sizes.length} clusters (min: ${minSize}, max: ${maxSize}, avg: ${avgSize})`;
     },
 
     toggleClusterColors() {
