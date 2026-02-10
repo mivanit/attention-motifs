@@ -24,12 +24,12 @@ prompts_max_chars = 512
 # which models to use (transformerlens names)
 models = [
 	# "pythia-1b",
+	"gemma-3-270m",
 	"pythia-70m",
 	"pythia-160m",
-	# "pythia-410m",
+	"pythia-410m",
 	"gpt2-small",
-	# "gpt2-medium",
-	# "gemma-3-270m",
+	"gpt2-medium",
 	# "gpt2-large",
 	# "meta-llama/Llama-3.2-1B",
 	# "Llama-3.2-1B",

@@ -12,7 +12,7 @@ dependencies = [
 	# standard
     "numpy>=1.26.1,<2.0.0",
     "torch>=2.5.1",
-    "jaxtyping>=0.2.33",
+    "jaxtyping>=0.2.11",
 	"einops>=0.8.0",
     "tqdm>=4.66.5",
     "pandas>=2.2.2",
@@ -41,7 +41,9 @@ dependencies = [
 	"zanj>=0.3.1",
 	"trnbl[tensorboard]>=0.1.1",
     # TL
-    "transformer-lens>=2.17.0",
+    # "transformer-lens>=2.17.0",
+	"transformer-lens @ git+https://github.com/TransformerLensOrg/TransformerLens@dev-3.x",
+	"transformers>=5.1.0",
     # this TL dep not listed? is this in an extra?
     "typeguard>=4.4.1",
 	# see https://github.com/pydantic/pydantic/issues/11348
@@ -79,6 +81,9 @@ dependencies = [
 
 [tool.uv]
 	default-groups = ["dev", "lint"]
+	override-dependencies = [
+		"transformer-lens @ git+https://github.com/TransformerLensOrg/TransformerLens@dev-3.x",
+	]
 
 [project.urls]
 	Homepage = "https://attention-motifs.github.io"
