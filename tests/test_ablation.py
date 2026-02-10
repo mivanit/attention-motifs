@@ -12,8 +12,8 @@ from attention_motifs.ablation.data import (
 from attention_motifs.ablation.ablate import (
 	AblationMethod,
 	parse_head_string,
-	heads_from_strings,
 )
+from attention_motifs.attnpedia import heads_from_strings
 from attention_motifs.ablation.candidates import (
 	get_known_induction_heads,
 	CandidateHeads,

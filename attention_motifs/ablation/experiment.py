@@ -17,8 +17,8 @@ from tqdm import tqdm
 from attention_motifs.ablation.ablate import (
 	AblationMethod,
 	HeadAblator,
-	heads_from_strings,
 )
+from attention_motifs.attnpedia import heads_from_strings
 from attention_motifs.ablation.candidates import (
 	get_control_heads,
 	find_candidate_induction_heads,
