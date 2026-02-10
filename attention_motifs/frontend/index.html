@@ -27,7 +27,7 @@
       header {
         text-align: center;
         padding: 40px 0;
-        background: linear-gradient(135deg, #9370db, #ececff);
+        background: linear-gradient(135deg, #5a3d8a, #9370db);
         color: white;
         margin-bottom: 40px;
         border-radius: 8px;
@@ -46,21 +46,70 @@
 
       .links {
         margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        gap: 16px;
       }
 
       .links a {
-        color: white;
+        color: #5a3d8a;
         text-decoration: none;
-        padding: 10px 20px;
-        margin: 0 10px;
-        border: 2px solid white;
-        border-radius: 5px;
-        transition: all 0.3s ease;
+        padding: 14px 32px;
+        background: white;
+        border-radius: 30px;
+        font-weight: 700;
+        font-size: 1.2em;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+        transition: background 0.25s ease, box-shadow 0.25s ease;
       }
 
       .links a:hover {
-        background: white;
+        background: #f0e6ff;
+        box-shadow: 0 4px 20px rgba(255, 255, 255, 0.3);
+      }
+
+      /* Main tools cards */
+      .main-tools {
+        display: flex;
+        gap: 24px;
+        margin-top: 24px;
+      }
+
+      .main-tool-card {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: #f8f9fa;
+        border-radius: 8px;
+        overflow: hidden;
+        text-decoration: none;
+        color: inherit;
+        border: 1px solid #e0e0e0;
+        transition: box-shadow 0.2s ease;
+      }
+
+      .main-tool-card:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      }
+
+      .main-tool-card img {
+        width: 100%;
+        aspect-ratio: 5/3;
+        object-fit: cover;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      .main-tool-card h3 {
+        margin: 16px 16px 8px 16px;
+        font-size: 1.1em;
         color: #9370db;
+      }
+
+      .main-tool-card p {
+        margin: 0 16px 16px 16px;
+        font-size: 0.9em;
+        color: #666;
+        line-height: 1.5;
       }
 
       .section {
@@ -261,6 +310,12 @@
         font-style: italic;
       }
 
+      @media (max-width: 900px) {
+        .main-tools {
+          flex-direction: column;
+        }
+      }
+
       @media (max-width: 768px) {
         header h1 {
           font-size: 2em;
@@ -281,11 +336,11 @@
     <div class="container">
       <header>
         <h1>Motifs in Attention Patterns of Large Language Models</h1>
-        <p>Interactive supplement</p>
         <div class="links">
+          <a href="https://attention-motifs.github.io/paper">Paper</a>
+          <a href="https://github.com/mivanit/attention-motifs">GitHub</a>
           <a href="https://attention-motifs.github.io">Website</a>
-          <a href="https://attention-motifs.github.io">Paper (coming soon!)</a>
-          <a href="https://github.com/attention-motifs">GitHub</a>
+          <a href="https://x.com/MishaIvanitskiy/status/1997498178569183661">Twitter/X</a>
         </div>
       </header>
 
@@ -302,83 +357,44 @@
           the embedding spaces, and looking at known classes of heads.
         </p>
 
-        <h3>Pipeline</h3>
-        <div class="pipeline-steps">
-          <div class="pipeline-step">
-            <h4>1. Pattern Extraction</h4>
+        <div class="main-tools">
+          <a href="vis/attnpedia/index.html" class="main-tool-card">
+            <img
+              src="https://attention-motifs.github.io/v1/figures/assets/attnpedia.jpg"
+              alt="AttentionPedia"
+            />
+            <h3>AttentionPedia</h3>
             <p>
-              Generate attention patterns from multiple language models using
-              diverse text prompts.
+              The central hub for exploring attention heads. Find similar heads,
+              view patterns side-by-side, and navigate classifications.
             </p>
-            <div class="link-group">
-              <strong>Tools:</strong>
-              <a href="patterns/index.html">Pattern Lens</a>
-              <a href="patterns/single.html">Single Pattern View</a>
-            </div>
-          </div>
-          <div class="pipeline-step">
-            <h4>2. Feature Extraction</h4>
-            <p>Compute handcrafted features from each attention pattern.</p>
-            <div class="link-group">
-              <strong>Figures:</strong>
-              <a href="figures/covariance-full.pdf">Full Covariance</a>
-              <a href="figures/covariance-reduced.pdf">Reduced Covariance</a>
-            </div>
-          </div>
-          <div class="pipeline-step">
-            <h4>3. Feature Analysis</h4>
+          </a>
+
+          <a href="vis/embeds/patterns/index.html" class="main-tool-card">
+            <img
+              src="https://attention-motifs.github.io/v1/figures/assets/embed_patterns.jpg"
+              alt="Pattern Embedding Visualization"
+            />
+            <h3>Pattern Embedding Visualization</h3>
             <p>
-              Normalization and principal component analysis of the table of
-              features.
+              Explore the 3D space of attention patterns. See how individual
+              patterns relate to each other in the learned embedding. WASD to
+              move, click+mouse to look around. Left click to select, right
+              click to open pattern, middle mouse button to bring up pattern
+              view.
             </p>
-            <div class="link-group">
-              <strong>Tools:</strong>
-              <a href="vis/embeds/patterns/index.html"
-                >Pattern Embedding Visualization</a
-              >
-            </div>
-            <div class="link-group">
-              <strong>Figures:</strong>
-              <a href="figures/pca.pdf">PCA Analysis</a>
-              <a href="figures/pca-all.png">PCA Overview</a>
-            </div>
-          </div>
-          <div class="pipeline-step">
-            <h4>4. Distances between heads</h4>
+          </a>
+
+          <a href="figures/head_embed_table.html" class="main-tool-card">
+            <img
+              src="https://attention-motifs.github.io/v1/figures/assets/head_embed_table.jpg"
+              alt="Head Embedding Table"
+            />
+            <h3>Head Embedding Table</h3>
             <p>
-              We now have a point cloud in PCA space for each head -- we can
-              compute distances between each cloud to get a distance matrix.
+              Various embeddings of attention heads, with known classifications.
             </p>
-            <div class="link-group">
-              <strong>Tools:</strong>
-              <a href="vis/attnpedia/index.html">AttentionPedia</a>
-            </div>
-            <div class="link-group">
-              <strong>Figures:</strong>
-              <a href="figures/head-dists-heatmap.pdf"
-                >Head Distances Heatmap</a
-              >
-            </div>
-          </div>
-          <div class="pipeline-step">
-            <h4>5. Embeddings of heads</h4>
-            <p>
-              Use the distance matrix to get embeddings of heads in a meaningful
-              latent space.
-            </p>
-            <div class="link-group">
-              <strong>Tools:</strong>
-              <a href="vis/embeds/heads/index.html"
-                >Head Embedding Visualization</a
-              >
-              <a href="figures/head_embed_table.html">Head Embedding Table</a>
-              <a href="figures/classifications.html">Classifications Page</a>
-            </div>
-            <div class="link-group">
-              <strong>Figures:</strong>
-              <a href="figures/head-embed.pdf">Head Embeddings</a>
-            </div>
-          </div>
+          </a>
         </div>
       </div>
 
@@ -476,6 +492,87 @@
                 - 3D space of all attention patterns
               </li>
             </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Pipeline</h2>
+        <div class="pipeline-steps">
+          <div class="pipeline-step">
+            <h4>1. Pattern Extraction</h4>
+            <p>
+              Generate attention patterns from multiple language models using
+              diverse text prompts.
+            </p>
+            <div class="link-group">
+              <strong>Tools:</strong>
+              <a href="patterns/index.html">Pattern Lens</a>
+              <a href="patterns/single.html">Single Pattern View</a>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <h4>2. Feature Extraction</h4>
+            <p>Compute handcrafted features from each attention pattern.</p>
+            <div class="link-group">
+              <strong>Figures:</strong>
+              <a href="figures/covariance-full.pdf">Full Covariance</a>
+              <a href="figures/covariance-reduced.pdf">Reduced Covariance</a>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <h4>3. Feature Analysis</h4>
+            <p>
+              Normalization and principal component analysis of the table of
+              features.
+            </p>
+            <div class="link-group">
+              <strong>Tools:</strong>
+              <a href="vis/embeds/patterns/index.html"
+                >Pattern Embedding Visualization</a
+              >
+            </div>
+            <div class="link-group">
+              <strong>Figures:</strong>
+              <a href="figures/pca.pdf">PCA Analysis</a>
+              <a href="figures/pca-all.png">PCA Overview</a>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <h4>4. Distances between heads</h4>
+            <p>
+              We now have a point cloud in PCA space for each head -- we can
+              compute distances between each cloud to get a distance matrix.
+            </p>
+            <div class="link-group">
+              <strong>Tools:</strong>
+              <a href="vis/attnpedia/index.html">AttentionPedia</a>
+            </div>
+            <div class="link-group">
+              <strong>Figures:</strong>
+              <a href="figures/head-dists-heatmap.pdf"
+                >Head Distances Heatmap</a
+              >
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <h4>5. Embeddings of heads</h4>
+            <p>
+              Use the distance matrix to get embeddings of heads in a meaningful
+              latent space.
+            </p>
+            <div class="link-group">
+              <strong>Tools:</strong>
+              <a href="vis/embeds/heads/index.html"
+                >Head Embedding Visualization</a
+              >
+              <a href="figures/head_embed_table.html">Head Embedding Table</a>
+              <a href="figures/classifications.html">Classifications Page</a>
+            </div>
+            <div class="link-group">
+              <strong>Figures:</strong>
+              <a href="figures/head-embed.pdf">Head Embeddings</a>
+            </div>
           </div>
         </div>
       </div>
