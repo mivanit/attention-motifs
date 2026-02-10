@@ -15,6 +15,7 @@ let gridState = {
   scale: 1.0,
   patternsBaseUrl: "",
   tooltip: null,
+  sortByCluster: false,
 };
 
 /**
@@ -118,6 +119,17 @@ function setupControls(defaultNClusters) {
     document
       .getElementById("model-grids-container")
       .style.setProperty("--scale", gridState.scale);
+  });
+
+  // Sort toggle button
+  const sortToggle = document.getElementById("sort-toggle");
+  sortToggle.addEventListener("click", () => {
+    gridState.sortByCluster = !gridState.sortByCluster;
+    sortToggle.textContent = gridState.sortByCluster
+      ? "By Cluster"
+      : "By Index";
+    sortToggle.classList.toggle("active", gridState.sortByCluster);
+    renderModelGrids();
   });
 }
 
@@ -297,14 +309,16 @@ function renderModelBox(container, modelName) {
   const gridContent = document.createElement("div");
   gridContent.className = "grid-content";
 
-  // Head labels
+  // Head labels - only show in index mode
   const headLabels = document.createElement("div");
   headLabels.className = "head-labels";
-  for (let h = 0; h < n_heads; h++) {
-    const label = document.createElement("div");
-    label.className = "head-label";
-    label.textContent = `${h}`;
-    headLabels.appendChild(label);
+  if (!gridState.sortByCluster) {
+    for (let h = 0; h < n_heads; h++) {
+      const label = document.createElement("div");
+      label.className = "head-label";
+      label.textContent = `${h}`;
+      headLabels.appendChild(label);
+    }
   }
   gridContent.appendChild(headLabels);
 
@@ -316,7 +330,19 @@ function renderModelBox(container, modelName) {
     const row = document.createElement("div");
     row.className = "grid-row";
 
-    for (let h = 0; h < n_heads; h++) {
+    // Get head indices - sorted by cluster if in cluster mode
+    let headIndices = Array.from({ length: n_heads }, (_, i) => i);
+    if (gridState.sortByCluster) {
+      headIndices.sort((a, b) => {
+        const clusterA =
+          window.CLUSTER_STATE.getClusterId(`${modelName}:L${l}:H${a}`) ?? 999;
+        const clusterB =
+          window.CLUSTER_STATE.getClusterId(`${modelName}:L${l}:H${b}`) ?? 999;
+        return clusterA - clusterB;
+      });
+    }
+
+    for (const h of headIndices) {
       const headId = `${modelName}:L${l}:H${h}`;
       const cell = document.createElement("div");
       cell.className = "grid-cell";
