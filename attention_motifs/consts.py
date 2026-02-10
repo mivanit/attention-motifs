@@ -1,6 +1,6 @@
 import hashlib
 import base64
-from typing import Iterable, Iterator, TypeVar
+from typing import Iterable, Iterator, TypeVar, overload
 import os
 import warnings
 
@@ -123,17 +123,37 @@ def str_batches(
 T_Tensor = TypeVar("T_Tensor", torch.Tensor, np.ndarray)
 
 
+@overload
 def tensor_batches(
-	arr: Float[T_Tensor, " n_samples *data_dims"],
+	arr: Float[torch.Tensor, " n_samples *data_dims"],
 	batch_size: int,
 	allow_last_incomplete: bool = True,
-) -> Iterator[Float[T_Tensor, " batch_size *data_dims"]]:
+) -> Iterator[Float[torch.Tensor, " batch_size *data_dims"]]: ...
+
+
+@overload
+def tensor_batches(
+	arr: Float[np.ndarray, " n_samples *data_dims"],
+	batch_size: int,
+	allow_last_incomplete: bool = True,
+) -> Iterator[Float[np.ndarray, " batch_size *data_dims"]]: ...
+
+
+def tensor_batches(
+	arr: Float[torch.Tensor, " n_samples *data_dims"]
+	| Float[np.ndarray, " n_samples *data_dims"],
+	batch_size: int,
+	allow_last_incomplete: bool = True,
+) -> (
+	Iterator[Float[torch.Tensor, " batch_size *data_dims"]]
+	| Iterator[Float[np.ndarray, " batch_size *data_dims"]]
+):
 	"""Yield successive batches from a tensor."""
 	idx: int = 0
 	while idx < len(arr):
-		arr_slice: Float[T_Tensor, " batch_size *data_dims"] = arr[
-			idx : idx + batch_size
-		]
+		arr_slice: Float[torch.Tensor, " batch_size *data_dims"] | Float[
+			np.ndarray, " batch_size *data_dims"
+		] = arr[idx : idx + batch_size]
 		if not allow_last_incomplete and len(arr_slice) < batch_size:
 			assert idx + batch_size >= len(arr), "this state should be inaccesible"
 			break
@@ -141,11 +161,31 @@ def tensor_batches(
 		yield arr_slice
 
 
+@overload
 def tensor_batches_indexed(
-	arr: Float[T_Tensor, " n_samples *data_dims"],
+	arr: Float[torch.Tensor, " n_samples *data_dims"],
 	batch_size: int | None = None,
 	allow_last_incomplete: bool = True,
-) -> Iterator[tuple[int, int, Float[T_Tensor, " batch_size *data_dims"]]]:
+) -> Iterator[tuple[int, int, Float[torch.Tensor, " batch_size *data_dims"]]]: ...
+
+
+@overload
+def tensor_batches_indexed(
+	arr: Float[np.ndarray, " n_samples *data_dims"],
+	batch_size: int | None = None,
+	allow_last_incomplete: bool = True,
+) -> Iterator[tuple[int, int, Float[np.ndarray, " batch_size *data_dims"]]]: ...
+
+
+def tensor_batches_indexed(
+	arr: Float[torch.Tensor, " n_samples *data_dims"]
+	| Float[np.ndarray, " n_samples *data_dims"],
+	batch_size: int | None = None,
+	allow_last_incomplete: bool = True,
+) -> (
+	Iterator[tuple[int, int, Float[torch.Tensor, " batch_size *data_dims"]]]
+	| Iterator[tuple[int, int, Float[np.ndarray, " batch_size *data_dims"]]]
+):
 	"""Yield successive batches from a tensor."""
 	if batch_size is None:
 		batch_size = len(arr)
@@ -155,7 +195,9 @@ def tensor_batches_indexed(
 		idx_end: int = idx_start + batch_size
 		idx_end = min(idx_end, len(arr))
 		# get slice
-		arr_slice: Float[T_Tensor, " batch_size *data_dims"] = arr[idx_start:idx_end]
+		arr_slice: Float[torch.Tensor, " batch_size *data_dims"] | Float[
+			np.ndarray, " batch_size *data_dims"
+		] = arr[idx_start:idx_end]
 		# throw away last incomplete batch if not allowed
 		if not allow_last_incomplete and len(arr_slice) < batch_size:
 			assert idx_start + batch_size >= len(arr), (
