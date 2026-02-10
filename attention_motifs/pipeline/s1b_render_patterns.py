@@ -1,5 +1,9 @@
 from attention_motifs.figure_funcs import _ensure_register
-from attention_motifs.pipeline.cfg import PipelineConfig, pipeline_step_major, pipeline_model_progress
+from attention_motifs.pipeline.cfg import (
+	PipelineConfig,
+	pipeline_step_major,
+	pipeline_model_progress,
+)
 from pattern_lens.figures import figures_main
 
 

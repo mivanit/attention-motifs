@@ -538,7 +538,9 @@ class DistanceTensorResult(SerializableDataclass):
 		elif precision == "f16":
 			distances = np.load(path / "distances_f16.npy")
 		else:
-			raise ValueError(f"Unknown precision: {precision}. Use 'f64', 'f32', or 'f16'.")
+			raise ValueError(
+				f"Unknown precision: {precision}. Use 'f64', 'f32', or 'f16'."
+			)
 
 		return cls(
 			cls_values=meta["cls_values"],

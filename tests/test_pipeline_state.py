@@ -4,7 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from attention_motifs.pipeline.state import PipelineState, StepRecord, StepName
+from attention_motifs.pipeline.state import PipelineState, StepRecord
 from attention_motifs.pipeline.cfg import PipelineConfig
 
 

@@ -1,5 +1,3 @@
-from muutils.collect_warnings import CollateWarnings
-
 from attention_motifs.pipeline.cfg import PipelineConfig, pipeline_step_major
 
 from attention_motifs.features.features import (

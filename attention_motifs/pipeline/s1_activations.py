@@ -1,5 +1,9 @@
 from pattern_lens.activations import activations_main
-from attention_motifs.pipeline.cfg import PipelineConfig, pipeline_step_major, pipeline_model_progress
+from attention_motifs.pipeline.cfg import (
+	PipelineConfig,
+	pipeline_step_major,
+	pipeline_model_progress,
+)
 
 
 def generate_activations(cfg: PipelineConfig) -> None:

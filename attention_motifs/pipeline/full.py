@@ -58,7 +58,7 @@ def _load_or_create_state(cfg: PipelineConfig) -> PipelineState:
 				f"{len(state.completed_steps)} steps already complete"
 			)
 	else:
-		print(f"[smart] No previous state found, starting fresh")
+		print("[smart] No previous state found, starting fresh")
 		state = PipelineState(config_hash=current_hash)
 
 	return state

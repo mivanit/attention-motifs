@@ -62,7 +62,9 @@ def write_frontend(cfg: PipelineConfig) -> None:
 	(cfg.figures_dir / "classifications.html").write_text(classes_html)
 
 	# write clustering dendrogram
-	clustering_html: str = (frontend_resources_path / "clustering/index.html").read_text()
+	clustering_html: str = (
+		frontend_resources_path / "clustering/index.html"
+	).read_text()
 	clustering_dir: Path = cfg.vis_dir / "clustering"
 	clustering_dir.mkdir(parents=True, exist_ok=True)
 	(clustering_dir / "index.html").write_text(clustering_html)

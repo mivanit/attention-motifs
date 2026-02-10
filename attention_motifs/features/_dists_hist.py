@@ -1,7 +1,7 @@
-#%%
+# %%
 import numpy as np
 import matplotlib.pyplot as plt
-#%%
+# %%
 
 
 x = np.load("distances.npy")
@@ -19,10 +19,10 @@ np.max(np.abs(x - x_f32))
 # #%%
 # np.max(np.abs(x_f16 - x_f32))
 
-#%%
+# %%
 x.shape
 
-#%%
+# %%
 
 plt.hist(x.flatten(), bins=200)
 plt.show()
@@ -30,24 +30,23 @@ plt.show()
 plt.hist(x_f16.flatten(), bins=200)
 plt.show()
 
-#%%
+# %%
 
 import json
 from pathlib import Path
 
-labels: list[str] = json.loads(
-	Path("dists_meta.json").read_text()
-)["cls_values"]
+labels: list[str] = json.loads(Path("dists_meta.json").read_text())["cls_values"]
 
-labels_mdl: list[str] = [
-	x.split(":")[0]
-	for x in labels
-]
+labels_mdl: list[str] = [x.split(":")[0] for x in labels]
 
 n_heads: int = len(labels_mdl)
 
-assert n_heads == x.shape[0], "Number of heads does not match the shape of distances array."
-assert n_heads == x.shape[1], "Number of heads does not match the shape of distances array."
+assert n_heads == x.shape[0], (
+	"Number of heads does not match the shape of distances array."
+)
+assert n_heads == x.shape[1], (
+	"Number of heads does not match the shape of distances array."
+)
 
 all_models: set[str] = set(labels_mdl)
 
@@ -67,23 +66,20 @@ colors: dict[str, str] = {
 	"pythia-1b": "green",
 }
 
-#%%
+# %%
 
 vmin = np.min(x)
 vmax = np.max(x)
 
 vmin, vmax
 
-#%%
+# %%
 
 
 # bins = np.linspace(0.0, vmax, 100)
 bins = np.linspace(0.0, 5.0, 100)
 
-all_hists = [
-	np.histogram(x[i], bins=bins)[0]
-	for i in range(n_heads)
-]
+all_hists = [np.histogram(x[i], bins=bins)[0] for i in range(n_heads)]
 
 
 for i in range(n_heads):

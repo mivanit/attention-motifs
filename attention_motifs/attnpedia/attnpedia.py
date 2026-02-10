@@ -16,7 +16,9 @@ ATTNPEDIA_PATH: Path = (
 )
 
 ATTNPEDIA_GROUPS_PATH: Path = (
-	Path(importlib.resources.files(attention_motifs)) / "attnpedia" / "attn-pedia-groups.json"
+	Path(importlib.resources.files(attention_motifs))
+	/ "attnpedia"
+	/ "attn-pedia-groups.json"
 )
 
 if not ATTNPEDIA_PATH.is_file():
