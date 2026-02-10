@@ -170,9 +170,9 @@ class TestSequencesBatch:
 		mask = get_induction_mask(sequences)
 		assert mask.shape == (1, 4)
 		# Position 3 should be an induction position (2nd rep, after start)
-		assert mask[0, 3] == True
+		assert mask[0, 3]
 		# Position 2 is the start of 2nd rep, not an induction position
-		assert mask[0, 2] == False
+		assert not mask[0, 2]
 
 
 # ============================================================

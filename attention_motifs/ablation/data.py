@@ -294,7 +294,7 @@ def generate_long_context_prompts(
 	source_texts: list[str],
 	target_length: int = 512,
 	device: str = "cpu",
-) -> list[Int[Tensor, "seq_len"]]:
+) -> list[Int[Tensor, " seq_len"]]:
 	"""Generate long prompts for ICL score evaluation.
 
 	Takes source texts and tokenizes them to fixed length for
