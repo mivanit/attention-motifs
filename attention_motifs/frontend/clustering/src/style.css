@@ -38,7 +38,7 @@ body {
 }
 
 .container {
-  max-width: 1600px;
+  max-width: 1800px;
   margin: 0 auto;
   padding: 0 20px 40px;
 }
@@ -116,63 +116,221 @@ h1 {
   color: #333;
 }
 
-#dendrogram-container {
+/* Main content layout */
+.main-content {
+  display: flex;
+  gap: 20px;
+}
+
+#model-grids-container {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-content: flex-start;
+}
+
+/* Model box */
+.model-box {
   background: white;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  position: relative;
+  padding: 12px;
 }
 
-#dendrogram {
-  width: 100%;
-  min-height: 600px;
-  display: block;
+.model-box-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  text-align: center;
 }
 
-.dendrogram-link {
-  fill: none;
-  stroke-width: 1.5px;
+.model-grid-wrapper {
+  display: flex;
+  gap: 4px;
+}
+
+.layer-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-top: calc(16px * var(--scale, 1));
+}
+
+.layer-label {
+  font-size: calc(9px * var(--scale, 1));
+  color: #888;
+  height: calc(14px * var(--scale, 1));
+  line-height: calc(14px * var(--scale, 1));
+  margin: calc(0.5px * var(--scale, 1)) 0;
+  text-align: right;
+  padding-right: 4px;
+}
+
+.grid-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.head-labels {
+  display: flex;
+  height: calc(16px * var(--scale, 1));
+}
+
+.head-label {
+  font-size: calc(9px * var(--scale, 1));
+  color: #888;
+  width: calc(14px * var(--scale, 1));
+  text-align: center;
+  margin: 0 calc(0.5px * var(--scale, 1));
+}
+
+.model-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-row {
+  display: flex;
+}
+
+.grid-cell {
+  width: calc(14px * var(--scale, 1));
+  height: calc(14px * var(--scale, 1));
+  margin: calc(0.5px * var(--scale, 1));
+  border-radius: 2px;
+  cursor: pointer;
   transition:
-    stroke 0.2s,
-    stroke-width 0.2s;
+    transform 0.1s,
+    box-shadow 0.1s;
 }
 
-.dendrogram-link:hover {
-  stroke-width: 3px;
+.grid-cell:hover {
+  transform: scale(1.2);
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.dendrogram-link.cut-line {
-  stroke: #e53935 !important;
-  stroke-width: 2px;
-  stroke-dasharray: 5, 5;
+.grid-cell.selected {
+  outline: 2px solid #333;
+  outline-offset: 1px;
 }
 
-.dendrogram-node {
+/* Side pane */
+.side-pane {
+  width: 420px;
+  min-width: 420px;
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.side-pane-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
+}
+
+.side-pane-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.side-pane-header #selected-count {
+  color: #888;
+  font-weight: normal;
+}
+
+.side-pane-header button {
+  padding: 6px 12px;
+  font-size: 13px;
+  background: #f5f5f5;
+  color: #555;
+  border: 1px solid #ddd;
+  border-radius: 4px;
   cursor: pointer;
 }
 
-.dendrogram-node circle {
-  fill: white;
-  stroke-width: 2px;
-  transition: r 0.2s;
+.side-pane-header button:hover {
+  background: #eee;
 }
 
-.dendrogram-node:hover circle {
-  r: 6;
+#pattern-images {
+  padding: 12px;
 }
 
-.dendrogram-label {
-  font-size: 10px;
-  fill: #333;
-  pointer-events: none;
+.pattern-section {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee;
 }
 
-.dendrogram-label.highlighted {
-  font-weight: bold;
+.pattern-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.pattern-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.pattern-section-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.pattern-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.pattern-section-cluster {
+  font-size: 12px;
+  color: #888;
+}
+
+.pattern-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+}
+
+.pattern-image {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  border-radius: 4px;
+  background: #f5f5f5;
+}
+
+.pattern-image-placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+  background: #f5f5f5;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #aaa;
   font-size: 11px;
 }
 
+/* Legend */
 .legend {
   background: white;
   padding: 16px 20px;
@@ -213,14 +371,14 @@ h1 {
 
 /* Tooltip */
 .tooltip {
-  position: absolute;
+  position: fixed;
   background: rgba(0, 0, 0, 0.85);
   color: white;
   padding: 8px 12px;
   border-radius: 4px;
   font-size: 12px;
   pointer-events: none;
-  z-index: 100;
+  z-index: 1000;
   max-width: 300px;
 }
 
@@ -247,4 +405,12 @@ h1 {
   padding: 60px;
   color: #e53935;
   font-size: 16px;
+}
+
+/* Empty state for side pane */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #888;
+  font-size: 14px;
 }

@@ -1,0 +1,591 @@
+/**
+ * Grid View visualization for clustering
+ *
+ * Renders model grids with cells colored by cluster assignment.
+ * Supports multi-selection of heads with pattern display in side pane.
+ */
+
+let gridState = {
+  linkage: null,
+  clsValues: null,
+  nHeads: 0,
+  modelConfigs: {},
+  selectedHeads: [],
+  prompts: {},
+  scale: 1.0,
+  patternsBaseUrl: "",
+  tooltip: null,
+};
+
+/**
+ * Initialize the grid view visualization
+ * @param {Object} config - Configuration object
+ */
+async function initGridView(config) {
+  const container = document.getElementById("model-grids-container");
+  container.innerHTML = '<div class="loading">Loading clustering data...</div>';
+
+  gridState.patternsBaseUrl = config.patternsBaseUrl;
+
+  try {
+    // Load all data in parallel
+    const [metaResponse, linkageResponse, modelsText] = await Promise.all([
+      fetch(config.clusteringMetaUrl),
+      fetch(config.linkageUrl),
+      fetch(config.modelsUrl).then((r) => r.text()),
+    ]);
+
+    if (!metaResponse.ok || !linkageResponse.ok) {
+      throw new Error("Failed to load clustering data");
+    }
+
+    const meta = await metaResponse.json();
+    const linkage = await linkageResponse.json();
+
+    gridState.clsValues = meta.cls_values;
+    gridState.linkage = linkage;
+    gridState.nHeads = meta.cls_values.length;
+
+    // Parse model configs from JSONL
+    gridState.modelConfigs = {};
+    for (const line of modelsText.trim().split("\n")) {
+      if (line.trim()) {
+        const cfg = JSON.parse(line);
+        gridState.modelConfigs[cfg.model_name] = {
+          n_layers: cfg.n_layers,
+          n_heads: cfg.n_heads,
+        };
+      }
+    }
+
+    // Set up controls
+    setupControls(config.defaultNClusters);
+
+    // Set up tooltip
+    setupTooltip();
+
+    // Set up side pane
+    setupSidePane();
+
+    // Initial render
+    updateClusters(config.defaultNClusters);
+  } catch (error) {
+    console.error("Error initializing grid view:", error);
+    container.innerHTML = `<div class="error">Error loading data: ${error.message}</div>`;
+  }
+}
+
+/**
+ * Set up control elements
+ * @param {number} defaultNClusters - Default number of clusters
+ */
+function setupControls(defaultNClusters) {
+  const nClustersSlider = document.getElementById("n-clusters");
+  const nClustersValue = document.getElementById("n-clusters-value");
+  const cutHeightSlider = document.getElementById("cut-height");
+  const cutHeightValue = document.getElementById("cut-height-value");
+  const scaleSlider = document.getElementById("scale");
+  const scaleValue = document.getElementById("scale-value");
+
+  // Set max clusters to number of heads
+  nClustersSlider.max = Math.min(gridState.nHeads, 100);
+  nClustersSlider.value = defaultNClusters;
+  nClustersValue.textContent = defaultNClusters;
+
+  // Get max height from linkage
+  const maxHeight = Math.max(...gridState.linkage.map((row) => row[2]));
+  cutHeightSlider.max = maxHeight;
+  cutHeightSlider.step = maxHeight / 1000;
+
+  // n-clusters slider
+  nClustersSlider.addEventListener("input", (e) => {
+    const n = parseInt(e.target.value);
+    nClustersValue.textContent = n;
+    updateClusters(n);
+  });
+
+  // cut-height slider
+  cutHeightSlider.addEventListener("input", (e) => {
+    const height = parseFloat(e.target.value);
+    cutHeightValue.textContent = height.toFixed(3);
+    updateClustersByHeight(height);
+  });
+
+  // Scale slider
+  scaleSlider.addEventListener("input", (e) => {
+    gridState.scale = parseFloat(e.target.value);
+    scaleValue.textContent = gridState.scale.toFixed(1);
+    document
+      .getElementById("model-grids-container")
+      .style.setProperty("--scale", gridState.scale);
+  });
+}
+
+/**
+ * Set up tooltip element
+ */
+function setupTooltip() {
+  const tooltip = document.createElement("div");
+  tooltip.className = "tooltip";
+  tooltip.style.display = "none";
+  document.body.appendChild(tooltip);
+  gridState.tooltip = tooltip;
+}
+
+/**
+ * Set up side pane interactions
+ */
+function setupSidePane() {
+  document.getElementById("clear-selection").addEventListener("click", () => {
+    gridState.selectedHeads = [];
+    updateSelectedCells();
+    updateSidePane();
+  });
+
+  // Initial empty state
+  updateSidePane();
+}
+
+/**
+ * Compute cluster assignments by cutting at a specific number of clusters
+ * @param {number} nClusters - Number of clusters
+ * @returns {Object.<string, number>} Map of head ID to cluster ID
+ */
+function computeClusters(nClusters) {
+  const linkage = gridState.linkage;
+  const clsValues = gridState.clsValues;
+  const n = clsValues.length;
+
+  if (nClusters >= n) {
+    const assignments = {};
+    clsValues.forEach((cls, i) => {
+      assignments[cls] = i;
+    });
+    return assignments;
+  }
+
+  // Find the cut height that gives us the desired number of clusters
+  const heights = linkage.map((row) => row[2]).sort((a, b) => b - a);
+  const cutHeight = heights[n - nClusters - 1] + 1e-10;
+
+  return computeClustersByHeightInternal(cutHeight);
+}
+
+/**
+ * Compute cluster assignments by cutting at a specific height
+ * @param {number} cutHeight - Height at which to cut
+ * @returns {Object.<string, number>} Map of head ID to cluster ID
+ */
+function computeClustersByHeightInternal(cutHeight) {
+  const linkage = gridState.linkage;
+  const clsValues = gridState.clsValues;
+  const n = clsValues.length;
+
+  // Union-find
+  const parent = Array.from({ length: 2 * n - 1 }, (_, i) => i);
+
+  function find(x) {
+    if (parent[x] !== x) {
+      parent[x] = find(parent[x]);
+    }
+    return parent[x];
+  }
+
+  function union(x, y, newParent) {
+    parent[find(x)] = newParent;
+    parent[find(y)] = newParent;
+  }
+
+  for (let i = 0; i < linkage.length; i++) {
+    const [idx1, idx2, distance] = linkage[i];
+    if (distance <= cutHeight) {
+      union(Math.floor(idx1), Math.floor(idx2), n + i);
+    }
+  }
+
+  const rootToCluster = {};
+  let nextCluster = 0;
+  const assignments = {};
+
+  for (let i = 0; i < n; i++) {
+    const root = find(i);
+    if (!(root in rootToCluster)) {
+      rootToCluster[root] = nextCluster++;
+    }
+    assignments[clsValues[i]] = rootToCluster[root];
+  }
+
+  return assignments;
+}
+
+/**
+ * Update visualization for a given number of clusters
+ * @param {number} nClusters - Number of clusters
+ */
+function updateClusters(nClusters) {
+  const assignments = computeClusters(nClusters);
+  window.CLUSTER_STATE.setAssignments(assignments, nClusters);
+  renderModelGrids();
+  updateStats(assignments, nClusters);
+  updateLegend(assignments);
+}
+
+/**
+ * Update visualization for a given cut height
+ * @param {number} cutHeight - Height at which to cut
+ */
+function updateClustersByHeight(cutHeight) {
+  const assignments = computeClustersByHeightInternal(cutHeight);
+  const nClusters = new Set(Object.values(assignments)).size;
+
+  document.getElementById("n-clusters").value = nClusters;
+  document.getElementById("n-clusters-value").textContent = nClusters;
+
+  window.CLUSTER_STATE.setAssignments(assignments, nClusters);
+  renderModelGrids();
+  updateStats(assignments, nClusters);
+  updateLegend(assignments);
+}
+
+/**
+ * Render all model grids
+ */
+function renderModelGrids() {
+  const container = document.getElementById("model-grids-container");
+  container.innerHTML = "";
+  container.style.setProperty("--scale", gridState.scale);
+
+  for (const modelName of Object.keys(gridState.modelConfigs)) {
+    renderModelBox(container, modelName);
+  }
+}
+
+/**
+ * Render a single model box
+ * @param {HTMLElement} container - Parent container
+ * @param {string} modelName - Model name
+ */
+function renderModelBox(container, modelName) {
+  const config = gridState.modelConfigs[modelName];
+  const { n_layers, n_heads } = config;
+
+  const box = document.createElement("div");
+  box.className = "model-box";
+
+  // Header
+  const header = document.createElement("div");
+  header.className = "model-box-header";
+  header.textContent = modelName;
+  box.appendChild(header);
+
+  // Grid wrapper (layer labels + grid content)
+  const wrapper = document.createElement("div");
+  wrapper.className = "model-grid-wrapper";
+
+  // Layer labels
+  const layerLabels = document.createElement("div");
+  layerLabels.className = "layer-labels";
+  for (let l = 0; l < n_layers; l++) {
+    const label = document.createElement("div");
+    label.className = "layer-label";
+    label.textContent = `L${l}`;
+    layerLabels.appendChild(label);
+  }
+  wrapper.appendChild(layerLabels);
+
+  // Grid content (head labels + grid)
+  const gridContent = document.createElement("div");
+  gridContent.className = "grid-content";
+
+  // Head labels
+  const headLabels = document.createElement("div");
+  headLabels.className = "head-labels";
+  for (let h = 0; h < n_heads; h++) {
+    const label = document.createElement("div");
+    label.className = "head-label";
+    label.textContent = `${h}`;
+    headLabels.appendChild(label);
+  }
+  gridContent.appendChild(headLabels);
+
+  // Grid
+  const grid = document.createElement("div");
+  grid.className = "model-grid";
+
+  for (let l = 0; l < n_layers; l++) {
+    const row = document.createElement("div");
+    row.className = "grid-row";
+
+    for (let h = 0; h < n_heads; h++) {
+      const headId = `${modelName}:L${l}:H${h}`;
+      const cell = document.createElement("div");
+      cell.className = "grid-cell";
+      cell.dataset.headId = headId;
+
+      // Set color from cluster state
+      const color = window.CLUSTER_STATE.getColor(headId);
+      cell.style.backgroundColor = color;
+
+      // Check if selected
+      if (gridState.selectedHeads.includes(headId)) {
+        cell.classList.add("selected");
+      }
+
+      // Click handler
+      cell.addEventListener("click", () => toggleHeadSelection(headId));
+
+      // Tooltip handlers
+      cell.addEventListener("mouseenter", (e) => showTooltip(e, headId));
+      cell.addEventListener("mousemove", (e) => moveTooltip(e));
+      cell.addEventListener("mouseleave", () => hideTooltip());
+
+      row.appendChild(cell);
+    }
+
+    grid.appendChild(row);
+  }
+
+  gridContent.appendChild(grid);
+  wrapper.appendChild(gridContent);
+  box.appendChild(wrapper);
+  container.appendChild(box);
+}
+
+/**
+ * Toggle head selection
+ * @param {string} headId - Head ID to toggle
+ */
+function toggleHeadSelection(headId) {
+  const idx = gridState.selectedHeads.indexOf(headId);
+  if (idx >= 0) {
+    gridState.selectedHeads.splice(idx, 1);
+  } else {
+    gridState.selectedHeads.push(headId);
+  }
+  updateSelectedCells();
+  updateSidePane();
+}
+
+/**
+ * Update selected cell styling
+ */
+function updateSelectedCells() {
+  document.querySelectorAll(".grid-cell").forEach((cell) => {
+    const headId = cell.dataset.headId;
+    if (gridState.selectedHeads.includes(headId)) {
+      cell.classList.add("selected");
+    } else {
+      cell.classList.remove("selected");
+    }
+  });
+
+  // Update count
+  document.getElementById("selected-count").textContent =
+    `(${gridState.selectedHeads.length})`;
+}
+
+/**
+ * Update side pane with selected heads' patterns
+ */
+async function updateSidePane() {
+  const patternImages = document.getElementById("pattern-images");
+  const selectedCount = document.getElementById("selected-count");
+
+  selectedCount.textContent = `(${gridState.selectedHeads.length})`;
+
+  if (gridState.selectedHeads.length === 0) {
+    patternImages.innerHTML =
+      '<div class="empty-state">Click on cells to select heads and view their attention patterns.</div>';
+    return;
+  }
+
+  patternImages.innerHTML = "";
+
+  for (const headId of gridState.selectedHeads) {
+    const section = document.createElement("div");
+    section.className = "pattern-section";
+
+    // Header with color swatch
+    const header = document.createElement("div");
+    header.className = "pattern-section-header";
+
+    const colorSwatch = document.createElement("div");
+    colorSwatch.className = "pattern-section-color";
+    colorSwatch.style.backgroundColor = window.CLUSTER_STATE.getColor(headId);
+    header.appendChild(colorSwatch);
+
+    const title = document.createElement("span");
+    title.className = "pattern-section-title";
+    title.textContent = headId;
+    header.appendChild(title);
+
+    const clusterId = window.CLUSTER_STATE.getClusterId(headId);
+    if (clusterId !== undefined) {
+      const clusterLabel = document.createElement("span");
+      clusterLabel.className = "pattern-section-cluster";
+      clusterLabel.textContent = `Cluster ${clusterId}`;
+      header.appendChild(clusterLabel);
+    }
+
+    section.appendChild(header);
+
+    // Pattern grid
+    const patternGrid = document.createElement("div");
+    patternGrid.className = "pattern-grid";
+
+    // Load prompts for this model if not cached
+    const [modelName, layerPart, headPart] = headId.split(":");
+    const layer = layerPart.substring(1);
+    const head = headPart.substring(1);
+
+    if (!gridState.prompts[modelName]) {
+      try {
+        const promptsUrl = `${gridState.patternsBaseUrl}/${modelName}/prompts.jsonl`;
+        const response = await fetch(promptsUrl);
+        if (response.ok) {
+          const text = await response.text();
+          gridState.prompts[modelName] = text
+            .trim()
+            .split("\n")
+            .filter((line) => line.trim())
+            .map((line) => JSON.parse(line));
+        } else {
+          gridState.prompts[modelName] = [];
+        }
+      } catch (e) {
+        console.warn(`Failed to load prompts for ${modelName}:`, e);
+        gridState.prompts[modelName] = [];
+      }
+    }
+
+    // Show up to 6 patterns
+    const prompts = gridState.prompts[modelName] || [];
+    const maxPatterns = Math.min(6, prompts.length);
+
+    for (let i = 0; i < maxPatterns; i++) {
+      const prompt = prompts[i];
+      const hash = prompt.hash || prompt.prompt_hash;
+
+      if (hash) {
+        const imgUrl = `${gridState.patternsBaseUrl}/${modelName}/prompts/${hash}/L${layer}/H${head}/attn.png`;
+        const img = document.createElement("img");
+        img.className = "pattern-image";
+        img.src = imgUrl;
+        img.alt = `Pattern for ${headId}`;
+        img.loading = "lazy";
+        img.onerror = () => {
+          img.style.display = "none";
+        };
+        patternGrid.appendChild(img);
+      }
+    }
+
+    if (maxPatterns === 0) {
+      const placeholder = document.createElement("div");
+      placeholder.className = "pattern-image-placeholder";
+      placeholder.textContent = "No patterns";
+      patternGrid.appendChild(placeholder);
+    }
+
+    section.appendChild(patternGrid);
+    patternImages.appendChild(section);
+  }
+}
+
+/**
+ * Show tooltip
+ */
+function showTooltip(event, headId) {
+  const tooltip = gridState.tooltip;
+  const clusterId = window.CLUSTER_STATE.getClusterId(headId);
+
+  tooltip.innerHTML = `
+    <div class="head-id">${headId}</div>
+    <div class="cluster-info">Cluster ${clusterId !== undefined ? clusterId : "?"}</div>
+  `;
+  tooltip.style.display = "block";
+  moveTooltip(event);
+}
+
+/**
+ * Move tooltip to follow cursor
+ */
+function moveTooltip(event) {
+  const tooltip = gridState.tooltip;
+  tooltip.style.left = event.clientX + 12 + "px";
+  tooltip.style.top = event.clientY + 12 + "px";
+}
+
+/**
+ * Hide tooltip
+ */
+function hideTooltip() {
+  gridState.tooltip.style.display = "none";
+}
+
+/**
+ * Update statistics display
+ */
+function updateStats(assignments, nClusters) {
+  const sizes = window.CLUSTER_STATE.getClusterSizes();
+  const sortedSizes = Object.values(sizes).sort((a, b) => b - a);
+
+  const statsEl = document.getElementById("stats");
+  statsEl.innerHTML = `
+    <span><strong>Total Heads:</strong> ${gridState.nHeads}</span>
+    <span><strong>Clusters:</strong> ${nClusters}</span>
+    <span><strong>Largest Cluster:</strong> ${sortedSizes[0]} heads</span>
+    <span><strong>Smallest Cluster:</strong> ${sortedSizes[sortedSizes.length - 1]} heads</span>
+  `;
+}
+
+/**
+ * Update legend display
+ */
+function updateLegend(assignments) {
+  const sizes = window.CLUSTER_STATE.getClusterSizes();
+  const legendEl = document.getElementById("legend");
+
+  const sortedClusters = Object.entries(sizes)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 20);
+
+  legendEl.innerHTML = sortedClusters
+    .map(
+      ([clusterId, count]) => `
+      <div class="legend-item" onclick="selectCluster(${clusterId})">
+        <div class="legend-swatch" style="background: ${window.CLUSTER_STATE.colors[clusterId]}"></div>
+        <span>Cluster ${clusterId}</span>
+        <span class="legend-count">(${count})</span>
+      </div>
+    `,
+    )
+    .join("");
+}
+
+/**
+ * Select all heads in a cluster
+ * @param {number} clusterId - Cluster ID to select
+ */
+function selectCluster(clusterId) {
+  const heads = window.CLUSTER_STATE.getHeadsInCluster(clusterId);
+  // Toggle: if all are selected, deselect; otherwise select all
+  const allSelected = heads.every((h) => gridState.selectedHeads.includes(h));
+
+  if (allSelected) {
+    // Deselect all in this cluster
+    gridState.selectedHeads = gridState.selectedHeads.filter(
+      (h) => !heads.includes(h),
+    );
+  } else {
+    // Add all from this cluster
+    for (const h of heads) {
+      if (!gridState.selectedHeads.includes(h)) {
+        gridState.selectedHeads.push(h);
+      }
+    }
+  }
+
+  updateSelectedCells();
+  updateSidePane();
+}

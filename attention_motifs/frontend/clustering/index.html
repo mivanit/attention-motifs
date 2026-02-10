@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hierarchical Clustering - Attention Heads</title>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
         <!-- begin 'style.css' -->
     <style>
     body {
@@ -47,7 +46,7 @@
     }
     
     .container {
-      max-width: 1600px;
+      max-width: 1800px;
       margin: 0 auto;
       padding: 0 20px 40px;
     }
@@ -125,63 +124,221 @@
       color: #333;
     }
     
-    #dendrogram-container {
+    /* Main content layout */
+    .main-content {
+      display: flex;
+      gap: 20px;
+    }
+    
+    #model-grids-container {
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-content: flex-start;
+    }
+    
+    /* Model box */
+    .model-box {
       background: white;
       border-radius: 8px;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      overflow: hidden;
-      position: relative;
+      padding: 12px;
     }
     
-    #dendrogram {
-      width: 100%;
-      min-height: 600px;
-      display: block;
+    .model-box-header {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+      text-align: center;
     }
     
-    .dendrogram-link {
-      fill: none;
-      stroke-width: 1.5px;
+    .model-grid-wrapper {
+      display: flex;
+      gap: 4px;
+    }
+    
+    .layer-labels {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      padding-top: calc(16px * var(--scale, 1));
+    }
+    
+    .layer-label {
+      font-size: calc(9px * var(--scale, 1));
+      color: #888;
+      height: calc(14px * var(--scale, 1));
+      line-height: calc(14px * var(--scale, 1));
+      margin: calc(0.5px * var(--scale, 1)) 0;
+      text-align: right;
+      padding-right: 4px;
+    }
+    
+    .grid-content {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .head-labels {
+      display: flex;
+      height: calc(16px * var(--scale, 1));
+    }
+    
+    .head-label {
+      font-size: calc(9px * var(--scale, 1));
+      color: #888;
+      width: calc(14px * var(--scale, 1));
+      text-align: center;
+      margin: 0 calc(0.5px * var(--scale, 1));
+    }
+    
+    .model-grid {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .grid-row {
+      display: flex;
+    }
+    
+    .grid-cell {
+      width: calc(14px * var(--scale, 1));
+      height: calc(14px * var(--scale, 1));
+      margin: calc(0.5px * var(--scale, 1));
+      border-radius: 2px;
+      cursor: pointer;
       transition:
-        stroke 0.2s,
-        stroke-width 0.2s;
+        transform 0.1s,
+        box-shadow 0.1s;
     }
     
-    .dendrogram-link:hover {
-      stroke-width: 3px;
+    .grid-cell:hover {
+      transform: scale(1.2);
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     }
     
-    .dendrogram-link.cut-line {
-      stroke: #e53935 !important;
-      stroke-width: 2px;
-      stroke-dasharray: 5, 5;
+    .grid-cell.selected {
+      outline: 2px solid #333;
+      outline-offset: 1px;
     }
     
-    .dendrogram-node {
+    /* Side pane */
+    .side-pane {
+      width: 420px;
+      min-width: 420px;
+      max-height: calc(100vh - 260px);
+      overflow-y: auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .side-pane-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+      position: sticky;
+      top: 0;
+      background: white;
+      z-index: 10;
+    }
+    
+    .side-pane-header h3 {
+      margin: 0;
+      font-size: 16px;
+      color: #333;
+    }
+    
+    .side-pane-header #selected-count {
+      color: #888;
+      font-weight: normal;
+    }
+    
+    .side-pane-header button {
+      padding: 6px 12px;
+      font-size: 13px;
+      background: #f5f5f5;
+      color: #555;
+      border: 1px solid #ddd;
+      border-radius: 4px;
       cursor: pointer;
     }
     
-    .dendrogram-node circle {
-      fill: white;
-      stroke-width: 2px;
-      transition: r 0.2s;
+    .side-pane-header button:hover {
+      background: #eee;
     }
     
-    .dendrogram-node:hover circle {
-      r: 6;
+    #pattern-images {
+      padding: 12px;
     }
     
-    .dendrogram-label {
-      font-size: 10px;
-      fill: #333;
-      pointer-events: none;
+    .pattern-section {
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #eee;
     }
     
-    .dendrogram-label.highlighted {
-      font-weight: bold;
+    .pattern-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    
+    .pattern-section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    
+    .pattern-section-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+    
+    .pattern-section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .pattern-section-cluster {
+      font-size: 12px;
+      color: #888;
+    }
+    
+    .pattern-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 8px;
+    }
+    
+    .pattern-image {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: contain;
+      border-radius: 4px;
+      background: #f5f5f5;
+    }
+    
+    .pattern-image-placeholder {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #f5f5f5;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #aaa;
       font-size: 11px;
     }
     
+    /* Legend */
     .legend {
       background: white;
       padding: 16px 20px;
@@ -222,14 +379,14 @@
     
     /* Tooltip */
     .tooltip {
-      position: absolute;
+      position: fixed;
       background: rgba(0, 0, 0, 0.85);
       color: white;
       padding: 8px 12px;
       border-radius: 4px;
       font-size: 12px;
       pointer-events: none;
-      z-index: 100;
+      z-index: 1000;
       max-width: 300px;
     }
     
@@ -256,6 +413,14 @@
       padding: 60px;
       color: #e53935;
       font-size: 16px;
+    }
+    
+    /* Empty state for side pane */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #888;
+      font-size: 14px;
     }
     
     </style>
@@ -293,15 +458,30 @@
           <span id="cut-height-value">--</span>
         </div>
         <div class="control-group">
-          <button id="reset-zoom">Reset Zoom</button>
-          <button id="export-svg">Export SVG</button>
+          <label for="scale">Scale:</label>
+          <input
+            type="range"
+            id="scale"
+            min="0.5"
+            max="2"
+            value="1"
+            step="0.1"
+          />
+          <span id="scale-value">1.0</span>
         </div>
       </div>
 
       <div class="stats" id="stats"></div>
 
-      <div id="dendrogram-container">
-        <svg id="dendrogram"></svg>
+      <div class="main-content">
+        <div id="model-grids-container"></div>
+        <div id="side-pane" class="side-pane">
+          <div class="side-pane-header">
+            <h3>Selected Heads <span id="selected-count">(0)</span></h3>
+            <button id="clear-selection">Clear</button>
+          </div>
+          <div id="pattern-images"></div>
+        </div>
       </div>
 
       <div class="legend" id="legend"></div>
@@ -435,44 +615,43 @@
     
     </script>
     <!-- end 'clusterState.js' -->
-        <!-- begin 'dendrogram.js' -->
+        <!-- begin 'gridView.js' -->
     <script>
     /**
-     * Dendrogram visualization using D3.js
+     * Grid View visualization for clustering
      *
-     * Renders hierarchical clustering as an interactive dendrogram with:
-     * - Adjustable number of clusters via slider
-     * - Color-coded branches by cluster
-     * - Zoom and pan
-     * - Click to highlight cluster members
+     * Renders model grids with cells colored by cluster assignment.
+     * Supports multi-selection of heads with pattern display in side pane.
      */
     
-    let dendrogramState = {
+    let gridState = {
       linkage: null,
       clsValues: null,
       nHeads: 0,
-      tree: null,
-      svg: null,
-      g: null,
-      zoom: null,
-      width: 0,
-      height: 0,
-      margin: { top: 20, right: 200, bottom: 20, left: 40 },
+      modelConfigs: {},
+      selectedHeads: [],
+      prompts: {},
+      scale: 1.0,
+      patternsBaseUrl: "",
+      tooltip: null,
     };
     
     /**
-     * Initialize the dendrogram visualization
+     * Initialize the grid view visualization
      * @param {Object} config - Configuration object
      */
-    async function initDendrogram(config) {
-      const container = document.getElementById("dendrogram-container");
+    async function initGridView(config) {
+      const container = document.getElementById("model-grids-container");
       container.innerHTML = '<div class="loading">Loading clustering data...</div>';
     
+      gridState.patternsBaseUrl = config.patternsBaseUrl;
+    
       try {
-        // Load metadata and linkage data
-        const [metaResponse, linkageResponse] = await Promise.all([
+        // Load all data in parallel
+        const [metaResponse, linkageResponse, modelsText] = await Promise.all([
           fetch(config.clusteringMetaUrl),
           fetch(config.linkageUrl),
+          fetch(config.modelsUrl).then((r) => r.text()),
         ]);
     
         if (!metaResponse.ok || !linkageResponse.ok) {
@@ -482,111 +661,37 @@
         const meta = await metaResponse.json();
         const linkage = await linkageResponse.json();
     
-        dendrogramState.clsValues = meta.cls_values;
-        dendrogramState.linkage = linkage;
-        dendrogramState.nHeads = meta.cls_values.length;
+        gridState.clsValues = meta.cls_values;
+        gridState.linkage = linkage;
+        gridState.nHeads = meta.cls_values.length;
     
-        // Build tree structure from linkage matrix
-        dendrogramState.tree = buildTree(linkage, meta.cls_values);
-    
-        // Set up the SVG
-        container.innerHTML = "";
-        setupSVG();
+        // Parse model configs from JSONL
+        gridState.modelConfigs = {};
+        for (const line of modelsText.trim().split("\n")) {
+          if (line.trim()) {
+            const cfg = JSON.parse(line);
+            gridState.modelConfigs[cfg.model_name] = {
+              n_layers: cfg.n_layers,
+              n_heads: cfg.n_heads,
+            };
+          }
+        }
     
         // Set up controls
         setupControls(config.defaultNClusters);
     
+        // Set up tooltip
+        setupTooltip();
+    
+        // Set up side pane
+        setupSidePane();
+    
         // Initial render
         updateClusters(config.defaultNClusters);
       } catch (error) {
-        console.error("Error initializing dendrogram:", error);
-        container.innerHTML = `<div class="error">Error loading clustering data: ${error.message}</div>`;
+        console.error("Error initializing grid view:", error);
+        container.innerHTML = `<div class="error">Error loading data: ${error.message}</div>`;
       }
-    }
-    
-    /**
-     * Build a tree structure from scipy's linkage matrix format
-     * @param {number[][]} linkage - Linkage matrix from scipy
-     * @param {string[]} clsValues - Head IDs
-     * @returns {Object} Root node of the tree
-     */
-    function buildTree(linkage, clsValues) {
-      const n = clsValues.length;
-    
-      // Create leaf nodes
-      const nodes = clsValues.map((name, i) => ({
-        id: i,
-        name: name,
-        isLeaf: true,
-        height: 0,
-        children: null,
-      }));
-    
-      // Add internal nodes from linkage matrix
-      // Each row: [idx1, idx2, distance, count]
-      for (let i = 0; i < linkage.length; i++) {
-        const [idx1, idx2, distance, count] = linkage[i];
-        const nodeId = n + i;
-    
-        nodes.push({
-          id: nodeId,
-          name: `cluster_${i}`,
-          isLeaf: false,
-          height: distance,
-          count: count,
-          children: [nodes[Math.floor(idx1)], nodes[Math.floor(idx2)]],
-        });
-      }
-    
-      // Root is the last node
-      return nodes[nodes.length - 1];
-    }
-    
-    /**
-     * Set up the SVG element with zoom behavior
-     */
-    function setupSVG() {
-      const container = document.getElementById("dendrogram-container");
-      const containerRect = container.getBoundingClientRect();
-    
-      // Calculate dimensions based on number of heads
-      const minHeight = 600;
-      const heightPerHead = 15;
-      dendrogramState.height = Math.max(
-        minHeight,
-        dendrogramState.nHeads * heightPerHead +
-          dendrogramState.margin.top +
-          dendrogramState.margin.bottom,
-      );
-      dendrogramState.width = containerRect.width;
-    
-      // Create SVG
-      const svg = d3
-        .select("#dendrogram-container")
-        .append("svg")
-        .attr("id", "dendrogram")
-        .attr("width", dendrogramState.width)
-        .attr("height", dendrogramState.height);
-    
-      // Add zoom behavior
-      dendrogramState.zoom = d3
-        .zoom()
-        .scaleExtent([0.5, 5])
-        .on("zoom", (event) => {
-          dendrogramState.g.attr("transform", event.transform);
-        });
-    
-      svg.call(dendrogramState.zoom);
-    
-      // Create main group for content
-      dendrogramState.g = svg
-        .append("g")
-        .attr(
-          "transform",
-          `translate(${dendrogramState.margin.left},${dendrogramState.margin.top})`,
-        );
-    
-      dendrogramState.svg = svg;
     }
     
     /**
@@ -598,16 +703,16 @@
       const nClustersValue = document.getElementById("n-clusters-value");
       const cutHeightSlider = document.getElementById("cut-height");
       const cutHeightValue = document.getElementById("cut-height-value");
-      const resetZoomBtn = document.getElementById("reset-zoom");
-      const exportSvgBtn = document.getElementById("export-svg");
+      const scaleSlider = document.getElementById("scale");
+      const scaleValue = document.getElementById("scale-value");
     
       // Set max clusters to number of heads
-      nClustersSlider.max = Math.min(dendrogramState.nHeads, 100);
+      nClustersSlider.max = Math.min(gridState.nHeads, 100);
       nClustersSlider.value = defaultNClusters;
       nClustersValue.textContent = defaultNClusters;
     
-      // Get max height from tree
-      const maxHeight = dendrogramState.tree.height;
+      // Get max height from linkage
+      const maxHeight = Math.max(...gridState.linkage.map((row) => row[2]));
       cutHeightSlider.max = maxHeight;
       cutHeightSlider.step = maxHeight / 1000;
     
@@ -625,31 +730,52 @@
         updateClustersByHeight(height);
       });
     
-      // Reset zoom
-      resetZoomBtn.addEventListener("click", () => {
-        dendrogramState.svg
-          .transition()
-          .duration(500)
-          .call(dendrogramState.zoom.transform, d3.zoomIdentity);
+      // Scale slider
+      scaleSlider.addEventListener("input", (e) => {
+        gridState.scale = parseFloat(e.target.value);
+        scaleValue.textContent = gridState.scale.toFixed(1);
+        document
+          .getElementById("model-grids-container")
+          .style.setProperty("--scale", gridState.scale);
+      });
+    }
+    
+    /**
+     * Set up tooltip element
+     */
+    function setupTooltip() {
+      const tooltip = document.createElement("div");
+      tooltip.className = "tooltip";
+      tooltip.style.display = "none";
+      document.body.appendChild(tooltip);
+      gridState.tooltip = tooltip;
+    }
+    
+    /**
+     * Set up side pane interactions
+     */
+    function setupSidePane() {
+      document.getElementById("clear-selection").addEventListener("click", () => {
+        gridState.selectedHeads = [];
+        updateSelectedCells();
+        updateSidePane();
       });
     
-      // Export SVG
-      exportSvgBtn.addEventListener("click", exportSVG);
+      // Initial empty state
+      updateSidePane();
     }
     
     /**
      * Compute cluster assignments by cutting at a specific number of clusters
-     * This mimics scipy's fcluster with criterion='maxclust'
      * @param {number} nClusters - Number of clusters
      * @returns {Object.<string, number>} Map of head ID to cluster ID
      */
     function computeClusters(nClusters) {
-      const linkage = dendrogramState.linkage;
-      const clsValues = dendrogramState.clsValues;
+      const linkage = gridState.linkage;
+      const clsValues = gridState.clsValues;
       const n = clsValues.length;
     
       if (nClusters >= n) {
-        // Each head is its own cluster
         const assignments = {};
         clsValues.forEach((cls, i) => {
           assignments[cls] = i;
@@ -658,14 +784,10 @@
       }
     
       // Find the cut height that gives us the desired number of clusters
-      // Sort merge distances
       const heights = linkage.map((row) => row[2]).sort((a, b) => b - a);
-    
-      // We need (n - nClusters) merges to go from n clusters to nClusters
-      // So we cut just above the (n - nClusters)th highest merge
       const cutHeight = heights[n - nClusters - 1] + 1e-10;
     
-      return computeClustersByHeight(cutHeight);
+      return computeClustersByHeightInternal(cutHeight);
     }
     
     /**
@@ -673,12 +795,12 @@
      * @param {number} cutHeight - Height at which to cut
      * @returns {Object.<string, number>} Map of head ID to cluster ID
      */
-    function computeClustersByHeight(cutHeight) {
-      const linkage = dendrogramState.linkage;
-      const clsValues = dendrogramState.clsValues;
+    function computeClustersByHeightInternal(cutHeight) {
+      const linkage = gridState.linkage;
+      const clsValues = gridState.clsValues;
       const n = clsValues.length;
     
-      // Union-find to track cluster membership
+      // Union-find
       const parent = Array.from({ length: 2 * n - 1 }, (_, i) => i);
     
       function find(x) {
@@ -693,7 +815,6 @@
         parent[find(y)] = newParent;
       }
     
-      // Process merges below the cut height
       for (let i = 0; i < linkage.length; i++) {
         const [idx1, idx2, distance] = linkage[i];
         if (distance <= cutHeight) {
@@ -701,11 +822,10 @@
         }
       }
     
-      // Assign cluster IDs
       const rootToCluster = {};
       let nextCluster = 0;
-    
       const assignments = {};
+    
       for (let i = 0; i < n; i++) {
         const root = find(i);
         if (!(root in rootToCluster)) {
@@ -724,7 +844,7 @@
     function updateClusters(nClusters) {
       const assignments = computeClusters(nClusters);
       window.CLUSTER_STATE.setAssignments(assignments, nClusters);
-      renderDendrogram(assignments);
+      renderModelGrids();
       updateStats(assignments, nClusters);
       updateLegend(assignments);
     }
@@ -734,141 +854,292 @@
      * @param {number} cutHeight - Height at which to cut
      */
     function updateClustersByHeight(cutHeight) {
-      const assignments = computeClustersByHeight(cutHeight);
+      const assignments = computeClustersByHeightInternal(cutHeight);
       const nClusters = new Set(Object.values(assignments)).size;
     
-      // Update n-clusters slider to match
       document.getElementById("n-clusters").value = nClusters;
       document.getElementById("n-clusters-value").textContent = nClusters;
     
       window.CLUSTER_STATE.setAssignments(assignments, nClusters);
-      renderDendrogram(assignments, cutHeight);
+      renderModelGrids();
       updateStats(assignments, nClusters);
       updateLegend(assignments);
     }
     
     /**
-     * Render the dendrogram with current cluster assignments
-     * @param {Object.<string, number>} assignments - Cluster assignments
-     * @param {number} [cutHeight] - Optional cut height to draw
+     * Render all model grids
      */
-    function renderDendrogram(assignments, cutHeight = null) {
-      const g = dendrogramState.g;
-      const tree = dendrogramState.tree;
-      const margin = dendrogramState.margin;
+    function renderModelGrids() {
+      const container = document.getElementById("model-grids-container");
+      container.innerHTML = "";
+      container.style.setProperty("--scale", gridState.scale);
     
-      const innerWidth = dendrogramState.width - margin.left - margin.right;
-      const innerHeight = dendrogramState.height - margin.top - margin.bottom;
+      for (const modelName of Object.keys(gridState.modelConfigs)) {
+        renderModelBox(container, modelName);
+      }
+    }
     
-      // Clear previous content
-      g.selectAll("*").remove();
+    /**
+     * Render a single model box
+     * @param {HTMLElement} container - Parent container
+     * @param {string} modelName - Model name
+     */
+    function renderModelBox(container, modelName) {
+      const config = gridState.modelConfigs[modelName];
+      const { n_layers, n_heads } = config;
     
-      // Create D3 hierarchy
-      const root = d3.hierarchy(tree, (d) => d.children);
+      const box = document.createElement("div");
+      box.className = "model-box";
     
-      // Use cluster layout
-      const cluster = d3.cluster().size([innerHeight, innerWidth - 100]);
-      cluster(root);
+      // Header
+      const header = document.createElement("div");
+      header.className = "model-box-header";
+      header.textContent = modelName;
+      box.appendChild(header);
     
-      // Scale x by height for proper dendrogram proportions
-      const maxHeight = tree.height;
-      const xScale = d3
-        .scaleLinear()
-        .domain([0, maxHeight])
-        .range([0, innerWidth - 100]);
+      // Grid wrapper (layer labels + grid content)
+      const wrapper = document.createElement("div");
+      wrapper.className = "model-grid-wrapper";
     
-      // Assign x position based on height
-      root.each((d) => {
-        d.y = xScale(d.data.height);
+      // Layer labels
+      const layerLabels = document.createElement("div");
+      layerLabels.className = "layer-labels";
+      for (let l = 0; l < n_layers; l++) {
+        const label = document.createElement("div");
+        label.className = "layer-label";
+        label.textContent = `L${l}`;
+        layerLabels.appendChild(label);
+      }
+      wrapper.appendChild(layerLabels);
+    
+      // Grid content (head labels + grid)
+      const gridContent = document.createElement("div");
+      gridContent.className = "grid-content";
+    
+      // Head labels
+      const headLabels = document.createElement("div");
+      headLabels.className = "head-labels";
+      for (let h = 0; h < n_heads; h++) {
+        const label = document.createElement("div");
+        label.className = "head-label";
+        label.textContent = `${h}`;
+        headLabels.appendChild(label);
+      }
+      gridContent.appendChild(headLabels);
+    
+      // Grid
+      const grid = document.createElement("div");
+      grid.className = "model-grid";
+    
+      for (let l = 0; l < n_layers; l++) {
+        const row = document.createElement("div");
+        row.className = "grid-row";
+    
+        for (let h = 0; h < n_heads; h++) {
+          const headId = `${modelName}:L${l}:H${h}`;
+          const cell = document.createElement("div");
+          cell.className = "grid-cell";
+          cell.dataset.headId = headId;
+    
+          // Set color from cluster state
+          const color = window.CLUSTER_STATE.getColor(headId);
+          cell.style.backgroundColor = color;
+    
+          // Check if selected
+          if (gridState.selectedHeads.includes(headId)) {
+            cell.classList.add("selected");
+          }
+    
+          // Click handler
+          cell.addEventListener("click", () => toggleHeadSelection(headId));
+    
+          // Tooltip handlers
+          cell.addEventListener("mouseenter", (e) => showTooltip(e, headId));
+          cell.addEventListener("mousemove", (e) => moveTooltip(e));
+          cell.addEventListener("mouseleave", () => hideTooltip());
+    
+          row.appendChild(cell);
+        }
+    
+        grid.appendChild(row);
+      }
+    
+      gridContent.appendChild(grid);
+      wrapper.appendChild(gridContent);
+      box.appendChild(wrapper);
+      container.appendChild(box);
+    }
+    
+    /**
+     * Toggle head selection
+     * @param {string} headId - Head ID to toggle
+     */
+    function toggleHeadSelection(headId) {
+      const idx = gridState.selectedHeads.indexOf(headId);
+      if (idx >= 0) {
+        gridState.selectedHeads.splice(idx, 1);
+      } else {
+        gridState.selectedHeads.push(headId);
+      }
+      updateSelectedCells();
+      updateSidePane();
+    }
+    
+    /**
+     * Update selected cell styling
+     */
+    function updateSelectedCells() {
+      document.querySelectorAll(".grid-cell").forEach((cell) => {
+        const headId = cell.dataset.headId;
+        if (gridState.selectedHeads.includes(headId)) {
+          cell.classList.add("selected");
+        } else {
+          cell.classList.remove("selected");
+        }
       });
     
-      // Draw links (elbow connectors)
-      g.selectAll(".dendrogram-link")
-        .data(root.links())
-        .enter()
-        .append("path")
-        .attr("class", "dendrogram-link")
-        .attr("d", elbow)
-        .attr("stroke", (d) => getLinkColor(d.target, assignments));
+      // Update count
+      document.getElementById("selected-count").textContent =
+        `(${gridState.selectedHeads.length})`;
+    }
     
-      // Draw cut line if specified
-      if (cutHeight !== null) {
-        const cutX = xScale(cutHeight);
-        g.append("line")
-          .attr("class", "cut-line")
-          .attr("x1", cutX)
-          .attr("y1", 0)
-          .attr("x2", cutX)
-          .attr("y2", innerHeight)
-          .attr("stroke", "#e53935")
-          .attr("stroke-width", 2)
-          .attr("stroke-dasharray", "5,5");
+    /**
+     * Update side pane with selected heads' patterns
+     */
+    async function updateSidePane() {
+      const patternImages = document.getElementById("pattern-images");
+      const selectedCount = document.getElementById("selected-count");
+    
+      selectedCount.textContent = `(${gridState.selectedHeads.length})`;
+    
+      if (gridState.selectedHeads.length === 0) {
+        patternImages.innerHTML =
+          '<div class="empty-state">Click on cells to select heads and view their attention patterns.</div>';
+        return;
       }
     
-      // Draw leaf labels
-      const leaves = root.leaves();
-      g.selectAll(".dendrogram-label")
-        .data(leaves)
-        .enter()
-        .append("text")
-        .attr("class", "dendrogram-label")
-        .attr("x", (d) => d.y + 5)
-        .attr("y", (d) => d.x)
-        .attr("dy", "0.35em")
-        .text((d) => formatHeadId(d.data.name))
-        .style("fill", (d) => window.CLUSTER_STATE.getColor(d.data.name))
-        .on("click", (event, d) => {
-          highlightCluster(assignments[d.data.name]);
-        })
-        .append("title")
-        .text((d) => d.data.name);
-    }
+      patternImages.innerHTML = "";
     
-    /**
-     * Generate elbow path for dendrogram links
-     */
-    function elbow(d) {
-      return `M${d.source.y},${d.source.x}H${d.target.y}V${d.target.x}`;
-    }
+      for (const headId of gridState.selectedHeads) {
+        const section = document.createElement("div");
+        section.className = "pattern-section";
     
-    /**
-     * Get link color based on cluster of target node
-     */
-    function getLinkColor(node, assignments) {
-      // For internal nodes, get cluster of any descendant leaf
-      if (!node.data.isLeaf) {
-        const leaf = node.leaves()[0];
-        if (leaf) {
-          return window.CLUSTER_STATE.getColor(leaf.data.name);
+        // Header with color swatch
+        const header = document.createElement("div");
+        header.className = "pattern-section-header";
+    
+        const colorSwatch = document.createElement("div");
+        colorSwatch.className = "pattern-section-color";
+        colorSwatch.style.backgroundColor = window.CLUSTER_STATE.getColor(headId);
+        header.appendChild(colorSwatch);
+    
+        const title = document.createElement("span");
+        title.className = "pattern-section-title";
+        title.textContent = headId;
+        header.appendChild(title);
+    
+        const clusterId = window.CLUSTER_STATE.getClusterId(headId);
+        if (clusterId !== undefined) {
+          const clusterLabel = document.createElement("span");
+          clusterLabel.className = "pattern-section-cluster";
+          clusterLabel.textContent = `Cluster ${clusterId}`;
+          header.appendChild(clusterLabel);
         }
+    
+        section.appendChild(header);
+    
+        // Pattern grid
+        const patternGrid = document.createElement("div");
+        patternGrid.className = "pattern-grid";
+    
+        // Load prompts for this model if not cached
+        const [modelName, layerPart, headPart] = headId.split(":");
+        const layer = layerPart.substring(1);
+        const head = headPart.substring(1);
+    
+        if (!gridState.prompts[modelName]) {
+          try {
+            const promptsUrl = `${gridState.patternsBaseUrl}/${modelName}/prompts.jsonl`;
+            const response = await fetch(promptsUrl);
+            if (response.ok) {
+              const text = await response.text();
+              gridState.prompts[modelName] = text
+                .trim()
+                .split("\n")
+                .filter((line) => line.trim())
+                .map((line) => JSON.parse(line));
+            } else {
+              gridState.prompts[modelName] = [];
+            }
+          } catch (e) {
+            console.warn(`Failed to load prompts for ${modelName}:`, e);
+            gridState.prompts[modelName] = [];
+          }
+        }
+    
+        // Show up to 6 patterns
+        const prompts = gridState.prompts[modelName] || [];
+        const maxPatterns = Math.min(6, prompts.length);
+    
+        for (let i = 0; i < maxPatterns; i++) {
+          const prompt = prompts[i];
+          const hash = prompt.hash || prompt.prompt_hash;
+    
+          if (hash) {
+            const imgUrl = `${gridState.patternsBaseUrl}/${modelName}/prompts/${hash}/L${layer}/H${head}/attn.png`;
+            const img = document.createElement("img");
+            img.className = "pattern-image";
+            img.src = imgUrl;
+            img.alt = `Pattern for ${headId}`;
+            img.loading = "lazy";
+            img.onerror = () => {
+              img.style.display = "none";
+            };
+            patternGrid.appendChild(img);
+          }
+        }
+    
+        if (maxPatterns === 0) {
+          const placeholder = document.createElement("div");
+          placeholder.className = "pattern-image-placeholder";
+          placeholder.textContent = "No patterns";
+          patternGrid.appendChild(placeholder);
+        }
+    
+        section.appendChild(patternGrid);
+        patternImages.appendChild(section);
       }
-      return window.CLUSTER_STATE.getColor(node.data.name);
     }
     
     /**
-     * Format head ID for display (shorter version)
+     * Show tooltip
      */
-    function formatHeadId(headId) {
-      // e.g., "gpt2-small:L5:H3" -> "gpt2-sm L5H3"
-      const parts = headId.split(":");
-      if (parts.length === 3) {
-        const model = parts[0].replace("-small", "-sm").replace("-medium", "-md");
-        return `${model} ${parts[1]}${parts[2]}`;
-      }
-      return headId;
+    function showTooltip(event, headId) {
+      const tooltip = gridState.tooltip;
+      const clusterId = window.CLUSTER_STATE.getClusterId(headId);
+    
+      tooltip.innerHTML = `
+        <div class="head-id">${headId}</div>
+        <div class="cluster-info">Cluster ${clusterId !== undefined ? clusterId : "?"}</div>
+      `;
+      tooltip.style.display = "block";
+      moveTooltip(event);
     }
     
     /**
-     * Highlight all heads in a cluster
+     * Move tooltip to follow cursor
      */
-    function highlightCluster(clusterId) {
-      const heads = window.CLUSTER_STATE.getHeadsInCluster(clusterId);
-      console.log(`Cluster ${clusterId}:`, heads);
+    function moveTooltip(event) {
+      const tooltip = gridState.tooltip;
+      tooltip.style.left = event.clientX + 12 + "px";
+      tooltip.style.top = event.clientY + 12 + "px";
+    }
     
-      // Highlight labels
-      dendrogramState.g
-        .selectAll(".dendrogram-label")
-        .classed("highlighted", (d) => heads.includes(d.data.name));
+    /**
+     * Hide tooltip
+     */
+    function hideTooltip() {
+      gridState.tooltip.style.display = "none";
     }
     
     /**
@@ -880,7 +1151,7 @@
     
       const statsEl = document.getElementById("stats");
       statsEl.innerHTML = `
-        <span><strong>Total Heads:</strong> ${dendrogramState.nHeads}</span>
+        <span><strong>Total Heads:</strong> ${gridState.nHeads}</span>
         <span><strong>Clusters:</strong> ${nClusters}</span>
         <span><strong>Largest Cluster:</strong> ${sortedSizes[0]} heads</span>
         <span><strong>Smallest Cluster:</strong> ${sortedSizes[sortedSizes.length - 1]} heads</span>
@@ -894,15 +1165,14 @@
       const sizes = window.CLUSTER_STATE.getClusterSizes();
       const legendEl = document.getElementById("legend");
     
-      // Sort clusters by size (descending)
       const sortedClusters = Object.entries(sizes)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 20); // Show top 20 clusters
+        .slice(0, 20);
     
       legendEl.innerHTML = sortedClusters
         .map(
           ([clusterId, count]) => `
-          <div class="legend-item" onclick="highlightCluster(${clusterId})">
+          <div class="legend-item" onclick="selectCluster(${clusterId})">
             <div class="legend-swatch" style="background: ${window.CLUSTER_STATE.colors[clusterId]}"></div>
             <span>Cluster ${clusterId}</span>
             <span class="legend-count">(${count})</span>
@@ -913,26 +1183,34 @@
     }
     
     /**
-     * Export the current SVG as a file
+     * Select all heads in a cluster
+     * @param {number} clusterId - Cluster ID to select
      */
-    function exportSVG() {
-      const svgEl = document.getElementById("dendrogram");
-      const serializer = new XMLSerializer();
-      const svgStr = serializer.serializeToString(svgEl);
+    function selectCluster(clusterId) {
+      const heads = window.CLUSTER_STATE.getHeadsInCluster(clusterId);
+      // Toggle: if all are selected, deselect; otherwise select all
+      const allSelected = heads.every((h) => gridState.selectedHeads.includes(h));
     
-      const blob = new Blob([svgStr], { type: "image/svg+xml" });
-      const url = URL.createObjectURL(blob);
+      if (allSelected) {
+        // Deselect all in this cluster
+        gridState.selectedHeads = gridState.selectedHeads.filter(
+          (h) => !heads.includes(h),
+        );
+      } else {
+        // Add all from this cluster
+        for (const h of heads) {
+          if (!gridState.selectedHeads.includes(h)) {
+            gridState.selectedHeads.push(h);
+          }
+        }
+      }
     
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "dendrogram.svg";
-      a.click();
-    
-      URL.revokeObjectURL(url);
+      updateSelectedCells();
+      updateSidePane();
     }
     
     </script>
-    <!-- end 'dendrogram.js' -->
+    <!-- end 'gridView.js' -->
     <script>
       // Initialize with config from URL or defaults
       const urlParams = new URLSearchParams(window.location.search);
@@ -942,11 +1220,13 @@
           "../../features/clustering/clustering_meta.json",
         linkageUrl:
           urlParams.get("linkage") || "../../features/clustering/linkage.json",
+        modelsUrl: urlParams.get("models") || "../../patterns/models.jsonl",
+        patternsBaseUrl: urlParams.get("patterns") || "../../patterns",
         defaultNClusters: parseInt(urlParams.get("n_clusters") || "10"),
       };
 
-      // Initialize dendrogram
-      initDendrogram(config);
+      // Initialize grid view
+      initGridView(config);
     </script>
   </body>
 </html>
