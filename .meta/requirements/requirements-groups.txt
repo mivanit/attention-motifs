@@ -25,6 +25,7 @@ attrs==25.4.0
     #   igittigitt
     #   jsonschema
     #   referencing
+basedpyright==1.38.0
 beartype==0.14.1
     # via
     #   attention-motifs
@@ -274,6 +275,8 @@ nest-asyncio==1.6.0
     # via ipykernel
 networkx==3.6.1
     # via torch
+nodejs-wheel-binaries==24.13.1
+    # via basedpyright
 numba==0.63.1
     # via
     #   pynndescent
@@ -576,6 +579,7 @@ triton==3.6.0 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
 trnbl==0.1.1
     # via attention-motifs
+ty==0.0.17
 typeguard==4.4.2
     # via
     #   attention-motifs

@@ -71,6 +71,8 @@ dependencies = [
 		"pytest-playwright>=0.6.2",
 		# type checking
 		"mypy>=1.0.1",
+		"ty",
+		"basedpyright",
 		# docs
 		'pdoc>=14.6.0',
 		# tomli since no tomlib in python < 3.1
