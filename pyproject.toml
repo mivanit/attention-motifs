@@ -58,7 +58,7 @@ dependencies = [
 
 
 [dependency-groups]
-	dev = [	
+	dev = [
 		# lmcat
 		"lmcat>=0.2.0",
 		"nbconvert",
@@ -67,11 +67,13 @@ dependencies = [
 		# coverage
 		"pytest-cov>=4.1.0",
 		"coverage-badge>=1.1.0",
+		# frontend testing
+		"pytest-playwright>=0.6.2",
 		# type checking
 		"mypy>=1.0.1",
-		# docs	
+		# docs
 		'pdoc>=14.6.0',
-		# tomli since no tomlib in python < 3.1		
+		# tomli since no tomlib in python < 3.1
 		"tomli>=2.1.0; python_version < '3.11'",
 	]
 	lint = [

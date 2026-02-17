@@ -1540,3 +1540,15 @@ am-server-embed: am-frontend-bundle
 am-server-patternlens:
 	@echo "start the pattern lens server"
 	$(PYTHON) -m pattern_lens.server --rewrite-index --path $(DEMO_DATA)
+
+# ~~~~~ frontend integration tests ~~~~~
+.PHONY: am-test-frontend
+am-test-frontend:
+	@echo "run frontend integration tests with Playwright"
+	$(PYTHON) -m pytest $(TESTS_DIR)/test_frontend.py -v --browser chromium $(PYTEST_OPTIONS)
+
+.PHONY: am-test-frontend-install
+am-test-frontend-install:
+	@echo "install Playwright browsers"
+	$(PYTHON) -m playwright install chromium
+# ~~~~~ end frontend integration tests ~~~~~
