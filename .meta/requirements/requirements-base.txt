@@ -11,6 +11,8 @@ aiohttp==3.13.3
     # via fsspec
 aiosignal==1.4.0
     # via aiohttp
+annotated-doc==0.0.4
+    # via typer
 annotated-types==0.7.0
     # via pydantic
 anyio==4.12.1
@@ -43,7 +45,7 @@ charset-normalizer==3.4.4
     # via requests
 click==8.3.1
     # via
-    #   typer-slim
+    #   typer
     #   wandb
 colorama==0.4.6 ; sys_platform == 'win32'
     # via
@@ -58,7 +60,7 @@ contourpy==1.3.3
     # via matplotlib
 cuda-bindings==12.9.4 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-cuda-pathfinder==1.3.3 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+cuda-pathfinder==1.3.4 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via cuda-bindings
 cycler==0.12.1
     # via matplotlib
@@ -82,7 +84,7 @@ fancy-einsum==0.0.3
     # via transformer-lens
 fastjsonschema==2.21.2
     # via nbformat
-filelock==3.20.3
+filelock==3.24.2
     # via
     #   datasets
     #   huggingface-hub
@@ -154,7 +156,7 @@ joblib==1.5.3
     # via
     #   pynndescent
     #   scikit-learn
-js-embedding-vis @ git+https://github.com/mivanit/js-embedding-vis@93acda2d1874572087d20c0302a45d6b5523622e
+js-embedding-vis @ git+https://github.com/mivanit/js-embedding-vis@307609fc81779b63f995fe7a5f814017efa759fc
     # via attention-motifs
 jsonschema==4.26.0
     # via nbformat
@@ -288,7 +290,12 @@ packaging==26.0
     #   tensorboard
     #   transformers
     #   wandb
-pandas==2.3.3
+pandas==2.3.3 ; python_full_version >= '3.14'
+    # via
+    #   datasets
+    #   pattern-lens
+    #   transformer-lens
+pandas==3.0.1 ; python_full_version < '3.14'
     # via
     #   datasets
     #   pattern-lens
@@ -299,12 +306,12 @@ pattern-lens @ git+https://github.com/mivanit/pattern-lens@61adc0e68f97cb8ce65f8
     # via attention-motifs
 pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
     # via ipython
-pillow==12.1.0
+pillow==12.1.1
     # via
     #   matplotlib
     #   pattern-lens
     #   tensorboard
-platformdirs==4.5.1
+platformdirs==4.9.2
     # via
     #   jupyter-core
     #   wandb
@@ -332,7 +339,7 @@ ptyprocess==0.7.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
-pyarrow==23.0.0
+pyarrow==23.0.1
     # via datasets
 pycparser==3.0 ; implementation_name == 'pypy'
     # via cffi
@@ -356,7 +363,7 @@ python-dateutil==2.9.0.post0
     #   jupyter-client
     #   matplotlib
     #   pandas
-pytz==2025.2
+pytz==2025.2 ; python_full_version >= '3.14'
     # via pandas
 pyyaml==6.0.3
     # via
@@ -381,7 +388,9 @@ requests==2.32.5
     #   datasets
     #   wandb
 rich==14.3.2
-    # via transformer-lens
+    # via
+    #   transformer-lens
+    #   typer
 rpds-py==0.30.0
     # via
     #   jsonschema
@@ -403,14 +412,16 @@ scipy==1.17.0
     #   umap-learn
 sentencepiece==0.2.1
     # via transformer-lens
-sentry-sdk==2.52.0
+sentry-sdk==2.53.0
     # via wandb
 setuptools==82.0.0
     # via
     #   tensorboard
     #   torch
 shellingham==1.5.4
-    # via huggingface-hub
+    # via
+    #   huggingface-hub
+    #   typer
 six==1.17.0
     # via python-dateutil
 smmap==5.0.2
@@ -456,11 +467,11 @@ traitlets==5.14.3
     #   jupyter-core
     #   matplotlib-inline
     #   nbformat
-transformer-lens @ git+https://github.com/TransformerLensOrg/TransformerLens@e93daf9699eecf623a8382edce4e0949bad3cfcf
+transformer-lens @ git+https://github.com/TransformerLensOrg/TransformerLens@86be1107e7456e0c70ab6259710347a7aa8e8c87
     # via
     #   attention-motifs
     #   pattern-lens
-transformers==5.1.0
+transformers==5.2.0
     # via
     #   attention-motifs
     #   transformer-lens
@@ -477,7 +488,9 @@ typeguard==4.4.2
     #   jaxtyping
     #   pattern-lens
     #   transformer-lens
-typer-slim==0.21.1
+typer==0.24.0
+    # via typer-slim
+typer-slim==0.24.0
     # via
     #   huggingface-hub
     #   transformers
@@ -496,9 +509,8 @@ typing-extensions==4.12.2
     #   torch
     #   transformer-lens
     #   typeguard
-    #   typer-slim
     #   wandb
-tzdata==2025.3
+tzdata==2025.3 ; python_full_version >= '3.14' or sys_platform == 'emscripten' or sys_platform == 'win32'
     # via pandas
 umap-learn==0.5.11
     # via attention-motifs
@@ -506,7 +518,7 @@ urllib3==2.6.3
     # via
     #   requests
     #   sentry-sdk
-wandb==0.24.2
+wandb==0.25.0
     # via transformer-lens
 wcwidth==0.6.0
     # via prompt-toolkit
