@@ -56,15 +56,16 @@ def http_server(ensure_pipeline_output: Path) -> Generator[str, None, None]:
 	"""
 	server_dir: Path = ensure_pipeline_output
 
-	def handler_factory(
-		*args: object, **kwargs: object
-	) -> QuietHTTPRequestHandler:
+	def handler_factory(*args: object, **kwargs: object) -> QuietHTTPRequestHandler:
 		return QuietHTTPRequestHandler(
-			*args, directory=str(server_dir), **kwargs  # type: ignore[arg-type]
+			*args,
+			directory=str(server_dir),
+			**kwargs,  # type: ignore[arg-type]
 		)
 
 	httpd: socketserver.TCPServer = socketserver.TCPServer(
-		("", HTTP_SERVER_PORT), handler_factory  # type: ignore[arg-type]
+		("", HTTP_SERVER_PORT),
+		handler_factory,  # type: ignore[arg-type]
 	)
 
 	# Run server in background thread
