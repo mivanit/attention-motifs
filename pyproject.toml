@@ -15,19 +15,19 @@ dependencies = [
     "jaxtyping>=0.2.11",
 	"einops>=0.8.0",
     "tqdm>=4.66.5",
-    "pandas>=2.2.2",
+    # "pandas>=2.2.2",
 	"polars",
     "scipy>=1.14.1",
-	"numba",
-	"POT>=0.9.5",
+	# "numba",
+	# "POT>=0.9.5",
     # "scikit-learn>=1.3",
 	"umap-learn>=0.5.7",
 	# plotting
 	"plotly",
     "matplotlib>=3.8.0",
-    "pillow>=11.0.0",
-	"dash>=3.0.1",
-	"beautifulsoup4",
+    # "pillow>=11.0.0",
+	# "dash>=3.0.1",
+	# "beautifulsoup4",
     # jupyter
     "ipykernel>=6.29.5",
     "ipywidgets>=8.1.5",
@@ -35,7 +35,7 @@ dependencies = [
     # typing
     "beartype>=0.14.1",
 	# symbolic regression
-	"pysr>=1.3.1",
+	# "pysr>=1.3.1",
     # custom utils
     "muutils>=0.8.9",
 	"zanj>=0.3.1",
