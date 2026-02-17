@@ -761,6 +761,11 @@ am-pipeline-test:
 	@echo "run the whole pipeline with test data"
 	rm -rf tests/.temp/ || true
 	$(MAKE) am-pipeline PIPELINE_CFG_PATH=$(TEST_CONFIG)
+	touch tests/.temp/.pipeline_complete
+
+# Marker file for test pipeline completion
+tests/.temp/.pipeline_complete:
+	$(MAKE) am-pipeline-test
 
 
 # display stuff
@@ -819,7 +824,7 @@ am-server-patternlens:
 
 # ~~~~~ frontend integration tests ~~~~~
 .PHONY: am-test-frontend
-am-test-frontend:
+am-test-frontend: tests/.temp/.pipeline_complete
 	@echo "run frontend integration tests with Playwright"
 	$(PYTHON) -m pytest $(TESTS_DIR)/test_frontend.py -v --browser chromium $(PYTEST_OPTIONS)
 

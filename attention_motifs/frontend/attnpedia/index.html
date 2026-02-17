@@ -4087,13 +4087,13 @@
             this.cluster_stats = null;
             return;
           }
-          const sizes = await this.clustering.getClusterSizes();
+          const sizesObj = await this.clustering.getClusterSizes();
+          // getClusterSizes returns an object {clusterId: count}, convert to array
+          const sizes = Object.values(sizesObj);
           if (!sizes || sizes.length === 0) {
             this.cluster_stats = null;
             return;
           }
-          // Sort sizes descending and format as compact string
-          const sortedSizes = [...sizes].sort((a, b) => b - a);
           const minSize = Math.min(...sizes);
           const maxSize = Math.max(...sizes);
           const avgSize = (sizes.reduce((a, b) => a + b, 0) / sizes.length).toFixed(
