@@ -171,14 +171,8 @@ exclude = ["__pycache__"]
 	exports = [
 		# no groups, no extras, just the base dependencies
 		{ name = "base", groups = false, extras = false },
-		# all groups
-		{ name = "groups", groups = true, extras = false },
-		# only the lint group -- custom options for this
-		{ name = "lint", options = ["--only-group", "lint"] },
-		# # all groups and extras
+		# all groups and extras
 		{ name = "all", filename="requirements.txt", groups = true, extras=true },
-		# # all groups and extras, a different way
-		{ name = "all", groups = true, options = ["--all-extras"] },
 	]
 
 [tool.makefile.inline-todo]
