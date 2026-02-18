@@ -110,7 +110,7 @@ DEFAULT_VIS_CONFIGS: dict[str, dict[str, Any]] = dict(
 			"middleClick": {
 				"enabled": True,
 				"title": "{activation.cls}",
-				"content": '<img src="../../../patterns/{activation.model}/prompts/{activation.prompt}/L{activation.layer}/H{activation.head}/attn.png" style="max-width: 300px; max-height: 300px;" />',
+				"content": '<img src="../../../patterns/{activation.model}/prompts/{activation.prompt}/L{activation.layer}/H{activation.head}/attn.png" style="width: 300px; height: 300px; image-rendering: pixelated;" draggable="false" />',
 			},
 		},
 	),
