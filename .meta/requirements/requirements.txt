@@ -292,7 +292,10 @@ numpy==1.26.4
     #   jaxtyping
     #   matplotlib
     #   numba
+    #   numpy-typing-compat
+    #   optype
     #   pandas
+    #   pandas-stubs
     #   pattern-lens
     #   scikit-learn
     #   scipy
@@ -302,6 +305,8 @@ numpy==1.26.4
     #   trnbl
     #   umap-learn
     #   zanj
+numpy-typing-compat==20251206.1.25
+    # via optype
 nvidia-cublas-cu12==12.8.4.1 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via
     #   nvidia-cudnn-cu12
@@ -341,6 +346,8 @@ nvidia-nvshmem-cu12==3.4.5 ; platform_machine == 'x86_64' and sys_platform == 'l
     # via torch
 nvidia-nvtx-cu12==12.8.90 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
+optype==0.15.0
+    # via scipy-stubs
 packaging==26.0
     # via
     #   accelerate
@@ -364,6 +371,7 @@ pandas==3.0.1 ; python_full_version < '3.14'
     #   datasets
     #   pattern-lens
     #   transformer-lens
+pandas-stubs==3.0.0.260204
 pandocfilters==1.5.1
     # via nbconvert
 parso==0.8.6
@@ -506,6 +514,7 @@ scipy==1.17.0
     #   pynndescent
     #   scikit-learn
     #   umap-learn
+scipy-stubs==1.17.0.2
 sentencepiece==0.2.1
     # via transformer-lens
 sentry-sdk==2.53.0
@@ -613,6 +622,7 @@ typing-extensions==4.12.2
     #   ipython
     #   jaxtyping
     #   mypy
+    #   optype
     #   pydantic
     #   pydantic-core
     #   pyee
