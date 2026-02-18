@@ -99,8 +99,8 @@ def main() -> None:
 	export_parser.add_argument(
 		"--min-cluster-size",
 		type=int,
-		default=None,
-		help="Minimum cluster size; smaller clusters get merged into 'misc'",
+		default=0,
+		help="Minimum cluster size; smaller clusters get merged into 'misc' (0 = disabled)",
 	)
 	export_parser.set_defaults(func=export_command)
 

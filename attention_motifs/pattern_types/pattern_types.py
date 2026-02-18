@@ -267,15 +267,16 @@ class PatternTypes:
 			cut_height=cut_height,
 		)
 
-		# Merge small clusters into misc if min_cluster_size specified
-		if min_cluster_size is not None and min_cluster_size > 1:
+		# Merge small clusters into misc if min_cluster_size > 0
+		small_clusters: set[int] = set()
+		if min_cluster_size is not None and min_cluster_size > 0:
 			# Count cluster sizes
 			cluster_counts: dict[int, int] = {}
 			for cluster_id in assignments.values():
 				cluster_counts[cluster_id] = cluster_counts.get(cluster_id, 0) + 1
 
 			# Find small clusters
-			small_clusters: set[int] = {
+			small_clusters = {
 				cid for cid, count in cluster_counts.items() if count < min_cluster_size
 			}
 
@@ -317,7 +318,8 @@ class PatternTypes:
 		types: list[PatternType] = []
 		for i in sorted(cluster_ids):
 			if i == cls.MISC_CLUSTER_ID:
-				types.append(PatternType(id=i, name="misc", description="Small clusters merged together"))
+				merged_ids: str = ", ".join(str(c) for c in sorted(small_clusters))
+				types.append(PatternType(id=i, name="misc", description=f"Merged from clusters: {merged_ids}"))
 			else:
 				types.append(PatternType(id=i, name="none", description="none"))
 

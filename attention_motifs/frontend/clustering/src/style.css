@@ -77,6 +77,10 @@ h1 {
   width: 150px;
 }
 
+.clustering-controls input[type="range"] {
+  width: 250px;
+}
+
 .control-group span {
   font-size: 14px;
   font-weight: 600;
@@ -136,6 +140,70 @@ h1 {
   outline: none;
   border-color: #1565c0;
   box-shadow: 0 0 0 2px rgba(21, 101, 192, 0.2);
+}
+
+/* Separate control boxes */
+.clustering-controls {
+  margin-bottom: 10px;
+}
+
+.display-controls {
+  position: relative;
+}
+
+/* Help icon with tooltip */
+.help-icon {
+  cursor: help;
+  font-size: 14px;
+  margin-left: auto;
+  padding: 4px;
+  position: relative;
+}
+
+.help-tooltip {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: #333;
+  color: #fff;
+  padding: 12px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 11px;
+  white-space: pre;
+  max-height: 400px;
+  max-width: 500px;
+  overflow: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.help-icon:hover .help-tooltip {
+  display: block;
+}
+
+/* Family row container for "By Family" mode */
+.family-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.family-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.family-label {
+  width: 100%;
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 4px;
 }
 
 .stats {
@@ -268,6 +336,28 @@ h1 {
   color: #333;
   margin-bottom: 8px;
   text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+
+.model-help-icon {
+  cursor: help;
+  font-size: 12px;
+  padding: 2px;
+  position: relative;
+  opacity: 0.6;
+}
+
+.model-help-icon:hover {
+  opacity: 1;
+}
+
+.model-help-icon .help-tooltip {
+  right: auto;
+  left: 100%;
+  top: 0;
 }
 
 .model-grid-wrapper {
@@ -535,4 +625,10 @@ h1 {
   font-size: 12px;
   color: #555;
   font-weight: 500;
+}
+
+.top-clusters-ellipsis {
+  font-size: 12px;
+  color: #888;
+  font-style: italic;
 }

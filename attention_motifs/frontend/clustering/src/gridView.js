@@ -24,6 +24,7 @@ let gridState = {
   modelSizes: {},
   modelOrder: "data",
   originalModelOrder: [],
+  modelDataFrame: null,
 };
 
 /**
@@ -159,15 +160,26 @@ async function initGridView(config) {
     // Store original model order
     gridState.originalModelOrder = Object.keys(gridState.modelConfigs);
 
-    // Fetch model sizes from TransformerLens model table
+    // Fetch model data using DataFrame
     try {
       const csvUrl =
         "https://raw.githubusercontent.com/mivanit/transformerlens-model-table/refs/heads/main/docs/model_table.csv";
       const csvResponse = await fetch(csvUrl);
       const csvText = await csvResponse.text();
-      gridState.modelSizes = parseModelSizes(csvText);
+      gridState.modelDataFrame = DataFrame.from_csv(csvText);
+
+      // Extract model sizes
+      gridState.modelSizes = {};
+      for (let i = 0; i < gridState.modelDataFrame.length; i++) {
+        const row = gridState.modelDataFrame.row(i);
+        const name = row["name.default_alias"];
+        const params = row["n_params.as_int"];
+        if (name && params) {
+          gridState.modelSizes[name] = params;
+        }
+      }
     } catch (e) {
-      console.warn("Failed to load model sizes:", e);
+      console.warn("Failed to load model data:", e);
     }
 
     // Set up controls
@@ -181,6 +193,9 @@ async function initGridView(config) {
 
     // Set up resizable divider
     setupResizableDivider();
+
+    // Set up help tooltip with model data
+    setupHelpTooltip();
 
     // Initial render with cut height = 5
     const initialCutHeight = 5;
@@ -211,8 +226,11 @@ function setupControls(defaultNClusters) {
   nClustersSlider.value = defaultNClusters;
   nClustersValue.textContent = defaultNClusters;
 
-  // Get max height from linkage
-  const maxHeight = Math.max(...gridState.linkage.map((row) => row[2]));
+  // Get max height from linkage, capped at 20
+  const maxHeight = Math.min(
+    Math.max(...gridState.linkage.map((row) => row[2])),
+    20,
+  );
   cutHeightSlider.max = maxHeight;
   cutHeightSlider.step = maxHeight / 1000;
 
@@ -330,6 +348,59 @@ function setupResizableDivider() {
 }
 
 /**
+ * Set up help tooltip showing model data as YAML
+ */
+function setupHelpTooltip() {
+  const helpIcon = document.getElementById("model-data-help");
+  if (!helpIcon || !gridState.modelDataFrame) return;
+
+  // Get data for models we have
+  const modelData = {};
+  for (const modelName of gridState.originalModelOrder) {
+    // Find row in DataFrame
+    for (let i = 0; i < gridState.modelDataFrame.length; i++) {
+      const row = gridState.modelDataFrame.row(i);
+      if (row["name.default_alias"] === modelName) {
+        modelData[modelName] = {
+          n_params: row["n_params.as_str"],
+          n_layers: row["cfg.n_layers"],
+          n_heads: row["cfg.n_heads"],
+          d_model: row["cfg.d_model"],
+        };
+        break;
+      }
+    }
+  }
+
+  const tooltip = document.createElement("div");
+  tooltip.className = "help-tooltip";
+  tooltip.textContent = toYAML(modelData);
+  helpIcon.appendChild(tooltip);
+}
+
+/**
+ * Get YAML string with model data for a specific model
+ * @param {string} modelName - Model name to look up
+ * @returns {string|null} YAML string or null if not found
+ */
+function getModelDataYaml(modelName) {
+  if (!gridState.modelDataFrame) return null;
+
+  for (let i = 0; i < gridState.modelDataFrame.length; i++) {
+    const row = gridState.modelDataFrame.row(i);
+    if (row["name.default_alias"] === modelName) {
+      return toYAML({
+        n_params: row["n_params.as_str"],
+        n_layers: row["cfg.n_layers"],
+        n_heads: row["cfg.n_heads"],
+        d_model: row["cfg.d_model"],
+      });
+    }
+  }
+  return null;
+}
+
+/**
  * Compute cluster assignments by cutting at a specific number of clusters
  * @param {number} nClusters - Number of clusters
  * @returns {Object.<string, number>} Map of head ID to cluster ID
@@ -436,8 +507,45 @@ function renderModelGrids() {
   container.innerHTML = "";
   container.style.setProperty("--scale", gridState.scale);
 
-  for (const modelName of getSortedModelNames()) {
-    renderModelBox(container, modelName);
+  if (gridState.modelOrder === "family") {
+    // Group by family and render each family as a row
+    const byFamily = {};
+    for (const model of gridState.originalModelOrder) {
+      const family = getModelFamily(model);
+      if (!byFamily[family]) byFamily[family] = [];
+      byFamily[family].push(model);
+    }
+
+    // Sort each family by size
+    for (const family of Object.keys(byFamily)) {
+      byFamily[family].sort((a, b) => {
+        const sizeA = gridState.modelSizes[a] ?? Infinity;
+        const sizeB = gridState.modelSizes[b] ?? Infinity;
+        return sizeA - sizeB;
+      });
+    }
+
+    // Render each family on its own row
+    const sortedFamilies = Object.keys(byFamily).sort();
+    for (const family of sortedFamilies) {
+      const familyRow = document.createElement("div");
+      familyRow.className = "family-row";
+
+      const label = document.createElement("div");
+      label.className = "family-label";
+      label.textContent = family;
+      familyRow.appendChild(label);
+
+      for (const modelName of byFamily[family]) {
+        renderModelBox(familyRow, modelName);
+      }
+
+      container.appendChild(familyRow);
+    }
+  } else {
+    for (const modelName of getSortedModelNames()) {
+      renderModelBox(container, modelName);
+    }
   }
 }
 
@@ -456,7 +564,26 @@ function renderModelBox(container, modelName) {
   // Header
   const header = document.createElement("div");
   header.className = "model-box-header";
-  header.textContent = modelName;
+
+  const headerText = document.createElement("span");
+  headerText.textContent = modelName;
+  header.appendChild(headerText);
+
+  // Add model-specific help icon
+  const modelYaml = getModelDataYaml(modelName);
+  if (modelYaml) {
+    const helpIcon = document.createElement("span");
+    helpIcon.className = "model-help-icon";
+    helpIcon.textContent = "❓";
+
+    const tooltip = document.createElement("div");
+    tooltip.className = "help-tooltip";
+    tooltip.textContent = modelYaml;
+    helpIcon.appendChild(tooltip);
+
+    header.appendChild(helpIcon);
+  }
+
   box.appendChild(header);
 
   // Grid wrapper (layer labels + grid content)
@@ -499,15 +626,20 @@ function renderModelBox(container, modelName) {
     const row = document.createElement("div");
     row.className = "grid-row";
 
-    // Get head indices - sorted by cluster if in cluster mode
+    // Get head indices - sorted by cluster size if in cluster mode
     let headIndices = Array.from({ length: n_heads }, (_, i) => i);
     if (gridState.sortByCluster) {
+      const clusterSizes = window.CLUSTER_STATE.getClusterSizes();
       headIndices.sort((a, b) => {
         const clusterA =
           window.CLUSTER_STATE.getClusterId(`${modelName}:L${l}:H${a}`) ?? 999;
         const clusterB =
           window.CLUSTER_STATE.getClusterId(`${modelName}:L${l}:H${b}`) ?? 999;
-        return clusterA - clusterB;
+        // Sort by cluster size (descending), then by cluster ID for ties
+        const sizeA = clusterSizes[clusterA] ?? 0;
+        const sizeB = clusterSizes[clusterB] ?? 0;
+        if (sizeA !== sizeB) return sizeB - sizeA; // Larger clusters first
+        return clusterA - clusterB; // Tie-breaker by cluster ID
       });
     }
 
@@ -815,12 +947,15 @@ function renderTopClusters() {
   if (!container) return;
 
   const sizes = window.CLUSTER_STATE.getClusterSizes();
+  const totalClusters = Object.keys(sizes).length;
 
   // Sort clusters by size descending, take top 20
   const sortedClusters = Object.entries(sizes)
     .map(([clusterId, size]) => ({ clusterId: parseInt(clusterId), size }))
     .sort((a, b) => b.size - a.size)
     .slice(0, 20);
+
+  const hasMore = totalClusters > 20;
 
   container.innerHTML = `
     <span class="top-clusters-label">Top ${sortedClusters.length} clusters:</span>
@@ -843,6 +978,7 @@ function renderTopClusters() {
         `;
       })
       .join("")}
+    ${hasMore ? `<span class="top-clusters-ellipsis">... +${totalClusters - 20} more</span>` : ""}
   `;
 
   // Add click handlers

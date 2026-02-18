@@ -1,36 +1,30 @@
 {
 	"meta": {
 		"cut_height": null,
-		"n_clusters": 10,
+		"n_clusters": 8,
 		"linkage_method": "average",
 		"clustering_path": "data/features/clustering",
-		"created_at": "2026-02-18T18:27:38.322347+00:00"
+		"created_at": "2026-02-18T18:55:02.352381+00:00",
+		"min_cluster_size": 10
 	},
 	"stats": {
 		"n_heads": 1176,
 		"cluster_sizes": {
-			"0": 2,
-			"1": 2,
+			"-1": 5,
 			"2": 12,
 			"3": 56,
 			"4": 23,
 			"5": 62,
 			"6": 228,
 			"7": 107,
-			"8": 683,
-			"9": 1
+			"8": 683
 		}
 	},
 	"types": [
 		{
-			"id": 0,
-			"name": "none",
-			"description": "none"
-		},
-		{
-			"id": 1,
-			"name": "none",
-			"description": "none"
+			"id": -1,
+			"name": "misc",
+			"description": "Merged from clusters: 0, 1, 9"
 		},
 		{
 			"id": 2,
@@ -64,11 +58,6 @@
 		},
 		{
 			"id": 8,
-			"name": "none",
-			"description": "none"
-		},
-		{
-			"id": 9,
 			"name": "none",
 			"description": "none"
 		}
@@ -193,7 +182,7 @@
 		"pythia-70m:L5:H4": 3,
 		"pythia-70m:L5:H5": 3,
 		"pythia-70m:L5:H6": 3,
-		"pythia-70m:L5:H7": 1,
+		"pythia-70m:L5:H7": -1,
 		"pythia-160m:L0:H0": 5,
 		"pythia-160m:L0:H1": 6,
 		"pythia-160m:L0:H2": 5,
@@ -337,7 +326,7 @@
 		"pythia-160m:L11:H8": 3,
 		"pythia-160m:L11:H9": 3,
 		"pythia-160m:L11:H10": 3,
-		"pythia-160m:L11:H11": 1,
+		"pythia-160m:L11:H11": -1,
 		"pythia-410m:L0:H0": 5,
 		"pythia-410m:L0:H1": 7,
 		"pythia-410m:L0:H2": 6,
@@ -629,7 +618,7 @@
 		"pythia-410m:L18:H0": 8,
 		"pythia-410m:L18:H1": 8,
 		"pythia-410m:L18:H2": 8,
-		"pythia-410m:L18:H3": 9,
+		"pythia-410m:L18:H3": -1,
 		"pythia-410m:L18:H4": 8,
 		"pythia-410m:L18:H5": 8,
 		"pythia-410m:L18:H6": 7,
@@ -726,7 +715,7 @@
 		"gpt2-small:L0:H1": 2,
 		"gpt2-small:L0:H2": 6,
 		"gpt2-small:L0:H3": 2,
-		"gpt2-small:L0:H4": 0,
+		"gpt2-small:L0:H4": -1,
 		"gpt2-small:L0:H5": 2,
 		"gpt2-small:L0:H6": 6,
 		"gpt2-small:L0:H7": 5,
@@ -745,7 +734,7 @@
 		"gpt2-small:L1:H8": 6,
 		"gpt2-small:L1:H9": 6,
 		"gpt2-small:L1:H10": 6,
-		"gpt2-small:L1:H11": 0,
+		"gpt2-small:L1:H11": -1,
 		"gpt2-small:L2:H0": 6,
 		"gpt2-small:L2:H1": 6,
 		"gpt2-small:L2:H2": 3,

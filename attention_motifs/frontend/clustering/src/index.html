@@ -19,7 +19,7 @@
     <div class="container">
       <h1>Hierarchical Clustering of Attention Heads</h1>
 
-      <div class="controls">
+      <div class="controls clustering-controls">
         <div class="control-group">
           <label for="n-clusters">Number of Clusters:</label>
           <input type="range" id="n-clusters" min="2" max="50" value="10" />
@@ -37,8 +37,11 @@
           />
           <span id="cut-height-value">--</span>
         </div>
+      </div>
+
+      <div class="controls display-controls">
         <div class="control-group">
-          <label for="scale">Scale:</label>
+          <label for="scale">Model Map Scale:</label>
           <input
             type="range"
             id="scale"
@@ -50,14 +53,18 @@
           <span id="scale-value">1.0</span>
         </div>
         <div class="control-group">
-          <label>Sort:</label>
+          <label>Sort Heads:</label>
           <button id="sort-toggle" class="toggle-btn">By Index</button>
+        </div>
+        <div class="control-group">
+          <label for="model-order">Model Order:</label>
           <select id="model-order" class="dropdown">
             <option value="data">Data Order</option>
             <option value="size">By Size</option>
             <option value="family">By Family</option>
           </select>
         </div>
+        <span class="help-icon" id="model-data-help">❓</span>
       </div>
 
       <div class="stats" id="stats"></div>
@@ -91,6 +98,8 @@
       </div>
     </div>
 
+    <script src="DataFrame.js"></script>
+    <script src="yaml.js"></script>
     <script src="sparklines.js"></script>
     <script src="clusterState.js"></script>
     <script src="gridView.js"></script>
