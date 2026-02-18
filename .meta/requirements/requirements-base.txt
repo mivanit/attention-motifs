@@ -156,7 +156,7 @@ joblib==1.5.3
     # via
     #   pynndescent
     #   scikit-learn
-js-embedding-vis @ git+https://github.com/mivanit/js-embedding-vis@307609fc81779b63f995fe7a5f814017efa759fc
+js-embedding-vis @ git+https://github.com/mivanit/js-embedding-vis@d6a65503e5e8042ab960a14df62a830c3e9460c7
     # via attention-motifs
 jsonschema==4.26.0
     # via nbformat
@@ -467,7 +467,7 @@ traitlets==5.14.3
     #   jupyter-core
     #   matplotlib-inline
     #   nbformat
-transformer-lens @ git+https://github.com/TransformerLensOrg/TransformerLens@86be1107e7456e0c70ab6259710347a7aa8e8c87
+transformer-lens @ git+https://github.com/TransformerLensOrg/TransformerLens@3c82bf5b32ea843aeda7cfcae03ede85a02dae06
     # via
     #   attention-motifs
     #   pattern-lens

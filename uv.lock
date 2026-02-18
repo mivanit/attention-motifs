@@ -1482,8 +1482,8 @@ wheels = [
 
 [[package]]
 name = "js-embedding-vis"
-version = "0.2.1"
-source = { git = "https://github.com/mivanit/js-embedding-vis#307609fc81779b63f995fe7a5f814017efa759fc" }
+version = "0.2.2"
+source = { git = "https://github.com/mivanit/js-embedding-vis#d6a65503e5e8042ab960a14df62a830c3e9460c7" }
 
 [[package]]
 name = "jsonschema"
@@ -4208,7 +4208,7 @@ wheels = [
 [[package]]
 name = "transformer-lens"
 version = "0.0.0"
-source = { git = "https://github.com/TransformerLensOrg/TransformerLens?rev=dev-3.x#86be1107e7456e0c70ab6259710347a7aa8e8c87" }
+source = { git = "https://github.com/TransformerLensOrg/TransformerLens?rev=dev-3.x#3c82bf5b32ea843aeda7cfcae03ede85a02dae06" }
 dependencies = [
     { name = "accelerate" },
     { name = "beartype" },
