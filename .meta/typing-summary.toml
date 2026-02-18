@@ -1,30 +1,31 @@
-# ty: Found 55 diagnostics
-# basedpyright: 82 errors, 1 warning, 0 notes
-# mypy: KeyError: 'is_type_form'
+# ty: Found 35 diagnostics
+# basedpyright: 60 errors, 1 warning, 0 notes
+# mypy: Found 39 errors in 17 files (checked 56 source files)
 
 [type_errors.ty]
-total_errors = 55
+total_errors = 35
 
 [type_errors.ty.by_type]
-"invalid-argument-type" = 18
-"unknown-argument" = 16
+"invalid-argument-type" = 13
 "invalid-assignment" = 5
 "no-matching-overload" = 4
-"unresolved-attribute" = 4
+"unresolved-attribute" = 3
 "unresolved-reference" = 3
 "invalid-return-type" = 2
 "unsupported-operator" = 1
+"invalid-method-override" = 1
 "unresolved-import" = 1
+"unknown-argument" = 1
 "missing-argument" = 1
 
 [type_errors.ty.by_file]
-"attention_motifs/features/analysis.py" = 21
 "attention_motifs/ablation/ablate.py" = 5
 "attention_motifs/attnpedia/attnpedia.py" = 5
 "attention_motifs/ablation/experiment.py" = 4
 "attention_motifs/ablation/metrics.py" = 2
 "attention_motifs/features/features.py" = 2
 "attention_motifs/pipeline/s5b_head_embed_plots.py" = 2
+"attention_motifs/features/analysis.py" = 1
 "attention_motifs/features/feat/hist_beta_fit.py" = 1
 "attention_motifs/features/generate.py" = 1
 "attention_motifs/pipeline/s2_features.py" = 1
@@ -41,23 +42,21 @@ total_errors = 55
 "notebooks/A2-pattern_lens_demo.ipynb:cell 4" = 1
 
 [type_errors.basedpyright]
-total_errors = 82
+total_errors = 60
 
 [type_errors.basedpyright.by_type]
-"reportArgumentType" = 24
-"reportCallIssue" = 21
+"reportArgumentType" = 20
 "reportInvalidTypeForm" = 10
-"reportAssignmentType" = 10
+"reportAssignmentType" = 9
+"reportCallIssue" = 6
 "reportReturnType" = 4
 "reportOptionalMemberAccess" = 3
-"reportAttributeAccessIssue" = 3
 "reportPossiblyUnboundVariable" = 3
+"reportAttributeAccessIssue" = 2
 "reportPrivateImportUsage" = 2
 "reportIncompatibleMethodOverride" = 1
-"reportIndexIssue" = 1
 
 [type_errors.basedpyright.by_file]
-"attention_motifs/features/analysis.py" = 23
 "attention_motifs/ablation/experiment.py" = 8
 "attention_motifs/ablation/ablate.py" = 6
 "attention_motifs/ablation/metrics.py" = 6
@@ -71,6 +70,7 @@ total_errors = 82
 "attention_motifs/features/features.py" = 2
 "attention_motifs/pipeline/s5b_head_embed_plots.py" = 2
 "notebooks/05-ablation_candidates.ipynb - cell 8" = 2
+"attention_motifs/features/analysis.py" = 1
 "attention_motifs/features/feat/hist_beta_fit.py" = 1
 "attention_motifs/features/generate.py" = 1
 "attention_motifs/features/vec_features.py" = 1
@@ -94,14 +94,36 @@ total_warnings = 1
 "notebooks/_dists_hist.py" = 1
 
 [type_errors.mypy]
-total_errors = 4
+total_errors = 39
 
 [type_errors.mypy.by_type]
-"arg-type" = 2
-"dict-item" = 1
-"import-untyped" = 1
+"arg-type" = 12
+"import-untyped" = 8
+"dict-item" = 4
+"assignment" = 4
+"call-overload" = 3
+"misc" = 2
+"return-value" = 2
+"attr-defined" = 1
+"override" = 1
+"index" = 1
+"list-item" = 1
 
 [type_errors.mypy.by_file]
+"attention_motifs/ablation/experiment.py" = 9
+"attention_motifs/attnpedia/attnpedia.py" = 4
+"attention_motifs/features/features.py" = 4
+"attention_motifs/ablation/ablate.py" = 4
+"attention_motifs/features/analysis.py" = 3
 "tests/conftest.py" = 2
+"attention_motifs/pipeline/s5b_head_embed_plots.py" = 2
+"attention_motifs/ablation/metrics.py" = 2
 "attention_motifs/pipeline/cfg.py" = 1
 "attention_motifs/features/vec_features.py" = 1
+"attention_motifs/consts.py" = 1
+"attention_motifs/features/feat/hist_beta_fit.py" = 1
+"attention_motifs/features/plotting.py" = 1
+"attention_motifs/pipeline/s2_features.py" = 1
+"attention_motifs/features/generate.py" = 1
+"attention_motifs/pipeline/s3b_feat_fig.py" = 1
+"tests/test_ablation.py" = 1

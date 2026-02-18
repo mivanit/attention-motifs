@@ -90,36 +90,8 @@
     ... (reportReturnType)
 /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:455:6 - error: Method "load" overrides class "SerializableDataclass" in an incompatible manner
-    Parameter 2 type mismatch: base parameter is type "dict[str, Any] | T@load", override parameter is type "dict[Unknown, Unknown]"
-      Type "dict[str, Any] | object*" is not assignable to type "dict[Unknown, Unknown]"
-        "object*" is not assignable to "dict[Unknown, Unknown]" (reportIncompatibleMethodOverride)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:461:4 - error: No parameter named "cls_values" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:462:4 - error: No parameter named "prompt_values" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:463:4 - error: No parameter named "distances" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:464:4 - error: No parameter named "is_reduced" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:549:4 - error: No parameter named "cls_values" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:550:4 - error: No parameter named "prompt_values" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:551:4 - error: No parameter named "distances" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:552:4 - error: No parameter named "is_reduced" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:590:4 - error: No parameter named "cls_values" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:591:4 - error: No parameter named "prompt_values" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:592:4 - error: No parameter named "distances" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:593:4 - error: No parameter named "is_reduced" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:706:4 - error: No parameter named "cls_values" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:707:4 - error: No parameter named "prompt_values" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:708:4 - error: No parameter named "distances" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:732:10 - error: Type "NDArray[floating[Any]]" is not assignable to declared type "int"
-    "ndarray[Any, dtype[floating[Any]]]" is not assignable to "int" (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:748:6 - error: "__getitem__" method not defined on type "int" (reportIndexIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:798:18 - error: "tab10" is not a known attribute of module "matplotlib.cm" (reportAttributeAccessIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:835:4 - error: Argument of type "list[int | float]" cannot be assigned to parameter "bounds" of type "tuple[float, float, float, float]" in function "inset_axes"
-    "list[int | float]" is not assignable to "tuple[float, float, float, float]" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:843:4 - error: Argument of type "list[float | int]" cannot be assigned to parameter "bounds" of type "tuple[float, float, float, float]" in function "inset_axes"
-    "list[float | int]" is not assignable to "tuple[float, float, float, float]" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:852:4 - error: Argument of type "list[int | float]" cannot be assigned to parameter "bounds" of type "tuple[float, float, float, float]" in function "inset_axes"
-    "list[int | float]" is not assignable to "tuple[float, float, float, float]" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:864:4 - error: Argument of type "list[float | int]" cannot be assigned to parameter "bounds" of type "tuple[float, float, float, float]" in function "inset_axes"
-    "list[float | int]" is not assignable to "tuple[float, float, float, float]" (reportArgumentType)
+    Parameter 2 type mismatch: base parameter is type "SerializableDataclass", override parameter is type "dict[Unknown, Unknown]"
+      "SerializableDataclass" is not assignable to "dict[Unknown, Unknown]" (reportIncompatibleMethodOverride)
 /home/miv/projects/attn/attention-motifs/attention_motifs/features/feat/hist_beta_fit.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/features/feat/hist_beta_fit.py:9:35 - error: "prefix_dict" is unknown import symbol (reportAttributeAccessIssue)
 /home/miv/projects/attn/attention-motifs/attention_motifs/features/features.py
@@ -229,4 +201,4 @@
     "Path" is not assignable to "str" (reportArgumentType)
 /home/miv/projects/attn/attention-motifs/notebooks/_dists_hist.py
   /home/miv/projects/attn/attention-motifs/notebooks/_dists_hist.py:74:1 - warning: Expression value is unused (reportUnusedExpression)
-82 errors, 1 warning, 0 notes
+60 errors, 1 warning, 0 notes
