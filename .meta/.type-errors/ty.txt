@@ -1,3 +1,7 @@
+   Building attention-motifs @ file:///home/miv/projects/attn/attention-motifs
+      Built attention-motifs @ file:///home/miv/projects/attn/attention-motifs
+Uninstalled 1 package in 0.70ms
+Installed 4 packages in 3ms
 warning[unused-type-ignore-comment]: Unused blanket `type: ignore` directive
    --> .meta/scripts/check_torch.py:100:17
     |
@@ -327,17 +331,17 @@ error[invalid-argument-type]: Argument to bound method `to_tokens` is incorrect
     |
 info: Element `list[Tensor]` of this union is not assignable to `str | list[str]`
 info: Method defined here
-   --> .venv/lib/python3.13/site-packages/transformer_lens/HookedTransformer.py:771:9
+   --> .venv/lib/python3.13/site-packages/transformer_lens/HookedTransformer.py:786:9
     |
-769 |             self.cfg.d_vocab_out = self.cfg.d_vocab
-770 |
-771 |     def to_tokens(
+784 |             self.cfg.d_vocab_out = self.cfg.d_vocab
+785 |
+786 |     def to_tokens(
     |         ^^^^^^^^^
-772 |         self,
-773 |         input: Union[str, List[str]],
+787 |         self,
+788 |         input: Union[str, List[str]],
     |         ---------------------------- Parameter declared here
-774 |         prepend_bos: Optional[Union[bool, None]] = USE_DEFAULT_VALUE,
-775 |         padding_side: Optional[Union[Literal["left", "right"], None]] = USE_DEFAULT_VALUE,
+789 |         prepend_bos: Optional[Union[bool, None]] = USE_DEFAULT_VALUE,
+790 |         padding_side: Optional[Union[Literal["left", "right"], None]] = USE_DEFAULT_VALUE,
     |
 info: rule `invalid-argument-type` is enabled by default
 
@@ -1394,6 +1398,43 @@ info: Function defined here
     |
 info: rule `invalid-argument-type` is enabled by default
 
+error[no-matching-overload]: No overload of bound method `update` matches arguments
+  --> attention_motifs/features/feat/transition_tensor.py:66:2
+   |
+65 |       indices_adjusted_diff = np.diff(indices_adjusted)
+66 | /     output.update(
+67 | |         dict(
+68 | |             skewness=stats.skew(indices_adjusted_diff),
+69 | |             kurtosis=stats.kurtosis(indices_adjusted_diff),
+70 | |         )
+71 | |         # all except skew and cov are highly correlated with other things
+72 | |         # prefix_dict(
+73 | |         #     vec_features(indices_adjusted_diff),
+74 | |         #     prefix="diff",
+75 | |         # )
+76 | |     )
+   | |_____^
+77 |
+78 |       return output
+   |
+info: First overload defined here
+    --> stdlib/typing.pyi:1860:9
+     |
+1858 |     # -- weakref.WeakKeyDictionary.__ior__
+1859 |     @overload
+1860 |     def update(self, m: SupportsKeysAndGetItem[_KT, _VT], /) -> None:
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+1861 |         """D.update([E, ]**F) -> None.  Update D from mapping/iterable E and F.
+1862 |         If E present and has a .keys() method, does:     for k in E.keys(): D[k] = E[k]
+     |
+info: Possible overloads for bound method `update`:
+info:   (self, m: SupportsKeysAndGetItem[_KT@MutableMapping, _VT@MutableMapping], /) -> None
+info:   (self: SupportsGetItem[str, _VT@MutableMapping], m: SupportsKeysAndGetItem[str, _VT@MutableMapping], /, **kwargs: _VT@MutableMapping) -> None
+info:   (self, m: Iterable[tuple[_KT@MutableMapping, _VT@MutableMapping]], /) -> None
+info:   (self: SupportsGetItem[str, _VT@MutableMapping], m: Iterable[tuple[str, _VT@MutableMapping]], /, **kwargs: _VT@MutableMapping) -> None
+info:   (self: SupportsGetItem[str, _VT@MutableMapping], /, **kwargs: _VT@MutableMapping) -> None
+info: rule `no-matching-overload` is enabled by default
+
 error[invalid-argument-type]: Argument to function `prefix_dict` is incorrect
   --> attention_motifs/features/features.py:60:7
    |
@@ -1424,7 +1465,7 @@ info: Function defined here
    |
 info: rule `invalid-argument-type` is enabled by default
 
-error[invalid-assignment]: Object of type `tqdm` is not assignable to `list[dict[Unknown, Unknown]]`
+error[invalid-assignment]: Object of type `tqdm[Unknown]` is not assignable to `list[dict[Unknown, Unknown]]`
    --> attention_motifs/features/features.py:144:15
     |
 142 |                   )
@@ -1436,7 +1477,7 @@ error[invalid-assignment]: Object of type `tqdm` is not assignable to `list[dict
 145 | |                 pool.imap(prompt_func, prompts),
 146 | |                 total=len(prompts),
 147 | |             )
-    | |_____________^ Incompatible value of type `tqdm`
+    | |_____________^ Incompatible value of type `tqdm[Unknown]`
 148 |               output.extend(itertools.chain.from_iterable(model_out))
     |
 info: rule `invalid-assignment` is enabled by default
@@ -1676,6 +1717,45 @@ info:   (self, key: _KT@dict, default: _VT@dict, /) -> _VT@dict
 info:   [_T](self, key: _KT@dict, default: _T, /) -> _VT@dict | _T
 info: rule `no-matching-overload` is enabled by default
 
+error[invalid-assignment]: Object of type `dict[str, int | float | Unknown | floating[_64Bit]]` is not assignable to `dict[str, int | float]`
+  --> attention_motifs/features/vec_features.py:37:2
+   |
+35 |           hist.astype(float) / hist.sum() if hist.sum() > 0 else hist.astype(float)
+36 |       )
+37 |       dist_features = dict(
+   |  _____-------------___^
+   | |     |
+   | |     Declared type `dict[str, int | float]`
+38 | |         mean=np.mean(arr),
+39 | |         median=np.median(arr),
+40 | |         variance=np.var(arr, ddof=1),
+41 | |         # std=np.std(arr, ddof=1),
+42 | |         skewness=stats.skew(arr),
+43 | |         # kurtosis=stats.kurtosis(arr),
+44 | |         entropy=stats.entropy(probs, base=2),
+45 | |         # L1_norm=np.sum(np.abs(arr)) / n,
+46 | |         # L2_norm=np.linalg.norm(arr, ord=2) / n,
+47 | |         rms=np.sqrt(np.mean(arr**2)),
+48 | |     )
+   | |_____^ Incompatible value of type `dict[str, int | float | Unknown | floating[_64Bit]]`
+49 |       if not reduced:
+50 |           dist_features["energy"] = np.sum(arr**2)
+   |
+info: rule `invalid-assignment` is enabled by default
+
+error[invalid-assignment]: Invalid subscript assignment with key of type `Literal["kurtosis"]` and value of type `floating[_64Bit] | Unknown` on object of type `dict[str, int | float]`
+  --> attention_motifs/features/vec_features.py:51:3
+   |
+49 |     if not reduced:
+50 |         dist_features["energy"] = np.sum(arr**2)
+51 |         dist_features["kurtosis"] = stats.kurtosis(arr)
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^-------------------
+   |                                     |
+   |                                     Expected value of type `int | float`, got `floating[_64Bit] | Unknown`
+52 |         dist_features["L2_norm"] = np.linalg.norm(arr, ord=2) / n
+   |
+info: rule `invalid-assignment` is enabled by default
+
 error[invalid-assignment]: Invalid subscript assignment with key of type `Literal["L2_norm"]` and value of type `floating[Any]` on object of type `dict[str, int | float]`
   --> attention_motifs/features/vec_features.py:52:3
    |
@@ -1690,6 +1770,25 @@ error[invalid-assignment]: Invalid subscript assignment with key of type `Litera
    |
 info: rule `invalid-assignment` is enabled by default
 
+error[invalid-assignment]: Object of type `dict[str, int | float | floating[_64Bit] | Any | floating[_64Bit | Any]]` is not assignable to `dict[str, int | float]`
+  --> attention_motifs/features/vec_features.py:69:12
+   |
+67 |       t: np.ndarray = np.arange(n)
+68 |       linreg_result = stats.linregress(t, arr)
+69 |       line_fit: dict[str, float] = dict(
+   |  _______________----------------___^
+   | |               |
+   | |               Declared type
+70 | |         slope=linreg_result.slope,
+71 | |         intercept=linreg_result.intercept,
+72 | |         r2=linreg_result.rvalue**2,
+73 | |     )
+   | |_____^ Incompatible value of type `dict[str, int | float | floating[_64Bit] | Any | floating[_64Bit | Any]]`
+74 |
+75 |       timeseries_features: dict[str, float] = dict(
+   |
+info: rule `invalid-assignment` is enabled by default
+
 error[invalid-return-type]: Return type does not match returned value
    --> attention_motifs/features/vec_features.py:251:6
     |
@@ -1701,6 +1800,29 @@ error[invalid-return-type]: Return type does not match returned value
     |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `ndarray[Unknown, Unknown]`, found `dict[Unknown, Unknown]`
     |
 info: rule `invalid-return-type` is enabled by default
+
+error[not-subscriptable]: Cannot subscript object of type `None` with no `__getitem__` method
+  --> attention_motifs/math/math.py:94:13
+   |
+92 |         raise ValueError("Linear programming failed: " + res.message)
+93 |
+94 |     m: float = res.x[0]
+   |                ^^^^^^^^
+95 |     b: float = res.x[1]
+96 |     y_pred: np.ndarray = m * x_arr + b
+   |
+info: rule `not-subscriptable` is enabled by default
+
+error[not-subscriptable]: Cannot subscript object of type `None` with no `__getitem__` method
+  --> attention_motifs/math/math.py:95:13
+   |
+94 |     m: float = res.x[0]
+95 |     b: float = res.x[1]
+   |                ^^^^^^^^
+96 |     y_pred: np.ndarray = m * x_arr + b
+97 |     r2: float = compute_r2(y_arr, y_pred)
+   |
+info: rule `not-subscriptable` is enabled by default
 
 error[invalid-return-type]: Return type does not match returned value
   --> attention_motifs/math/transition_tensor.py:26:6
@@ -1835,158 +1957,6 @@ error[unresolved-attribute]: Attribute `shape` is not defined on `None` in union
     |
 info: rule `unresolved-attribute` is enabled by default
 
-error[invalid-assignment]: Object of type `dict[str, str]` is not assignable to `dict[Literal["raw", "norms", "scaled", "pca", "pca_npy", ... omitted 4 literals], str]`
-  --> attention_motifs/pipeline/cfg.py:36:14
-   |
-34 |   PlotKwargKey = Literal["pca_all_dpi",]
-35 |
-36 |   DATA_FNAMES: dict[DataFilename, str] = dict(
-   |  ______________-----------------------___^
-   | |              |
-   | |              Declared type
-37 | |     raw="raw.jsonl",
-38 | |     norms="norms.jsonl",
-39 | |     scaled="scaled.jsonl",
-40 | |     importance="importance.jsonl",
-41 | |     pca="pca.jsonl",
-42 | |     pca_npy="pca.npy",
-43 | |     head_dists_zanj="head_dists.zanj",
-44 | |     head_dists_raw="head_dists_raw",
-45 | |     head_embed="head_embed.jsonl",
-46 | |     clustering="clustering",
-47 | | )
-   | |_^ Incompatible value of type `dict[str, str]`
-48 |
-49 |   FIGURE_FNAMES: dict[FigureFilename, str] = dict(
-   |
-info: rule `invalid-assignment` is enabled by default
-
-error[invalid-assignment]: Object of type `dict[str, str]` is not assignable to `dict[Literal["pca", "cov_full", "cov_reduced", "pca_all", "head_dists", "head_embed"], str]`
-  --> attention_motifs/pipeline/cfg.py:49:16
-   |
-47 |   )
-48 |
-49 |   FIGURE_FNAMES: dict[FigureFilename, str] = dict(
-   |  ________________-------------------------___^
-   | |                |
-   | |                Declared type
-50 | |     pca="pca.pdf",
-51 | |     cov_full="covariance-full.pdf",
-52 | |     cov_reduced="covariance-reduced.pdf",
-53 | |     pca_all="pca-all.png",
-54 | |     head_dists="head-dists-heatmap.pdf",
-55 | |     head_embed="head-embed.pdf",
-56 | | )
-   | |_^ Incompatible value of type `dict[str, str]`
-57 |
-58 |   DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
-   |
-info: rule `invalid-assignment` is enabled by default
-
-error[invalid-assignment]: Object of type `dict[str, str | dict[str, str | dict[Unknown | str, Unknown | str | dict[Unknown | str, Unknown | int] | int]] | dict[str, str | dict[Unknown | str, Unknown | str | list[Unknown | str] | dict[Unknown | str, Unknown | int | float] | dict[Unknown | str, Unknown | str | dict[Unknown | str, Unknown | str]]]]]` is not assignable to `dict[str, str]`
-   --> attention_motifs/pipeline/cfg.py:58:22
-    |
- 56 |   )
- 57 |
- 58 |   DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
-    |  ______________________--------------___^
-    | |                      |
-    | |                      Declared type
- 59 | |     attentionpedia=dict(
- 60 | |         path="attnpedia",
- 61 | |         cfg_path="config.json",
- 62 | |         cfg={
- 63 | |             "head_viewing": "gpt2-small:L5:H5",
- 64 | |             "table": {"n_nearby": 2, "n_share_class": 2},
- 65 | |             "n_prompts": 5,
- 66 | |             "pattern_size": 120,
- 67 | |             "attnpedia_url": "ap.json",
- 68 | |             "headDistsmeta_url": "../../features/head_dists_raw/dists_meta.json",
- 69 | |             "prompts_url": "../../patterns/gpt2-small/prompts.jsonl",
- 70 | |             "headDistsnpy_url": "../../features/head_dists_raw/distances.npy",
- 71 | |             "patterns_path": "../../patterns/",
- 72 | |         },
- 73 | |     ),
- 74 | |     embed_pattern=dict(
- 75 | |         path="embeds/patterns/",
- 76 | |         cfg_path="config.json",
- 77 | |         cfg={
- 78 | |             "dataFile": "../../../features/pca.jsonl",
- 79 | |             "numericalPrefix": "pc.",
- 80 | |             "defaultColorColumn": "activation.model",
- 81 | |             "defaultSelectionColumn": "activation.model",
- 82 | |             "hoverColumns": ["activation.cls", "activation.prompt", "activation.n_ctx"],
- 83 | |             "selectedPoints": {
- 84 | |                 "size": 5,
- 85 | |                 "sizeMin": 0.1,
- 86 | |                 "sizeMax": 20,
- 87 | |                 "sizeStep": 0.1,
- 88 | |                 "opacityMin": 0.0,
- 89 | |                 "opacityStep": 0.01,
- 90 | |             },
- 91 | |             "nonSelectedPoints": {
- 92 | |                 "size": 3,
- 93 | |                 "sizeMin": 0.1,
- 94 | |                 "sizeStep": 0.1,
- 95 | |                 "opacityMin": 0.00,
- 96 | |             },
- 97 | |             "movement": {
- 98 | |                 "speed": 25,
- 99 | |                 "speedMin": 1,
-100 | |                 "rollSpeed": 0.02,
-101 | |                 "mouseSensitivity": 0.002,
-102 | |                 "sprintMultiplier": 3,
-103 | |             },
-104 | |             "rightClick": {
-105 | |                 "mode": "url",
-106 | |                 "url": {
-107 | |                     "template": "../../../patterns/single.html?prompt={activation.prompt}&head={activation.model}.L{activation.layer}…
-108 | |                 },
-109 | |             },
-110 | |         },
-111 | |     ),
-112 | |     embed_head=dict(
-113 | |         path="embeds/heads/",
-114 | |         cfg_path="config.json",
-115 | |         cfg={
-116 | |             "dataFile": "../../../features/head_embed.jsonl",
-117 | |             "numericalPrefix": "embed.",
-118 | |             "defaultColorColumn": "type.group",
-119 | |             "defaultSelectionColumn": "type.group",
-120 | |             "hoverColumns": ["cls", "type.primary", "type.group"],
-121 | |             "selectedPoints": {
-122 | |                 "size": 20,
-123 | |                 "sizeMin": 0.1,
-124 | |                 "sizeMax": 50,
-125 | |                 "sizeStep": 0.1,
-126 | |                 "opacityMin": 0.0,
-127 | |                 "opacityStep": 0.01,
-128 | |             },
-129 | |             "nonSelectedPoints": {
-130 | |                 "size": 10,
-131 | |                 "sizeMin": 0.1,
-132 | |                 "sizeMax": 50,
-133 | |                 "sizeStep": 0.1,
-134 | |                 "opacityMin": 0.00,
-135 | |             },
-136 | |             "movement": {
-137 | |                 "speed": 25,
-138 | |                 "speedMin": 1,
-139 | |                 "rollSpeed": 0.02,
-140 | |                 "mouseSensitivity": 0.002,
-141 | |                 "sprintMultiplier": 3,
-142 | |             },
-143 | |             "rightClick": {
-144 | |                 "mode": "url",
-145 | |                 "url": {"template": "../../attnpedia/index.html?head_viewing={cls}"},
-146 | |             },
-147 | |         },
-148 | |     ),
-149 | | )
-    | |_^ Incompatible value of type `dict[str, str | dict[str, str | dict[Unknown | str, Unknown | str | dict[Unknown | str, Unknown | int] | int]] | dict[str, str | dict[Unknown | str, Unknown | str | list[Unknown | str] | dict[Unknown | str, Unknown | int | float] | dict[Unknown | str, Unknown | str | dict[Unknown | str, Unknown | str]]]]]`
-    |
-info: rule `invalid-assignment` is enabled by default
-
 error[invalid-argument-type]: Argument to function `activations_main` is incorrect
   --> attention_motifs/pipeline/s1_activations.py:18:4
    |
@@ -2093,13 +2063,13 @@ error[invalid-argument-type]: Argument to bound method `data_path` is incorrect
 121 |     return df_importance, pca_data
     |
 info: Method defined here
-   --> attention_motifs/pipeline/cfg.py:235:6
+   --> attention_motifs/pipeline/cfg.py:240:6
     |
-233 |         return self.figures_dir is not None
-234 |
-235 |     def data_path(self, fname: DataFilename) -> Path:
+238 |         return self.figures_dir is not None
+239 |
+240 |     def data_path(self, fname: DataFilename) -> Path:
     |         ^^^^^^^^^       ------------------- Parameter declared here
-236 |         return self.features_dir / self.data_fnames[fname]
+241 |         return self.features_dir / self.data_fnames[fname]
     |
 info: rule `invalid-argument-type` is enabled by default
 
@@ -2150,13 +2120,13 @@ error[invalid-argument-type]: Argument to bound method `data_path` is incorrect
 117 |         pipeline_step_major("pipeline step 3b: process attention features")
     |
 info: Method defined here
-   --> attention_motifs/pipeline/cfg.py:235:6
+   --> attention_motifs/pipeline/cfg.py:240:6
     |
-233 |         return self.figures_dir is not None
-234 |
-235 |     def data_path(self, fname: DataFilename) -> Path:
+238 |         return self.figures_dir is not None
+239 |
+240 |     def data_path(self, fname: DataFilename) -> Path:
     |         ^^^^^^^^^       ------------------- Parameter declared here
-236 |         return self.features_dir / self.data_fnames[fname]
+241 |         return self.features_dir / self.data_fnames[fname]
     |
 info: rule `invalid-argument-type` is enabled by default
 
@@ -2231,15 +2201,15 @@ info: rule `unsupported-operator` is enabled by default
 error[unsupported-operator]: Unsupported `/` operation
   --> attention_motifs/pipeline/s4b_write_frontend.py:74:3
    |
-72 |     # write main index and diagram svg
+72 |     # write main index, style.css, and diagram svg
 73 |     main_index_html: str = (frontend_resources_path / "index.html").read_text()
 74 |     (cfg.figures_dir / "../index.html").write_text(main_index_html)
    |      ---------------^^^---------------
    |      |                 |
    |      |                 Has type `Literal["../index.html"]`
    |      Has type `Path | None`
-75 |     diagram_svg: str = (frontend_resources_path / "diagram.svg").read_text()
-76 |     (cfg.figures_dir / "../diagram.svg").write_text(diagram_svg)
+75 |     style_css: str = (frontend_resources_path / "style.css").read_text()
+76 |     (cfg.figures_dir / "../style.css").write_text(style_css)
    |
 info: rule `unsupported-operator` is enabled by default
 
@@ -2247,8 +2217,23 @@ error[unsupported-operator]: Unsupported `/` operation
   --> attention_motifs/pipeline/s4b_write_frontend.py:76:3
    |
 74 |     (cfg.figures_dir / "../index.html").write_text(main_index_html)
-75 |     diagram_svg: str = (frontend_resources_path / "diagram.svg").read_text()
-76 |     (cfg.figures_dir / "../diagram.svg").write_text(diagram_svg)
+75 |     style_css: str = (frontend_resources_path / "style.css").read_text()
+76 |     (cfg.figures_dir / "../style.css").write_text(style_css)
+   |      ---------------^^^--------------
+   |      |                 |
+   |      |                 Has type `Literal["../style.css"]`
+   |      Has type `Path | None`
+77 |     diagram_svg: str = (frontend_resources_path / "diagram.svg").read_text()
+78 |     (cfg.figures_dir / "../diagram.svg").write_text(diagram_svg)
+   |
+info: rule `unsupported-operator` is enabled by default
+
+error[unsupported-operator]: Unsupported `/` operation
+  --> attention_motifs/pipeline/s4b_write_frontend.py:78:3
+   |
+76 |     (cfg.figures_dir / "../style.css").write_text(style_css)
+77 |     diagram_svg: str = (frontend_resources_path / "diagram.svg").read_text()
+78 |     (cfg.figures_dir / "../diagram.svg").write_text(diagram_svg)
    |      ---------------^^^----------------
    |      |                 |
    |      |                 Has type `Literal["../diagram.svg"]`
@@ -2678,4 +2663,4 @@ help: Remove the unused suppression comment
 70 | 
 71 | 	# Run server in background thread
 
-Found 137 diagnostics
+Found 141 diagnostics

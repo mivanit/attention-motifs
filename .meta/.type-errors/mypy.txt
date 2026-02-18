@@ -1,3 +1,175 @@
-usage: mypy [-h] [-v] [-V] [more options; see below]
-            [-m MODULE] [-p PACKAGE] [-c PROGRAM_TEXT] [files ...]
-mypy: error: Missing target module, package, files, or command.
+attention_motifs/pipeline/cfg.py:40: error: Dict entry 3 has incompatible type "Literal['importance']": "str"; expected "Literal['raw', 'norms', 'scaled', 'pca', 'pca_npy', 'head_dists_zanj', 'head_dists_raw', 'head_embed', 'clustering']": "str"  [dict-item]
+attention_motifs/pipeline/cfg.py:220: error: Argument "default_factory" to "field" has incompatible type "Callable[[], dict[str, dict[str, Any]]]"; expected "Callable[[], dict[str, str]]"  [arg-type]
+attention_motifs/pipeline/cfg.py:220: error: Incompatible return value type (got "dict[str, dict[str, Any]]", expected "dict[str, str]")  [return-value]
+attention_motifs/pipeline/cfg.py:230: error: Dict entry 0 has incompatible type "Literal['pca_all_dpi']": "int"; expected "Literal['pca_all_dpi']": "str"  [dict-item]
+attention_motifs/pipeline/s0_download_models.py:1: error: Skipping analyzing "transformer_lens": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/pipeline/s4b_write_frontend.py:5: error: Skipping analyzing "js_embedding_vis": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/pipeline/s4b_write_frontend.py:27: error: Incompatible types in assignment (expression has type "str", variable has type "dict[Any, Any]")  [assignment]
+attention_motifs/pipeline/s4b_write_frontend.py:38: error: Incompatible types in assignment (expression has type "str", variable has type "dict[Any, Any]")  [assignment]
+attention_motifs/pipeline/s4b_write_frontend.py:47: error: Incompatible types in assignment (expression has type "str", variable has type "dict[Any, Any]")  [assignment]
+attention_motifs/pipeline/s4b_write_frontend.py:56: error: Name "head_embed_table_html" already defined on line 20  [no-redef]
+attention_motifs/pipeline/s4b_write_frontend.py:59: error: Unsupported left operand type for / ("None")  [operator]
+attention_motifs/pipeline/s4b_write_frontend.py:59: note: Left operand is of type "Path | None"
+attention_motifs/pipeline/s4b_write_frontend.py:62: error: Unsupported left operand type for / ("None")  [operator]
+attention_motifs/pipeline/s4b_write_frontend.py:62: note: Left operand is of type "Path | None"
+attention_motifs/pipeline/s4b_write_frontend.py:74: error: Unsupported left operand type for / ("None")  [operator]
+attention_motifs/pipeline/s4b_write_frontend.py:74: note: Left operand is of type "Path | None"
+attention_motifs/pipeline/s4b_write_frontend.py:76: error: Unsupported left operand type for / ("None")  [operator]
+attention_motifs/pipeline/s4b_write_frontend.py:76: note: Left operand is of type "Path | None"
+attention_motifs/pipeline/s4b_write_frontend.py:78: error: Unsupported left operand type for / ("None")  [operator]
+attention_motifs/pipeline/s4b_write_frontend.py:78: note: Left operand is of type "Path | None"
+attention_motifs/features/clustering.py:55: error: Name "path" already defined on line 47  [no-redef]
+attention_motifs/features/clustering.py:56: error: Item "str" of "Path | str" has no attribute "mkdir"  [union-attr]
+attention_motifs/features/clustering.py:63: error: Unsupported left operand type for / ("str")  [operator]
+attention_motifs/features/clustering.py:63: note: Left operand is of type "Path | str"
+attention_motifs/features/clustering.py:68: error: Unsupported left operand type for / ("str")  [operator]
+attention_motifs/features/clustering.py:68: note: Left operand is of type "Path | str"
+attention_motifs/features/clustering.py:72: error: Unsupported left operand type for / ("str")  [operator]
+attention_motifs/features/clustering.py:72: note: Left operand is of type "Path | str"
+attention_motifs/features/clustering.py:79: error: Name "path" already defined on line 77  [no-redef]
+attention_motifs/features/clustering.py:81: error: Unsupported left operand type for / ("str")  [operator]
+attention_motifs/features/clustering.py:81: note: Left operand is of type "Path | str"
+attention_motifs/features/clustering.py:85: error: Unsupported left operand type for / ("str")  [operator]
+attention_motifs/features/clustering.py:85: note: Left operand is of type "Path | str"
+attention_motifs/util/util.py:44: error: Incompatible return value type (got "tuple[dict[Any, Any], list[Any], list[ndarray[Any, Any]]]", expected "tuple[dict[Any, Any], list[dict[Any, Any]], list[NpzFile]]")  [return-value]
+attention_motifs/util/util.py:62: error: Incompatible default for argument "prompts" (default has type "None", argument has type "list[int]")  [assignment]
+attention_motifs/util/util.py:62: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+attention_motifs/util/util.py:62: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+attention_motifs/math/math.py:84: error: Name "c" already defined on line 78  [no-redef]
+attention_motifs/math/math.py:85: error: Name "A_ub" already defined on line 79  [no-redef]
+attention_motifs/math/math.py:86: error: Name "b_ub" already defined on line 80  [no-redef]
+attention_motifs/math/math.py:94: error: Name "m" already defined on line 63  [no-redef]
+attention_motifs/math/math.py:94: error: Value of type "ndarray[tuple[int], dtype[floating[_64Bit]]] | None" is not indexable  [index]
+attention_motifs/math/math.py:95: error: Name "b" already defined on line 64  [no-redef]
+attention_motifs/math/math.py:95: error: Value of type "ndarray[tuple[int], dtype[floating[_64Bit]]] | None" is not indexable  [index]
+attention_motifs/math/math.py:96: error: Name "y_pred" already defined on line 66  [no-redef]
+attention_motifs/math/math.py:97: error: Name "r2" already defined on line 67  [no-redef]
+attention_motifs/features/vec_features.py:6: error: Skipping analyzing "numba": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/features/vec_features.py:52: error: Incompatible types in assignment (expression has type "floating[Any]", target has type "float")  [assignment]
+attention_motifs/features/vec_features.py:75: error: Name "timeseries_features" already defined on line 28  [no-redef]
+attention_motifs/features/vec_features.py:252: error: Incompatible return value type (got "dict[str, Any]", expected "ndarray[Any, Any]")  [return-value]
+attention_motifs/consts.py:210: error: Incompatible types in "yield" (actual type "tuple[int, int, Tensor | ndarray[Any, Any]]", expected type "tuple[int, int, Tensor] | tuple[int, int, ndarray[Any, Any]]")  [misc]
+attention_motifs/features/feat/hist_beta_fit.py:9: error: Module "attention_motifs.util" has no attribute "prefix_dict"  [attr-defined]
+attention_motifs/math/transition_tensor.py:27: error: Incompatible return value type (got "floating[Any]", expected "float")  [return-value]
+attention_motifs/math/transition_tensor.py:269: error: Invalid index type "int | float" for "dict[int, Tensor]"; expected type "int"  [index]
+attention_motifs/math/transition_tensor.py:287: error: Argument "approx_l10" to "transition_tensor" has incompatible type "float"; expected "int"  [arg-type]
+attention_motifs/math/transition_tensor.py:318: error: Item "None" of "ndarray[Any, Any] | None" has no attribute "T"  [union-attr]
+attention_motifs/math/transition_tensor.py:318: error: Item "None" of "ndarray[Any, Any] | None" has no attribute "shape"  [union-attr]
+attention_motifs/math/transition_tensor.py:325: error: Item "None" of "ndarray[Any, Any] | None" has no attribute "shape"  [union-attr]
+attention_motifs/math/transition_tensor.py:326: error: Item "None" of "ndarray[Any, Any] | None" has no attribute "shape"  [union-attr]
+attention_motifs/math/transition_tensor.py:327: error: Value of type "ndarray[Any, Any] | None" is not indexable  [index]
+attention_motifs/math/transition_tensor.py:327: error: Item "None" of "ndarray[Any, Any] | None" has no attribute "shape"  [union-attr]
+attention_motifs/features/feat/transition_tensor.py:19: error: Argument "approx_l10" to "transition_tensor_torch" has incompatible type "float"; expected "int"  [arg-type]
+attention_motifs/features/plotting.py:9: error: Skipping analyzing "sklearn.decomposition": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/features/plotting.py:234: error: No overload variant of "get" of "dict" matches argument types "None", "float"  [call-overload]
+attention_motifs/features/plotting.py:234: note: Possible overload variants:
+attention_motifs/features/plotting.py:234: note:     def get(self, str, None = ..., /) -> float | None
+attention_motifs/features/plotting.py:234: note:     def get(self, str, float, /) -> float
+attention_motifs/features/plotting.py:234: note:     def [_T] get(self, str, _T, /) -> float | _T
+attention_motifs/features/plotting.py:237: error: No overload variant of "get" of "dict" matches argument types "None", "int"  [call-overload]
+attention_motifs/features/plotting.py:237: note: Possible overload variants:
+attention_motifs/features/plotting.py:237: note:     def get(self, str, None = ..., /) -> int | None
+attention_motifs/features/plotting.py:237: note:     def get(self, str, int, /) -> int
+attention_motifs/features/plotting.py:237: note:     def [_T] get(self, str, _T, /) -> int | _T
+attention_motifs/features/plotting.py:329: error: Slice index must be an integer, SupportsIndex or None  [misc]
+attention_motifs/attnpedia/attnpedia.py:15: error: Argument 1 to "Path" has incompatible type "Traversable"; expected "str | PathLike[str]"  [arg-type]
+attention_motifs/attnpedia/attnpedia.py:19: error: Argument 1 to "Path" has incompatible type "Traversable"; expected "str | PathLike[str]"  [arg-type]
+attention_motifs/attnpedia/attnpedia.py:134: error: Incompatible types in assignment (expression has type "str | list[dict[Literal['type', 'heads'], str | list[str]]]", variable has type "str")  [assignment]
+attention_motifs/attnpedia/attnpedia.py:137: error: Invalid index type "str" for "str"; expected type "SupportsIndex | slice[Any, Any, Any]"  [index]
+attention_motifs/attnpedia/attnpedia.py:146: error: Invalid index type "str" for "str"; expected type "SupportsIndex | slice[Any, Any, Any]"  [index]
+attention_motifs/attnpedia/attnpedia.py:147: error: Invalid index type "str" for "str"; expected type "SupportsIndex | slice[Any, Any, Any]"  [index]
+attention_motifs/attnpedia/attnpedia.py:250: error: Incompatible return value type (got "dict[str, str] | None", expected "dict[str, str]")  [return-value]
+attention_motifs/attnpedia/attnpedia.py:266: error: Incompatible return value type (got "dict[str, str] | None", expected "dict[str, str]")  [return-value]
+attention_motifs/attnpedia/attnpedia.py:320: error: Invalid index type "str" for "str"; expected type "SupportsIndex | slice[Any, Any, Any]"  [index]
+attention_motifs/attnpedia/attnpedia.py:325: error: Invalid index type "str" for "str"; expected type "SupportsIndex | slice[Any, Any, Any]"  [index]
+attention_motifs/attnpedia/attnpedia.py:326: error: Invalid index type "str" for "str"; expected type "SupportsIndex | slice[Any, Any, Any]"  [index]
+attention_motifs/attnpedia/attnpedia.py:362: error: No overload variant of "to_dict" of "DataFrame" matches argument type "str"  [call-overload]
+attention_motifs/attnpedia/attnpedia.py:362: note: Possible overload variants:
+attention_motifs/attnpedia/attnpedia.py:362: note:     def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series]
+attention_motifs/attnpedia/attnpedia.py:362: note:     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]
+attention_motifs/attnpedia/attnpedia.py:362: note:     def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]
+attention_motifs/attnpedia/attnpedia.py:365: error: No overload variant of "to_dict" of "DataFrame" matches argument type "str"  [call-overload]
+attention_motifs/attnpedia/attnpedia.py:365: note: Possible overload variants:
+attention_motifs/attnpedia/attnpedia.py:365: note:     def to_dict(self, *, as_series: Literal[True] = ...) -> dict[str, Series]
+attention_motifs/attnpedia/attnpedia.py:365: note:     def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]
+attention_motifs/attnpedia/attnpedia.py:365: note:     def to_dict(self, *, as_series: bool) -> dict[str, Series] | dict[str, list[Any]]
+attention_motifs/pipeline/s1b_render_patterns.py:17: error: Argument "save_path" to "figures_main" has incompatible type "Path"; expected "str"  [arg-type]
+attention_motifs/features/analysis.py:13: error: Skipping analyzing "mpl_toolkits.axes_grid1": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/features/analysis.py:14: error: Skipping analyzing "sklearn.decomposition": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/features/analysis.py:49: error: Name "missing_expr" already defined on line 47  [no-redef]
+attention_motifs/features/analysis.py:131: error: No overload variant of "array_summary" matches argument type "ndarray[Any, Any]"  [call-overload]
+attention_motifs/features/analysis.py:131: note: Possible overload variants:
+attention_motifs/features/analysis.py:131: note:     def array_summary(array: Any, as_list: Literal[True], **kwargs: Any) -> list[str]
+attention_motifs/features/analysis.py:131: note:     def array_summary(array: Any, as_list: Literal[False], **kwargs: Any) -> str
+attention_motifs/features/analysis.py:417: error: Argument 1 to "set_position" of "_AxesBase" has incompatible type "list[float]"; expected "Bbox | tuple[float, float, float, float]"  [arg-type]
+attention_motifs/features/analysis.py:452: error: Argument 1 of "load" is incompatible with supertype "muutils.json_serialize.serializable_dataclass.SerializableDataclass"; supertype defines the argument type as "dict[str, Any] | DistanceTensorResult"  [override]
+attention_motifs/features/analysis.py:452: note: This violates the Liskov substitution principle
+attention_motifs/features/analysis.py:452: note: See https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
+attention_motifs/features/analysis.py:729: error: Incompatible types in assignment (expression has type "ndarray[Any, dtype[floating[Any]]]", variable has type "int")  [assignment]
+attention_motifs/features/analysis.py:745: error: Value of type "int" is not indexable  [index]
+attention_motifs/features/analysis.py:795: error: Module has no attribute "tab10"  [attr-defined]
+attention_motifs/features/analysis.py:832: error: Argument 1 to "inset_axes" of "Axes" has incompatible type "list[float]"; expected "tuple[float, float, float, float]"  [arg-type]
+attention_motifs/features/analysis.py:840: error: Argument 1 to "inset_axes" of "Axes" has incompatible type "list[float]"; expected "tuple[float, float, float, float]"  [arg-type]
+attention_motifs/features/analysis.py:849: error: Argument 1 to "inset_axes" of "Axes" has incompatible type "list[float]"; expected "tuple[float, float, float, float]"  [arg-type]
+attention_motifs/features/analysis.py:861: error: Argument 1 to "inset_axes" of "Axes" has incompatible type "list[float]"; expected "tuple[float, float, float, float]"  [arg-type]
+attention_motifs/ablation/ablate.py:18: error: Skipping analyzing "transformer_lens": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/ablation/ablate.py:19: error: Skipping analyzing "transformer_lens.hook_points": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/ablation/ablate.py:19: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
+attention_motifs/ablation/ablate.py:153: error: Incompatible types in assignment (expression has type "tqdm[int]", variable has type "range")  [assignment]
+attention_motifs/ablation/ablate.py:163: error: Argument 1 to "stack" has incompatible type "list[str] | list[Tensor]"; expected "tuple[Tensor, ...] | list[Tensor] | None"  [arg-type]
+attention_motifs/pipeline/s1_activations.py:18: error: Argument "save_path" to "activations_main" has incompatible type "Path"; expected "str"  [arg-type]
+attention_motifs/pipeline/s1_activations.py:19: error: Argument "prompts_path" to "activations_main" has incompatible type "Path"; expected "str"  [arg-type]
+attention_motifs/features/features.py:61: error: Dict entry 0 has incompatible type "str": "str"; expected "str": "float"  [dict-item]
+attention_motifs/features/features.py:63: error: Dict entry 2 has incompatible type "str": "str"; expected "str": "float"  [dict-item]
+attention_motifs/features/features.py:65: error: Dict entry 4 has incompatible type "str": "str"; expected "str": "float"  [dict-item]
+attention_motifs/features/features.py:144: error: Incompatible types in assignment (expression has type "tqdm[list[dict[str, int | float | str]]]", variable has type "list[dict[Any, Any]]")  [assignment]
+attention_motifs/pipeline/s3b_feat_fig.py:66: error: No overload variant of "get" of "dict" matches argument types "str", "int"  [call-overload]
+attention_motifs/pipeline/s3b_feat_fig.py:66: note: Possible overload variants:
+attention_motifs/pipeline/s3b_feat_fig.py:66: note:     def get(self, Literal['pca_all_dpi'], None = ..., /) -> str | None
+attention_motifs/pipeline/s3b_feat_fig.py:66: note:     def get(self, Literal['pca_all_dpi'], str, /) -> str
+attention_motifs/pipeline/s3b_feat_fig.py:66: note:     def [_T] get(self, Literal['pca_all_dpi'], _T, /) -> str | _T
+attention_motifs/pipeline/s3b_feat_fig.py:115: error: Argument 1 to "data_path" of "PipelineConfig" has incompatible type "Literal['importance']"; expected "Literal['raw', 'norms', 'scaled', 'pca', 'pca_npy', 'head_dists_zanj', 'head_dists_raw', 'head_embed', 'clustering']"  [arg-type]
+attention_motifs/pipeline/s3_feat_proc.py:63: error: Name "data_scaled" already defined on line 59  [no-redef]
+attention_motifs/pipeline/s3_feat_proc.py:119: error: Argument 1 to "data_path" of "PipelineConfig" has incompatible type "Literal['importance']"; expected "Literal['raw', 'norms', 'scaled', 'pca', 'pca_npy', 'head_dists_zanj', 'head_dists_raw', 'head_embed', 'clustering']"  [arg-type]
+attention_motifs/pipeline/s3_feat_proc.py:129: error: Item "None" of "Path | None" has no attribute "mkdir"  [union-attr]
+attention_motifs/features/head_analysis.py:14: error: Skipping analyzing "sklearn.manifold": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/features/head_analysis.py:15: error: Skipping analyzing "sklearn.decomposition": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/features/head_analysis.py:16: error: Skipping analyzing "sklearn.base": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/features/head_analysis.py:16: error: Skipping analyzing "sklearn": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/features/head_analysis.py:17: error: Skipping analyzing "umap": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/features/head_analysis.py:149: error: Name "embedding" already defined on line 147  [no-redef]
+attention_motifs/features/head_analysis.py:196: error: "DataFrame" has no attribute "_embed_meta"  [attr-defined]
+attention_motifs/features/head_analysis.py:381: error: Item "None" of "Axes | None" has no attribute "plot"  [union-attr]
+attention_motifs/features/head_analysis.py:394: error: Item "None" of "Axes | None" has no attribute "set_xlabel"  [union-attr]
+attention_motifs/features/head_analysis.py:395: error: Item "None" of "Axes | None" has no attribute "set_ylabel"  [union-attr]
+attention_motifs/features/head_analysis.py:400: error: Item "None" of "Axes | None" has no attribute "set_title"  [union-attr]
+attention_motifs/features/head_analysis.py:406: error: Item "None" of "Axes | None" has no attribute "set_title"  [union-attr]
+attention_motifs/features/head_analysis.py:408: error: Item "None" of "Axes | None" has no attribute "set_title"  [union-attr]
+attention_motifs/features/head_analysis.py:413: error: Item "None" of "Axes | None" has no attribute "legend"  [union-attr]
+attention_motifs/features/head_analysis.py:415: error: Item "None" of "Axes | None" has no attribute "legend"  [union-attr]
+attention_motifs/features/head_analysis.py:419: error: Item "None" of "Axes | None" has no attribute "set_xlim"  [union-attr]
+attention_motifs/features/head_analysis.py:421: error: Item "None" of "Axes | None" has no attribute "set_ylim"  [union-attr]
+attention_motifs/features/head_analysis.py:426: error: Incompatible return value type (got "tuple[Figure | None, Axes | None]", expected "tuple[Figure | None, Axes]")  [return-value]
+attention_motifs/features/head_analysis.py:502: error: Incompatible types in assignment (expression has type "None", variable has type "str")  [assignment]
+attention_motifs/ablation/metrics.py:473: error: Invalid index type "tuple[int, int, int | float]" for "Tensor"; expected type "SupportsIndex | bool | int | slice[Any, Any, Any] | EllipsisType | Tensor | _NestedSequence[bool | int | slice[Any, Any, Any] | EllipsisType | Tensor | None] | None | tuple[SupportsIndex | bool | int | slice[Any, Any, Any] | EllipsisType | Tensor | _NestedSequence[bool | int | slice[Any, Any, Any] | EllipsisType | Tensor | None] | None, ...]"  [index]
+attention_motifs/pipeline/s2_features.py:12: error: Argument "features_func" to "scalar_feature_table" has incompatible type "Callable[[ndarray[Any, Any]], dict[str, float]]"; expected "Callable[[Tensor], dict[str, float]]"  [arg-type]
+attention_motifs/features/generate.py:45: error: Argument "features_func" to "scalar_feature_table" has incompatible type "Callable[[ndarray[Any, Any]], dict[str, float]]"; expected "Callable[[Tensor], dict[str, float]]"  [arg-type]
+attention_motifs/pipeline/s5b_head_embed_plots.py:48: error: Unsupported left operand type for / ("None")  [operator]
+attention_motifs/pipeline/s5b_head_embed_plots.py:48: note: Left operand is of type "Path | None"
+attention_motifs/pipeline/s5b_head_embed_plots.py:87: error: Incompatible types in assignment (expression has type "Figure | None", variable has type "Figure")  [assignment]
+attention_motifs/pipeline/s5b_head_embed_plots.py:112: error: Unsupported left operand type for / ("None")  [operator]
+attention_motifs/pipeline/s5b_head_embed_plots.py:112: note: Left operand is of type "Path | None"
+attention_motifs/pipeline/s5_head_embed.py:110: error: Argument "embedding_methods" to "create_embedding_df_multi" has incompatible type "list[str]"; expected "Sequence[Literal['isomap', 'umap', 'tsne', 'pca']]"  [arg-type]
+attention_motifs/pipeline/s5_head_embed.py:126: error: Unsupported left operand type for / ("None")  [operator]
+attention_motifs/pipeline/s5_head_embed.py:126: note: Left operand is of type "Path | None"
+attention_motifs/pipeline/s5_head_embed.py:127: error: Item "None" of "Path | None" has no attribute "mkdir"  [union-attr]
+attention_motifs/ablation/experiment.py:37: error: Skipping analyzing "transformer_lens": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/ablation/experiment.py:203: error: Argument 1 to "heads_from_strings" has incompatible type "list[tuple[int, int]] | list[str]"; expected "list[str]"  [arg-type]
+attention_motifs/ablation/experiment.py:206: error: Argument 1 to "heads_from_strings" has incompatible type "list[tuple[int, int]] | list[str]"; expected "list[str]"  [arg-type]
+attention_motifs/ablation/experiment.py:257: error: Incompatible types in assignment (expression has type "tqdm[Sequence[object]]", variable has type "list[Sequence[object]]")  [assignment]
+attention_motifs/ablation/experiment.py:263: error: Argument 2 to "prefix_matching_score" has incompatible type "object"; expected "int"  [arg-type]
+attention_motifs/ablation/experiment.py:263: error: Argument 3 to "prefix_matching_score" has incompatible type "object"; expected "int"  [arg-type]
+attention_motifs/ablation/experiment.py:267: error: List item 0 has incompatible type "tuple[object, object]"; expected "tuple[int, int]"  [list-item]
+attention_motifs/ablation/experiment.py:269: error: Argument 2 to "prefix_matching_score" has incompatible type "object"; expected "int"  [arg-type]
+attention_motifs/ablation/experiment.py:269: error: Argument 3 to "prefix_matching_score" has incompatible type "object"; expected "int"  [arg-type]
+Found 133 errors in 27 files (checked 60 source files)
