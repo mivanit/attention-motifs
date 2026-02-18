@@ -19,87 +19,97 @@
     <div class="container">
       <h1>Hierarchical Clustering of Attention Heads</h1>
 
-      <div class="controls clustering-controls">
-        <div class="control-group">
-          <label for="n-clusters">Number of Clusters:</label>
-          <input type="range" id="n-clusters" min="2" max="50" value="10" />
-          <input
-            type="number"
-            id="n-clusters-input"
-            value="10"
-            min="2"
-            class="control-input"
-          />
-        </div>
-        <div class="control-group">
-          <label for="cut-height">Cut Height:</label>
-          <input
-            type="range"
-            id="cut-height"
-            min="0"
-            max="100"
-            value="50"
-            step="0.1"
-          />
-          <input
-            type="number"
-            id="cut-height-input"
-            value="0"
-            min="0"
-            step="0.001"
-            class="control-input"
-          />
-        </div>
-        <div class="control-group">
-          <label for="min-cluster-size">Min Cluster Size:</label>
-          <input
-            type="range"
-            id="min-cluster-size"
-            min="0"
-            max="100"
-            value="0"
-          />
-          <input
-            type="number"
-            id="min-cluster-size-input"
-            value="0"
-            min="0"
-            class="control-input"
-          />
-        </div>
-        <div class="control-group">
-          <button id="export-pattern-types" class="toggle-btn">
-            Export Pattern Types
-          </button>
-        </div>
-      </div>
+      <div class="controls-header">
+        <div class="controls-left">
+          <div class="controls clustering-controls">
+            <div class="control-group">
+              <label for="n-clusters">Number of Clusters:</label>
+              <input type="range" id="n-clusters" min="2" max="50" value="10" />
+              <input
+                type="number"
+                id="n-clusters-input"
+                value="10"
+                min="2"
+                class="control-input"
+              />
+            </div>
+            <div class="control-group">
+              <label for="cut-height">Cut Height:</label>
+              <input
+                type="range"
+                id="cut-height"
+                min="0"
+                max="100"
+                value="50"
+                step="0.1"
+              />
+              <input
+                type="number"
+                id="cut-height-input"
+                value="0"
+                min="0"
+                step="0.001"
+                class="control-input"
+              />
+            </div>
+            <div class="control-group">
+              <label for="min-cluster-size">Min Cluster Size:</label>
+              <input
+                type="range"
+                id="min-cluster-size"
+                min="0"
+                max="100"
+                value="0"
+              />
+              <input
+                type="number"
+                id="min-cluster-size-input"
+                value="0"
+                min="0"
+                class="control-input"
+              />
+            </div>
+            <div class="control-group">
+              <button id="export-pattern-types" class="toggle-btn">
+                Export Pattern Types
+              </button>
+            </div>
+          </div>
 
-      <div class="controls display-controls">
-        <div class="control-group">
-          <label for="scale">Model Map Scale:</label>
-          <input
-            type="range"
-            id="scale"
-            min="0.5"
-            max="2"
-            value="1"
-            step="0.1"
-          />
-          <span id="scale-value">1.0</span>
+          <div class="controls display-controls">
+            <div class="control-group">
+              <label for="scale">Model Map Scale:</label>
+              <input
+                type="range"
+                id="scale"
+                min="0.5"
+                max="2"
+                value="1"
+                step="0.1"
+              />
+              <span id="scale-value">1.0</span>
+            </div>
+            <div class="control-group">
+              <label>Sort Heads:</label>
+              <button id="sort-toggle" class="toggle-btn">By Index</button>
+            </div>
+            <div class="control-group">
+              <label for="model-order">Model Order:</label>
+              <select id="model-order" class="dropdown">
+                <option value="data">Data Order</option>
+                <option value="size">By Size</option>
+                <option value="family">By Family</option>
+              </select>
+            </div>
+            <span class="help-icon" id="model-data-help">❓</span>
+          </div>
         </div>
-        <div class="control-group">
-          <label>Sort Heads:</label>
-          <button id="sort-toggle" class="toggle-btn">By Index</button>
+
+        <div class="controls-right">
+          <div id="mini-dendrogram-container">
+            <svg id="mini-dendrogram"></svg>
+          </div>
         </div>
-        <div class="control-group">
-          <label for="model-order">Model Order:</label>
-          <select id="model-order" class="dropdown">
-            <option value="data">Data Order</option>
-            <option value="size">By Size</option>
-            <option value="family">By Family</option>
-          </select>
-        </div>
-        <span class="help-icon" id="model-data-help">❓</span>
       </div>
 
       <div class="stats" id="stats"></div>
@@ -129,6 +139,17 @@
             </div>
           </div>
           <div id="pattern-images"></div>
+          <div
+            class="selection-notes"
+            id="selection-notes-container"
+            style="display: none"
+          >
+            <label for="selection-note">Selection Note:</label>
+            <textarea
+              id="selection-note"
+              placeholder="Add a note about these selected heads..."
+            ></textarea>
+          </div>
         </div>
       </div>
     </div>

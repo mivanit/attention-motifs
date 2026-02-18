@@ -28,6 +28,7 @@ let gridState = {
   modelOrder: "data",
   originalModelOrder: [],
   modelDataFrame: null,
+  selectionNote: "",
 };
 
 /**
@@ -374,6 +375,11 @@ function setupSidePane() {
     updateSidePane();
   });
 
+  // Selection note textarea
+  document.getElementById("selection-note").addEventListener("input", (e) => {
+    gridState.selectionNote = e.target.value;
+  });
+
   // Initial empty state
   updateSidePane();
 }
@@ -677,6 +683,10 @@ function exportPatternTypes() {
     },
     types: types,
     assignments: assignments,
+    selection: {
+      heads: gridState.selectedHeads,
+      note: gridState.selectionNote,
+    },
   };
 
   // Trigger download
@@ -930,14 +940,19 @@ function shuffleArray(array) {
 async function updateSidePane() {
   const patternImages = document.getElementById("pattern-images");
   const selectedCount = document.getElementById("selected-count");
+  const notesContainer = document.getElementById("selection-notes-container");
 
   selectedCount.textContent = `(${gridState.selectedHeads.length})`;
 
   if (gridState.selectedHeads.length === 0) {
     patternImages.innerHTML =
       '<div class="empty-state">Click on cells to select heads and view their attention patterns. Shift-click to select all heads in a cluster.</div>';
+    notesContainer.style.display = "none";
     return;
   }
+
+  // Show notes container when heads are selected
+  notesContainer.style.display = "block";
 
   patternImages.innerHTML = "";
 
@@ -1138,6 +1153,185 @@ function updateStats(assignments, nClusters, smallClusters = new Set()) {
 
   // Render top clusters list
   renderTopClusters();
+
+  // Render mini dendrogram
+  renderMiniDendrogram();
+}
+
+/**
+ * Build a simplified tree from linkage matrix, collapsed at cluster boundaries
+ * Returns a tree where leaves are clusters (not individual heads)
+ */
+function buildClusterTree() {
+  const linkage = gridState.linkage;
+  const n = gridState.nHeads;
+  const assignments = window.CLUSTER_STATE.getAssignments();
+
+  // Build full tree first
+  const nodes = [];
+
+  // Leaf nodes (individual heads)
+  for (let i = 0; i < n; i++) {
+    const headId = gridState.clsValues[i];
+    nodes.push({
+      id: i,
+      isLeaf: true,
+      height: 0,
+      clusterId: assignments[headId],
+      count: 1,
+    });
+  }
+
+  // Internal nodes from linkage
+  for (let i = 0; i < linkage.length; i++) {
+    const [idx1, idx2, distance, count] = linkage[i];
+    const left = nodes[Math.floor(idx1)];
+    const right = nodes[Math.floor(idx2)];
+
+    // If both children have the same cluster, this node has that cluster
+    // If different clusters, this is a merge point (clusterId = null)
+    const clusterId =
+      left.clusterId === right.clusterId ? left.clusterId : null;
+
+    nodes.push({
+      id: n + i,
+      isLeaf: false,
+      height: distance,
+      clusterId: clusterId,
+      count: count,
+      children: [left, right],
+    });
+  }
+
+  const root = nodes[nodes.length - 1];
+
+  // Now collapse: for any node where all descendants have the same cluster,
+  // replace it with a leaf representing that cluster
+  function collapse(node) {
+    if (node.isLeaf) {
+      return {
+        isLeaf: true,
+        clusterId: node.clusterId,
+        count: node.count,
+        height: node.height,
+      };
+    }
+
+    // If this entire subtree is one cluster, collapse to leaf
+    if (node.clusterId !== null) {
+      return {
+        isLeaf: true,
+        clusterId: node.clusterId,
+        count: node.count,
+        height: node.height,
+      };
+    }
+
+    // Otherwise, recurse
+    return {
+      isLeaf: false,
+      clusterId: null,
+      height: node.height,
+      count: node.count,
+      children: [collapse(node.children[0]), collapse(node.children[1])],
+    };
+  }
+
+  return collapse(root);
+}
+
+/**
+ * Render a simple horizontal dendrogram showing cluster structure
+ */
+function renderMiniDendrogram() {
+  const svg = document.getElementById("mini-dendrogram");
+  if (!svg) return;
+
+  const tree = buildClusterTree();
+  const sizes = window.CLUSTER_STATE.getClusterSizes();
+
+  // Get dimensions
+  const rect = svg.getBoundingClientRect();
+  const width = rect.width || 380;
+  const height = rect.height || 130;
+  const margin = { top: 10, right: 60, bottom: 10, left: 10 };
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  // Count leaves and assign y positions
+  let leafCount = 0;
+  function countLeaves(node) {
+    if (node.isLeaf) {
+      node.leafIndex = leafCount++;
+      return 1;
+    }
+    return countLeaves(node.children[0]) + countLeaves(node.children[1]);
+  }
+  const totalLeaves = countLeaves(tree);
+
+  // Get max height for x scaling
+  function getMaxHeight(node) {
+    if (node.isLeaf) return 0;
+    return Math.max(
+      node.height,
+      getMaxHeight(node.children[0]),
+      getMaxHeight(node.children[1]),
+    );
+  }
+  const maxHeight = getMaxHeight(tree) || 1;
+
+  // Position nodes
+  function positionNodes(node) {
+    if (node.isLeaf) {
+      node.x = innerWidth;
+      node.y = (node.leafIndex + 0.5) * (innerHeight / totalLeaves);
+      return node.y;
+    }
+
+    const y0 = positionNodes(node.children[0]);
+    const y1 = positionNodes(node.children[1]);
+    node.x = innerWidth * (1 - node.height / maxHeight);
+    node.y = (y0 + y1) / 2;
+    return node.y;
+  }
+  positionNodes(tree);
+
+  // Build SVG content
+  let paths = "";
+  let circles = "";
+  let labels = "";
+
+  function renderNode(node) {
+    if (node.isLeaf) {
+      const color = window.CLUSTER_STATE.colors[
+        node.clusterId >= 0
+          ? node.clusterId % window.CLUSTER_STATE.colors.length
+          : 0
+      ];
+      const displayColor = node.clusterId === -1 ? "#666" : color;
+      const size = sizes[node.clusterId] || node.count;
+
+      circles += `<circle cx="${margin.left + node.x}" cy="${margin.top + node.y}" r="6" fill="${displayColor}" stroke="white" stroke-width="1"/>`;
+      labels += `<text x="${margin.left + node.x + 10}" y="${margin.top + node.y + 4}" font-size="11" fill="#333">${size}</text>`;
+      return;
+    }
+
+    // Draw elbow paths to children
+    for (const child of node.children) {
+      const x1 = margin.left + node.x;
+      const y1 = margin.top + node.y;
+      const x2 = margin.left + child.x;
+      const y2 = margin.top + child.y;
+
+      // Elbow path: horizontal then vertical
+      paths += `<path d="M${x1},${y1} H${x2} V${y2}" fill="none" stroke="#999" stroke-width="1.5"/>`;
+      renderNode(child);
+    }
+  }
+
+  renderNode(tree);
+
+  svg.innerHTML = paths + circles + labels;
 }
 
 /**

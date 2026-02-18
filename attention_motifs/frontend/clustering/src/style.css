@@ -49,6 +49,46 @@ h1 {
   margin-bottom: 20px;
 }
 
+.controls-header {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.controls-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.controls-left .controls {
+  margin-bottom: 12px;
+}
+
+.controls-left .controls:last-child {
+  margin-bottom: 0;
+}
+
+.controls-right {
+  flex: 0 0 400px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#mini-dendrogram-container {
+  width: 100%;
+  height: 140px;
+}
+
+#mini-dendrogram {
+  width: 100%;
+  height: 100%;
+}
+
 .controls {
   background: white;
   padding: 16px 20px;
@@ -556,6 +596,37 @@ h1 {
 
 .pattern-link img {
   display: block;
+}
+
+/* Selection notes */
+.selection-notes {
+  padding: 12px;
+  border-top: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.selection-notes label {
+  display: block;
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 6px;
+}
+
+.selection-notes textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.selection-notes textarea:focus {
+  outline: none;
+  border-color: #1565c0;
 }
 
 /* Tooltip */
