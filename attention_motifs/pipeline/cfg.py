@@ -2,7 +2,7 @@ from copy import deepcopy
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 PIPELINE_CFG_EXAMPLES: str = """
 # use `pipeline_cfg.toml`
@@ -33,7 +33,7 @@ FigureFilename = Literal[
 
 PlotKwargKey = Literal["pca_all_dpi",]
 
-DATA_FNAMES: dict[DataFilename, str] = dict(
+DATA_FNAMES: dict[DataFilename, str] = dict( # ty: ignore[invalid-assignment]
 	raw="raw.jsonl",
 	norms="norms.jsonl",
 	scaled="scaled.jsonl",
@@ -46,7 +46,7 @@ DATA_FNAMES: dict[DataFilename, str] = dict(
 	clustering="clustering",
 )
 
-FIGURE_FNAMES: dict[FigureFilename, str] = dict(
+FIGURE_FNAMES: dict[FigureFilename, str] = dict( # ty: ignore[invalid-assignment]
 	pca="pca.pdf",
 	cov_full="covariance-full.pdf",
 	cov_reduced="covariance-reduced.pdf",
@@ -55,7 +55,7 @@ FIGURE_FNAMES: dict[FigureFilename, str] = dict(
 	head_embed="head-embed.pdf",
 )
 
-DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
+DEFAULT_VIS_CONFIGS: dict[str, dict[str, Any]] = dict(
 	attentionpedia=dict(
 		path="attnpedia",
 		cfg_path="config.json",
