@@ -88,6 +88,22 @@ h1 {
   min-width: 50px;
 }
 
+.control-input {
+  width: 70px;
+  padding: 4px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.control-input:focus {
+  outline: none;
+  border-color: #1565c0;
+}
+
 .control-group button {
   padding: 8px 16px;
   font-size: 14px;
@@ -354,6 +370,10 @@ h1 {
   opacity: 1;
 }
 
+.model-help-icon:hover .help-tooltip {
+  display: block;
+}
+
 .model-help-icon .help-tooltip {
   right: auto;
   left: 100%;
@@ -517,6 +537,25 @@ h1 {
   justify-content: center;
   color: #aaa;
   font-size: 11px;
+}
+
+.pattern-link {
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.pattern-link:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.pattern-link img {
+  display: block;
 }
 
 /* Tooltip */

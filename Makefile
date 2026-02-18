@@ -790,8 +790,18 @@ am-frontend-format:
 	@echo "format the frontend files"
 	npx prettier --write "attention_motifs/frontend/**/*.{html,js,css}" --log-level warn || true
 
+JS_DEV_TOOLKIT_URL = https://raw.githubusercontent.com/mivanit/js-dev-toolkit/main/src
+
+.PHONY: am-frontend-fetch-libs
+am-frontend-fetch-libs:
+	@echo "fetch js-dev-toolkit libs"
+	mkdir -p $(FRONTEND_DIR)/libs
+	curl -sL $(JS_DEV_TOOLKIT_URL)/DataFrame.js -o $(FRONTEND_DIR)/libs/DataFrame.js
+	curl -sL $(JS_DEV_TOOLKIT_URL)/yaml.js -o $(FRONTEND_DIR)/libs/yaml.js
+	curl -sL $(JS_DEV_TOOLKIT_URL)/sparklines.js -o $(FRONTEND_DIR)/libs/sparklines.js
+
 .PHONY: am-frontend-bundle
-am-frontend-bundle: am-frontend-format am-frontend-ap-build
+am-frontend-bundle: am-frontend-format am-frontend-ap-build am-frontend-fetch-libs
 	@echo "bundle frontend files"
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_ATTNPEDIA_DIR)/src/index.html --output $(FRONTEND_ATTNPEDIA_DIR)/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/head_embed_table/src/index.html --output $(FRONTEND_DIR)/head_embed_table/index.html

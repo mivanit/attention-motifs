@@ -21,11 +21,30 @@ let gridState = {
   logScale: false,
   currentAssignments: null,
   currentNClusters: 0,
+  currentCutHeight: null,
+  minClusterSize: 10,
+  linkageMethod: "average",
   modelSizes: {},
   modelOrder: "data",
   originalModelOrder: [],
   modelDataFrame: null,
 };
+
+/**
+ * Generate single pattern viewer URL for a specific head and prompt
+ * @param {string} headId - Head ID in format "model:Llayer:Hhead"
+ * @param {string} promptHash - The prompt hash
+ * @returns {string} URL to single pattern viewer
+ */
+function getPatternViewerUrl(headId, promptHash) {
+  const parts = headId.split(":");
+  const model = parts[0];
+  const layer = parts[1].substring(1); // Remove "L" prefix
+  const head = parts[2].substring(1); // Remove "H" prefix
+
+  // Format: single.html?prompt={hash}&head={model}.L{layer}.H{head}
+  return `../../patterns/single.html?prompt=${promptHash}&head=${model}.L${layer}.H${head}`;
+}
 
 /**
  * Parse model sizes from TransformerLens CSV
@@ -197,11 +216,15 @@ async function initGridView(config) {
     // Set up help tooltip with model data
     setupHelpTooltip();
 
-    // Initial render with cut height = 5
-    const initialCutHeight = 5;
+    // Initial render with cut height and min cluster size
+    const initialCutHeight = 5.48;
+    const initialMinClusterSize = gridState.minClusterSize;
     document.getElementById("cut-height").value = initialCutHeight;
-    document.getElementById("cut-height-value").textContent =
-      initialCutHeight.toFixed(1);
+    document.getElementById("cut-height-input").value =
+      initialCutHeight.toFixed(3);
+    document.getElementById("min-cluster-size").value = initialMinClusterSize;
+    document.getElementById("min-cluster-size-input").value =
+      initialMinClusterSize;
     updateClustersByHeight(initialCutHeight);
   } catch (error) {
     console.error("Error initializing grid view:", error);
@@ -215,16 +238,21 @@ async function initGridView(config) {
  */
 function setupControls(defaultNClusters) {
   const nClustersSlider = document.getElementById("n-clusters");
-  const nClustersValue = document.getElementById("n-clusters-value");
+  const nClustersInput = document.getElementById("n-clusters-input");
   const cutHeightSlider = document.getElementById("cut-height");
-  const cutHeightValue = document.getElementById("cut-height-value");
+  const cutHeightInput = document.getElementById("cut-height-input");
+  const minClusterSizeSlider = document.getElementById("min-cluster-size");
+  const minClusterSizeInput = document.getElementById("min-cluster-size-input");
   const scaleSlider = document.getElementById("scale");
   const scaleValue = document.getElementById("scale-value");
+  const exportBtn = document.getElementById("export-pattern-types");
 
   // Set max clusters to number of heads
-  nClustersSlider.max = Math.min(gridState.nHeads, 100);
+  const maxClusters = Math.min(gridState.nHeads, 100);
+  nClustersSlider.max = maxClusters;
   nClustersSlider.value = defaultNClusters;
-  nClustersValue.textContent = defaultNClusters;
+  nClustersInput.value = defaultNClusters;
+  nClustersInput.max = maxClusters;
 
   // Get max height from linkage, capped at 20
   const maxHeight = Math.min(
@@ -233,19 +261,51 @@ function setupControls(defaultNClusters) {
   );
   cutHeightSlider.max = maxHeight;
   cutHeightSlider.step = maxHeight / 1000;
+  cutHeightInput.max = maxHeight;
+  cutHeightInput.step = maxHeight / 1000;
 
-  // n-clusters slider
+  // n-clusters slider and input (bidirectional)
   nClustersSlider.addEventListener("input", (e) => {
     const n = parseInt(e.target.value);
-    nClustersValue.textContent = n;
+    nClustersInput.value = n;
+    updateClusters(n);
+  });
+  nClustersInput.addEventListener("change", (e) => {
+    const n = Math.max(2, Math.min(maxClusters, parseInt(e.target.value) || 2));
+    nClustersInput.value = n;
+    nClustersSlider.value = n;
     updateClusters(n);
   });
 
-  // cut-height slider
+  // cut-height slider and input (bidirectional)
   cutHeightSlider.addEventListener("input", (e) => {
     const height = parseFloat(e.target.value);
-    cutHeightValue.textContent = height.toFixed(3);
+    cutHeightInput.value = height.toFixed(3);
     updateClustersByHeight(height);
+  });
+  cutHeightInput.addEventListener("change", (e) => {
+    const height = Math.max(
+      0,
+      Math.min(maxHeight, parseFloat(e.target.value) || 0),
+    );
+    cutHeightInput.value = height.toFixed(3);
+    cutHeightSlider.value = height;
+    updateClustersByHeight(height);
+  });
+
+  // min-cluster-size slider and input (bidirectional)
+  minClusterSizeSlider.addEventListener("input", (e) => {
+    const size = parseInt(e.target.value);
+    minClusterSizeInput.value = size;
+    gridState.minClusterSize = size;
+    reapplyCurrentClustering();
+  });
+  minClusterSizeInput.addEventListener("change", (e) => {
+    const size = Math.max(0, parseInt(e.target.value) || 0);
+    minClusterSizeInput.value = size;
+    minClusterSizeSlider.value = size;
+    gridState.minClusterSize = size;
+    reapplyCurrentClustering();
   });
 
   // Scale slider
@@ -273,6 +333,9 @@ function setupControls(defaultNClusters) {
     gridState.modelOrder = e.target.value;
     renderModelGrids();
   });
+
+  // Export pattern types button
+  exportBtn.addEventListener("click", exportPatternTypes);
 }
 
 /**
@@ -473,14 +536,83 @@ function computeClustersByHeightInternal(cutHeight) {
 }
 
 /**
+ * Apply min-cluster-size merging to assignments
+ * @param {Object.<string, number>} assignments - Original cluster assignments
+ * @returns {Object} Object with merged assignments, small cluster IDs, and final cluster count
+ */
+function applyMinClusterSize(assignments) {
+  const minSize = gridState.minClusterSize;
+  if (minSize <= 0) {
+    return {
+      assignments: assignments,
+      smallClusters: new Set(),
+      nClusters: new Set(Object.values(assignments)).size,
+    };
+  }
+
+  // Count cluster sizes
+  const clusterCounts = {};
+  for (const cid of Object.values(assignments)) {
+    clusterCounts[cid] = (clusterCounts[cid] || 0) + 1;
+  }
+
+  // Find small clusters
+  const smallClusters = new Set();
+  for (const [cid, count] of Object.entries(clusterCounts)) {
+    if (count < minSize) {
+      smallClusters.add(parseInt(cid));
+    }
+  }
+
+  // Reassign small cluster heads to misc (-1)
+  if (smallClusters.size > 0) {
+    const merged = {};
+    for (const [headId, cid] of Object.entries(assignments)) {
+      merged[headId] = smallClusters.has(cid) ? -1 : cid;
+    }
+    return {
+      assignments: merged,
+      smallClusters: smallClusters,
+      nClusters: new Set(Object.values(merged)).size,
+    };
+  }
+
+  return {
+    assignments: assignments,
+    smallClusters: smallClusters,
+    nClusters: new Set(Object.values(assignments)).size,
+  };
+}
+
+/**
+ * Reapply current clustering with updated min-cluster-size
+ */
+function reapplyCurrentClustering() {
+  if (gridState.currentCutHeight !== null) {
+    updateClustersByHeight(gridState.currentCutHeight);
+  } else {
+    updateClusters(gridState.currentNClusters || 10);
+  }
+}
+
+/**
  * Update visualization for a given number of clusters
  * @param {number} nClusters - Number of clusters
  */
 function updateClusters(nClusters) {
-  const assignments = computeClusters(nClusters);
-  window.CLUSTER_STATE.setAssignments(assignments, nClusters);
+  gridState.currentNClusters = nClusters;
+  gridState.currentCutHeight = null;
+
+  const rawAssignments = computeClusters(nClusters);
+  const {
+    assignments,
+    smallClusters,
+    nClusters: finalNClusters,
+  } = applyMinClusterSize(rawAssignments);
+
+  window.CLUSTER_STATE.setAssignments(assignments, finalNClusters);
   renderModelGrids();
-  updateStats(assignments, nClusters);
+  updateStats(assignments, finalNClusters, smallClusters);
 }
 
 /**
@@ -488,15 +620,75 @@ function updateClusters(nClusters) {
  * @param {number} cutHeight - Height at which to cut
  */
 function updateClustersByHeight(cutHeight) {
-  const assignments = computeClustersByHeightInternal(cutHeight);
-  const nClusters = new Set(Object.values(assignments)).size;
+  gridState.currentCutHeight = cutHeight;
 
-  document.getElementById("n-clusters").value = nClusters;
-  document.getElementById("n-clusters-value").textContent = nClusters;
+  const rawAssignments = computeClustersByHeightInternal(cutHeight);
+  const rawNClusters = new Set(Object.values(rawAssignments)).size;
+  const {
+    assignments,
+    smallClusters,
+    nClusters: finalNClusters,
+  } = applyMinClusterSize(rawAssignments);
 
-  window.CLUSTER_STATE.setAssignments(assignments, nClusters);
+  document.getElementById("n-clusters").value = rawNClusters;
+  document.getElementById("n-clusters-input").value = rawNClusters;
+
+  window.CLUSTER_STATE.setAssignments(assignments, finalNClusters);
   renderModelGrids();
-  updateStats(assignments, nClusters);
+  updateStats(assignments, finalNClusters, smallClusters);
+}
+
+/**
+ * Export pattern types JSON
+ */
+function exportPatternTypes() {
+  const assignments = window.CLUSTER_STATE.getAssignments();
+  const nClusters = window.CLUSTER_STATE.getNumClusters();
+
+  // Build cluster sizes
+  const clusterSizes = {};
+  for (const cid of Object.values(assignments)) {
+    const key = String(cid);
+    clusterSizes[key] = (clusterSizes[key] || 0) + 1;
+  }
+
+  // Build types array
+  const clusterIds = [...new Set(Object.values(assignments))].sort(
+    (a, b) => a - b,
+  );
+  const types = clusterIds.map((id) => ({
+    id: id,
+    name: id === -1 ? "misc" : "none",
+    description: id === -1 ? "Merged from small clusters" : "none",
+  }));
+
+  const patternTypes = {
+    meta: {
+      cut_height: gridState.currentCutHeight,
+      n_clusters: nClusters,
+      linkage_method: gridState.linkageMethod,
+      clustering_path: "browser-export",
+      created_at: new Date().toISOString(),
+      min_cluster_size: gridState.minClusterSize,
+    },
+    stats: {
+      n_heads: Object.keys(assignments).length,
+      cluster_sizes: clusterSizes,
+    },
+    types: types,
+    assignments: assignments,
+  };
+
+  // Trigger download
+  const blob = new Blob([JSON.stringify(patternTypes, null, "\t")], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "pattern_types.json";
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 /**
@@ -834,6 +1026,14 @@ async function updateSidePane() {
 
       if (hash) {
         const imgUrl = `${gridState.patternsBaseUrl}/${modelName}/prompts/${hash}/L${layer}/H${head}/attn.png`;
+
+        // Create clickable link to pattern viewer
+        const link = document.createElement("a");
+        link.href = getPatternViewerUrl(headId, hash);
+        link.target = "_blank";
+        link.className = "pattern-link";
+        link.title = "Open in pattern viewer";
+
         const img = document.createElement("img");
         img.className = "pattern-image";
         img.src = imgUrl;
@@ -842,9 +1042,11 @@ async function updateSidePane() {
         img.style.width = gridState.patternSize + "px";
         img.style.height = gridState.patternSize + "px";
         img.onerror = () => {
-          img.style.display = "none";
+          link.style.display = "none";
         };
-        patternRow.appendChild(img);
+
+        link.appendChild(img);
+        patternRow.appendChild(link);
       }
     }
 
@@ -894,10 +1096,9 @@ function hideTooltip() {
 /**
  * Update statistics display with sparkline
  */
-function updateStats(assignments, nClusters) {
+function updateStats(assignments, nClusters, smallClusters = new Set()) {
   // Store for re-rendering when toggling log scale
   gridState.currentAssignments = assignments;
-  gridState.currentNClusters = nClusters;
 
   const sizes = window.CLUSTER_STATE.getClusterSizes();
   const sortedSizes = Object.values(sizes).sort((a, b) => b - a);

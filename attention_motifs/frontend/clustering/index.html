@@ -96,6 +96,22 @@
       min-width: 50px;
     }
     
+    .control-input {
+      width: 70px;
+      padding: 4px 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      text-align: center;
+    }
+    
+    .control-input:focus {
+      outline: none;
+      border-color: #1565c0;
+    }
+    
     .control-group button {
       padding: 8px 16px;
       font-size: 14px;
@@ -362,6 +378,10 @@
       opacity: 1;
     }
     
+    .model-help-icon:hover .help-tooltip {
+      display: block;
+    }
+    
     .model-help-icon .help-tooltip {
       right: auto;
       left: 100%;
@@ -527,6 +547,25 @@
       font-size: 11px;
     }
     
+    .pattern-link {
+      display: inline-block;
+      flex-shrink: 0;
+      border-radius: 4px;
+      cursor: pointer;
+      transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
+    }
+    
+    .pattern-link:hover {
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    .pattern-link img {
+      display: block;
+    }
+    
     /* Tooltip */
     .tooltip {
       position: fixed;
@@ -661,7 +700,13 @@
         <div class="control-group">
           <label for="n-clusters">Number of Clusters:</label>
           <input type="range" id="n-clusters" min="2" max="50" value="10" />
-          <span id="n-clusters-value">10</span>
+          <input
+            type="number"
+            id="n-clusters-input"
+            value="10"
+            min="2"
+            class="control-input"
+          />
         </div>
         <div class="control-group">
           <label for="cut-height">Cut Height:</label>
@@ -673,7 +718,36 @@
             value="50"
             step="0.1"
           />
-          <span id="cut-height-value">--</span>
+          <input
+            type="number"
+            id="cut-height-input"
+            value="0"
+            min="0"
+            step="0.001"
+            class="control-input"
+          />
+        </div>
+        <div class="control-group">
+          <label for="min-cluster-size">Min Cluster Size:</label>
+          <input
+            type="range"
+            id="min-cluster-size"
+            min="0"
+            max="100"
+            value="0"
+          />
+          <input
+            type="number"
+            id="min-cluster-size-input"
+            value="0"
+            min="0"
+            class="control-input"
+          />
+        </div>
+        <div class="control-group">
+          <button id="export-pattern-types" class="toggle-btn">
+            Export Pattern Types
+          </button>
         </div>
       </div>
 
@@ -736,7 +810,7 @@
       </div>
     </div>
 
-        <!-- begin 'DataFrame.js' -->
+        <!-- begin '../../libs/DataFrame.js' -->
     <script>
     /**
      * @fileoverview Tabular data manipulation and display
@@ -746,423 +820,423 @@
      */
     
     class DataFrame {
-      /**
-       * Creates a DataFrame from a list of row objects
-       *
-       * @param {Array<Object>} data - Array of row objects
-       * @param {Array<string>} [columns] - Optional column names (will be inferred from data if not provided)
-       */
-      constructor(data = [], columns = null) {
-        this.data = data;
+    	/**
+    	 * Creates a DataFrame from a list of row objects
+    	 *
+    	 * @param {Array<Object>} data - Array of row objects
+    	 * @param {Array<string>} [columns] - Optional column names (will be inferred from data if not provided)
+    	 */
+    	constructor(data = [], columns = null) {
+    		this.data = data;
     
-        // Infer columns from data if not provided
-        if (!columns && data.length > 0) {
-          this.columns = Object.keys(data[0]);
-        } else {
-          this.columns = columns || [];
-        }
-      }
+    		// Infer columns from data if not provided
+    		if (!columns && data.length > 0) {
+    			this.columns = Object.keys(data[0]);
+    		} else {
+    			this.columns = columns || [];
+    		}
+    	}
     
-      /**
-       * Returns the values for a specific column
-       *
-       * @param {string} name - Column name
-       * @returns {Array} - Values in the column
-       */
-      col(name) {
-        if (!this.columns.includes(name)) {
-          throw new Error(
-            `Column '${name}' not found in columns: ${this.columns.join(", ")}`,
-          );
-        }
+    	/**
+    	 * Returns the values for a specific column
+    	 *
+    	 * @param {string} name - Column name
+    	 * @returns {Array} - Values in the column
+    	 */
+    	col(name) {
+    		if (!this.columns.includes(name)) {
+    			throw new Error(
+    				`Column '${name}' not found in columns: ${this.columns.join(", ")}`,
+    			);
+    		}
     
-        return this.data.map((row) => row[name]);
-      }
+    		return this.data.map((row) => row[name]);
+    	}
     
-      /**
-       * Returns the values for a specific cell
-       * @param {row_idx} row_idx - Row index
-       * @param {col_name} col_name - Column name
-       * @returns {any} - Value in the cell
-       * @throws {Error} - If row index or column name is invalid
-       */
-      get(row_idx, col_name) {
-        if (row_idx < 0 || row_idx >= this.data.length) {
-          throw new Error(
-            `Row index ${row_idx} out of bounds (0 to ${this.data.length - 1})`,
-          );
-        }
+    	/**
+    	 * Returns the values for a specific cell
+    	 * @param {row_idx} row_idx - Row index
+    	 * @param {col_name} col_name - Column name
+    	 * @returns {any} - Value in the cell
+    	 * @throws {Error} - If row index or column name is invalid
+    	 */
+    	get(row_idx, col_name) {
+    		if (row_idx < 0 || row_idx >= this.data.length) {
+    			throw new Error(
+    				`Row index ${row_idx} out of bounds (0 to ${this.data.length - 1})`,
+    			);
+    		}
     
-        if (!this.columns.includes(col_name)) {
-          throw new Error(
-            `Column '${col_name}' not found in columns: ${this.columns.join(", ")}`,
-          );
-        }
+    		if (!this.columns.includes(col_name)) {
+    			throw new Error(
+    				`Column '${col_name}' not found in columns: ${this.columns.join(", ")}`,
+    			);
+    		}
     
-        return this.data[row_idx][col_name];
-      }
+    		return this.data[row_idx][col_name];
+    	}
     
-      /**
-       * Returns a specific row as an object
-       *
-       * @param {number} rowIdx - Row index
-       * @returns {Object} - Row as an object
-       */
-      row(rowIdx) {
-        if (rowIdx < 0 || rowIdx >= this.data.length) {
-          throw new Error(
-            `Row index ${rowIdx} out of bounds (0 to ${this.data.length - 1})`,
-          );
-        }
+    	/**
+    	 * Returns a specific row as an object
+    	 *
+    	 * @param {number} rowIdx - Row index
+    	 * @returns {Object} - Row as an object
+    	 */
+    	row(rowIdx) {
+    		if (rowIdx < 0 || rowIdx >= this.data.length) {
+    			throw new Error(
+    				`Row index ${rowIdx} out of bounds (0 to ${this.data.length - 1})`,
+    			);
+    		}
     
-        return this.data[rowIdx];
-      }
+    		return this.data[rowIdx];
+    	}
     
-      /**
-       * Returns unique values in a specific column
-       * @param {string} name - Column name
-       * @returns {Set} - Unique values in the column
-       */
-      col_unique(name) {
-        return new Set(this.col(name));
-      }
+    	/**
+    	 * Returns unique values in a specific column
+    	 * @param {string} name - Column name
+    	 * @returns {Set} - Unique values in the column
+    	 */
+    	col_unique(name) {
+    		return new Set(this.col(name));
+    	}
     
-      /**
-       * Apply a function to transform values in a specific column
-       * @param {string} name - Column name
-       * @param {Function} fn - Function to apply to each value (value, rowIndex) => newValue
-       */
-      col_apply(name, fn) {
-        if (!this.columns.includes(name)) {
-          throw new Error(
-            `Column '${name}' not found in columns: ${this.columns.join(", ")}`,
-          );
-        }
+    	/**
+    	 * Apply a function to transform values in a specific column
+    	 * @param {string} name - Column name
+    	 * @param {Function} fn - Function to apply to each value (value, rowIndex) => newValue
+    	 */
+    	col_apply(name, fn) {
+    		if (!this.columns.includes(name)) {
+    			throw new Error(
+    				`Column '${name}' not found in columns: ${this.columns.join(", ")}`,
+    			);
+    		}
     
-        for (let i = 0; i < this.data.length; i++) {
-          this.data[i][name] = fn(this.data[i][name], i);
-        }
-      }
+    		for (let i = 0; i < this.data.length; i++) {
+    			this.data[i][name] = fn(this.data[i][name], i);
+    		}
+    	}
     
-      /**
-       * Parses a CSV string into a DataFrame
-       *
-       * @param {string} text - CSV text content
-       * @returns {DataFrame} - New DataFrame instance
-       */
-      static from_csv(text) {
-        // Split text into lines and filter out empty lines
-        const lines = text.split("\n").filter((line) => line.trim().length > 0);
+    	/**
+    	 * Parses a CSV string into a DataFrame
+    	 *
+    	 * @param {string} text - CSV text content
+    	 * @returns {DataFrame} - New DataFrame instance
+    	 */
+    	static from_csv(text) {
+    		// Split text into lines and filter out empty lines
+    		const lines = text.split("\n").filter((line) => line.trim().length > 0);
     
-        if (lines.length === 0) {
-          return new DataFrame();
-        }
+    		if (lines.length === 0) {
+    			return new DataFrame();
+    		}
     
-        // First line is the header
-        const header = lines[0].split(",").map((col) => col.trim());
+    		// First line is the header
+    		const header = lines[0].split(",").map((col) => col.trim());
     
-        // Parse each line into a row object
-        const data = [];
-        for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(",").map((val) => val.trim());
+    		// Parse each line into a row object
+    		const data = [];
+    		for (let i = 1; i < lines.length; i++) {
+    			const values = lines[i].split(",").map((val) => val.trim());
     
-          // Create row object mapping column names to values
-          const row = {};
-          for (let j = 0; j < header.length; j++) {
-            // Try to convert to number if possible
-            const value = values[j];
-            if (value === undefined) continue;
+    			// Create row object mapping column names to values
+    			const row = {};
+    			for (let j = 0; j < header.length; j++) {
+    				// Try to convert to number if possible
+    				const value = values[j];
+    				if (value === undefined) continue;
     
-            // Handle quoted strings
-            if (value.startsWith('"') && value.endsWith('"')) {
-              row[header[j]] = value.slice(1, -1);
-            }
-            // Handle null values
-            else if (value === "" || value.toLowerCase() === "null") {
-              row[header[j]] = null;
-            }
-            // Try converting to number
-            else if (!isNaN(value)) {
-              row[header[j]] = Number(value);
-            }
-            // Otherwise keep as string
-            else {
-              row[header[j]] = value;
-            }
-          }
+    				// Handle quoted strings
+    				if (value.startsWith('"') && value.endsWith('"')) {
+    					row[header[j]] = value.slice(1, -1);
+    				}
+    				// Handle null values
+    				else if (value === "" || value.toLowerCase() === "null") {
+    					row[header[j]] = null;
+    				}
+    				// Try converting to number
+    				else if (!isNaN(value)) {
+    					row[header[j]] = Number(value);
+    				}
+    				// Otherwise keep as string
+    				else {
+    					row[header[j]] = value;
+    				}
+    			}
     
-          data.push(row);
-        }
+    			data.push(row);
+    		}
     
-        return new DataFrame(data, header);
-      }
+    		return new DataFrame(data, header);
+    	}
     
-      /**
-       * Converts DataFrame to CSV string
-       *
-       * @returns {string} - CSV representation of the DataFrame
-       */
-      to_csv() {
-        if (this.data.length === 0) {
-          return this.columns.join(",");
-        }
+    	/**
+    	 * Converts DataFrame to CSV string
+    	 *
+    	 * @returns {string} - CSV representation of the DataFrame
+    	 */
+    	to_csv() {
+    		if (this.data.length === 0) {
+    			return this.columns.join(",");
+    		}
     
-        // Start with the header
-        const lines = [this.columns.join(",")];
+    		// Start with the header
+    		const lines = [this.columns.join(",")];
     
-        // Add each row
-        for (const row of this.data) {
-          const values = this.columns.map((col) => {
-            const val = row[col];
+    		// Add each row
+    		for (const row of this.data) {
+    			const values = this.columns.map((col) => {
+    				const val = row[col];
     
-            if (val === null || val === undefined) {
-              return "";
-            } else if (
-              typeof val === "string" &&
-              (val.includes(",") || val.includes('"'))
-            ) {
-              // Escape quotes and wrap in quotes
-              return `"${val.replace(/"/g, '""')}"`;
-            } else {
-              return String(val);
-            }
-          });
+    				if (val === null || val === undefined) {
+    					return "";
+    				} else if (
+    					typeof val === "string" &&
+    					(val.includes(",") || val.includes('"'))
+    				) {
+    					// Escape quotes and wrap in quotes
+    					return `"${val.replace(/"/g, '""')}"`;
+    				} else {
+    					return String(val);
+    				}
+    			});
     
-          lines.push(values.join(","));
-        }
+    			lines.push(values.join(","));
+    		}
     
-        return lines.join("\n");
-      }
+    		return lines.join("\n");
+    	}
     
-      /**
-       * Parses a JSONL string into a DataFrame
-       *
-       * @param {string} text - JSONL text content
-       * @returns {DataFrame} - New DataFrame instance
-       */
-      static from_jsonl(text) {
-        // Parse each line as JSON
-        const data = text
-          .trim()
-          .split("\n")
-          .map((line) => JSON.parse(line));
+    	/**
+    	 * Parses a JSONL string into a DataFrame
+    	 *
+    	 * @param {string} text - JSONL text content
+    	 * @returns {DataFrame} - New DataFrame instance
+    	 */
+    	static from_jsonl(text) {
+    		// Parse each line as JSON
+    		const data = text
+    			.trim()
+    			.split("\n")
+    			.map((line) => JSON.parse(line));
     
-        // Extract all unique column names from all rows
-        const allColumns = new Set();
-        for (const row of data) {
-          Object.keys(row).forEach((key) => allColumns.add(key));
-        }
+    		// Extract all unique column names from all rows
+    		const allColumns = new Set();
+    		for (const row of data) {
+    			Object.keys(row).forEach((key) => allColumns.add(key));
+    		}
     
-        return new DataFrame(data, Array.from(allColumns));
-      }
+    		return new DataFrame(data, Array.from(allColumns));
+    	}
     
-      /**
-       * Converts DataFrame to JSONL string
-       *
-       * @returns {string} - JSONL representation of the DataFrame
-       */
-      to_jsonl() {
-        return this.data.map((row) => JSON.stringify(row)).join("\n");
-      }
+    	/**
+    	 * Converts DataFrame to JSONL string
+    	 *
+    	 * @returns {string} - JSONL representation of the DataFrame
+    	 */
+    	to_jsonl() {
+    		return this.data.map((row) => JSON.stringify(row)).join("\n");
+    	}
     
-      /**
-       * Returns the number of rows in the DataFrame
-       *
-       * @returns {number} - Number of rows
-       */
-      get length() {
-        return this.data.length;
-      }
+    	/**
+    	 * Returns the number of rows in the DataFrame
+    	 *
+    	 * @returns {number} - Number of rows
+    	 */
+    	get length() {
+    		return this.data.length;
+    	}
     
-      /**
-       * Returns a string representation of the DataFrame
-       *
-       * @returns {string} - String representation
-       */
-      toString() {
-        if (this.data.length === 0) {
-          return "Empty DataFrame";
-        }
+    	/**
+    	 * Returns a string representation of the DataFrame
+    	 *
+    	 * @returns {string} - String representation
+    	 */
+    	toString() {
+    		if (this.data.length === 0) {
+    			return "Empty DataFrame";
+    		}
     
-        return `DataFrame with ${this.data.length} rows and ${this.columns.length} columns: ${this.columns.join(", ")}`;
-      }
+    		return `DataFrame with ${this.data.length} rows and ${this.columns.length} columns: ${this.columns.join(", ")}`;
+    	}
     
-      /**
-       * Creates a deep copy of the DataFrame
-       *
-       * @returns {DataFrame} - New DataFrame with copied data
-       */
-      clone() {
-        // Deep copy the data array and each row object
-        const clonedData = this.data.map((row) => ({ ...row }));
-        // Copy the columns array
-        const clonedColumns = [...this.columns];
-        return new DataFrame(clonedData, clonedColumns);
-      }
+    	/**
+    	 * Creates a deep copy of the DataFrame
+    	 *
+    	 * @returns {DataFrame} - New DataFrame with copied data
+    	 */
+    	clone() {
+    		// Deep copy the data array and each row object
+    		const clonedData = this.data.map((row) => ({ ...row }));
+    		// Copy the columns array
+    		const clonedColumns = [...this.columns];
+    		return new DataFrame(clonedData, clonedColumns);
+    	}
     
-      /**
-       * Filters rows based on a predicate function
-       *
-       * @param {Function} predicate - Function that receives a row and returns boolean
-       * @returns {DataFrame} - New DataFrame with filtered rows
-       * @example
-       * df.filter(row => row.age > 18)
-       */
-      filter(predicate) {
-        const filteredData = this.data.filter(predicate);
-        return new DataFrame(filteredData, [...this.columns]);
-      }
+    	/**
+    	 * Filters rows based on a predicate function
+    	 *
+    	 * @param {Function} predicate - Function that receives a row and returns boolean
+    	 * @returns {DataFrame} - New DataFrame with filtered rows
+    	 * @example
+    	 * df.filter(row => row.age > 18)
+    	 */
+    	filter(predicate) {
+    		const filteredData = this.data.filter(predicate);
+    		return new DataFrame(filteredData, [...this.columns]);
+    	}
     
-      /**
-       * Filters rows by a column value or predicate
-       *
-       * @param {string} column - Column name to filter by
-       * @param {any|Function} valueOrPredicate - Value to match, or predicate function for column value
-       * @returns {DataFrame} - New DataFrame with filtered rows
-       * @example
-       * // Filter by exact value
-       * df.filterBy('status', 'active')
-       *
-       * // Filter by predicate
-       * df.filterBy('age', age => age > 18)
-       */
-      filterBy(column, valueOrPredicate) {
-        if (!this.columns.includes(column)) {
-          throw new Error(
-            `Column '${column}' not found in columns: ${this.columns.join(", ")}`,
-          );
-        }
+    	/**
+    	 * Filters rows by a column value or predicate
+    	 *
+    	 * @param {string} column - Column name to filter by
+    	 * @param {any|Function} valueOrPredicate - Value to match, or predicate function for column value
+    	 * @returns {DataFrame} - New DataFrame with filtered rows
+    	 * @example
+    	 * // Filter by exact value
+    	 * df.filterBy('status', 'active')
+    	 *
+    	 * // Filter by predicate
+    	 * df.filterBy('age', age => age > 18)
+    	 */
+    	filterBy(column, valueOrPredicate) {
+    		if (!this.columns.includes(column)) {
+    			throw new Error(
+    				`Column '${column}' not found in columns: ${this.columns.join(", ")}`,
+    			);
+    		}
     
-        // If valueOrPredicate is a function, use it as a predicate on the column value
-        if (typeof valueOrPredicate === "function") {
-          const filteredData = this.data.filter((row) =>
-            valueOrPredicate(row[column]),
-          );
-          return new DataFrame(filteredData, [...this.columns]);
-        }
-        // Otherwise, filter by exact value match
-        else {
-          const filteredData = this.data.filter(
-            (row) => row[column] === valueOrPredicate,
-          );
-          return new DataFrame(filteredData, [...this.columns]);
-        }
-      }
+    		// If valueOrPredicate is a function, use it as a predicate on the column value
+    		if (typeof valueOrPredicate === "function") {
+    			const filteredData = this.data.filter((row) =>
+    				valueOrPredicate(row[column]),
+    			);
+    			return new DataFrame(filteredData, [...this.columns]);
+    		}
+    		// Otherwise, filter by exact value match
+    		else {
+    			const filteredData = this.data.filter(
+    				(row) => row[column] === valueOrPredicate,
+    			);
+    			return new DataFrame(filteredData, [...this.columns]);
+    		}
+    	}
     
-      /**
-       * Sorts DataFrame by a column
-       *
-       * @param {string} column - Column name to sort by
-       * @param {boolean} [ascending=true] - Sort in ascending order (default true)
-       * @returns {DataFrame} - New DataFrame with sorted rows
-       * @example
-       * // Sort by age ascending
-       * df.sort('age')
-       *
-       * // Sort by age descending
-       * df.sort('age', false)
-       */
-      sort(column, ascending = true) {
-        if (!this.columns.includes(column)) {
-          throw new Error(
-            `Column '${column}' not found in columns: ${this.columns.join(", ")}`,
-          );
-        }
+    	/**
+    	 * Sorts DataFrame by a column
+    	 *
+    	 * @param {string} column - Column name to sort by
+    	 * @param {boolean} [ascending=true] - Sort in ascending order (default true)
+    	 * @returns {DataFrame} - New DataFrame with sorted rows
+    	 * @example
+    	 * // Sort by age ascending
+    	 * df.sort('age')
+    	 *
+    	 * // Sort by age descending
+    	 * df.sort('age', false)
+    	 */
+    	sort(column, ascending = true) {
+    		if (!this.columns.includes(column)) {
+    			throw new Error(
+    				`Column '${column}' not found in columns: ${this.columns.join(", ")}`,
+    			);
+    		}
     
-        // Create a copy of the data array
-        const sortedData = [...this.data];
+    		// Create a copy of the data array
+    		const sortedData = [...this.data];
     
-        // Sort with null handling (nulls at the end)
-        sortedData.sort((a, b) => {
-          const aVal = a[column];
-          const bVal = b[column];
+    		// Sort with null handling (nulls at the end)
+    		sortedData.sort((a, b) => {
+    			const aVal = a[column];
+    			const bVal = b[column];
     
-          // Handle null/undefined values - place at end
-          if (aVal === null || aVal === undefined) {
-            return 1;
-          }
-          if (bVal === null || bVal === undefined) {
-            return -1;
-          }
+    			// Handle null/undefined values - place at end
+    			if (aVal === null || aVal === undefined) {
+    				return 1;
+    			}
+    			if (bVal === null || bVal === undefined) {
+    				return -1;
+    			}
     
-          // Compare values
-          let comparison;
-          if (typeof aVal === "string" && typeof bVal === "string") {
-            comparison = aVal.localeCompare(bVal);
-          } else {
-            comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-          }
+    			// Compare values
+    			let comparison;
+    			if (typeof aVal === "string" && typeof bVal === "string") {
+    				comparison = aVal.localeCompare(bVal);
+    			} else {
+    				comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+    			}
     
-          // Apply ascending/descending
-          return ascending ? comparison : -comparison;
-        });
+    			// Apply ascending/descending
+    			return ascending ? comparison : -comparison;
+    		});
     
-        return new DataFrame(sortedData, [...this.columns]);
-      }
+    		return new DataFrame(sortedData, [...this.columns]);
+    	}
     
-      /**
-       * Sorts DataFrame using a custom comparison function
-       *
-       * @param {Function} compareFn - Comparison function (a, b) => number
-       * @returns {DataFrame} - New DataFrame with sorted rows
-       * @example
-       * // Sort by multiple columns
-       * df.sortBy((a, b) => {
-       *   if (a.city !== b.city) return a.city.localeCompare(b.city);
-       *   return a.age - b.age;
-       * })
-       */
-      sortBy(compareFn) {
-        // Create a copy of the data array
-        const sortedData = [...this.data];
-        sortedData.sort(compareFn);
-        return new DataFrame(sortedData, [...this.columns]);
-      }
+    	/**
+    	 * Sorts DataFrame using a custom comparison function
+    	 *
+    	 * @param {Function} compareFn - Comparison function (a, b) => number
+    	 * @returns {DataFrame} - New DataFrame with sorted rows
+    	 * @example
+    	 * // Sort by multiple columns
+    	 * df.sortBy((a, b) => {
+    	 *   if (a.city !== b.city) return a.city.localeCompare(b.city);
+    	 *   return a.age - b.age;
+    	 * })
+    	 */
+    	sortBy(compareFn) {
+    		// Create a copy of the data array
+    		const sortedData = [...this.data];
+    		sortedData.sort(compareFn);
+    		return new DataFrame(sortedData, [...this.columns]);
+    	}
     
-      /**
-       * Returns HTML code for displaying the DataFrame as a simple table
-       *
-       * @returns {string} - HTML table representation
-       * @throws {Error} - If the DataFrame is empty
-       */
-      display_simple() {
-        if (this.data.length === 0) {
-          throw new Error("Cannot display empty DataFrame");
-        }
+    	/**
+    	 * Returns HTML code for displaying the DataFrame as a simple table
+    	 *
+    	 * @returns {string} - HTML table representation
+    	 * @throws {Error} - If the DataFrame is empty
+    	 */
+    	display_simple() {
+    		if (this.data.length === 0) {
+    			throw new Error("Cannot display empty DataFrame");
+    		}
     
-        let html = "<table>\n";
+    		let html = "<table>\n";
     
-        html += "  <thead>\n    <tr>\n";
-        for (const column of this.columns) {
-          html += `      <th>${column}</th>\n`;
-        }
-        html += "    </tr>\n  </thead>\n";
+    		html += "  <thead>\n    <tr>\n";
+    		for (const column of this.columns) {
+    			html += `      <th>${column}</th>\n`;
+    		}
+    		html += "    </tr>\n  </thead>\n";
     
-        html += "  <tbody>\n";
-        for (let i = 0; i < this.data.length; i++) {
-          const row = this.data[i];
-          html += "    <tr>\n";
+    		html += "  <tbody>\n";
+    		for (let i = 0; i < this.data.length; i++) {
+    			const row = this.data[i];
+    			html += "    <tr>\n";
     
-          for (const column of this.columns) {
-            const value = row[column];
-            const displayValue =
-              value === null || value === undefined ? "" : String(value);
-            html += `      <td>${displayValue}</td>\n`;
-          }
+    			for (const column of this.columns) {
+    				const value = row[column];
+    				const displayValue =
+    					value === null || value === undefined ? "" : String(value);
+    				html += `      <td>${displayValue}</td>\n`;
+    			}
     
-          html += "    </tr>\n";
-        }
-        html += "  </tbody>\n";
+    			html += "    </tr>\n";
+    		}
+    		html += "  </tbody>\n";
     
-        html += "</table>";
+    		html += "</table>";
     
-        return html;
-      }
+    		return html;
+    	}
     }
     
     </script>
-    <!-- end 'DataFrame.js' -->
-        <!-- begin 'yaml.js' -->
+    <!-- end '../../libs/DataFrame.js' -->
+        <!-- begin '../../libs/yaml.js' -->
     <script>
     /**
      * @fileoverview Simple YAML serialization util
@@ -1179,394 +1253,477 @@
      * @returns {string} YAML formatted string
      */
     function toYAML(obj, indent = 0) {
-      const lines = [];
-      const indentStr = "  ".repeat(indent);
+    	const lines = [];
+    	const indentStr = "  ".repeat(indent);
     
-      for (const [key, value] of Object.entries(obj)) {
-        if (value === null || value === undefined) {
-          lines.push(`${indentStr}${key}: null`);
-        } else if (Array.isArray(value)) {
-          if (value.length === 0) {
-            lines.push(`${indentStr}${key}: []`);
-          } else if (value.every((item) => typeof item !== "object")) {
-            // Simple array - inline format
-            lines.push(
-              `${indentStr}${key}: [${value.map((v) => JSON.stringify(v)).join(", ")}]`,
-            );
-          } else {
-            // Complex array - multiline format
-            lines.push(`${indentStr}${key}:`);
-            value.forEach((item) => {
-              if (typeof item === "object" && item !== null) {
-                lines.push(`${indentStr}  -`);
-                const subYaml = toYAML(item, indent + 2);
-                lines.push(
-                  subYaml
-                    .split("\n")
-                    .map((line) => "  " + line)
-                    .join("\n"),
-                );
-              } else {
-                lines.push(`${indentStr}  - ${JSON.stringify(item)}`);
-              }
-            });
-          }
-        } else if (typeof value === "object" && value !== null) {
-          lines.push(`${indentStr}${key}:`);
-          lines.push(toYAML(value, indent + 1));
-        } else if (typeof value === "string") {
-          // Always quote strings
-          lines.push(`${indentStr}${key}: ${JSON.stringify(value)}`);
-        } else {
-          // Number, boolean
-          lines.push(`${indentStr}${key}: ${value}`);
-        }
-      }
+    	for (const [key, value] of Object.entries(obj)) {
+    		if (value === null || value === undefined) {
+    			lines.push(`${indentStr}${key}: null`);
+    		} else if (Array.isArray(value)) {
+    			if (value.length === 0) {
+    				lines.push(`${indentStr}${key}: []`);
+    			} else if (value.every((item) => typeof item !== "object")) {
+    				// Simple array - inline format
+    				lines.push(
+    					`${indentStr}${key}: [${value.map((v) => JSON.stringify(v)).join(", ")}]`,
+    				);
+    			} else {
+    				// Complex array - multiline format
+    				lines.push(`${indentStr}${key}:`);
+    				value.forEach((item) => {
+    					if (typeof item === "object" && item !== null) {
+    						lines.push(`${indentStr}  -`);
+    						const subYaml = toYAML(item, indent + 2);
+    						lines.push(
+    							subYaml
+    								.split("\n")
+    								.map((line) => "  " + line)
+    								.join("\n"),
+    						);
+    					} else {
+    						lines.push(`${indentStr}  - ${JSON.stringify(item)}`);
+    					}
+    				});
+    			}
+    		} else if (typeof value === "object" && value !== null) {
+    			lines.push(`${indentStr}${key}:`);
+    			lines.push(toYAML(value, indent + 1));
+    		} else if (typeof value === "string") {
+    			// Always quote strings
+    			lines.push(`${indentStr}${key}: ${JSON.stringify(value)}`);
+    		} else {
+    			// Number, boolean
+    			lines.push(`${indentStr}${key}: ${value}`);
+    		}
+    	}
     
-      return lines.join("\n");
+    	return lines.join("\n");
     }
     
     </script>
-    <!-- end 'yaml.js' -->
-        <!-- begin 'sparklines.js' -->
+    <!-- end '../../libs/yaml.js' -->
+        <!-- begin '../../libs/sparklines.js' -->
     <script>
-    // sparklines.js - Generate SVG sparklines and sparkbars from data arrays
-    // origin: https://github.com/mivanit/js-dev-toolkit
-    // license: GPLv3
+    /**
+     * @fileoverview Generate SVG sparklines and sparkbars from data arrays
+     * @module sparklines
+     * @license GPLv3
+     * @see {@link https://github.com/mivanit/js-dev-toolkit}
+     */
     
     const _PLOT_OPTS_DEFAULT = {
-      width: 160,
-      height: 80,
-      color: "#4169E1",
-      shading: 0.3,
-      lineWidth: 2,
-      markers: null,
-      margin: 5,
-      style: "line",
-      barWidthRatio: 1,
-      logScale: false,
+    	// Chart dimensions and basic styling
+    	width: 160, // number: SVG width in pixels
+    	height: 80, // number: SVG height in pixels
+    	color: "#4169E1", // string: CSS color for line/bars/markers
+    	shading: 0.3, // boolean|number: false=none, true=solid fill, 0-1=gradient opacity
+    	lineWidth: 2, // number: stroke width for line charts in pixels
+    	markers: null, // null|number: null=no markers, positive number=circle radius
+    	margin: 5, // number: base margin around chart content in pixels
+    	style: "line", // string: 'line' or 'bar' (internal, set by sparkline/sparkbars)
+    	barWidthRatio: 1, // number: 0-1 ratio, 1=touching bars, <1=gaps between bars
+    	logScale: false, // boolean: use logarithmic scale for y-axis
     
-      xAxis: {
-        line: false,
-        ticks: false,
-        text_offset: 10,
-        text_y_position: 0,
-        label_margin: 5,
-        limits_length: 2,
-      },
+    	// X-axis configuration
+    	xAxis: {
+    		line: false, // boolean: show axis line
+    		ticks: false, // boolean: show tick labels (min/max values)
+    		text_offset: 10, // number: pixels below axis for tick labels
+    		text_y_position: 0, // number: additional Y offset for labels (positive = down)
+    		label_margin: 5, // number: extra margin in pixels when ticks shown
+    		limits_length: 2, // number: expected array length for xlims (internal)
+    	},
     
-      yAxis: {
-        line: false,
-        ticks: false,
-        text_offset: 2,
-        text_y_offset: 0,
-        label_margin: 10,
-        limits_length: 2,
-      },
+    	// Y-axis configuration
+    	yAxis: {
+    		line: false, // boolean: show axis line
+    		ticks: false, // boolean: show tick labels (min/max values)
+    		text_offset: 2, // number: pixels left of axis for tick labels
+    		text_y_offset: 0, // number: pixels down from top edge for max label to prevent cutoff
+    		label_margin: 10, // number: extra margin in pixels when ticks shown
+    		limits_length: 2, // number: expected array length for ylims (internal)
+    	},
     
-      xlims: null,
-      ylims: null,
+    	xlims: null, // null|array: [min, max] numbers, null values, or null for auto from data
+    	ylims: null, // null|array: [min, max] numbers, null values, or null for auto from data
     
-      bar: {
-        opacity: 0.8,
-        y_axis_shift_ratio: 0.6,
-        y_axis_reduction_factor: 1,
-      },
+    	// Bar chart specific settings
+    	bar: {
+    		opacity: 0.8, // number: 0-1 opacity of bar rectangles
+    		y_axis_shift_ratio: 0.6, // number: Y-axis left shift as ratio of bar width
+    		y_axis_reduction_factor: 1, // number: width reduction factor for Y-axis labels
+    	},
     
-      axis_style: {
-        color: "#ccc",
-        width: 1,
-        font_size: 10,
-        text_color: "#666",
-      },
+    	// Axis styling (applies to both X and Y)
+    	axis_style: {
+    		color: "#ccc", // string: CSS color for axis lines
+    		width: 1, // number: axis line stroke width in pixels
+    		font_size: 10, // number: tick label font size in pixels
+    		text_color: "#666", // string: CSS color for tick labels
+    	},
     
-      gradient: {
-        start_offset: "0%",
-        end_offset: "100%",
-        end_opacity: 0,
-      },
+    	// Gradient fill configuration (when shading is 0-1)
+    	gradient: {
+    		start_offset: "0%", // string: SVG gradient start position
+    		end_offset: "100%", // string: SVG gradient end position
+    		end_opacity: 0, // number: 0-1 opacity at gradient end
+    	},
     
-      min_range: 1,
+    	min_range: 1, // number: minimum range when max equals min in data
     };
-    
+    /**
+     * Deep merge options with defaults
+     */
     function merge_options(options = {}) {
-      return {
-        ..._PLOT_OPTS_DEFAULT,
-        ...options,
-        xAxis: { ..._PLOT_OPTS_DEFAULT.xAxis, ...(options.xAxis || {}) },
-        yAxis: { ..._PLOT_OPTS_DEFAULT.yAxis, ...(options.yAxis || {}) },
-        bar: { ..._PLOT_OPTS_DEFAULT.bar, ...(options.bar || {}) },
-        axis_style: {
-          ..._PLOT_OPTS_DEFAULT.axis_style,
-          ...(options.axis_style || {}),
-        },
-        gradient: {
-          ..._PLOT_OPTS_DEFAULT.gradient,
-          ...(options.gradient || {}),
-        },
-      };
+    	return {
+    		..._PLOT_OPTS_DEFAULT,
+    		...options,
+    		xAxis: { ..._PLOT_OPTS_DEFAULT.xAxis, ...(options.xAxis || {}) },
+    		yAxis: { ..._PLOT_OPTS_DEFAULT.yAxis, ...(options.yAxis || {}) },
+    		bar: { ..._PLOT_OPTS_DEFAULT.bar, ...(options.bar || {}) },
+    		axis_style: {
+    			..._PLOT_OPTS_DEFAULT.axis_style,
+    			...(options.axis_style || {}),
+    		},
+    		gradient: {
+    			..._PLOT_OPTS_DEFAULT.gradient,
+    			...(options.gradient || {}),
+    		},
+    	};
     }
     
+    /**
+     * Process and validate input values
+     * Returns { xvalues, yvalues } arrays
+     */
     function process_values(values, yvalues = null) {
-      if (!Array.isArray(values)) {
-        throw new Error(`First parameter must be an array, got: ${typeof values}`);
-      }
+    	// Validate inputs
+    	if (!Array.isArray(values)) {
+    		throw new Error(
+    			`First parameter must be an array, got: ${typeof values}`,
+    		);
+    	}
     
-      if (values.length === 0) {
-        throw new Error("Values array cannot be empty");
-      }
+    	if (values.length === 0) {
+    		throw new Error("Values array cannot be empty");
+    	}
     
-      let xvals, yvals;
+    	let xvals, yvals;
     
-      if (yvalues === null) {
-        yvals = values;
-        xvals = Array.from({ length: values.length }, (_, i) => i);
-      } else {
-        if (!Array.isArray(yvalues)) {
-          throw new Error(
-            `Second parameter must be an array or null, got: ${typeof yvalues}`,
-          );
-        }
-        xvals = values;
-        yvals = yvalues;
-      }
+    	if (yvalues === null) {
+    		// values is y-values, generate x-values as 0..n-1
+    		yvals = values;
+    		xvals = Array.from({ length: values.length }, (_, i) => i);
+    	} else {
+    		// values is x-values, yvalues is y-values
+    		if (!Array.isArray(yvalues)) {
+    			throw new Error(
+    				`Second parameter must be an array or null, got: ${typeof yvalues}`,
+    			);
+    		}
+    		xvals = values;
+    		yvals = yvalues;
+    	}
     
-      if (xvals.length !== yvals.length) {
-        throw new Error(
-          `x-values length (${xvals.length}) must match y-values length (${yvals.length})`,
-        );
-      }
+    	// Validate that x and y arrays have same length
+    	if (xvals.length !== yvals.length) {
+    		throw new Error(
+    			`x-values length (${xvals.length}) must match y-values length (${yvals.length})`,
+    		);
+    	}
     
-      return { xvalues: xvals, yvalues: yvals };
+    	return { xvalues: xvals, yvalues: yvals };
     }
     
     function plot(values, yvalues = null, options = {}) {
-      const opts = merge_options(options);
-      const { xvalues, yvalues: yvals } = process_values(values, yvalues);
+    	const opts = merge_options(options);
+    	const { xvalues, yvalues: yvals } = process_values(values, yvalues);
     
-      const needsLeftMargin = opts.yAxis.ticks;
-      const needsBottomMargin = opts.xAxis.ticks;
-      const barChartExtraMargin =
-        opts.style === "bar" && (opts.yAxis.line || opts.yAxis.ticks)
-          ? ((opts.width - 2 * opts.margin) / yvals.length) *
-            opts.bar.y_axis_shift_ratio
-          : 0;
-      const leftMargin =
-        (needsLeftMargin ? opts.margin + opts.yAxis.label_margin : opts.margin) +
-        barChartExtraMargin;
-      const bottomMargin = needsBottomMargin
-        ? opts.margin + opts.xAxis.label_margin
-        : opts.margin;
+    	// Calculate margins based on what's shown
+    	const needsLeftMargin = opts.yAxis.ticks;
+    	const needsBottomMargin = opts.xAxis.ticks;
+    	// For bar charts with Y-axis, we need extra left margin since axis is shifted left
+    	const barChartExtraMargin =
+    		opts.style === "bar" && (opts.yAxis.line || opts.yAxis.ticks)
+    			? ((opts.width - 2 * opts.margin) / yvals.length) *
+    				opts.bar.y_axis_shift_ratio
+    			: 0;
+    	const leftMargin =
+    		(needsLeftMargin
+    			? opts.margin + opts.yAxis.label_margin
+    			: opts.margin) + barChartExtraMargin;
+    	const bottomMargin = needsBottomMargin
+    		? opts.margin + opts.xAxis.label_margin
+    		: opts.margin;
     
-      const dataYmin = Math.min(...yvals);
-      const dataYmax = Math.max(...yvals);
-      let ymin = opts.ylims && opts.ylims[0] !== null ? opts.ylims[0] : dataYmin;
-      let ymax = opts.ylims && opts.ylims[1] !== null ? opts.ylims[1] : dataYmax;
+    	// Calculate axis limits - use custom limits if provided, otherwise data range
+    	const dataYmin = Math.min(...yvals);
+    	const dataYmax = Math.max(...yvals);
+    	let ymin = opts.ylims && opts.ylims[0] !== null ? opts.ylims[0] : dataYmin;
+    	let ymax = opts.ylims && opts.ylims[1] !== null ? opts.ylims[1] : dataYmax;
     
-      if (opts.logScale) {
-        if (yvals.some((v) => v < 0) || ymin < 0 || ymax < 0) {
-          throw new Error("Log scale requires all values >= 0");
-        }
-      }
+    	// For log scale, assert all values >= 0
+    	if (opts.logScale) {
+    		if (yvals.some((v) => v < 0) || ymin < 0 || ymax < 0) {
+    			throw new Error("Log scale requires all values >= 0");
+    		}
+    	}
     
-      const transformY = opts.logScale
-        ? (y) => (y > 0 ? Math.log10(y) : 0)
-        : (y) => y;
+    	// Transform to log space if needed, handling zeros
+    	// For log scale, we use log10(y) for y > 0, and leave 0 as special case (will skip bars)
+    	const transformY = opts.logScale
+    		? (y) => (y > 0 ? Math.log10(y) : 0)
+    		: (y) => y;
     
-      const positiveYvals = opts.logScale ? yvals.filter((v) => v > 0) : yvals;
-      const yminForScale =
-        opts.logScale && positiveYvals.length > 0
-          ? Math.min(...positiveYvals)
-          : ymin;
-      const ymaxForScale =
-        opts.logScale && positiveYvals.length > 0
-          ? Math.max(...positiveYvals)
-          : ymax;
+    	// For axis limits, only use positive values in log scale
+    	const positiveYvals = opts.logScale ? yvals.filter((v) => v > 0) : yvals;
+    	const yminForScale =
+    		opts.logScale && positiveYvals.length > 0
+    			? Math.min(...positiveYvals)
+    			: ymin;
+    	const ymaxForScale =
+    		opts.logScale && positiveYvals.length > 0
+    			? Math.max(...positiveYvals)
+    			: ymax;
     
-      const yminTransformed = transformY(yminForScale);
-      const ymaxTransformed = transformY(ymaxForScale);
-      const yrange = ymaxTransformed - yminTransformed || opts.min_range;
+    	const yminTransformed = transformY(yminForScale);
+    	const ymaxTransformed = transformY(ymaxForScale);
+    	const yrange = ymaxTransformed - yminTransformed || opts.min_range;
     
-      const dataXmin = Math.min(...xvalues);
-      const dataXmax = Math.max(...xvalues);
-      const xmin = opts.xlims && opts.xlims[0] !== null ? opts.xlims[0] : dataXmin;
-      const xmax = opts.xlims && opts.xlims[1] !== null ? opts.xlims[1] : dataXmax;
-      const xrange = xmax - xmin || opts.min_range;
+    	const dataXmin = Math.min(...xvalues);
+    	const dataXmax = Math.max(...xvalues);
+    	const xmin =
+    		opts.xlims && opts.xlims[0] !== null ? opts.xlims[0] : dataXmin;
+    	const xmax =
+    		opts.xlims && opts.xlims[1] !== null ? opts.xlims[1] : dataXmax;
+    	const xrange = xmax - xmin || opts.min_range;
     
-      const chartWidth = opts.width - leftMargin - opts.margin;
-      const chartHeight = opts.height - opts.margin - bottomMargin;
+    	const chartWidth = opts.width - leftMargin - opts.margin;
+    	const chartHeight = opts.height - opts.margin - bottomMargin;
     
-      let svg = "<svg " + `width="${opts.width}" height="${opts.height}"` + ">";
+    	// Build SVG
     
-      if (opts.style === "bar") {
-        const baseY = opts.height - bottomMargin;
-        const adjustedChartWidth = chartWidth - chartWidth / yvals.length / 2;
+    	// this setup is messy, but syntax highlighting gets confused with template strings??
+    	let svg = "<svg " + `width="${opts.width}" height="${opts.height}"` + ">";
     
-        let barSpacing;
-        if (yvals.length === 1) {
-          barSpacing = adjustedChartWidth;
-        } else {
-          const sortedIndices = [...Array(xvalues.length).keys()].sort(
-            (a, b) => xvalues[a] - xvalues[b],
-          );
-          let minSpacing = Infinity;
-          for (let j = 1; j < sortedIndices.length; j++) {
-            const prevX = xvalues[sortedIndices[j - 1]];
-            const currX = xvalues[sortedIndices[j]];
-            const spacing = ((currX - prevX) / xrange) * adjustedChartWidth;
-            if (spacing < minSpacing) minSpacing = spacing;
-          }
-          barSpacing =
-            minSpacing === Infinity
-              ? adjustedChartWidth / yvals.length
-              : minSpacing;
-        }
+    	if (opts.style === "bar") {
+    		// Bar chart rendering
+    		const baseY = opts.height - bottomMargin;
+    		// For bars, we position them at centers, with the first at 0 and last at (n-1)/n of the width
+    		// This matches how the X-axis is drawn (ending at center of last bar)
+    		const adjustedChartWidth = chartWidth - chartWidth / yvals.length / 2;
     
-        const actualBarWidth = barSpacing * opts.barWidthRatio;
+    		// Calculate bar spacing based on actual x-values
+    		let barSpacing;
+    		if (yvals.length === 1) {
+    			// Single bar: use full available width
+    			barSpacing = adjustedChartWidth;
+    		} else {
+    			// Multiple bars: find minimum spacing between consecutive x-values
+    			const sortedIndices = [...Array(xvalues.length).keys()].sort(
+    				(a, b) => xvalues[a] - xvalues[b],
+    			);
+    			let minSpacing = Infinity;
+    			for (let j = 1; j < sortedIndices.length; j++) {
+    				const prevX = xvalues[sortedIndices[j - 1]];
+    				const currX = xvalues[sortedIndices[j]];
+    				const spacing = ((currX - prevX) / xrange) * adjustedChartWidth;
+    				if (spacing < minSpacing) minSpacing = spacing;
+    			}
+    			// If all x-values are the same, fall back to dividing by count
+    			barSpacing =
+    				minSpacing === Infinity
+    					? adjustedChartWidth / yvals.length
+    					: minSpacing;
+    		}
     
-        yvals.forEach((yval, i) => {
-          if (opts.logScale && yval === 0) {
-            return;
-          }
+    		// Bar width is the spacing times the ratio (1 = touching, <1 = gaps)
+    		const actualBarWidth = barSpacing * opts.barWidthRatio;
     
-          const xval = xvalues[i];
-          const x = leftMargin + ((xval - xmin) / xrange) * adjustedChartWidth;
-          const yvalTransformed = transformY(yval);
-          const barHeight =
-            Math.abs((yvalTransformed - yminTransformed) / yrange) * chartHeight;
-          const barY = baseY - barHeight;
+    		yvals.forEach((yval, i) => {
+    			// Skip bars with zero values in log scale
+    			if (opts.logScale && yval === 0) {
+    				return;
+    			}
     
-          const barX = x - actualBarWidth / 2;
+    			const xval = xvalues[i];
+    			// Position at bar center
+    			const x =
+    				leftMargin + ((xval - xmin) / xrange) * adjustedChartWidth;
+    			const yvalTransformed = transformY(yval);
+    			const barHeight =
+    				Math.abs((yvalTransformed - yminTransformed) / yrange) *
+    				chartHeight;
+    			const barY = baseY - barHeight;
     
-          svg += `<rect x="${barX}" y="${barY}" width="${actualBarWidth}" height="${barHeight}" fill="${opts.color}" opacity="${opts.bar.opacity}"/>`;
-        });
-      } else {
-        let path = "";
-        let dots = "";
-        const points = [];
+    			// Calculate bar x position (offset by half width to center)
+    			const barX = x - actualBarWidth / 2;
     
-        yvals.forEach((yval, i) => {
-          const xval = xvalues[i];
-          const x = leftMargin + ((xval - xmin) / xrange) * chartWidth;
+    			svg += `<rect x="${barX}" y="${barY}" width="${actualBarWidth}" height="${barHeight}" fill="${opts.color}" opacity="${opts.bar.opacity}"/>`;
+    		});
+    	} else {
+    		// Line chart rendering (existing code)
+    		let path = "";
+    		let dots = "";
+    		const points = [];
     
-          if (opts.logScale && yval === 0) {
-            return;
-          }
+    		yvals.forEach((yval, i) => {
+    			const xval = xvalues[i];
+    			const x = leftMargin + ((xval - xmin) / xrange) * chartWidth;
     
-          const yvalTransformed = transformY(yval);
-          const y =
-            opts.margin +
-            (1 - (yvalTransformed - yminTransformed) / yrange) * chartHeight;
-          points.push({ x, y, xval, yval });
+    			// Skip zero values in log scale for line charts (break the line)
+    			if (opts.logScale && yval === 0) {
+    				// Break the line by moving to next point
+    				return;
+    			}
     
-          const moveCmd =
-            i === 0 || (opts.logScale && i > 0 && yvals[i - 1] === 0) ? "M" : "L";
-          path += `${moveCmd} ${x} ${y} `;
+    			const yvalTransformed = transformY(yval);
+    			const y =
+    				opts.margin +
+    				(1 - (yvalTransformed - yminTransformed) / yrange) *
+    					chartHeight;
+    			points.push({ x, y, xval, yval });
     
-          if (opts.markers !== null && opts.markers > 0) {
-            dots += `<circle cx="${x}" cy="${y}" r="${opts.markers}" fill="${opts.color}"/>`;
-          }
-        });
+    			// Start new path segment if previous was skipped
+    			const moveCmd =
+    				i === 0 || (opts.logScale && i > 0 && yvals[i - 1] === 0)
+    					? "M"
+    					: "L";
+    			path += `${moveCmd} ${x} ${y} `;
     
-        if (opts.shading !== false) {
-          if (opts.shading === true) {
-            for (let i = 0; i < points.length - 1; i++) {
-              const p1 = points[i];
-              const p2 = points[i + 1];
-              const segmentPath = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p2.x} ${opts.height - bottomMargin} L ${p1.x} ${opts.height - bottomMargin} Z`;
-              svg += `<path d="${segmentPath}" fill="${opts.color}"/>`;
-            }
-          } else {
-            const gradId = `grad${Date.now()}${Math.random()}`;
-            const opacity = parseFloat(opts.shading);
-            svg += `
-              <defs>
-                <linearGradient id="${gradId}" x1="${opts.gradient.start_offset}" y1="${opts.gradient.start_offset}" x2="${opts.gradient.start_offset}" y2="${opts.gradient.end_offset}">
-                  <stop offset="${opts.gradient.start_offset}" style="stop-color:${opts.color};stop-opacity:${opacity}"/>
-                  <stop offset="${opts.gradient.end_offset}" style="stop-color:${opts.color};stop-opacity:${opts.gradient.end_opacity}"/>
-                </linearGradient>
-              </defs>`;
+    			// Add markers if specified
+    			if (opts.markers !== null && opts.markers > 0) {
+    				dots += `<circle cx="${x}" cy="${y}" r="${opts.markers}" fill="${opts.color}"/>`;
+    			}
+    		});
     
-            for (let i = 0; i < points.length - 1; i++) {
-              const p1 = points[i];
-              const p2 = points[i + 1];
-              const segmentPath = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p2.x} ${opts.height - bottomMargin} L ${p1.x} ${opts.height - bottomMargin} Z`;
-              svg += `<path d="${segmentPath}" fill="url(#${gradId})"/>`;
-            }
-          }
-        }
+    		// Add shading if requested
+    		if (opts.shading !== false) {
+    			if (opts.shading === true) {
+    				// Solid fill
+    				for (let i = 0; i < points.length - 1; i++) {
+    					const p1 = points[i];
+    					const p2 = points[i + 1];
+    					const segmentPath = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p2.x} ${opts.height - bottomMargin} L ${p1.x} ${opts.height - bottomMargin} Z`;
+    					svg += `<path d="${segmentPath}" fill="${opts.color}"/>`;
+    				}
+    			} else {
+    				// Gradient fill
+    				const gradId = `grad${Date.now()}${Math.random()}`;
+    				const opacity = parseFloat(opts.shading);
+    				svg += `
+    	            <defs>
+    	                <linearGradient id="${gradId}" x1="${opts.gradient.start_offset}" y1="${opts.gradient.start_offset}" x2="${opts.gradient.start_offset}" y2="${opts.gradient.end_offset}">
+    	                    <stop offset="${opts.gradient.start_offset}" style="stop-color:${opts.color};stop-opacity:${opacity}"/>
+    	                    <stop offset="${opts.gradient.end_offset}" style="stop-color:${opts.color};stop-opacity:${opts.gradient.end_opacity}"/>
+    	                </linearGradient>
+    	            </defs>`;
     
-        svg += `<path d="${path}" stroke="${opts.color}" stroke-width="${opts.lineWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+    				for (let i = 0; i < points.length - 1; i++) {
+    					const p1 = points[i];
+    					const p2 = points[i + 1];
+    					const segmentPath = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p2.x} ${opts.height - bottomMargin} L ${p1.x} ${opts.height - bottomMargin} Z`;
+    					svg += `<path d="${segmentPath}" fill="url(#${gradId})"/>`;
+    				}
+    			}
+    		}
     
-        svg += dots;
-      }
+    		// Add the line
+    		svg += `<path d="${path}" stroke="${opts.color}" stroke-width="${opts.lineWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
     
-      const formatYTick = (value) => {
-        if (!opts.logScale) {
-          return value;
-        }
-        if (value === 0) {
-          return "0";
-        }
-        return value.toExponential(1);
-      };
+    		// Add dots
+    		svg += dots;
+    	}
     
-      if (opts.yAxis.line || opts.yAxis.ticks) {
-        const barShift =
-          opts.style === "bar"
-            ? (chartWidth / yvals.length) * opts.bar.y_axis_shift_ratio
-            : 0;
-        const yAxisX = leftMargin - barShift;
+    	// Format y-axis tick labels (use scientific notation for log scale)
+    	const formatYTick = (value) => {
+    		if (!opts.logScale) {
+    			return value;
+    		}
+    		// For log scale, use scientific notation unless value is 0
+    		if (value === 0) {
+    			return "0";
+    		}
+    		// Convert to scientific notation with 1 decimal place
+    		return value.toExponential(1);
+    	};
     
-        if (opts.yAxis.line) {
-          svg += `<line x1="${yAxisX}" y1="${opts.margin}" x2="${yAxisX}" y2="${opts.height - bottomMargin}"
-                        stroke="${opts.axis_style.color}" stroke-width="${opts.axis_style.width}"/>`;
-        }
-        if (opts.yAxis.ticks) {
-          svg += `<text x="${yAxisX - opts.yAxis.text_offset}" y="${opts.margin + opts.yAxis.text_y_offset + opts.axis_style.font_size}" font-size="${opts.axis_style.font_size}" fill="${opts.axis_style.text_color}" text-anchor="end">${formatYTick(ymaxForScale)}</text>`;
-          const lowerLabel =
-            opts.logScale && ymin === 0 ? "0" : formatYTick(yminForScale);
-          svg += `<text x="${yAxisX - opts.yAxis.text_offset}" y="${opts.height - bottomMargin + opts.yAxis.text_offset}" font-size="${opts.axis_style.font_size}" fill="${opts.axis_style.text_color}" text-anchor="end">${lowerLabel}</text>`;
-        }
-      }
+    	// Add y-axis
+    	if (opts.yAxis.line || opts.yAxis.ticks) {
+    		// For bar charts, shift Y-axis left by 0.75 bar widths to avoid overlap
+    		const barShift =
+    			opts.style === "bar"
+    				? (chartWidth / yvals.length) * opts.bar.y_axis_shift_ratio
+    				: 0;
+    		const yAxisX = leftMargin - barShift;
     
-      if (opts.xAxis.line) {
-        const xAxisEnd =
-          opts.style === "bar"
-            ? leftMargin + chartWidth - chartWidth / yvals.length / 2
-            : opts.width - opts.margin;
-        svg += `<line x1="${leftMargin}" y1="${opts.height - bottomMargin}" x2="${xAxisEnd}" y2="${opts.height - bottomMargin}"
-                        stroke="${opts.axis_style.color}" stroke-width="${opts.axis_style.width}"/>`;
-      }
-      if (opts.xAxis.ticks && yvals.length > 0) {
-        const xTickEnd =
-          opts.style === "bar"
-            ? leftMargin + chartWidth - chartWidth / yvals.length / 2
-            : opts.width - opts.margin;
-        const xLabelY =
-          opts.height -
-          bottomMargin +
-          opts.xAxis.text_offset +
-          opts.xAxis.text_y_position;
-        svg += `<text x="${leftMargin}" y="${xLabelY}" font-size="${opts.axis_style.font_size}" fill="${opts.axis_style.text_color}" text-anchor="middle">${xmin}</text>`;
-        svg += `<text x="${xTickEnd}" y="${xLabelY}" font-size="${opts.axis_style.font_size}" fill="${opts.axis_style.text_color}" text-anchor="middle">${xmax}</text>`;
-      }
+    		if (opts.yAxis.line) {
+    			svg += `<line x1="${yAxisX}" y1="${opts.margin}" x2="${yAxisX}" y2="${opts.height - bottomMargin}"
+                          stroke="${opts.axis_style.color}" stroke-width="${opts.axis_style.width}"/>`;
+    		}
+    		if (opts.yAxis.ticks) {
+    			svg += `<text x="${yAxisX - opts.yAxis.text_offset}" y="${opts.margin + opts.yAxis.text_y_offset + opts.axis_style.font_size}" font-size="${opts.axis_style.font_size}" fill="${opts.axis_style.text_color}" text-anchor="end">${formatYTick(ymaxForScale)}</text>`;
+    			// For log scale with ymin=0, always show "0" for the lower bound
+    			const lowerLabel =
+    				opts.logScale && ymin === 0 ? "0" : formatYTick(yminForScale);
+    			svg += `<text x="${yAxisX - opts.yAxis.text_offset}" y="${opts.height - bottomMargin + opts.yAxis.text_offset}" font-size="${opts.axis_style.font_size}" fill="${opts.axis_style.text_color}" text-anchor="end">${lowerLabel}</text>`;
+    		}
+    	}
     
-      svg += "</svg>";
+    	// Add x-axis
+    	if (opts.xAxis.line) {
+    		// For bar charts, end X-axis at center of last bar, not full width
+    		const xAxisEnd =
+    			opts.style === "bar"
+    				? leftMargin + chartWidth - chartWidth / yvals.length / 2
+    				: opts.width - opts.margin;
+    		svg += `<line x1="${leftMargin}" y1="${opts.height - bottomMargin}" x2="${xAxisEnd}" y2="${opts.height - bottomMargin}"
+                          stroke="${opts.axis_style.color}" stroke-width="${opts.axis_style.width}"/>`;
+    	}
+    	if (opts.xAxis.ticks && yvals.length > 0) {
+    		// For bar charts, position end tick at center of last bar
+    		const xTickEnd =
+    			opts.style === "bar"
+    				? leftMargin + chartWidth - chartWidth / yvals.length / 2
+    				: opts.width - opts.margin;
+    		const xLabelY =
+    			opts.height -
+    			bottomMargin +
+    			opts.xAxis.text_offset +
+    			opts.xAxis.text_y_position;
+    		svg += `<text x="${leftMargin}" y="${xLabelY}" font-size="${opts.axis_style.font_size}" fill="${opts.axis_style.text_color}" text-anchor="middle">${xmin}</text>`;
+    		svg += `<text x="${xTickEnd}" y="${xLabelY}" font-size="${opts.axis_style.font_size}" fill="${opts.axis_style.text_color}" text-anchor="middle">${xmax}</text>`;
+    	}
     
-      return svg;
+    	svg += "</svg>";
+    
+    	return svg;
     }
     
+    /**
+     * Generate an SVG sparkline (line chart) from data
+     * @param {number[]} values - Y-values or X-values if yvalues provided
+     * @param {number[]|null} yvalues - Y-values (when values becomes x-values)
+     * @param {object} options - Chart options (xlims/ylims can be [min,max] with null for auto)
+     * @returns {string} SVG element as HTML string
+     */
     function sparkline(values, yvalues = null, options = {}) {
-      return plot(values, yvalues, { ...options, style: "line" });
+    	return plot(values, yvalues, { ...options, style: "line" });
     }
     
+    /**
+     * Generate an SVG sparkbar chart (bar chart) from data
+     * @param {number[]} values - Y-values or X-values if yvalues provided
+     * @param {number[]|null} yvalues - Y-values (when values becomes x-values)
+     * @param {object} options - Chart options (xlims/ylims can be [min,max] with null for auto)
+     * @returns {string} SVG element as HTML string
+     */
     function sparkbars(values, yvalues = null, options = {}) {
-      return plot(values, yvalues, { ...options, style: "bar" });
+    	return plot(values, yvalues, { ...options, style: "bar" });
     }
     
     </script>
-    <!-- end 'sparklines.js' -->
+    <!-- end '../../libs/sparklines.js' -->
         <!-- begin 'clusterState.js' -->
     <script>
     /**
@@ -1625,7 +1782,26 @@
         if (clusterId === undefined) {
           return "#888888"; // Gray for unknown heads
         }
+        if (clusterId === -1) {
+          return "#666666"; // Dark gray for misc cluster
+        }
         return this.colors[clusterId % this.colors.length];
+      }
+    
+      /**
+       * Get all assignments
+       * @returns {Object.<string, number>} Map of headId to clusterId
+       */
+      getAssignments() {
+        return { ...this.assignments };
+      }
+    
+      /**
+       * Get number of clusters
+       * @returns {number} Number of clusters
+       */
+      getNumClusters() {
+        return this.nClusters;
       }
     
       /**
@@ -1720,11 +1896,30 @@
       logScale: false,
       currentAssignments: null,
       currentNClusters: 0,
+      currentCutHeight: null,
+      minClusterSize: 10,
+      linkageMethod: "average",
       modelSizes: {},
       modelOrder: "data",
       originalModelOrder: [],
       modelDataFrame: null,
     };
+    
+    /**
+     * Generate single pattern viewer URL for a specific head and prompt
+     * @param {string} headId - Head ID in format "model:Llayer:Hhead"
+     * @param {string} promptHash - The prompt hash
+     * @returns {string} URL to single pattern viewer
+     */
+    function getPatternViewerUrl(headId, promptHash) {
+      const parts = headId.split(":");
+      const model = parts[0];
+      const layer = parts[1].substring(1); // Remove "L" prefix
+      const head = parts[2].substring(1); // Remove "H" prefix
+    
+      // Format: single.html?prompt={hash}&head={model}.L{layer}.H{head}
+      return `../../patterns/single.html?prompt=${promptHash}&head=${model}.L${layer}.H${head}`;
+    }
     
     /**
      * Parse model sizes from TransformerLens CSV
@@ -1896,11 +2091,15 @@
         // Set up help tooltip with model data
         setupHelpTooltip();
     
-        // Initial render with cut height = 5
-        const initialCutHeight = 5;
+        // Initial render with cut height and min cluster size
+        const initialCutHeight = 5.48;
+        const initialMinClusterSize = gridState.minClusterSize;
         document.getElementById("cut-height").value = initialCutHeight;
-        document.getElementById("cut-height-value").textContent =
-          initialCutHeight.toFixed(1);
+        document.getElementById("cut-height-input").value =
+          initialCutHeight.toFixed(3);
+        document.getElementById("min-cluster-size").value = initialMinClusterSize;
+        document.getElementById("min-cluster-size-input").value =
+          initialMinClusterSize;
         updateClustersByHeight(initialCutHeight);
       } catch (error) {
         console.error("Error initializing grid view:", error);
@@ -1914,16 +2113,21 @@
      */
     function setupControls(defaultNClusters) {
       const nClustersSlider = document.getElementById("n-clusters");
-      const nClustersValue = document.getElementById("n-clusters-value");
+      const nClustersInput = document.getElementById("n-clusters-input");
       const cutHeightSlider = document.getElementById("cut-height");
-      const cutHeightValue = document.getElementById("cut-height-value");
+      const cutHeightInput = document.getElementById("cut-height-input");
+      const minClusterSizeSlider = document.getElementById("min-cluster-size");
+      const minClusterSizeInput = document.getElementById("min-cluster-size-input");
       const scaleSlider = document.getElementById("scale");
       const scaleValue = document.getElementById("scale-value");
+      const exportBtn = document.getElementById("export-pattern-types");
     
       // Set max clusters to number of heads
-      nClustersSlider.max = Math.min(gridState.nHeads, 100);
+      const maxClusters = Math.min(gridState.nHeads, 100);
+      nClustersSlider.max = maxClusters;
       nClustersSlider.value = defaultNClusters;
-      nClustersValue.textContent = defaultNClusters;
+      nClustersInput.value = defaultNClusters;
+      nClustersInput.max = maxClusters;
     
       // Get max height from linkage, capped at 20
       const maxHeight = Math.min(
@@ -1932,19 +2136,51 @@
       );
       cutHeightSlider.max = maxHeight;
       cutHeightSlider.step = maxHeight / 1000;
+      cutHeightInput.max = maxHeight;
+      cutHeightInput.step = maxHeight / 1000;
     
-      // n-clusters slider
+      // n-clusters slider and input (bidirectional)
       nClustersSlider.addEventListener("input", (e) => {
         const n = parseInt(e.target.value);
-        nClustersValue.textContent = n;
+        nClustersInput.value = n;
+        updateClusters(n);
+      });
+      nClustersInput.addEventListener("change", (e) => {
+        const n = Math.max(2, Math.min(maxClusters, parseInt(e.target.value) || 2));
+        nClustersInput.value = n;
+        nClustersSlider.value = n;
         updateClusters(n);
       });
     
-      // cut-height slider
+      // cut-height slider and input (bidirectional)
       cutHeightSlider.addEventListener("input", (e) => {
         const height = parseFloat(e.target.value);
-        cutHeightValue.textContent = height.toFixed(3);
+        cutHeightInput.value = height.toFixed(3);
         updateClustersByHeight(height);
+      });
+      cutHeightInput.addEventListener("change", (e) => {
+        const height = Math.max(
+          0,
+          Math.min(maxHeight, parseFloat(e.target.value) || 0),
+        );
+        cutHeightInput.value = height.toFixed(3);
+        cutHeightSlider.value = height;
+        updateClustersByHeight(height);
+      });
+    
+      // min-cluster-size slider and input (bidirectional)
+      minClusterSizeSlider.addEventListener("input", (e) => {
+        const size = parseInt(e.target.value);
+        minClusterSizeInput.value = size;
+        gridState.minClusterSize = size;
+        reapplyCurrentClustering();
+      });
+      minClusterSizeInput.addEventListener("change", (e) => {
+        const size = Math.max(0, parseInt(e.target.value) || 0);
+        minClusterSizeInput.value = size;
+        minClusterSizeSlider.value = size;
+        gridState.minClusterSize = size;
+        reapplyCurrentClustering();
       });
     
       // Scale slider
@@ -1972,6 +2208,9 @@
         gridState.modelOrder = e.target.value;
         renderModelGrids();
       });
+    
+      // Export pattern types button
+      exportBtn.addEventListener("click", exportPatternTypes);
     }
     
     /**
@@ -2172,14 +2411,83 @@
     }
     
     /**
+     * Apply min-cluster-size merging to assignments
+     * @param {Object.<string, number>} assignments - Original cluster assignments
+     * @returns {Object} Object with merged assignments, small cluster IDs, and final cluster count
+     */
+    function applyMinClusterSize(assignments) {
+      const minSize = gridState.minClusterSize;
+      if (minSize <= 0) {
+        return {
+          assignments: assignments,
+          smallClusters: new Set(),
+          nClusters: new Set(Object.values(assignments)).size,
+        };
+      }
+    
+      // Count cluster sizes
+      const clusterCounts = {};
+      for (const cid of Object.values(assignments)) {
+        clusterCounts[cid] = (clusterCounts[cid] || 0) + 1;
+      }
+    
+      // Find small clusters
+      const smallClusters = new Set();
+      for (const [cid, count] of Object.entries(clusterCounts)) {
+        if (count < minSize) {
+          smallClusters.add(parseInt(cid));
+        }
+      }
+    
+      // Reassign small cluster heads to misc (-1)
+      if (smallClusters.size > 0) {
+        const merged = {};
+        for (const [headId, cid] of Object.entries(assignments)) {
+          merged[headId] = smallClusters.has(cid) ? -1 : cid;
+        }
+        return {
+          assignments: merged,
+          smallClusters: smallClusters,
+          nClusters: new Set(Object.values(merged)).size,
+        };
+      }
+    
+      return {
+        assignments: assignments,
+        smallClusters: smallClusters,
+        nClusters: new Set(Object.values(assignments)).size,
+      };
+    }
+    
+    /**
+     * Reapply current clustering with updated min-cluster-size
+     */
+    function reapplyCurrentClustering() {
+      if (gridState.currentCutHeight !== null) {
+        updateClustersByHeight(gridState.currentCutHeight);
+      } else {
+        updateClusters(gridState.currentNClusters || 10);
+      }
+    }
+    
+    /**
      * Update visualization for a given number of clusters
      * @param {number} nClusters - Number of clusters
      */
     function updateClusters(nClusters) {
-      const assignments = computeClusters(nClusters);
-      window.CLUSTER_STATE.setAssignments(assignments, nClusters);
+      gridState.currentNClusters = nClusters;
+      gridState.currentCutHeight = null;
+    
+      const rawAssignments = computeClusters(nClusters);
+      const {
+        assignments,
+        smallClusters,
+        nClusters: finalNClusters,
+      } = applyMinClusterSize(rawAssignments);
+    
+      window.CLUSTER_STATE.setAssignments(assignments, finalNClusters);
       renderModelGrids();
-      updateStats(assignments, nClusters);
+      updateStats(assignments, finalNClusters, smallClusters);
     }
     
     /**
@@ -2187,15 +2495,75 @@
      * @param {number} cutHeight - Height at which to cut
      */
     function updateClustersByHeight(cutHeight) {
-      const assignments = computeClustersByHeightInternal(cutHeight);
-      const nClusters = new Set(Object.values(assignments)).size;
+      gridState.currentCutHeight = cutHeight;
     
-      document.getElementById("n-clusters").value = nClusters;
-      document.getElementById("n-clusters-value").textContent = nClusters;
+      const rawAssignments = computeClustersByHeightInternal(cutHeight);
+      const rawNClusters = new Set(Object.values(rawAssignments)).size;
+      const {
+        assignments,
+        smallClusters,
+        nClusters: finalNClusters,
+      } = applyMinClusterSize(rawAssignments);
     
-      window.CLUSTER_STATE.setAssignments(assignments, nClusters);
+      document.getElementById("n-clusters").value = rawNClusters;
+      document.getElementById("n-clusters-input").value = rawNClusters;
+    
+      window.CLUSTER_STATE.setAssignments(assignments, finalNClusters);
       renderModelGrids();
-      updateStats(assignments, nClusters);
+      updateStats(assignments, finalNClusters, smallClusters);
+    }
+    
+    /**
+     * Export pattern types JSON
+     */
+    function exportPatternTypes() {
+      const assignments = window.CLUSTER_STATE.getAssignments();
+      const nClusters = window.CLUSTER_STATE.getNumClusters();
+    
+      // Build cluster sizes
+      const clusterSizes = {};
+      for (const cid of Object.values(assignments)) {
+        const key = String(cid);
+        clusterSizes[key] = (clusterSizes[key] || 0) + 1;
+      }
+    
+      // Build types array
+      const clusterIds = [...new Set(Object.values(assignments))].sort(
+        (a, b) => a - b,
+      );
+      const types = clusterIds.map((id) => ({
+        id: id,
+        name: id === -1 ? "misc" : "none",
+        description: id === -1 ? "Merged from small clusters" : "none",
+      }));
+    
+      const patternTypes = {
+        meta: {
+          cut_height: gridState.currentCutHeight,
+          n_clusters: nClusters,
+          linkage_method: gridState.linkageMethod,
+          clustering_path: "browser-export",
+          created_at: new Date().toISOString(),
+          min_cluster_size: gridState.minClusterSize,
+        },
+        stats: {
+          n_heads: Object.keys(assignments).length,
+          cluster_sizes: clusterSizes,
+        },
+        types: types,
+        assignments: assignments,
+      };
+    
+      // Trigger download
+      const blob = new Blob([JSON.stringify(patternTypes, null, "\t")], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "pattern_types.json";
+      a.click();
+      URL.revokeObjectURL(url);
     }
     
     /**
@@ -2533,6 +2901,14 @@
     
           if (hash) {
             const imgUrl = `${gridState.patternsBaseUrl}/${modelName}/prompts/${hash}/L${layer}/H${head}/attn.png`;
+    
+            // Create clickable link to pattern viewer
+            const link = document.createElement("a");
+            link.href = getPatternViewerUrl(headId, hash);
+            link.target = "_blank";
+            link.className = "pattern-link";
+            link.title = "Open in pattern viewer";
+    
             const img = document.createElement("img");
             img.className = "pattern-image";
             img.src = imgUrl;
@@ -2541,9 +2917,11 @@
             img.style.width = gridState.patternSize + "px";
             img.style.height = gridState.patternSize + "px";
             img.onerror = () => {
-              img.style.display = "none";
+              link.style.display = "none";
             };
-            patternRow.appendChild(img);
+    
+            link.appendChild(img);
+            patternRow.appendChild(link);
           }
         }
     
@@ -2593,10 +2971,9 @@
     /**
      * Update statistics display with sparkline
      */
-    function updateStats(assignments, nClusters) {
+    function updateStats(assignments, nClusters, smallClusters = new Set()) {
       // Store for re-rendering when toggling log scale
       gridState.currentAssignments = assignments;
-      gridState.currentNClusters = nClusters;
     
       const sizes = window.CLUSTER_STATE.getClusterSizes();
       const sortedSizes = Object.values(sizes).sort((a, b) => b - a);

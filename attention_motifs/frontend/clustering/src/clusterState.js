@@ -54,7 +54,26 @@ class ClusterState {
     if (clusterId === undefined) {
       return "#888888"; // Gray for unknown heads
     }
+    if (clusterId === -1) {
+      return "#666666"; // Dark gray for misc cluster
+    }
     return this.colors[clusterId % this.colors.length];
+  }
+
+  /**
+   * Get all assignments
+   * @returns {Object.<string, number>} Map of headId to clusterId
+   */
+  getAssignments() {
+    return { ...this.assignments };
+  }
+
+  /**
+   * Get number of clusters
+   * @returns {number} Number of clusters
+   */
+  getNumClusters() {
+    return this.nClusters;
   }
 
   /**

@@ -1,5 +1,7 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 data/**
+# fetched js libs
+attention_motifs/frontend/libs/
 # demo output - lots of npz files and images
 docs/demo/**
 # pysr/juliacall will dump pickle files and csvs in here
