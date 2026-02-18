@@ -1,5 +1,9 @@
 # TODO
 
+## attentionpedia optimizations
+
+- use new array.js feature to load only part of an array
+
 ## Investigate NaN in feature computation pipeline
 
 ### Problem observed
