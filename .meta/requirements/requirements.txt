@@ -611,6 +611,10 @@ typer-slim==0.24.0
     # via
     #   huggingface-hub
     #   transformers
+types-psutil==7.2.2.20260130
+types-requests==2.32.4.20260107
+    # via types-tqdm
+types-tqdm==4.67.3.20260205
 typing-extensions==4.12.2
     # via
     #   aiosignal
@@ -639,6 +643,7 @@ urllib3==2.6.3
     # via
     #   requests
     #   sentry-sdk
+    #   types-requests
 wandb==0.25.0
     # via transformer-lens
 wcmatch==10.1
