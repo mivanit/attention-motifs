@@ -107,6 +107,11 @@ DEFAULT_VIS_CONFIGS: dict[str, str] = dict(
 					"template": "../../../patterns/single.html?prompt={activation.prompt}&head={activation.model}.L{activation.layer}.H{activation.head}"
 				},
 			},
+			"middleClick": {
+				"enabled": True,
+				"title": "{activation.cls}",
+				"content": '<img src="../../../patterns/{activation.model}/prompts/{activation.prompt}/L{activation.layer}/H{activation.head}/attn.png" style="max-width: 300px; max-height: 300px;" />',
+			},
 		},
 	),
 	embed_head=dict(

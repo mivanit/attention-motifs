@@ -69,9 +69,11 @@ def write_frontend(cfg: PipelineConfig) -> None:
 	clustering_dir.mkdir(parents=True, exist_ok=True)
 	(clustering_dir / "index.html").write_text(clustering_html)
 
-	# write main index and diagram svg
+	# write main index, style.css, and diagram svg
 	main_index_html: str = (frontend_resources_path / "index.html").read_text()
 	(cfg.figures_dir / "../index.html").write_text(main_index_html)
+	style_css: str = (frontend_resources_path / "style.css").read_text()
+	(cfg.figures_dir / "../style.css").write_text(style_css)
 	diagram_svg: str = (frontend_resources_path / "diagram.svg").read_text()
 	(cfg.figures_dir / "../diagram.svg").write_text(diagram_svg)
 
