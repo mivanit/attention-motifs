@@ -195,144 +195,55 @@ error[invalid-argument-type]: Method `__getitem__` of type `bound method Tensor.
     |
 info: rule `invalid-argument-type` is enabled by default
 
-error[invalid-argument-type]: Argument to function `__new__` is incorrect
-  --> attention_motifs/attnpedia/attnpedia.py:15:7
-   |
-14 | ATTNPEDIA_PATH: Path = (
-15 |     Path(importlib.resources.files(attention_motifs)) / "attnpedia" / "attn-pedia.json"
-   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `str | PathLike[str]`, found `Traversable`
-16 | )
-   |
-info: Function defined here
-   --> stdlib/pathlib/__init__.pyi:310:13
-    |
-308 |         def __new__(cls, *args: StrPath, **kwargs: Unused) -> Self: ...  # pyright: ignore[reportInconsistentConstructor]
-309 |     else:
-310 |         def __new__(cls, *args: StrPath, **kwargs: Unused) -> Self: ...
-    |             ^^^^^^^      -------------- Parameter declared here
-311 |
-312 |     @classmethod
-    |
-info: rule `invalid-argument-type` is enabled by default
-
-error[invalid-argument-type]: Argument to function `__new__` is incorrect
-  --> attention_motifs/attnpedia/attnpedia.py:19:7
-   |
-18 | ATTNPEDIA_GROUPS_PATH: Path = (
-19 |     Path(importlib.resources.files(attention_motifs))
-   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `str | PathLike[str]`, found `Traversable`
-20 |     / "attnpedia"
-21 |     / "attn-pedia-groups.json"
-   |
-info: Function defined here
-   --> stdlib/pathlib/__init__.pyi:310:13
-    |
-308 |         def __new__(cls, *args: StrPath, **kwargs: Unused) -> Self: ...  # pyright: ignore[reportInconsistentConstructor]
-309 |     else:
-310 |         def __new__(cls, *args: StrPath, **kwargs: Unused) -> Self: ...
-    |             ^^^^^^^      -------------- Parameter declared here
-311 |
-312 |     @classmethod
-    |
-info: rule `invalid-argument-type` is enabled by default
-
-error[invalid-assignment]: Object of type `str | list[dict[Literal["type", "heads"], str | list[str]]]` is not assignable to `str`
-   --> attention_motifs/attnpedia/attnpedia.py:134:16
-    |
-132 |         df_raw: list[dict] = list()
-133 |         for group in self.data_raw:
-134 |             model_name: str = group["model"]
-    |                         ---   ^^^^^^^^^^^^^^ Incompatible value of type `str | list[dict[Literal["type", "heads"], str | list[str]]]`
-    |                         |
-    |                         Declared type
-135 |
-136 |             for head_cls in group["classes"]:
-    |
-info: rule `invalid-assignment` is enabled by default
-
-error[invalid-argument-type]: Method `__getitem__` of type `Overload[(key: SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> LiteralString, (key: SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> str]` cannot be called with key of type `Literal["heads"]` on object of type `str`
-   --> attention_motifs/attnpedia/attnpedia.py:137:14
-    |
-136 |             for head_cls in group["classes"]:
-137 |                 for h in head_cls["heads"]:
-    |                          ^^^^^^^^
-138 |                     layer_idx, head_idx = parse_head(h)
-    |
-info: rule `invalid-argument-type` is enabled by default
-
-error[invalid-argument-type]: Method `__getitem__` of type `Overload[(key: SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> LiteralString, (key: SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> str]` cannot be called with key of type `Literal["type"]` on object of type `str`
-   --> attention_motifs/attnpedia/attnpedia.py:146:16
-    |
-144 | …                     "paper.notes": group["notes"],
-145 | …                     "paper.name": model_name,
-146 | …                     "type": head_cls["type"],
-    |                               ^^^^^^^^
-147 | …                     "prefixed_type": f"{group['prefix']}:{head_cls['type']}",
-148 | …                     "layer_idx": layer_idx,
-    |
-info: rule `invalid-argument-type` is enabled by default
-
-error[invalid-argument-type]: Method `__getitem__` of type `Overload[(key: SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> LiteralString, (key: SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> str]` cannot be called with key of type `Literal["type"]` on object of type `str`
-   --> attention_motifs/attnpedia/attnpedia.py:147:46
-    |
-145 | …                     "paper.name": model_name,
-146 | …                     "type": head_cls["type"],
-147 | …                     "prefixed_type": f"{group['prefix']}:{head_cls['type']}",
-    |                                                             ^^^^^^^^
-148 | …                     "layer_idx": layer_idx,
-149 | …                     "head_idx": head_idx,
-    |
-info: rule `invalid-argument-type` is enabled by default
-
 error[invalid-return-type]: Return type does not match returned value
-   --> attention_motifs/attnpedia/attnpedia.py:250:10
+   --> attention_motifs/attnpedia/attnpedia.py:264:10
     |
-248 |             self._generate_head_type_maps()
-249 |
-250 |         return self._head_type_colors
+262 |             self._generate_head_type_maps()
+263 |
+264 |         return self._head_type_colors
     |                ^^^^^^^^^^^^^^^^^^^^^^ expected `dict[str, str]`, found `dict[str, str] | None`
-251 |
-252 |     def head_type_groups(self, refresh: bool = False) -> dict[str, str]:
+265 |
+266 |     def head_type_groups(self, refresh: bool = False) -> dict[str, str]:
     |
-   ::: attention_motifs/attnpedia/attnpedia.py:234:55
+   ::: attention_motifs/attnpedia/attnpedia.py:248:55
     |
-232 |         }
-233 |
-234 |     def head_type_colors(self, refresh: bool = False) -> dict[str, str]:
+246 |         }
+247 |
+248 |     def head_type_colors(self, refresh: bool = False) -> dict[str, str]:
     |                                                          -------------- Expected `dict[str, str]` because of return type
-235 |         """Get a mapping of attention head types to color codes.
+249 |         """Get a mapping of attention head types to color codes.
     |
 info: rule `invalid-return-type` is enabled by default
 
 error[invalid-return-type]: Return type does not match returned value
-   --> attention_motifs/attnpedia/attnpedia.py:266:10
+   --> attention_motifs/attnpedia/attnpedia.py:280:10
     |
-264 |             self._generate_head_type_maps()
-265 |
-266 |         return self._head_type_groups
+278 |             self._generate_head_type_maps()
+279 |
+280 |         return self._head_type_groups
     |                ^^^^^^^^^^^^^^^^^^^^^^ expected `dict[str, str]`, found `dict[str, str] | None`
-267 |
-268 |     def _generate_head_type_maps(self) -> None:
+281 |
+282 |     def _generate_head_type_maps(self) -> None:
     |
-   ::: attention_motifs/attnpedia/attnpedia.py:252:55
+   ::: attention_motifs/attnpedia/attnpedia.py:266:55
     |
-250 |         return self._head_type_colors
-251 |
-252 |     def head_type_groups(self, refresh: bool = False) -> dict[str, str]:
+264 |         return self._head_type_colors
+265 |
+266 |     def head_type_groups(self, refresh: bool = False) -> dict[str, str]:
     |                                                          -------------- Expected `dict[str, str]` because of return type
-253 |         """Get a mapping of attention head types to their group names.
+267 |         """Get a mapping of attention head types to their group names.
     |
 info: rule `invalid-return-type` is enabled by default
 
 error[invalid-argument-type]: Argument to function `to_hex` is incorrect
-   --> attention_motifs/attnpedia/attnpedia.py:296:46
+   --> attention_motifs/attnpedia/attnpedia.py:310:46
     |
-294 |                         min(max(c * (1 + factor), 0), 1) for c in base_rgb
-295 |                     )
-296 |                     color_dict[type_name] = mcolors.rgb2hex(new_rgb)
+308 |                         min(max(c * (1 + factor), 0), 1) for c in base_rgb
+309 |                     )
+310 |                     color_dict[type_name] = mcolors.rgb2hex(new_rgb)
     |                                                             ^^^^^^^ Expected `tuple[int | float, int | float, int | float] | str | tuple[int | float, int | float, int | float, int | float] | tuple[tuple[int | float, int | float, int | float] | str, int | float] | tuple[tuple[int | float, int | float, int | float, int | float], int | float]`, found `tuple[int | float, ...]`
-297 |
-298 |             # Assign group to each type
+311 |
+312 |             # Assign group to each type
     |
 info: Function defined here
   --> .venv/lib/python3.13/site-packages/matplotlib/colors.pyi:44:5
@@ -346,149 +257,15 @@ info: Function defined here
    |
 info: rule `invalid-argument-type` is enabled by default
 
-error[invalid-argument-type]: Method `__getitem__` of type `Overload[(key: SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> LiteralString, (key: SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> str]` cannot be called with key of type `Literal["type"]` on object of type `str`
-   --> attention_motifs/attnpedia/attnpedia.py:320:49
-    |
-318 |         for paper in self.data_raw:
-319 |             for head_class in paper["classes"]:
-320 |                 head_class_name: str = f"{paper['prefix']}:{head_class['type']}"
-    |                                                             ^^^^^^^^^^
-321 |                 metadata[head_class_name] = dict(
-322 |                     url=paper["url"],
-    |
-info: rule `invalid-argument-type` is enabled by default
-
-error[invalid-argument-type]: Argument to bound method `__init__` is incorrect
-   --> attention_motifs/attnpedia/attnpedia.py:322:6
-    |
-320 |                 head_class_name: str = f"{paper['prefix']}:{head_class['type']}"
-321 |                 metadata[head_class_name] = dict(
-322 |                     url=paper["url"],
-    |                     ^^^^^^^^^^^^^^^^ Expected `str | list[dict[str, str | list[str]]] | int | list[Unknown | str]`, found `str | list[dict[Literal["type", "heads"], str | list[str]]]`
-323 |                     notes=paper["notes"],
-324 |                     model=paper["model"],
-    |
-info: Element `list[dict[Literal["type", "heads"], str | list[str]]]` of this union is not assignable to `str | list[dict[str, str | list[str]]] | int | list[Unknown | str]`
-info: Matching overload defined here
-    --> stdlib/builtins.pyi:2964:9
-     |
-2962 |     def __init__(self, /) -> None: ...
-2963 |     @overload
-2964 |     def __init__(self: dict[str, _VT], /, **kwargs: _VT) -> None: ...  # pyright: ignore[reportInvalidTypeVarUse]  #11780
-     |         ^^^^^^^^                          ------------- Parameter declared here
-2965 |     @overload
-2966 |     def __init__(self, map: SupportsKeysAndGetItem[_KT, _VT], /) -> None: ...
-     |
-info: Non-matching overloads for bound method `__init__`:
-info:   (self, /) -> None
-info:   (self, map: SupportsKeysAndGetItem[_KT@dict, _VT@dict], /) -> None
-info:   (self: dict[str, _VT@dict], map: SupportsKeysAndGetItem[str, _VT@dict], /, **kwargs: _VT@dict) -> None
-info:   (self, iterable: Iterable[tuple[_KT@dict, _VT@dict]], /) -> None
-info:   (self: dict[str, _VT@dict], iterable: Iterable[tuple[str, _VT@dict]], /, **kwargs: _VT@dict) -> None
-info:   (self: dict[str, str], iterable: Iterable[list[str]], /) -> None
-info:   (self: dict[bytes, bytes], iterable: Iterable[list[bytes]], /) -> None
-info: Union variant `Overload[[_KT, _VT]() -> None, [_KT, _VT](**kwargs: _VT) -> None, [_KT, _VT](map: SupportsKeysAndGetItem[_KT, _VT], /) -> None, [_KT, _VT](map: SupportsKeysAndGetItem[str, _VT], /, **kwargs: _VT) -> None, [_KT, _VT](iterable: Iterable[tuple[_KT, _VT]], /) -> None, [_KT, _VT](iterable: Iterable[tuple[str, _VT]], /, **kwargs: _VT) -> None, [_KT, _VT](iterable: Iterable[list[str]], /) -> None, [_KT, _VT](iterable: Iterable[list[bytes]], /) -> None]` is incompatible with this call site
-info: Attempted to call union type `(def __new__[Self, _KT, _VT](cls, /, *args: Any, **kwargs: Any) -> Self) | (Overload[[_KT, _VT]() -> None, [_KT, _VT](**kwargs: _VT) -> None, [_KT, _VT](map: SupportsKeysAndGetItem[_KT, _VT], /) -> None, [_KT, _VT](map: SupportsKeysAndGetItem[str, _VT], /, **kwargs: _VT) -> None, [_KT, _VT](iterable: Iterable[tuple[_KT, _VT]], /) -> None, [_KT, _VT](iterable: Iterable[tuple[str, _VT]], /, **kwargs: _VT) -> None, [_KT, _VT](iterable: Iterable[list[str]], /) -> None, [_KT, _VT](iterable: Iterable[list[bytes]], /) -> None])`
-info: rule `invalid-argument-type` is enabled by default
-
-error[invalid-argument-type]: Argument to bound method `__init__` is incorrect
-   --> attention_motifs/attnpedia/attnpedia.py:323:6
-    |
-321 |                 metadata[head_class_name] = dict(
-322 |                     url=paper["url"],
-323 |                     notes=paper["notes"],
-    |                     ^^^^^^^^^^^^^^^^^^^^ Expected `str | list[dict[str, str | list[str]]] | int | list[Unknown | str]`, found `str | list[dict[Literal["type", "heads"], str | list[str]]]`
-324 |                     model=paper["model"],
-325 |                     n_heads=len(head_class["heads"]),
-    |
-info: Element `list[dict[Literal["type", "heads"], str | list[str]]]` of this union is not assignable to `str | list[dict[str, str | list[str]]] | int | list[Unknown | str]`
-info: Matching overload defined here
-    --> stdlib/builtins.pyi:2964:9
-     |
-2962 |     def __init__(self, /) -> None: ...
-2963 |     @overload
-2964 |     def __init__(self: dict[str, _VT], /, **kwargs: _VT) -> None: ...  # pyright: ignore[reportInvalidTypeVarUse]  #11780
-     |         ^^^^^^^^                          ------------- Parameter declared here
-2965 |     @overload
-2966 |     def __init__(self, map: SupportsKeysAndGetItem[_KT, _VT], /) -> None: ...
-     |
-info: Non-matching overloads for bound method `__init__`:
-info:   (self, /) -> None
-info:   (self, map: SupportsKeysAndGetItem[_KT@dict, _VT@dict], /) -> None
-info:   (self: dict[str, _VT@dict], map: SupportsKeysAndGetItem[str, _VT@dict], /, **kwargs: _VT@dict) -> None
-info:   (self, iterable: Iterable[tuple[_KT@dict, _VT@dict]], /) -> None
-info:   (self: dict[str, _VT@dict], iterable: Iterable[tuple[str, _VT@dict]], /, **kwargs: _VT@dict) -> None
-info:   (self: dict[str, str], iterable: Iterable[list[str]], /) -> None
-info:   (self: dict[bytes, bytes], iterable: Iterable[list[bytes]], /) -> None
-info: Union variant `Overload[[_KT, _VT]() -> None, [_KT, _VT](**kwargs: _VT) -> None, [_KT, _VT](map: SupportsKeysAndGetItem[_KT, _VT], /) -> None, [_KT, _VT](map: SupportsKeysAndGetItem[str, _VT], /, **kwargs: _VT) -> None, [_KT, _VT](iterable: Iterable[tuple[_KT, _VT]], /) -> None, [_KT, _VT](iterable: Iterable[tuple[str, _VT]], /, **kwargs: _VT) -> None, [_KT, _VT](iterable: Iterable[list[str]], /) -> None, [_KT, _VT](iterable: Iterable[list[bytes]], /) -> None]` is incompatible with this call site
-info: Attempted to call union type `(def __new__[Self, _KT, _VT](cls, /, *args: Any, **kwargs: Any) -> Self) | (Overload[[_KT, _VT]() -> None, [_KT, _VT](**kwargs: _VT) -> None, [_KT, _VT](map: SupportsKeysAndGetItem[_KT, _VT], /) -> None, [_KT, _VT](map: SupportsKeysAndGetItem[str, _VT], /, **kwargs: _VT) -> None, [_KT, _VT](iterable: Iterable[tuple[_KT, _VT]], /) -> None, [_KT, _VT](iterable: Iterable[tuple[str, _VT]], /, **kwargs: _VT) -> None, [_KT, _VT](iterable: Iterable[list[str]], /) -> None, [_KT, _VT](iterable: Iterable[list[bytes]], /) -> None])`
-info: rule `invalid-argument-type` is enabled by default
-
-error[invalid-argument-type]: Argument to bound method `__init__` is incorrect
-   --> attention_motifs/attnpedia/attnpedia.py:324:6
-    |
-322 |                     url=paper["url"],
-323 |                     notes=paper["notes"],
-324 |                     model=paper["model"],
-    |                     ^^^^^^^^^^^^^^^^^^^^ Expected `str | list[dict[str, str | list[str]]] | int | list[Unknown | str]`, found `str | list[dict[Literal["type", "heads"], str | list[str]]]`
-325 |                     n_heads=len(head_class["heads"]),
-326 |                     heads=[f"{paper['model']}:{h}" for h in head_class["heads"]],
-    |
-info: Element `list[dict[Literal["type", "heads"], str | list[str]]]` of this union is not assignable to `str | list[dict[str, str | list[str]]] | int | list[Unknown | str]`
-info: Matching overload defined here
-    --> stdlib/builtins.pyi:2964:9
-     |
-2962 |     def __init__(self, /) -> None: ...
-2963 |     @overload
-2964 |     def __init__(self: dict[str, _VT], /, **kwargs: _VT) -> None: ...  # pyright: ignore[reportInvalidTypeVarUse]  #11780
-     |         ^^^^^^^^                          ------------- Parameter declared here
-2965 |     @overload
-2966 |     def __init__(self, map: SupportsKeysAndGetItem[_KT, _VT], /) -> None: ...
-     |
-info: Non-matching overloads for bound method `__init__`:
-info:   (self, /) -> None
-info:   (self, map: SupportsKeysAndGetItem[_KT@dict, _VT@dict], /) -> None
-info:   (self: dict[str, _VT@dict], map: SupportsKeysAndGetItem[str, _VT@dict], /, **kwargs: _VT@dict) -> None
-info:   (self, iterable: Iterable[tuple[_KT@dict, _VT@dict]], /) -> None
-info:   (self: dict[str, _VT@dict], iterable: Iterable[tuple[str, _VT@dict]], /, **kwargs: _VT@dict) -> None
-info:   (self: dict[str, str], iterable: Iterable[list[str]], /) -> None
-info:   (self: dict[bytes, bytes], iterable: Iterable[list[bytes]], /) -> None
-info: Union variant `Overload[[_KT, _VT]() -> None, [_KT, _VT](**kwargs: _VT) -> None, [_KT, _VT](map: SupportsKeysAndGetItem[_KT, _VT], /) -> None, [_KT, _VT](map: SupportsKeysAndGetItem[str, _VT], /, **kwargs: _VT) -> None, [_KT, _VT](iterable: Iterable[tuple[_KT, _VT]], /) -> None, [_KT, _VT](iterable: Iterable[tuple[str, _VT]], /, **kwargs: _VT) -> None, [_KT, _VT](iterable: Iterable[list[str]], /) -> None, [_KT, _VT](iterable: Iterable[list[bytes]], /) -> None]` is incompatible with this call site
-info: Attempted to call union type `(def __new__[Self, _KT, _VT](cls, /, *args: Any, **kwargs: Any) -> Self) | (Overload[[_KT, _VT]() -> None, [_KT, _VT](**kwargs: _VT) -> None, [_KT, _VT](map: SupportsKeysAndGetItem[_KT, _VT], /) -> None, [_KT, _VT](map: SupportsKeysAndGetItem[str, _VT], /, **kwargs: _VT) -> None, [_KT, _VT](iterable: Iterable[tuple[_KT, _VT]], /) -> None, [_KT, _VT](iterable: Iterable[tuple[str, _VT]], /, **kwargs: _VT) -> None, [_KT, _VT](iterable: Iterable[list[str]], /) -> None, [_KT, _VT](iterable: Iterable[list[bytes]], /) -> None])`
-info: rule `invalid-argument-type` is enabled by default
-
-error[invalid-argument-type]: Method `__getitem__` of type `Overload[(key: SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> LiteralString, (key: SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> str]` cannot be called with key of type `Literal["heads"]` on object of type `str`
-   --> attention_motifs/attnpedia/attnpedia.py:325:18
-    |
-323 |                     notes=paper["notes"],
-324 |                     model=paper["model"],
-325 |                     n_heads=len(head_class["heads"]),
-    |                                 ^^^^^^^^^^
-326 |                     heads=[f"{paper['model']}:{h}" for h in head_class["heads"]],
-327 |                 )
-    |
-info: rule `invalid-argument-type` is enabled by default
-
-error[invalid-argument-type]: Method `__getitem__` of type `Overload[(key: SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> LiteralString, (key: SupportsIndex | slice[SupportsIndex | None, SupportsIndex | None, SupportsIndex | None], /) -> str]` cannot be called with key of type `Literal["heads"]` on object of type `str`
-   --> attention_motifs/attnpedia/attnpedia.py:326:46
-    |
-324 |                     model=paper["model"],
-325 |                     n_heads=len(head_class["heads"]),
-326 |                     heads=[f"{paper['model']}:{h}" for h in head_class["heads"]],
-    |                                                             ^^^^^^^^^^
-327 |                 )
-    |
-info: rule `invalid-argument-type` is enabled by default
-
 error[no-matching-overload]: No overload of bound method `to_dict` matches arguments
-   --> attention_motifs/attnpedia/attnpedia.py:362:13
+   --> attention_motifs/attnpedia/attnpedia.py:376:13
     |
-360 |             }
-361 |         case "dataframe":
-362 |             result = pedia.dataframe().to_dict(orient="records")
+374 |             }
+375 |         case "dataframe":
+376 |             result = pedia.dataframe().to_dict(orient="records")
     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-363 |             lines = True
-364 |         case "df":
+377 |             lines = True
+378 |         case "df":
     |
 info: First overload defined here
     --> .venv/lib/python3.13/site-packages/polars/dataframe/frame.py:1793:9
@@ -519,14 +296,14 @@ info: Overload implementation defined here
 info: rule `no-matching-overload` is enabled by default
 
 error[no-matching-overload]: No overload of bound method `to_dict` matches arguments
-   --> attention_motifs/attnpedia/attnpedia.py:365:13
+   --> attention_motifs/attnpedia/attnpedia.py:379:13
     |
-363 |             lines = True
-364 |         case "df":
-365 |             result = pedia.dataframe().to_dict(orient="records")
+377 |             lines = True
+378 |         case "df":
+379 |             result = pedia.dataframe().to_dict(orient="records")
     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-366 |             lines = True
-367 |         case "head-to-types":
+380 |             lines = True
+381 |         case "head-to-types":
     |
 info: First overload defined here
     --> .venv/lib/python3.13/site-packages/polars/dataframe/frame.py:1793:9
@@ -554,60 +331,6 @@ info: Overload implementation defined here
 1806 |           """
 1807 |           Convert DataFrame to a dictionary mapping column name to values.
      |
-info: rule `no-matching-overload` is enabled by default
-
-error[no-matching-overload]: No overload of function `array_summary` matches arguments
-   --> attention_motifs/features/analysis.py:134:22
-    |
-132 |     for col in remove_cols:
-133 |         # Assuming array_summary is defined elsewhere.
-134 |         print(f"{col:<60} {array_summary(df_models_dropped[col].to_numpy())}")
-    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-135 |
-136 |     df_filtered: pl.DataFrame = df_models_dropped.drop(remove_cols)
-    |
-info: First overload defined here
-   --> .venv/lib/python3.13/site-packages/muutils/tensor_info.py:448:5
-    |
-447 |   @overload
-448 |   def array_summary(
-    |  _____^
-449 | |     array: Any,
-450 | |     as_list: Literal[True],
-451 | |     **kwargs,
-452 | | ) -> List[str]: ...
-    | |______________^
-453 |   @overload
-454 |   def array_summary(
-    |
-info: Possible overloads for function `array_summary`:
-info:   (array: Any, as_list: Literal[True], **kwargs) -> list[str]
-info:   (array: Any, as_list: Literal[False], **kwargs) -> str
-info: Overload implementation defined here
-   --> .venv/lib/python3.13/site-packages/muutils/tensor_info.py:459:5
-    |
-457 |       **kwargs,
-458 |   ) -> str: ...
-459 |   def array_summary(  # type: ignore[misc]
-    |  _____^
-460 | |     array,
-461 | |     fmt: OutputFormat = _USE_DEFAULT,  # type: ignore[assignment]
-462 | |     precision: int = _USE_DEFAULT,  # type: ignore[assignment]
-463 | |     stats: bool = _USE_DEFAULT,  # type: ignore[assignment]
-464 | |     shape: bool = _USE_DEFAULT,  # type: ignore[assignment]
-465 | |     dtype: bool = _USE_DEFAULT,  # type: ignore[assignment]
-466 | |     device: bool = _USE_DEFAULT,  # type: ignore[assignment]
-467 | |     requires_grad: bool = _USE_DEFAULT,  # type: ignore[assignment]
-468 | |     sparkline: bool = _USE_DEFAULT,  # type: ignore[assignment]
-469 | |     sparkline_bins: int = _USE_DEFAULT,  # type: ignore[assignment]
-470 | |     sparkline_logy: Optional[bool] = _USE_DEFAULT,  # type: ignore[assignment]
-471 | |     colored: bool = _USE_DEFAULT,  # type: ignore[assignment]
-472 | |     eq_char: str = _USE_DEFAULT,  # type: ignore[assignment]
-473 | |     as_list: bool = _USE_DEFAULT,  # type: ignore[assignment]
-474 | | ) -> Union[str, List[str]]:
-    | |__________________________^
-475 |       """Format array information into a readable summary.
-    |
 info: rule `no-matching-overload` is enabled by default
 
 error[invalid-argument-type]: Argument to bound method `set_position` is incorrect
@@ -1101,14 +824,14 @@ error[invalid-argument-type]: Argument to function `prefix_dict` is incorrect
 70 |                       ),
    |
 info: Function defined here
-  --> attention_motifs/util/util.py:12:5
+  --> attention_motifs/util/util.py:13:5
    |
-12 | def prefix_dict(
+13 | def prefix_dict(
    |     ^^^^^^^^^^^
-13 |     d: dict[str, float],
+14 |     d: dict[str, float],
    |     ------------------- Parameter declared here
-14 |     prefix: str | list[str],
-15 |     sep: str = ".",
+15 |     prefix: str | list[str],
+16 |     sep: str = ".",
    |
 info: rule `invalid-argument-type` is enabled by default
 
@@ -1151,140 +874,6 @@ info: Function defined here
 93 |       act_path: Path,
 94 |       out_path: Path,
    |
-info: rule `invalid-argument-type` is enabled by default
-
-error[no-matching-overload]: No overload of bound method `get` matches arguments
-   --> attention_motifs/features/plotting.py:238:21
-    |
-236 |         # Support per-label alpha / marker size like the original
-237 |         alpha_value = (
-238 |             alpha.get(label, alpha.get(None, 0.9)) if isinstance(alpha, dict) else alpha
-    |                              ^^^^^^^^^^^^^^^^^^^^
-239 |         )
-240 |         size_value = (
-    |
-info: First overload defined here
-    --> stdlib/builtins.pyi:3015:9
-     |
-3013 |     # Positional-only in dict, but not in MutableMapping
-3014 |     @overload  # type: ignore[override]
-3015 |     def get(self, key: _KT, default: None = None, /) -> _VT | None:
-     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-3016 |         """Return the value for key if key is in the dictionary, else default."""
-     |
-info: Possible overloads for bound method `get`:
-info:   (self, key: _KT@dict, default: None = None, /) -> _VT@dict | None
-info:   (self, key: _KT@dict, default: _VT@dict, /) -> _VT@dict
-info:   [_T](self, key: _KT@dict, default: _T, /) -> _VT@dict | _T
-info: rule `no-matching-overload` is enabled by default
-
-error[no-matching-overload]: No overload of bound method `get` matches arguments
-   --> attention_motifs/features/plotting.py:241:27
-    |
-239 |         )
-240 |         size_value = (
-241 |             marker_size.get(label, marker_size.get(None, 1))
-    |                                    ^^^^^^^^^^^^^^^^^^^^^^^^
-242 |             if isinstance(marker_size, dict)
-243 |             else marker_size
-    |
-info: First overload defined here
-    --> stdlib/builtins.pyi:3015:9
-     |
-3013 |     # Positional-only in dict, but not in MutableMapping
-3014 |     @overload  # type: ignore[override]
-3015 |     def get(self, key: _KT, default: None = None, /) -> _VT | None:
-     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-3016 |         """Return the value for key if key is in the dictionary, else default."""
-     |
-info: Possible overloads for bound method `get`:
-info:   (self, key: _KT@dict, default: None = None, /) -> _VT@dict | None
-info:   (self, key: _KT@dict, default: _VT@dict, /) -> _VT@dict
-info:   [_T](self, key: _KT@dict, default: _T, /) -> _VT@dict | _T
-info: rule `no-matching-overload` is enabled by default
-
-error[invalid-assignment]: Object of type `list[int | float | floating[Any]]` is not assignable to `list[int | float]`
-   --> attention_motifs/math/transition_tensor.py:305:7
-    |
-303 |         y: np.ndarray = tt[i, 0, :]
-304 |         # Initial parameter guess: amplitude, midpoint, steepness, baseline
-305 |         p0: list[float] = [max(y) - min(y), np.median(x), 1.0, min(y)]
-    |             -----------   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible value of type `list[int | float | floating[Any]]`
-    |             |
-    |             Declared type
-306 |         try:
-307 |             popt: np.ndarray
-    |
-info: rule `invalid-assignment` is enabled by default
-
-error[invalid-argument-type]: Argument to function `activations_main` is incorrect
-  --> attention_motifs/pipeline/s1_activations.py:18:4
-   |
-16 |         activations_main(
-17 |             model_name=model_name,
-18 |             save_path=cfg.patterns_dir,
-   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `str`, found `Path`
-19 |             prompts_path=cfg.prompts_file,
-20 |             raw_prompts=True,
-   |
-info: Function defined here
-   --> .venv/lib/python3.13/site-packages/pattern_lens/activations.py:385:5
-    |
-385 | def activations_main(
-    |     ^^^^^^^^^^^^^^^^
-386 |     model_name: str,
-387 |     save_path: str,
-    |     -------------- Parameter declared here
-388 |     prompts_path: str,
-389 |     raw_prompts: bool,
-    |
-info: rule `invalid-argument-type` is enabled by default
-
-error[invalid-argument-type]: Argument to function `activations_main` is incorrect
-  --> attention_motifs/pipeline/s1_activations.py:19:4
-   |
-17 |             model_name=model_name,
-18 |             save_path=cfg.patterns_dir,
-19 |             prompts_path=cfg.prompts_file,
-   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `str`, found `Path`
-20 |             raw_prompts=True,
-21 |             min_chars=cfg.prompts_min_chars,
-   |
-info: Function defined here
-   --> .venv/lib/python3.13/site-packages/pattern_lens/activations.py:385:5
-    |
-385 | def activations_main(
-    |     ^^^^^^^^^^^^^^^^
-386 |     model_name: str,
-387 |     save_path: str,
-388 |     prompts_path: str,
-    |     ----------------- Parameter declared here
-389 |     raw_prompts: bool,
-390 |     min_chars: int,
-    |
-info: rule `invalid-argument-type` is enabled by default
-
-error[invalid-argument-type]: Argument to function `figures_main` is incorrect
-  --> attention_motifs/pipeline/s1b_render_patterns.py:17:4
-   |
-15 |         figures_main(
-16 |             model_name=model,
-17 |             save_path=cfg.patterns_dir,
-   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `str`, found `Path`
-18 |             n_samples=cfg.prompts_n_samples,
-19 |             force=cfg.force_overwrite,
-   |
-info: Function defined here
-   --> .venv/lib/python3.13/site-packages/pattern_lens/figures.py:287:5
-    |
-287 | def figures_main(
-    |     ^^^^^^^^^^^^
-288 |     model_name: str,
-289 |     save_path: str,
-    |     -------------- Parameter declared here
-290 |     n_samples: int,
-291 |     force: bool,
-    |
 info: rule `invalid-argument-type` is enabled by default
 
 error[invalid-argument-type]: Argument to function `scalar_feature_table` is incorrect
@@ -1379,42 +968,6 @@ error[unresolved-attribute]: Attribute `savefig` is not defined on `None` in uni
 102 |                         format="svg",
     |
 info: rule `unresolved-attribute` is enabled by default
-
-error[invalid-return-type]: Return type does not match returned value
-  --> attention_motifs/util/util.py:44:9
-   |
-42 |       model_config: dict = json.loads((model_path / "model_cfg.json").read_text())
-43 |
-44 |       return model_config, prompts, activations
-   |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `tuple[dict[Unknown, Unknown], list[dict[Unknown, Unknown]], list[NpzFile]]`, found `tuple[Any, list[Unknown], list[ndarray[Unknown, Unknown]]]`
-   |
-  ::: attention_motifs/util/util.py:24:6
-   |
-22 |       model_name: str,
-23 |       base_path: Path = Path("../docs/demo"),
-24 |   ) -> tuple[
-   |  ______-
-25 | |     dict,
-26 | |     list[dict],
-27 | |     list[np.lib.npyio.NpzFile],
-28 | | ]:
-   | |_- Expected `tuple[dict[Unknown, Unknown], list[dict[Unknown, Unknown]], list[NpzFile]]` because of return type
-29 |       "returns (model_config, prompts, activations)"
-30 |       model_path: Path = base_path / model_name
-   |
-info: rule `invalid-return-type` is enabled by default
-
-error[invalid-parameter-default]: Default value of type `None` is not assignable to annotated parameter type `list[int]`
-  --> attention_motifs/util/util.py:62:2
-   |
-60 |     activations: list[np.lib.npyio.NpzFile],
-61 |     figure_func: Callable,
-62 |     prompts: list[int] = None,
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
-63 |     layers: list[int] | None = None,
-64 |     heads: list[int] | None = None,
-   |
-info: rule `invalid-parameter-default` is enabled by default
 
 error[invalid-argument-type]: Argument to function `scalar_feature_table` is incorrect
  --> notebooks/01-pattern_features_generate.ipynb:cell 5:3:2
@@ -1623,94 +1176,4 @@ info: Function defined here
     |
 info: rule `invalid-argument-type` is enabled by default
 
-error[invalid-argument-type]: Argument to bound method `__init__` is incorrect
-  --> tests/conftest.py:61:4
-   |
-59 |     def handler_factory(*args: object, **kwargs: object) -> QuietHTTPRequestHandler:
-60 |         return QuietHTTPRequestHandler(
-61 |             *args,
-   |             ^^^^^ Expected `socket | tuple[bytes, socket]`, found `object`
-62 |             directory=str(server_dir),
-63 |             **kwargs,  # type: ignore[arg-type]
-   |
-info: Method defined here
-   --> stdlib/http/server.pyi:359:9
-    |
-357 |         index_pages: ClassVar[tuple[str, ...]]
-358 |     directory: str
-359 |     def __init__(
-    |         ^^^^^^^^
-360 |         self,
-361 |         request: socketserver._RequestType,
-    |         ---------------------------------- Parameter declared here
-362 |         client_address: _socket._RetAddress,
-363 |         server: socketserver.BaseServer,
-    |
-info: rule `invalid-argument-type` is enabled by default
-
-error[invalid-argument-type]: Argument to bound method `__init__` is incorrect
-  --> tests/conftest.py:61:4
-   |
-59 |     def handler_factory(*args: object, **kwargs: object) -> QuietHTTPRequestHandler:
-60 |         return QuietHTTPRequestHandler(
-61 |             *args,
-   |             ^^^^^ Expected `BaseServer`, found `object`
-62 |             directory=str(server_dir),
-63 |             **kwargs,  # type: ignore[arg-type]
-   |
-info: Method defined here
-   --> stdlib/http/server.pyi:359:9
-    |
-357 |         index_pages: ClassVar[tuple[str, ...]]
-358 |     directory: str
-359 |     def __init__(
-    |         ^^^^^^^^
-360 |         self,
-361 |         request: socketserver._RequestType,
-362 |         client_address: _socket._RetAddress,
-363 |         server: socketserver.BaseServer,
-    |         ------------------------------- Parameter declared here
-364 |         *,
-365 |         directory: StrPath | None = None,
-    |
-info: rule `invalid-argument-type` is enabled by default
-
-warning[unused-type-ignore-comment]: Unused blanket `type: ignore` directive
-  --> tests/conftest.py:63:15
-   |
-61 |             *args,
-62 |             directory=str(server_dir),
-63 |             **kwargs,  # type: ignore[arg-type]
-   |                        ^^^^^^^^^^^^^^^^^^^^^^^^
-64 |         )
-   |
-help: Remove the unused suppression comment
-60 | 		return QuietHTTPRequestHandler(
-61 | 			*args,
-62 | 			directory=str(server_dir),
-   - 			**kwargs,  # type: ignore[arg-type]
-63 + 			**kwargs,
-64 | 		)
-65 | 
-66 | 	httpd: socketserver.TCPServer = socketserver.TCPServer(
-
-warning[unused-type-ignore-comment]: Unused blanket `type: ignore` directive
-  --> tests/conftest.py:68:21
-   |
-66 |     httpd: socketserver.TCPServer = socketserver.TCPServer(
-67 |         ("", HTTP_SERVER_PORT),
-68 |         handler_factory,  # type: ignore[arg-type]
-   |                           ^^^^^^^^^^^^^^^^^^^^^^^^
-69 |     )
-   |
-help: Remove the unused suppression comment
-65 | 
-66 | 	httpd: socketserver.TCPServer = socketserver.TCPServer(
-67 | 		("", HTTP_SERVER_PORT),
-   - 		handler_factory,  # type: ignore[arg-type]
-68 + 		handler_factory,
-69 | 	)
-70 | 
-71 | 	# Run server in background thread
-
-Found 80 diagnostics
+Found 55 diagnostics

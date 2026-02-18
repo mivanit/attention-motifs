@@ -1,10 +1,8 @@
-tests/conftest.py:61: error: Argument 1 to "QuietHTTPRequestHandler" has incompatible type "*tuple[object, ...]"; expected "socket | tuple[bytes, socket]"  [arg-type]
-tests/conftest.py:61: error: Argument 1 to "QuietHTTPRequestHandler" has incompatible type "*tuple[object, ...]"; expected "BaseServer"  [arg-type]
-attention_motifs/util/util.py:44: error: Incompatible return value type (got "tuple[dict[Any, Any], list[Any], list[ndarray[Any, Any]]]", expected "tuple[dict[Any, Any], list[dict[Any, Any]], list[NpzFile]]")  [return-value]
-attention_motifs/util/util.py:62: error: Incompatible default for argument "prompts" (default has type "None", argument has type "list[int]")  [assignment]
-attention_motifs/util/util.py:62: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
-attention_motifs/util/util.py:62: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+attention_motifs/pipeline/cfg.py:234: error: Dict entry 1 has incompatible type "Literal['n_dims']": "int"; expected "Literal['pca_all_dpi']": "int"  [dict-item]
+tests/conftest.py:63: error: Argument 3 to "QuietHTTPRequestHandler" has incompatible type "**dict[str, object]"; expected "socket | tuple[bytes, socket]"  [arg-type]
+tests/conftest.py:63: error: Argument 3 to "QuietHTTPRequestHandler" has incompatible type "**dict[str, object]"; expected "BaseServer"  [arg-type]
 attention_motifs/features/vec_features.py:6: error: Skipping analyzing "numba": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/features/vec_features.py:6: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
 Traceback (most recent call last):
   File "<frozen runpy>", line 198, in _run_module_as_main
   File "<frozen runpy>", line 88, in _run_code
@@ -32,7 +30,10 @@ Traceback (most recent call last):
   File "mypy/nodes.py", line 4751, in deserialize
   File "mypy/nodes.py", line 4644, in deserialize
   File "mypy/nodes.py", line 286, in deserialize
+  File "mypy/nodes.py", line 1168, in deserialize
   File "mypy/nodes.py", line 1034, in deserialize
   File "mypy/types.py", line 250, in deserialize_type
-  File "mypy/types.py", line 2623, in deserialize
-KeyError: 'is_bound'
+  File "mypy/types.py", line 2614, in deserialize
+  File "mypy/types.py", line 250, in deserialize_type
+  File "mypy/types.py", line 3595, in deserialize
+KeyError: 'is_type_form'

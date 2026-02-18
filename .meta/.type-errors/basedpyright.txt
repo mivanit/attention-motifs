@@ -57,68 +57,15 @@
       "tuple[int, int, Number]" is not assignable to "EllipsisType"
       "tuple[int, int, Number]" is not assignable to "Tensor" (reportArgumentType)
 /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:15:7 - error: Argument of type "Traversable" cannot be assigned to parameter "args" of type "StrPath" in function "__new__"
-    Type "Traversable" is not assignable to type "StrPath"
-      "Traversable" is not assignable to "str"
-      "Traversable" is incompatible with protocol "PathLike[str]"
-        "__fspath__" is not present (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:15:7 - error: Argument of type "Traversable" cannot be assigned to parameter "args" of type "StrPath" in function "__init__"
-    Type "Traversable" is not assignable to type "StrPath"
-      "Traversable" is not assignable to "str"
-      "Traversable" is incompatible with protocol "PathLike[str]"
-        "__fspath__" is not present (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:19:7 - error: Argument of type "Traversable" cannot be assigned to parameter "args" of type "StrPath" in function "__new__"
-    Type "Traversable" is not assignable to type "StrPath"
-      "Traversable" is not assignable to "str"
-      "Traversable" is incompatible with protocol "PathLike[str]"
-        "__fspath__" is not present (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:19:7 - error: Argument of type "Traversable" cannot be assigned to parameter "args" of type "StrPath" in function "__init__"
-    Type "Traversable" is not assignable to type "StrPath"
-      "Traversable" is not assignable to "str"
-      "Traversable" is incompatible with protocol "PathLike[str]"
-        "__fspath__" is not present (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:134:22 - error: Type "str | list[dict[Literal['type', 'heads'], str | list[str]]]" is not assignable to declared type "str"
-    Type "str | list[dict[Literal['type', 'heads'], str | list[str]]]" is not assignable to type "str"
-      "list[dict[Literal['type', 'heads'], str | list[str]]]" is not assignable to "str" (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:137:14 - error: Argument of type "Literal['heads']" cannot be assigned to parameter "key" of type "SupportsIndex | slice[Any, Any, Any]" in function "__getitem__"
-    Type "Literal['heads']" is not assignable to type "SupportsIndex | slice[Any, Any, Any]"
-      "Literal['heads']" is incompatible with protocol "SupportsIndex"
-        "__index__" is not present
-      "Literal['heads']" is not assignable to "slice[Any, Any, Any]" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:146:16 - error: Argument of type "Literal['type']" cannot be assigned to parameter "key" of type "SupportsIndex | slice[Any, Any, Any]" in function "__getitem__"
-    Type "Literal['type']" is not assignable to type "SupportsIndex | slice[Any, Any, Any]"
-      "Literal['type']" is incompatible with protocol "SupportsIndex"
-        "__index__" is not present
-      "Literal['type']" is not assignable to "slice[Any, Any, Any]" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:147:46 - error: Argument of type "Literal['type']" cannot be assigned to parameter "key" of type "SupportsIndex | slice[Any, Any, Any]" in function "__getitem__"
-    Type "Literal['type']" is not assignable to type "SupportsIndex | slice[Any, Any, Any]"
-      "Literal['type']" is incompatible with protocol "SupportsIndex"
-        "__index__" is not present
-      "Literal['type']" is not assignable to "slice[Any, Any, Any]" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:250:10 - error: Type "dict[str, str] | None" is not assignable to return type "dict[str, str]"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:264:10 - error: Type "dict[str, str] | None" is not assignable to return type "dict[str, str]"
     Type "dict[str, str] | None" is not assignable to type "dict[str, str]"
       "None" is not assignable to "dict[str, str]" (reportReturnType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:266:10 - error: Type "dict[str, str] | None" is not assignable to return type "dict[str, str]"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:280:10 - error: Type "dict[str, str] | None" is not assignable to return type "dict[str, str]"
     Type "dict[str, str] | None" is not assignable to type "dict[str, str]"
       "None" is not assignable to "dict[str, str]" (reportReturnType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:320:49 - error: Argument of type "Literal['type']" cannot be assigned to parameter "key" of type "SupportsIndex | slice[Any, Any, Any]" in function "__getitem__"
-    Type "Literal['type']" is not assignable to type "SupportsIndex | slice[Any, Any, Any]"
-      "Literal['type']" is incompatible with protocol "SupportsIndex"
-        "__index__" is not present
-      "Literal['type']" is not assignable to "slice[Any, Any, Any]" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:325:18 - error: Argument of type "Literal['heads']" cannot be assigned to parameter "key" of type "SupportsIndex | slice[Any, Any, Any]" in function "__getitem__"
-    Type "Literal['heads']" is not assignable to type "SupportsIndex | slice[Any, Any, Any]"
-      "Literal['heads']" is incompatible with protocol "SupportsIndex"
-        "__index__" is not present
-      "Literal['heads']" is not assignable to "slice[Any, Any, Any]" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:326:46 - error: Argument of type "Literal['heads']" cannot be assigned to parameter "key" of type "SupportsIndex | slice[Any, Any, Any]" in function "__getitem__"
-    Type "Literal['heads']" is not assignable to type "SupportsIndex | slice[Any, Any, Any]"
-      "Literal['heads']" is incompatible with protocol "SupportsIndex"
-        "__index__" is not present
-      "Literal['heads']" is not assignable to "slice[Any, Any, Any]" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:362:13 - error: No overloads for "to_dict" match the provided arguments
+  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:376:13 - error: No overloads for "to_dict" match the provided arguments
     Argument types: (Literal['records']) (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:365:13 - error: No overloads for "to_dict" match the provided arguments
+  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:379:13 - error: No overloads for "to_dict" match the provided arguments
     Argument types: (Literal['records']) (reportCallIssue)
 /home/miv/projects/attn/attention-motifs/attention_motifs/consts.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/consts.py:162:9 - error: Return type of generator function must be compatible with "Generator[Tensor | ndarray[Unknown, Unknown], Any, Any]"
@@ -142,12 +89,6 @@
           "tuple[int, int, Tensor | ndarray[Unknown, Unknown]]" is not assignable to "tuple[int, int, ndarray[Unknown, Unknown]]"
     ... (reportReturnType)
 /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:134:22 - error: No overloads for "array_summary" match the provided arguments
-    Argument types: (ndarray[Any, Any]) (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:420:23 - error: Argument of type "list[float]" cannot be assigned to parameter "pos" of type "Bbox | tuple[float, float, float, float]" in function "set_position"
-    Type "list[float]" is not assignable to type "Bbox | tuple[float, float, float, float]"
-      "list[float]" is not assignable to "Bbox"
-      "list[float]" is not assignable to "tuple[float, float, float, float]" (reportArgumentType)
   /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:455:6 - error: Method "load" overrides class "SerializableDataclass" in an incompatible manner
     Parameter 2 type mismatch: base parameter is type "dict[str, Any] | T@load", override parameter is type "dict[Unknown, Unknown]"
       Type "dict[str, Any] | object*" is not assignable to type "dict[Unknown, Unknown]"
@@ -203,13 +144,6 @@
   /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:153:15 - error: Type "tuple[NDArray[float64] | Unknown, Unknown, Unknown] | NDArray[float64] | Unknown | coo_matrix[floating[_32Bit]] | Any" is not assignable to declared type "ndarray[Unknown, Unknown]"
     Type "tuple[NDArray[float64] | Unknown, Unknown, Unknown] | NDArray[float64] | Unknown | coo_matrix[floating[_32Bit]] | Any" is not assignable to type "ndarray[Unknown, Unknown]"
       "coo_matrix[floating[_32Bit]]" is not assignable to "ndarray[Unknown, Unknown]" (reportAssignmentType)
-/home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:238:21 - error: No overloads for "get" match the provided arguments (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:238:31 - error: Argument of type "None" cannot be assigned to parameter "key" of type "str" in function "get"
-    "None" is not assignable to "str" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:241:27 - error: No overloads for "get" match the provided arguments (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:241:43 - error: Argument of type "None" cannot be assigned to parameter "key" of type "str" in function "get"
-    "None" is not assignable to "str" (reportArgumentType)
 /home/miv/projects/attn/attention-motifs/attention_motifs/features/vec_features.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/features/vec_features.py:64:27 - error: Type "float64" is not assignable to declared type "float"
     "floating[_64Bit]" is not assignable to "float" (reportAssignmentType)
@@ -217,14 +151,6 @@
   /home/miv/projects/attn/attention-motifs/attention_motifs/figure_funcs.py:7:2 - error: "AttentionMatrix" is not exported from module "pattern_lens.figure_util"
     Import from "pattern_lens.consts" instead (reportPrivateImportUsage)
 /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:19:12 - warning: Unsupported escape sequence in string literal (reportInvalidStringEscapeSequence)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:19:20 - warning: Unsupported escape sequence in string literal (reportInvalidStringEscapeSequence)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:19:25 - warning: Unsupported escape sequence in string literal (reportInvalidStringEscapeSequence)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:19:43 - warning: Unsupported escape sequence in string literal (reportInvalidStringEscapeSequence)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:19:45 - warning: Unsupported escape sequence in string literal (reportInvalidStringEscapeSequence)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:20:9 - error: Operator "-" not supported for type "bool_" when expected type is "float" (reportOperatorIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:34:9 - error: Type "bool_" is not assignable to return type "float"
-    "bool_" is not assignable to "float" (reportReturnType)
   /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:231:29 - error: Type "list[Number]" is not assignable to declared type "list[int]"
     "list[Number]" is not assignable to "list[int]"
       Type parameter "_T@list" is invariant, but "Number" is not the same as "int"
@@ -236,8 +162,6 @@
   /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:254:4 - error: Argument of type "Number | Unknown" cannot be assigned to parameter "key" of type "int" in function "__getitem__"
     Type "Number | Unknown" is not assignable to type "int"
       "float" is not assignable to "int" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:305:39 - error: Type "list[Any | floating[Any] | float]" is not assignable to declared type "list[float]"
-    "floating[Any]" is not assignable to "float" (reportAssignmentType)
 /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/cfg.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/cfg.py:39:40 - error: Type "dict[str, str]" is not assignable to declared type "dict[DataFilename, str]"
     "dict[str, str]" is not assignable to "dict[DataFilename, str]"
@@ -248,14 +172,6 @@
   /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/cfg.py:231:41 - error: Type "dict[str, int]" is not assignable to declared type "dict[PlotKwargKey, int]"
     "dict[str, int]" is not assignable to "dict[PlotKwargKey, int]"
       Type parameter "_KT@dict" is invariant, but "str" is not the same as "PlotKwargKey" (reportAssignmentType)
-/home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s1_activations.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s1_activations.py:18:14 - error: Argument of type "Path" cannot be assigned to parameter "save_path" of type "str" in function "activations_main"
-    "Path" is not assignable to "str" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s1_activations.py:19:17 - error: Argument of type "Path" cannot be assigned to parameter "prompts_path" of type "str" in function "activations_main"
-    "Path" is not assignable to "str" (reportArgumentType)
-/home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s1b_render_patterns.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s1b_render_patterns.py:17:14 - error: Argument of type "Path" cannot be assigned to parameter "save_path" of type "str" in function "figures_main"
-    "Path" is not assignable to "str" (reportArgumentType)
 /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s2_features.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s2_features.py:12:17 - error: Argument of type "(A: ndarray[Unknown, Unknown]) -> dict[str, float]" cannot be assigned to parameter "features_func" of type "(Tensor) -> dict[str, float]" in function "scalar_feature_table"
     Type "(A: ndarray[Unknown, Unknown]) -> dict[str, float]" is not assignable to type "(Tensor) -> dict[str, float]"
@@ -276,11 +192,6 @@
   /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s5b_head_embed_plots.py:100:10 - error: "savefig" is not a known attribute of "None" (reportOptionalMemberAccess)
 /home/miv/projects/attn/attention-motifs/attention_motifs/util/profiling.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/util/profiling.py:254:27 - error: "gpu_prof" is possibly unbound (reportPossiblyUnboundVariable)
-/home/miv/projects/attn/attention-motifs/attention_motifs/util/util.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/util/util.py:27:14 - error: "npyio" is not a known attribute of module "numpy.lib" (reportAttributeAccessIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/util/util.py:60:27 - error: "npyio" is not a known attribute of module "numpy.lib" (reportAttributeAccessIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/util/util.py:62:23 - error: Expression of type "None" cannot be assigned to parameter of type "list[int]"
-    "None" is not assignable to "list[int]" (reportArgumentType)
 /home/miv/projects/attn/attention-motifs/notebooks/01-pattern_features_generate.ipynb - cell 3
   /home/miv/projects/attn/attention-motifs/notebooks/01-pattern_features_generate.ipynb:3:3:16 - error: Argument of type "(A: ndarray[Unknown, Unknown]) -> dict[str, float]" cannot be assigned to parameter "features_func" of type "(Tensor) -> dict[str, float]" in function "scalar_feature_table"
     Type "(A: ndarray[Unknown, Unknown]) -> dict[str, float]" is not assignable to type "(Tensor) -> dict[str, float]"
@@ -318,11 +229,4 @@
     "Path" is not assignable to "str" (reportArgumentType)
 /home/miv/projects/attn/attention-motifs/notebooks/_dists_hist.py
   /home/miv/projects/attn/attention-motifs/notebooks/_dists_hist.py:74:1 - warning: Expression value is unused (reportUnusedExpression)
-/home/miv/projects/attn/attention-motifs/tests/conftest.py
-  /home/miv/projects/attn/attention-motifs/tests/conftest.py:61:5 - error: Argument of type "object" cannot be assigned to parameter "request" of type "_RequestType" in function "__init__"
-    Type "object" is not assignable to type "_RequestType"
-      "object" is not assignable to "socket"
-      "object" is not assignable to "tuple[bytes, socket]" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/tests/conftest.py:61:5 - error: Argument of type "object" cannot be assigned to parameter "server" of type "BaseServer" in function "__init__"
-    "object" is not assignable to "BaseServer" (reportArgumentType)
-110 errors, 6 warnings, 0 notes
+82 errors, 1 warning, 0 notes
