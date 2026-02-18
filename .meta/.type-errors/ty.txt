@@ -1,295 +1,3 @@
-   Building attention-motifs @ file:///home/miv/projects/attn/attention-motifs
-      Built attention-motifs @ file:///home/miv/projects/attn/attention-motifs
-Uninstalled 1 package in 0.70ms
-Installed 4 packages in 3ms
-warning[unused-type-ignore-comment]: Unused blanket `type: ignore` directive
-   --> .meta/scripts/check_torch.py:100:17
-    |
- 99 |     try:
-100 |         import torch  # type: ignore[import-not-found] # noqa: PLC0415
-    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-101 |     except ImportError as e:
-102 |         info["torch.__version__"] = "not available"
-    |
-help: Remove the unused suppression comment
-97  | 	info: dict[str, Any] = {}
-98  | 
-99  | 	try:
-    - 		import torch  # type: ignore[import-not-found] # noqa: PLC0415
-100 + 		import torch  # noqa: PLC0415
-101 | 	except ImportError as e:
-102 | 		info["torch.__version__"] = "not available"
-103 | 		exceptions.append(e)
-
-warning[unused-ignore-comment]: Unused `ty: ignore` directive
-   --> .meta/scripts/check_torch.py:111:124
-    |
-110 | …
-111 | …ttributeAccessIssue,reportUnknownMemberType]  # ty: ignore[possibly-missing-attribute]
-    |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-112 | …
-    |
-help: Remove the unused suppression comment
-108 | 		info["torch.cuda.is_available()"] = torch.cuda.is_available()
-109 | 
-110 | 		if torch.cuda.is_available():
-    - 			info["torch.version.cuda"] = torch.version.cuda  # pyright: ignore[reportAttributeAccessIssue,reportUnknownMemberType]  # ty: ignore[possibly-missing-attribute]
-111 + 			info["torch.version.cuda"] = torch.version.cuda  # pyright: ignore[reportAttributeAccessIssue,reportUnknownMemberType]
-112 | 			info["torch.cuda.device_count()"] = torch.cuda.device_count()
-113 | 
-114 | 			if torch.cuda.device_count() > 0:
-
-warning[unused-type-ignore-comment]: Unused blanket `type: ignore` directive
-  --> .meta/scripts/docs_clean.py:23:18
-   |
-22 | try:
-23 |     import tomllib  # type: ignore[import-not-found] # pyright: ignore[reportMissingImports]
-   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-24 | except ImportError:
-25 |     import tomli as tomllib  # type: ignore[import-untyped,import-not-found,no-redef] # pyright: ignore[reportMissingImports]
-   |
-help: Remove the unused suppression comment
-20 | from typing import Any, cast
-21 | 
-22 | try:
-   - 	import tomllib  # type: ignore[import-not-found] # pyright: ignore[reportMissingImports]
-23 + 	import tomllib  # pyright: ignore[reportMissingImports]
-24 | except ImportError:
-25 | 	import tomli as tomllib  # type: ignore[import-untyped,import-not-found,no-redef] # pyright: ignore[reportMissingImports]
-26 | 
-
-warning[unused-type-ignore-comment]: Unused blanket `type: ignore` directive
-  --> .meta/scripts/export_requirements.py:20:18
-   |
-19 | try:
-20 |     import tomllib  # type: ignore[import-not-found] # pyright: ignore[reportMissingImports]
-   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-21 | except ImportError:
-22 |     import tomli as tomllib  # type: ignore[import-not-found,no-redef,import-untyped] # pyright: ignore[reportMissingImports]
-   |
-help: Remove the unused suppression comment
-17 | import warnings
-18 | 
-19 | try:
-   - 	import tomllib  # type: ignore[import-not-found] # pyright: ignore[reportMissingImports]
-20 + 	import tomllib  # pyright: ignore[reportMissingImports]
-21 | except ImportError:
-22 | 	import tomli as tomllib  # type: ignore[import-not-found,no-redef,import-untyped] # pyright: ignore[reportMissingImports]
-23 | from functools import reduce
-
-warning[unused-type-ignore-comment]: Unused blanket `type: ignore` directive
-  --> .meta/scripts/get_todos.py:28:18
-   |
-27 | try:
-28 |     import tomllib  # type: ignore[import-not-found] # pyright: ignore[reportMissingImports]
-   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-29 | except ImportError:
-30 |     import tomli as tomllib  # type: ignore[import-untyped,import-not-found,no-redef] # pyright: ignore[reportMissingImports]
-   |
-help: Remove the unused suppression comment
-25 | from jinja2 import Template
-26 | 
-27 | try:
-   - 	import tomllib  # type: ignore[import-not-found] # pyright: ignore[reportMissingImports]
-28 + 	import tomllib  # pyright: ignore[reportMissingImports]
-29 | except ImportError:
-30 | 	import tomli as tomllib  # type: ignore[import-untyped,import-not-found,no-redef] # pyright: ignore[reportMissingImports]
-31 | 
-
-warning[unused-type-ignore-comment]: Unused blanket `type: ignore` directive
-  --> .meta/scripts/get_version.py:19:19
-   |
-17 | try:
-18 |     try:
-19 |         import tomllib  # type: ignore[import-not-found] # pyright: ignore[reportMissingImports]
-   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-20 |     except ImportError:
-21 |         import tomli as tomllib  # type: ignore[import-untyped,import-not-found,no-redef] # pyright: ignore[reportMissingImports]
-   |
-help: Remove the unused suppression comment
-16 | 
-17 | try:
-18 | 	try:
-   - 		import tomllib  # type: ignore[import-not-found] # pyright: ignore[reportMissingImports]
-19 + 		import tomllib  # pyright: ignore[reportMissingImports]
-20 | 	except ImportError:
-21 | 		import tomli as tomllib  # type: ignore[import-untyped,import-not-found,no-redef] # pyright: ignore[reportMissingImports]
-22 | 
-
-warning[unused-type-ignore-comment]: Unused blanket `type: ignore` directive
-  --> .meta/scripts/make_docs.py:28:18
-   |
-26 | try:
-27 |     # python 3.11+
-28 |     import tomllib  # type: ignore[import-not-found] # pyright: ignore[reportMissingImports]
-   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-29 | except ImportError:
-30 |     import tomli as tomllib  # type: ignore[import-untyped,import-not-found,no-redef] # pyright: ignore[reportMissingImports]
-   |
-help: Remove the unused suppression comment
-25 | 
-26 | try:
-27 | 	# python 3.11+
-   - 	import tomllib  # type: ignore[import-not-found] # pyright: ignore[reportMissingImports]
-28 + 	import tomllib  # pyright: ignore[reportMissingImports]
-29 | except ImportError:
-30 | 	import tomli as tomllib  # type: ignore[import-untyped,import-not-found,no-redef] # pyright: ignore[reportMissingImports]
-31 | 
-
-warning[unused-type-ignore-comment]: Unused blanket `type: ignore` directive
-  --> .meta/scripts/make_docs.py:33:14
-   |
-32 | import jinja2
-33 | import pdoc  # type: ignore[import-not-found]
-   |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-34 | import pdoc.doc  # type: ignore[import-not-found]
-35 | import pdoc.extract  # type: ignore[import-not-found]
-   |
-help: Remove the unused suppression comment
-30 | 	import tomli as tomllib  # type: ignore[import-untyped,import-not-found,no-redef] # pyright: ignore[reportMissingImports]
-31 | 
-32 | import jinja2
-   - import pdoc  # type: ignore[import-not-found]
-33 + import pdoc
-34 | import pdoc.doc  # type: ignore[import-not-found]
-35 | import pdoc.extract  # type: ignore[import-not-found]
-36 | import pdoc.render  # type: ignore[import-not-found]
-
-warning[unused-type-ignore-comment]: Unused blanket `type: ignore` directive
-  --> .meta/scripts/make_docs.py:34:18
-   |
-32 | import jinja2
-33 | import pdoc  # type: ignore[import-not-found]
-34 | import pdoc.doc  # type: ignore[import-not-found]
-   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-35 | import pdoc.extract  # type: ignore[import-not-found]
-36 | import pdoc.render  # type: ignore[import-not-found]
-   |
-help: Remove the unused suppression comment
-31 | 
-32 | import jinja2
-33 | import pdoc  # type: ignore[import-not-found]
-   - import pdoc.doc  # type: ignore[import-not-found]
-34 + import pdoc.doc
-35 | import pdoc.extract  # type: ignore[import-not-found]
-36 | import pdoc.render  # type: ignore[import-not-found]
-37 | import pdoc.render_helpers  # type: ignore[import-not-found]
-
-warning[unused-type-ignore-comment]: Unused blanket `type: ignore` directive
-  --> .meta/scripts/make_docs.py:35:22
-   |
-33 | import pdoc  # type: ignore[import-not-found]
-34 | import pdoc.doc  # type: ignore[import-not-found]
-35 | import pdoc.extract  # type: ignore[import-not-found]
-   |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-36 | import pdoc.render  # type: ignore[import-not-found]
-37 | import pdoc.render_helpers  # type: ignore[import-not-found]
-   |
-help: Remove the unused suppression comment
-32 | import jinja2
-33 | import pdoc  # type: ignore[import-not-found]
-34 | import pdoc.doc  # type: ignore[import-not-found]
-   - import pdoc.extract  # type: ignore[import-not-found]
-35 + import pdoc.extract
-36 | import pdoc.render  # type: ignore[import-not-found]
-37 | import pdoc.render_helpers  # type: ignore[import-not-found]
-38 | from markupsafe import Markup
-
-warning[unused-type-ignore-comment]: Unused blanket `type: ignore` directive
-  --> .meta/scripts/make_docs.py:36:21
-   |
-34 | import pdoc.doc  # type: ignore[import-not-found]
-35 | import pdoc.extract  # type: ignore[import-not-found]
-36 | import pdoc.render  # type: ignore[import-not-found]
-   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-37 | import pdoc.render_helpers  # type: ignore[import-not-found]
-38 | from markupsafe import Markup
-   |
-help: Remove the unused suppression comment
-33 | import pdoc  # type: ignore[import-not-found]
-34 | import pdoc.doc  # type: ignore[import-not-found]
-35 | import pdoc.extract  # type: ignore[import-not-found]
-   - import pdoc.render  # type: ignore[import-not-found]
-36 + import pdoc.render
-37 | import pdoc.render_helpers  # type: ignore[import-not-found]
-38 | from markupsafe import Markup
-39 | 
-
-warning[unused-type-ignore-comment]: Unused blanket `type: ignore` directive
-  --> .meta/scripts/make_docs.py:37:29
-   |
-35 | import pdoc.extract  # type: ignore[import-not-found]
-36 | import pdoc.render  # type: ignore[import-not-found]
-37 | import pdoc.render_helpers  # type: ignore[import-not-found]
-   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-38 | from markupsafe import Markup
-   |
-help: Remove the unused suppression comment
-34 | import pdoc.doc  # type: ignore[import-not-found]
-35 | import pdoc.extract  # type: ignore[import-not-found]
-36 | import pdoc.render  # type: ignore[import-not-found]
-   - import pdoc.render_helpers  # type: ignore[import-not-found]
-37 + import pdoc.render_helpers
-38 | from markupsafe import Markup
-39 | 
-40 | """
-
-warning[unused-type-ignore-comment]: Unused blanket `type: ignore` directive
-  --> .meta/scripts/make_docs.py:64:59
-   |
-62 | }
-63 |
-64 | pdoc.render_helpers.markdown_extensions["alerts"] = True  # type: ignore[assignment]  # pyright: ignore[reportArgumentType]
-   |                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-65 | pdoc.render_helpers.markdown_extensions["admonitions"] = True  # type: ignore[assignment]  # pyright: ignore[reportArgumentType]
-   |
-help: Remove the unused suppression comment
-61 | 	"&apos;": "'",
-62 | }
-63 | 
-   - pdoc.render_helpers.markdown_extensions["alerts"] = True  # type: ignore[assignment]  # pyright: ignore[reportArgumentType]
-64 + pdoc.render_helpers.markdown_extensions["alerts"] = True  # pyright: ignore[reportArgumentType]
-65 | pdoc.render_helpers.markdown_extensions["admonitions"] = True  # type: ignore[assignment]  # pyright: ignore[reportArgumentType]
-66 | 
-67 | 
-
-warning[unused-type-ignore-comment]: Unused blanket `type: ignore` directive
-  --> .meta/scripts/make_docs.py:65:64
-   |
-64 | pdoc.render_helpers.markdown_extensions["alerts"] = True  # type: ignore[assignment]  # pyright: ignore[reportArgumentType]
-65 | pdoc.render_helpers.markdown_extensions["admonitions"] = True  # type: ignore[assignment]  # pyright: ignore[reportArgumentType]
-   |                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   |
-help: Remove the unused suppression comment
-62 | }
-63 | 
-64 | pdoc.render_helpers.markdown_extensions["alerts"] = True  # type: ignore[assignment]  # pyright: ignore[reportArgumentType]
-   - pdoc.render_helpers.markdown_extensions["admonitions"] = True  # type: ignore[assignment]  # pyright: ignore[reportArgumentType]
-65 + pdoc.render_helpers.markdown_extensions["admonitions"] = True  # pyright: ignore[reportArgumentType]
-66 | 
-67 | 
-68 | _CONFIG_NOTEBOOKS_INDEX_TEMPLATE: str = r"""<!doctype html>
-
-warning[unused-ignore-comment]: Unused `ty: ignore` directive
-  --> .meta/scripts/pdoc_markdown2_cli.py:35:63
-   |
-33 |     markdown: Any = Markdown(  # pyright: ignore[reportUnknownVariableType]
-34 |         extras=["fenced-code-blocks", "header-ids", "markdown-in-html", "tables"],
-35 |         safe_mode=safe_mode,  # pyright: ignore[reportArgumentType] # ty: ignore[invalid-argument-type]
-   |                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-36 |     )
-37 |     html: str = str(markdown.convert(text))  # pyright: ignore[reportUnknownMemberType,reportUnknownArgumentType]
-   |
-help: Remove the unused suppression comment
-32 | 	# Convert to HTML using markdown2
-33 | 	markdown: Any = Markdown(  # pyright: ignore[reportUnknownVariableType]
-34 | 		extras=["fenced-code-blocks", "header-ids", "markdown-in-html", "tables"],
-   - 		safe_mode=safe_mode,  # pyright: ignore[reportArgumentType] # ty: ignore[invalid-argument-type]
-35 + 		safe_mode=safe_mode,  # pyright: ignore[reportArgumentType]
-36 | 	)
-37 | 	html: str = str(markdown.convert(text))  # pyright: ignore[reportUnknownMemberType,reportUnknownArgumentType]
-38 | 
-
 error[invalid-assignment]: Object of type `None` is not assignable to `<class 'HookedTransformer'>`
   --> attention_motifs/ablation/ablate.py:21:2
    |
@@ -849,14 +557,14 @@ info: Overload implementation defined here
 info: rule `no-matching-overload` is enabled by default
 
 error[no-matching-overload]: No overload of function `array_summary` matches arguments
-   --> attention_motifs/features/analysis.py:131:22
+   --> attention_motifs/features/analysis.py:134:22
     |
-129 |     for col in remove_cols:
-130 |         # Assuming array_summary is defined elsewhere.
-131 |         print(f"{col:<60} {array_summary(df_models_dropped[col].to_numpy())}")
+132 |     for col in remove_cols:
+133 |         # Assuming array_summary is defined elsewhere.
+134 |         print(f"{col:<60} {array_summary(df_models_dropped[col].to_numpy())}")
     |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-132 |
-133 |     df_filtered: pl.DataFrame = df_models_dropped.drop(remove_cols)
+135 |
+136 |     df_filtered: pl.DataFrame = df_models_dropped.drop(remove_cols)
     |
 info: First overload defined here
    --> .venv/lib/python3.13/site-packages/muutils/tensor_info.py:448:5
@@ -903,14 +611,14 @@ info: Overload implementation defined here
 info: rule `no-matching-overload` is enabled by default
 
 error[invalid-argument-type]: Argument to bound method `set_position` is incorrect
-   --> attention_motifs/features/analysis.py:417:23
+   --> attention_motifs/features/analysis.py:420:23
     |
-415 |     if 0 < trim_frac < 0.5:
-416 |         pos = ax_imp.get_position()
-417 |         ax_imp.set_position([pos.x0, pos.y0, pos.width * (1 - trim_frac), pos.height])
+418 |     if 0 < trim_frac < 0.5:
+419 |         pos = ax_imp.get_position()
+420 |         ax_imp.set_position([pos.x0, pos.y0, pos.width * (1 - trim_frac), pos.height])
     |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `Bbox | tuple[int | float, int | float, int | float, int | float]`, found `list[Unknown | int | float]`
-418 |
-419 |     # ---------- optional histogram ---------------------------------------
+421 |
+422 |     # ---------- optional histogram ---------------------------------------
     |
 info: Method defined here
    --> .venv/lib/python3.13/site-packages/matplotlib/axes/_base.pyi:123:9
@@ -928,100 +636,14 @@ info: Method defined here
 info: rule `invalid-argument-type` is enabled by default
 
 error[unknown-argument]: Argument `cls_values` does not match any known parameter of bound method `__init__`
-   --> attention_motifs/features/analysis.py:458:4
-    |
-456 |         )
-457 |         return cls(
-458 |             cls_values=data["cls_values"],
-    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-459 |             prompt_values=data["prompt_values"],
-460 |             distances=data["distances"],
-    |
-info: Method signature here
-   --> stdlib/builtins.pyi:136:9
-    |
-134 |     @__class__.setter
-135 |     def __class__(self, type: type[Self], /) -> None: ...
-136 |     def __init__(self) -> None: ...
-    |         ^^^^^^^^^^^^^^^^^^^^^^
-137 |     def __new__(cls) -> Self: ...
-138 |     # N.B. `object.__setattr__` and `object.__delattr__` are heavily special-cased by type checkers.
-    |
-info: rule `unknown-argument` is enabled by default
-
-error[unknown-argument]: Argument `prompt_values` does not match any known parameter of bound method `__init__`
-   --> attention_motifs/features/analysis.py:459:4
-    |
-457 |         return cls(
-458 |             cls_values=data["cls_values"],
-459 |             prompt_values=data["prompt_values"],
-    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-460 |             distances=data["distances"],
-461 |             is_reduced=True,
-    |
-info: Method signature here
-   --> stdlib/builtins.pyi:136:9
-    |
-134 |     @__class__.setter
-135 |     def __class__(self, type: type[Self], /) -> None: ...
-136 |     def __init__(self) -> None: ...
-    |         ^^^^^^^^^^^^^^^^^^^^^^
-137 |     def __new__(cls) -> Self: ...
-138 |     # N.B. `object.__setattr__` and `object.__delattr__` are heavily special-cased by type checkers.
-    |
-info: rule `unknown-argument` is enabled by default
-
-error[unknown-argument]: Argument `distances` does not match any known parameter of bound method `__init__`
-   --> attention_motifs/features/analysis.py:460:4
-    |
-458 |             cls_values=data["cls_values"],
-459 |             prompt_values=data["prompt_values"],
-460 |             distances=data["distances"],
-    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-461 |             is_reduced=True,
-462 |         )
-    |
-info: Method signature here
-   --> stdlib/builtins.pyi:136:9
-    |
-134 |     @__class__.setter
-135 |     def __class__(self, type: type[Self], /) -> None: ...
-136 |     def __init__(self) -> None: ...
-    |         ^^^^^^^^^^^^^^^^^^^^^^
-137 |     def __new__(cls) -> Self: ...
-138 |     # N.B. `object.__setattr__` and `object.__delattr__` are heavily special-cased by type checkers.
-    |
-info: rule `unknown-argument` is enabled by default
-
-error[unknown-argument]: Argument `is_reduced` does not match any known parameter of bound method `__init__`
    --> attention_motifs/features/analysis.py:461:4
     |
-459 |             prompt_values=data["prompt_values"],
-460 |             distances=data["distances"],
-461 |             is_reduced=True,
-    |             ^^^^^^^^^^^^^^^
-462 |         )
-    |
-info: Method signature here
-   --> stdlib/builtins.pyi:136:9
-    |
-134 |     @__class__.setter
-135 |     def __class__(self, type: type[Self], /) -> None: ...
-136 |     def __init__(self) -> None: ...
-    |         ^^^^^^^^^^^^^^^^^^^^^^
-137 |     def __new__(cls) -> Self: ...
-138 |     # N.B. `object.__setattr__` and `object.__delattr__` are heavily special-cased by type checkers.
-    |
-info: rule `unknown-argument` is enabled by default
-
-error[unknown-argument]: Argument `cls_values` does not match any known parameter of bound method `__init__`
-   --> attention_motifs/features/analysis.py:546:4
-    |
-545 |         return cls(
-546 |             cls_values=meta["cls_values"],
+459 |         )
+460 |         return cls(
+461 |             cls_values=data["cls_values"],
     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-547 |             prompt_values=meta["prompt_values"],
-548 |             distances=distances,
+462 |             prompt_values=data["prompt_values"],
+463 |             distances=data["distances"],
     |
 info: Method signature here
    --> stdlib/builtins.pyi:136:9
@@ -1036,14 +658,14 @@ info: Method signature here
 info: rule `unknown-argument` is enabled by default
 
 error[unknown-argument]: Argument `prompt_values` does not match any known parameter of bound method `__init__`
-   --> attention_motifs/features/analysis.py:547:4
+   --> attention_motifs/features/analysis.py:462:4
     |
-545 |         return cls(
-546 |             cls_values=meta["cls_values"],
-547 |             prompt_values=meta["prompt_values"],
+460 |         return cls(
+461 |             cls_values=data["cls_values"],
+462 |             prompt_values=data["prompt_values"],
     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-548 |             distances=distances,
-549 |             is_reduced=True,
+463 |             distances=data["distances"],
+464 |             is_reduced=True,
     |
 info: Method signature here
    --> stdlib/builtins.pyi:136:9
@@ -1058,14 +680,14 @@ info: Method signature here
 info: rule `unknown-argument` is enabled by default
 
 error[unknown-argument]: Argument `distances` does not match any known parameter of bound method `__init__`
-   --> attention_motifs/features/analysis.py:548:4
+   --> attention_motifs/features/analysis.py:463:4
     |
-546 |             cls_values=meta["cls_values"],
-547 |             prompt_values=meta["prompt_values"],
-548 |             distances=distances,
-    |             ^^^^^^^^^^^^^^^^^^^
-549 |             is_reduced=True,
-550 |         )
+461 |             cls_values=data["cls_values"],
+462 |             prompt_values=data["prompt_values"],
+463 |             distances=data["distances"],
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+464 |             is_reduced=True,
+465 |         )
     |
 info: Method signature here
    --> stdlib/builtins.pyi:136:9
@@ -1080,34 +702,34 @@ info: Method signature here
 info: rule `unknown-argument` is enabled by default
 
 error[unknown-argument]: Argument `is_reduced` does not match any known parameter of bound method `__init__`
+   --> attention_motifs/features/analysis.py:464:4
+    |
+462 |             prompt_values=data["prompt_values"],
+463 |             distances=data["distances"],
+464 |             is_reduced=True,
+    |             ^^^^^^^^^^^^^^^
+465 |         )
+    |
+info: Method signature here
+   --> stdlib/builtins.pyi:136:9
+    |
+134 |     @__class__.setter
+135 |     def __class__(self, type: type[Self], /) -> None: ...
+136 |     def __init__(self) -> None: ...
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+137 |     def __new__(cls) -> Self: ...
+138 |     # N.B. `object.__setattr__` and `object.__delattr__` are heavily special-cased by type checkers.
+    |
+info: rule `unknown-argument` is enabled by default
+
+error[unknown-argument]: Argument `cls_values` does not match any known parameter of bound method `__init__`
    --> attention_motifs/features/analysis.py:549:4
     |
-547 |             prompt_values=meta["prompt_values"],
-548 |             distances=distances,
-549 |             is_reduced=True,
-    |             ^^^^^^^^^^^^^^^
-550 |         )
-    |
-info: Method signature here
-   --> stdlib/builtins.pyi:136:9
-    |
-134 |     @__class__.setter
-135 |     def __class__(self, type: type[Self], /) -> None: ...
-136 |     def __init__(self) -> None: ...
-    |         ^^^^^^^^^^^^^^^^^^^^^^
-137 |     def __new__(cls) -> Self: ...
-138 |     # N.B. `object.__setattr__` and `object.__delattr__` are heavily special-cased by type checkers.
-    |
-info: rule `unknown-argument` is enabled by default
-
-error[unknown-argument]: Argument `cls_values` does not match any known parameter of bound method `__init__`
-   --> attention_motifs/features/analysis.py:587:4
-    |
-586 |         return DistanceTensorResult(
-587 |             cls_values=matching_cls,
-    |             ^^^^^^^^^^^^^^^^^^^^^^^
-588 |             prompt_values=self.prompt_values,
-589 |             distances=matching_dists,
+548 |         return cls(
+549 |             cls_values=meta["cls_values"],
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+550 |             prompt_values=meta["prompt_values"],
+551 |             distances=distances,
     |
 info: Method signature here
    --> stdlib/builtins.pyi:136:9
@@ -1122,14 +744,14 @@ info: Method signature here
 info: rule `unknown-argument` is enabled by default
 
 error[unknown-argument]: Argument `prompt_values` does not match any known parameter of bound method `__init__`
-   --> attention_motifs/features/analysis.py:588:4
+   --> attention_motifs/features/analysis.py:550:4
     |
-586 |         return DistanceTensorResult(
-587 |             cls_values=matching_cls,
-588 |             prompt_values=self.prompt_values,
-    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-589 |             distances=matching_dists,
-590 |             is_reduced=self.is_reduced,
+548 |         return cls(
+549 |             cls_values=meta["cls_values"],
+550 |             prompt_values=meta["prompt_values"],
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+551 |             distances=distances,
+552 |             is_reduced=True,
     |
 info: Method signature here
    --> stdlib/builtins.pyi:136:9
@@ -1144,14 +766,14 @@ info: Method signature here
 info: rule `unknown-argument` is enabled by default
 
 error[unknown-argument]: Argument `distances` does not match any known parameter of bound method `__init__`
-   --> attention_motifs/features/analysis.py:589:4
+   --> attention_motifs/features/analysis.py:551:4
     |
-587 |             cls_values=matching_cls,
-588 |             prompt_values=self.prompt_values,
-589 |             distances=matching_dists,
-    |             ^^^^^^^^^^^^^^^^^^^^^^^^
-590 |             is_reduced=self.is_reduced,
-591 |         )
+549 |             cls_values=meta["cls_values"],
+550 |             prompt_values=meta["prompt_values"],
+551 |             distances=distances,
+    |             ^^^^^^^^^^^^^^^^^^^
+552 |             is_reduced=True,
+553 |         )
     |
 info: Method signature here
    --> stdlib/builtins.pyi:136:9
@@ -1166,13 +788,13 @@ info: Method signature here
 info: rule `unknown-argument` is enabled by default
 
 error[unknown-argument]: Argument `is_reduced` does not match any known parameter of bound method `__init__`
-   --> attention_motifs/features/analysis.py:590:4
+   --> attention_motifs/features/analysis.py:552:4
     |
-588 |             prompt_values=self.prompt_values,
-589 |             distances=matching_dists,
-590 |             is_reduced=self.is_reduced,
-    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
-591 |         )
+550 |             prompt_values=meta["prompt_values"],
+551 |             distances=distances,
+552 |             is_reduced=True,
+    |             ^^^^^^^^^^^^^^^
+553 |         )
     |
 info: Method signature here
    --> stdlib/builtins.pyi:136:9
@@ -1187,13 +809,13 @@ info: Method signature here
 info: rule `unknown-argument` is enabled by default
 
 error[unknown-argument]: Argument `cls_values` does not match any known parameter of bound method `__init__`
-   --> attention_motifs/features/analysis.py:703:4
+   --> attention_motifs/features/analysis.py:590:4
     |
-702 |         return DistanceTensorResult(
-703 |             cls_values=cls_values,
-    |             ^^^^^^^^^^^^^^^^^^^^^
-704 |             prompt_values=prompt_values,
-705 |             distances=D,
+589 |         return DistanceTensorResult(
+590 |             cls_values=matching_cls,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^
+591 |             prompt_values=self.prompt_values,
+592 |             distances=matching_dists,
     |
 info: Method signature here
    --> stdlib/builtins.pyi:136:9
@@ -1208,14 +830,14 @@ info: Method signature here
 info: rule `unknown-argument` is enabled by default
 
 error[unknown-argument]: Argument `prompt_values` does not match any known parameter of bound method `__init__`
-   --> attention_motifs/features/analysis.py:704:4
+   --> attention_motifs/features/analysis.py:591:4
     |
-702 |         return DistanceTensorResult(
-703 |             cls_values=cls_values,
-704 |             prompt_values=prompt_values,
-    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-705 |             distances=D,
-706 |         )
+589 |         return DistanceTensorResult(
+590 |             cls_values=matching_cls,
+591 |             prompt_values=self.prompt_values,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+592 |             distances=matching_dists,
+593 |             is_reduced=self.is_reduced,
     |
 info: Method signature here
    --> stdlib/builtins.pyi:136:9
@@ -1230,13 +852,99 @@ info: Method signature here
 info: rule `unknown-argument` is enabled by default
 
 error[unknown-argument]: Argument `distances` does not match any known parameter of bound method `__init__`
-   --> attention_motifs/features/analysis.py:705:4
+   --> attention_motifs/features/analysis.py:592:4
     |
-703 |             cls_values=cls_values,
-704 |             prompt_values=prompt_values,
-705 |             distances=D,
+590 |             cls_values=matching_cls,
+591 |             prompt_values=self.prompt_values,
+592 |             distances=matching_dists,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^
+593 |             is_reduced=self.is_reduced,
+594 |         )
+    |
+info: Method signature here
+   --> stdlib/builtins.pyi:136:9
+    |
+134 |     @__class__.setter
+135 |     def __class__(self, type: type[Self], /) -> None: ...
+136 |     def __init__(self) -> None: ...
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+137 |     def __new__(cls) -> Self: ...
+138 |     # N.B. `object.__setattr__` and `object.__delattr__` are heavily special-cased by type checkers.
+    |
+info: rule `unknown-argument` is enabled by default
+
+error[unknown-argument]: Argument `is_reduced` does not match any known parameter of bound method `__init__`
+   --> attention_motifs/features/analysis.py:593:4
+    |
+591 |             prompt_values=self.prompt_values,
+592 |             distances=matching_dists,
+593 |             is_reduced=self.is_reduced,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+594 |         )
+    |
+info: Method signature here
+   --> stdlib/builtins.pyi:136:9
+    |
+134 |     @__class__.setter
+135 |     def __class__(self, type: type[Self], /) -> None: ...
+136 |     def __init__(self) -> None: ...
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+137 |     def __new__(cls) -> Self: ...
+138 |     # N.B. `object.__setattr__` and `object.__delattr__` are heavily special-cased by type checkers.
+    |
+info: rule `unknown-argument` is enabled by default
+
+error[unknown-argument]: Argument `cls_values` does not match any known parameter of bound method `__init__`
+   --> attention_motifs/features/analysis.py:706:4
+    |
+705 |         return DistanceTensorResult(
+706 |             cls_values=cls_values,
+    |             ^^^^^^^^^^^^^^^^^^^^^
+707 |             prompt_values=prompt_values,
+708 |             distances=D,
+    |
+info: Method signature here
+   --> stdlib/builtins.pyi:136:9
+    |
+134 |     @__class__.setter
+135 |     def __class__(self, type: type[Self], /) -> None: ...
+136 |     def __init__(self) -> None: ...
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+137 |     def __new__(cls) -> Self: ...
+138 |     # N.B. `object.__setattr__` and `object.__delattr__` are heavily special-cased by type checkers.
+    |
+info: rule `unknown-argument` is enabled by default
+
+error[unknown-argument]: Argument `prompt_values` does not match any known parameter of bound method `__init__`
+   --> attention_motifs/features/analysis.py:707:4
+    |
+705 |         return DistanceTensorResult(
+706 |             cls_values=cls_values,
+707 |             prompt_values=prompt_values,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+708 |             distances=D,
+709 |         )
+    |
+info: Method signature here
+   --> stdlib/builtins.pyi:136:9
+    |
+134 |     @__class__.setter
+135 |     def __class__(self, type: type[Self], /) -> None: ...
+136 |     def __init__(self) -> None: ...
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+137 |     def __new__(cls) -> Self: ...
+138 |     # N.B. `object.__setattr__` and `object.__delattr__` are heavily special-cased by type checkers.
+    |
+info: rule `unknown-argument` is enabled by default
+
+error[unknown-argument]: Argument `distances` does not match any known parameter of bound method `__init__`
+   --> attention_motifs/features/analysis.py:708:4
+    |
+706 |             cls_values=cls_values,
+707 |             prompt_values=prompt_values,
+708 |             distances=D,
     |             ^^^^^^^^^^^
-706 |         )
+709 |         )
     |
 info: Method signature here
    --> stdlib/builtins.pyi:136:9
@@ -1251,25 +959,25 @@ info: Method signature here
 info: rule `unknown-argument` is enabled by default
 
 error[unresolved-attribute]: Module `matplotlib.cm` has no member `tab10`
-   --> attention_motifs/features/analysis.py:795:11
+   --> attention_motifs/features/analysis.py:798:11
     |
-793 |         models: list[str] = sorted({model for model, _, _ in sorted_entries})
-794 |         model_rgb: dict[str, tuple[float, float, float]] = {
-795 |             model: plt.cm.tab10(i)[:3] for i, model in enumerate(models)
+796 |         models: list[str] = sorted({model for model, _, _ in sorted_entries})
+797 |         model_rgb: dict[str, tuple[float, float, float]] = {
+798 |             model: plt.cm.tab10(i)[:3] for i, model in enumerate(models)
     |                    ^^^^^^^^^^^^
-796 |         }
+799 |         }
     |
 info: rule `unresolved-attribute` is enabled by default
 
 error[invalid-argument-type]: Argument to bound method `inset_axes` is incorrect
-   --> attention_motifs/features/analysis.py:832:4
+   --> attention_motifs/features/analysis.py:835:4
     |
-830 |         # ---------------- stripes ------------------------------------------------
-831 |         axis_top = axis_main.inset_axes(
-832 |             [0, 1.0 + top_label_space * 0.4, 1, stripe_thickness],
+833 |         # ---------------- stripes ------------------------------------------------
+834 |         axis_top = axis_main.inset_axes(
+835 |             [0, 1.0 + top_label_space * 0.4, 1, stripe_thickness],
     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `tuple[int | float, int | float, int | float, int | float]`, found `list[Unknown | int | float]`
-833 |             transform=axis_main.transAxes,
-834 |             sharex=axis_main,
+836 |             transform=axis_main.transAxes,
+837 |             sharex=axis_main,
     |
 info: Method defined here
   --> .venv/lib/python3.13/site-packages/matplotlib/axes/_axes.pyi:71:9
@@ -1287,13 +995,13 @@ info: Method defined here
 info: rule `invalid-argument-type` is enabled by default
 
 error[invalid-argument-type]: Argument to bound method `inset_axes` is incorrect
-   --> attention_motifs/features/analysis.py:840:4
+   --> attention_motifs/features/analysis.py:843:4
     |
-839 |         axis_left = axis_main.inset_axes(
-840 |             [-stripe_thickness - left_label_space * 0.4, 0, stripe_thickness, 1],
+842 |         axis_left = axis_main.inset_axes(
+843 |             [-stripe_thickness - left_label_space * 0.4, 0, stripe_thickness, 1],
     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `tuple[int | float, int | float, int | float, int | float]`, found `list[Unknown | int | float]`
-841 |             transform=axis_main.transAxes,
-842 |             sharey=axis_main,
+844 |             transform=axis_main.transAxes,
+845 |             sharey=axis_main,
     |
 info: Method defined here
   --> .venv/lib/python3.13/site-packages/matplotlib/axes/_axes.pyi:71:9
@@ -1311,19 +1019,19 @@ info: Method defined here
 info: rule `invalid-argument-type` is enabled by default
 
 error[invalid-argument-type]: Argument to bound method `inset_axes` is incorrect
-   --> attention_motifs/features/analysis.py:849:4
+   --> attention_motifs/features/analysis.py:852:4
     |
-847 |           # ---------------- model-label axes --------------------------------------
-848 |           axis_top_labels = axis_main.inset_axes(
-849 | /             [
-850 | |                 0,
-851 | |                 1.0 + stripe_thickness + top_label_space * 0.2,
-852 | |                 1,
-853 | |                 top_label_space * 0.8,
-854 | |             ],
+850 |           # ---------------- model-label axes --------------------------------------
+851 |           axis_top_labels = axis_main.inset_axes(
+852 | /             [
+853 | |                 0,
+854 | |                 1.0 + stripe_thickness + top_label_space * 0.2,
+855 | |                 1,
+856 | |                 top_label_space * 0.8,
+857 | |             ],
     | |_____________^ Expected `tuple[int | float, int | float, int | float, int | float]`, found `list[Unknown | int | float]`
-855 |               transform=axis_main.transAxes,
-856 |               sharex=axis_main,
+858 |               transform=axis_main.transAxes,
+859 |               sharex=axis_main,
     |
 info: Method defined here
   --> .venv/lib/python3.13/site-packages/matplotlib/axes/_axes.pyi:71:9
@@ -1341,13 +1049,13 @@ info: Method defined here
 info: rule `invalid-argument-type` is enabled by default
 
 error[invalid-argument-type]: Argument to bound method `inset_axes` is incorrect
-   --> attention_motifs/features/analysis.py:861:4
+   --> attention_motifs/features/analysis.py:864:4
     |
-860 |         axis_left_labels = axis_main.inset_axes(
-861 |             [-stripe_thickness - left_label_space, 0, top_label_space * 0.8, 1],
+863 |         axis_left_labels = axis_main.inset_axes(
+864 |             [-stripe_thickness - left_label_space, 0, top_label_space * 0.8, 1],
     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `tuple[int | float, int | float, int | float, int | float]`, found `list[Unknown | int | float]`
-862 |             transform=axis_main.transAxes,
-863 |             sharey=axis_main,
+865 |             transform=axis_main.transAxes,
+866 |             sharey=axis_main,
     |
 info: Method defined here
   --> .venv/lib/python3.13/site-packages/matplotlib/axes/_axes.pyi:71:9
@@ -1373,67 +1081,6 @@ error[unresolved-import]: Module `attention_motifs.util` has no member `prefix_d
   |                                   ^^^^^^^^^^^
   |
 info: rule `unresolved-import` is enabled by default
-
-error[invalid-argument-type]: Argument to function `transition_tensor_torch` is incorrect
-  --> attention_motifs/features/feat/transition_tensor.py:19:22
-   |
-17 |     A_torch = torch.tensor(A, device=device)
-18 |     idxs_tr, tt_tr, _ = transition_tensor_torch(
-19 |         A_torch, exact=32, approx_l10=5.0, approx_pts=32
-   |                            ^^^^^^^^^^^^^^ Expected `int`, found `float`
-20 |     )
-21 |     idxs = idxs_tr.cpu().numpy()
-   |
-info: Function defined here
-   --> attention_motifs/math/transition_tensor.py:157:5
-    |
-157 | def transition_tensor_torch(
-    |     ^^^^^^^^^^^^^^^^^^^^^^^
-158 |     A: Float[Tensor, "n_ctx n_ctx"],
-159 |     exact: int = 10,
-160 |     approx_l10: int = 3,
-    |     ------------------- Parameter declared here
-161 |     approx_pts: int = 20,
-162 |     res_norm: Optional[
-    |
-info: rule `invalid-argument-type` is enabled by default
-
-error[no-matching-overload]: No overload of bound method `update` matches arguments
-  --> attention_motifs/features/feat/transition_tensor.py:66:2
-   |
-65 |       indices_adjusted_diff = np.diff(indices_adjusted)
-66 | /     output.update(
-67 | |         dict(
-68 | |             skewness=stats.skew(indices_adjusted_diff),
-69 | |             kurtosis=stats.kurtosis(indices_adjusted_diff),
-70 | |         )
-71 | |         # all except skew and cov are highly correlated with other things
-72 | |         # prefix_dict(
-73 | |         #     vec_features(indices_adjusted_diff),
-74 | |         #     prefix="diff",
-75 | |         # )
-76 | |     )
-   | |_____^
-77 |
-78 |       return output
-   |
-info: First overload defined here
-    --> stdlib/typing.pyi:1860:9
-     |
-1858 |     # -- weakref.WeakKeyDictionary.__ior__
-1859 |     @overload
-1860 |     def update(self, m: SupportsKeysAndGetItem[_KT, _VT], /) -> None:
-     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-1861 |         """D.update([E, ]**F) -> None.  Update D from mapping/iterable E and F.
-1862 |         If E present and has a .keys() method, does:     for k in E.keys(): D[k] = E[k]
-     |
-info: Possible overloads for bound method `update`:
-info:   (self, m: SupportsKeysAndGetItem[_KT@MutableMapping, _VT@MutableMapping], /) -> None
-info:   (self: SupportsGetItem[str, _VT@MutableMapping], m: SupportsKeysAndGetItem[str, _VT@MutableMapping], /, **kwargs: _VT@MutableMapping) -> None
-info:   (self, m: Iterable[tuple[_KT@MutableMapping, _VT@MutableMapping]], /) -> None
-info:   (self: SupportsGetItem[str, _VT@MutableMapping], m: Iterable[tuple[str, _VT@MutableMapping]], /, **kwargs: _VT@MutableMapping) -> None
-info:   (self: SupportsGetItem[str, _VT@MutableMapping], /, **kwargs: _VT@MutableMapping) -> None
-info: rule `no-matching-overload` is enabled by default
 
 error[invalid-argument-type]: Argument to function `prefix_dict` is incorrect
   --> attention_motifs/features/features.py:60:7
@@ -1506,176 +1153,15 @@ info: Function defined here
    |
 info: rule `invalid-argument-type` is enabled by default
 
-error[unresolved-attribute]: Unresolved attribute `_embed_meta` on type `DataFrame`
-   --> attention_motifs/features/head_analysis.py:196:2
-    |
-195 |     # HACK: add metadata
-196 |     df._embed_meta = dict(
-    |     ^^^^^^^^^^^^^^
-197 |         embedding_method=embedding_method,
-198 |         n_components=n_components,
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[unresolved-attribute]: Attribute `plot` is not defined on `None` in union `Axes | None`
-   --> attention_motifs/features/head_analysis.py:381:3
-    |
-379 |         else:
-380 |             scatter_kwargs["color"] = color_map[cat]
-381 |         ax.plot(
-    |         ^^^^^^^
-382 |             cat_df[x_col],
-383 |             cat_df[y_col],
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[unresolved-attribute]: Attribute `set_xlabel` is not defined on `None` in union `Axes | None`
-   --> attention_motifs/features/head_analysis.py:394:2
-    |
-392 |     n_neighbors: int = int(parts[3][1:])
-393 |
-394 |     ax.set_xlabel(f"Dimension {dims[0]}")
-    |     ^^^^^^^^^^^^^
-395 |     ax.set_ylabel(f"Dimension {dims[1]}")
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[unresolved-attribute]: Attribute `set_ylabel` is not defined on `None` in union `Axes | None`
-   --> attention_motifs/features/head_analysis.py:395:2
-    |
-394 |     ax.set_xlabel(f"Dimension {dims[0]}")
-395 |     ax.set_ylabel(f"Dimension {dims[1]}")
-    |     ^^^^^^^^^^^^^
-396 |
-397 |     # Simpler title if inside a grid
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[unresolved-attribute]: Attribute `set_title` is not defined on `None` in union `Axes | None`
-   --> attention_motifs/features/head_analysis.py:400:4
-    |
-398 |     if title is None:
-399 |         if ax_provided:
-400 |             ax.set_title(f"{method}, n_neighbors={n_neighbors}")
-    |             ^^^^^^^^^^^^
-401 |         else:
-402 |             title = (
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[unresolved-attribute]: Attribute `set_title` is not defined on `None` in union `Axes | None`
-   --> attention_motifs/features/head_analysis.py:406:4
-    |
-404 |                 f"colored by '{color_by}' ({len(categories)} categories), n_neighbors={n_neighbors}"
-405 |             )
-406 |             ax.set_title(title)
-    |             ^^^^^^^^^^^^
-407 |     else:
-408 |         ax.set_title(title)
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[unresolved-attribute]: Attribute `set_title` is not defined on `None` in union `Axes | None`
-   --> attention_motifs/features/head_analysis.py:408:3
-    |
-406 |             ax.set_title(title)
-407 |     else:
-408 |         ax.set_title(title)
-    |         ^^^^^^^^^^^^
-409 |
-410 |     # Add legend (potentially outside plot for many categories)
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[unresolved-attribute]: Attribute `legend` is not defined on `None` in union `Axes | None`
-   --> attention_motifs/features/head_analysis.py:413:4
-    |
-411 |     if not ax_provided:  # Only add legend to individual plots
-412 |         if len(categories) > 10:
-413 |             ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
-    |             ^^^^^^^^^
-414 |         else:
-415 |             ax.legend()
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[unresolved-attribute]: Attribute `legend` is not defined on `None` in union `Axes | None`
-   --> attention_motifs/features/head_analysis.py:415:4
-    |
-413 |             ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
-414 |         else:
-415 |             ax.legend()
-    |             ^^^^^^^^^
-416 |
-417 |     # Set x and y limits if provided
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[unresolved-attribute]: Attribute `set_xlim` is not defined on `None` in union `Axes | None`
-   --> attention_motifs/features/head_analysis.py:419:3
-    |
-417 |     # Set x and y limits if provided
-418 |     if xlim is not None:
-419 |         ax.set_xlim(xlim)
-    |         ^^^^^^^^^^^
-420 |     if ylim is not None:
-421 |         ax.set_ylim(ylim)
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[unresolved-attribute]: Attribute `set_ylim` is not defined on `None` in union `Axes | None`
-   --> attention_motifs/features/head_analysis.py:421:3
-    |
-419 |         ax.set_xlim(xlim)
-420 |     if ylim is not None:
-421 |         ax.set_ylim(ylim)
-    |         ^^^^^^^^^^^
-422 |
-423 |     if fig is not None:
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[invalid-return-type]: Return type does not match returned value
-   --> attention_motifs/features/head_analysis.py:426:9
-    |
-424 |         plt.tight_layout()
-425 |
-426 |     return fig, ax
-    |            ^^^^^^^ expected `tuple[Figure | None, Axes]`, found `tuple[None | Figure, Axes | None]`
-    |
-   ::: attention_motifs/features/head_analysis.py:313:6
-    |
-311 |     xlim: tuple[float, float] | None = None,
-312 |     ylim: tuple[float, float] | None = None,
-313 | ) -> tuple[plt.Figure | None, plt.Axes]:
-    |      ---------------------------------- Expected `tuple[Figure | None, Axes]` because of return type
-314 |     """Plot head embeddings colored by the specified column"""
-    |
-info: rule `invalid-return-type` is enabled by default
-
-error[invalid-assignment]: Object of type `None` is not assignable to `str`
-   --> attention_motifs/features/head_analysis.py:502:19
-    |
-500 |     methods_found: set[str] = set()
-501 |     n_neighbors_found: set[int] = set()
-502 |     match_model_str: str = None
-    |                      ---   ^^^^ Incompatible value of type `None`
-    |                      |
-    |                      Declared type
-503 |
-504 |     # Simple pattern matching to find all embedding columns and extract their metadata
-    |
-info: rule `invalid-assignment` is enabled by default
-
 error[no-matching-overload]: No overload of bound method `get` matches arguments
-   --> attention_motifs/features/plotting.py:234:21
+   --> attention_motifs/features/plotting.py:238:21
     |
-232 |         # Support per-label alpha / marker size like the original
-233 |         alpha_value = (
-234 |             alpha.get(label, alpha.get(None, 0.9)) if isinstance(alpha, dict) else alpha
+236 |         # Support per-label alpha / marker size like the original
+237 |         alpha_value = (
+238 |             alpha.get(label, alpha.get(None, 0.9)) if isinstance(alpha, dict) else alpha
     |                              ^^^^^^^^^^^^^^^^^^^^
-235 |         )
-236 |         size_value = (
+239 |         )
+240 |         size_value = (
     |
 info: First overload defined here
     --> stdlib/builtins.pyi:3015:9
@@ -1693,14 +1179,14 @@ info:   [_T](self, key: _KT@dict, default: _T, /) -> _VT@dict | _T
 info: rule `no-matching-overload` is enabled by default
 
 error[no-matching-overload]: No overload of bound method `get` matches arguments
-   --> attention_motifs/features/plotting.py:237:27
+   --> attention_motifs/features/plotting.py:241:27
     |
-235 |         )
-236 |         size_value = (
-237 |             marker_size.get(label, marker_size.get(None, 1))
+239 |         )
+240 |         size_value = (
+241 |             marker_size.get(label, marker_size.get(None, 1))
     |                                    ^^^^^^^^^^^^^^^^^^^^^^^^
-238 |             if isinstance(marker_size, dict)
-239 |             else marker_size
+242 |             if isinstance(marker_size, dict)
+243 |             else marker_size
     |
 info: First overload defined here
     --> stdlib/builtins.pyi:3015:9
@@ -1716,148 +1202,6 @@ info:   (self, key: _KT@dict, default: None = None, /) -> _VT@dict | None
 info:   (self, key: _KT@dict, default: _VT@dict, /) -> _VT@dict
 info:   [_T](self, key: _KT@dict, default: _T, /) -> _VT@dict | _T
 info: rule `no-matching-overload` is enabled by default
-
-error[invalid-assignment]: Object of type `dict[str, int | float | Unknown | floating[_64Bit]]` is not assignable to `dict[str, int | float]`
-  --> attention_motifs/features/vec_features.py:37:2
-   |
-35 |           hist.astype(float) / hist.sum() if hist.sum() > 0 else hist.astype(float)
-36 |       )
-37 |       dist_features = dict(
-   |  _____-------------___^
-   | |     |
-   | |     Declared type `dict[str, int | float]`
-38 | |         mean=np.mean(arr),
-39 | |         median=np.median(arr),
-40 | |         variance=np.var(arr, ddof=1),
-41 | |         # std=np.std(arr, ddof=1),
-42 | |         skewness=stats.skew(arr),
-43 | |         # kurtosis=stats.kurtosis(arr),
-44 | |         entropy=stats.entropy(probs, base=2),
-45 | |         # L1_norm=np.sum(np.abs(arr)) / n,
-46 | |         # L2_norm=np.linalg.norm(arr, ord=2) / n,
-47 | |         rms=np.sqrt(np.mean(arr**2)),
-48 | |     )
-   | |_____^ Incompatible value of type `dict[str, int | float | Unknown | floating[_64Bit]]`
-49 |       if not reduced:
-50 |           dist_features["energy"] = np.sum(arr**2)
-   |
-info: rule `invalid-assignment` is enabled by default
-
-error[invalid-assignment]: Invalid subscript assignment with key of type `Literal["kurtosis"]` and value of type `floating[_64Bit] | Unknown` on object of type `dict[str, int | float]`
-  --> attention_motifs/features/vec_features.py:51:3
-   |
-49 |     if not reduced:
-50 |         dist_features["energy"] = np.sum(arr**2)
-51 |         dist_features["kurtosis"] = stats.kurtosis(arr)
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^-------------------
-   |                                     |
-   |                                     Expected value of type `int | float`, got `floating[_64Bit] | Unknown`
-52 |         dist_features["L2_norm"] = np.linalg.norm(arr, ord=2) / n
-   |
-info: rule `invalid-assignment` is enabled by default
-
-error[invalid-assignment]: Invalid subscript assignment with key of type `Literal["L2_norm"]` and value of type `floating[Any]` on object of type `dict[str, int | float]`
-  --> attention_motifs/features/vec_features.py:52:3
-   |
-50 |         dist_features["energy"] = np.sum(arr**2)
-51 |         dist_features["kurtosis"] = stats.kurtosis(arr)
-52 |         dist_features["L2_norm"] = np.linalg.norm(arr, ord=2) / n
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^------------------------------
-   |                                    |
-   |                                    Expected value of type `int | float`, got `floating[Any]`
-53 |
-54 |     # if compute_timeseries:
-   |
-info: rule `invalid-assignment` is enabled by default
-
-error[invalid-assignment]: Object of type `dict[str, int | float | floating[_64Bit] | Any | floating[_64Bit | Any]]` is not assignable to `dict[str, int | float]`
-  --> attention_motifs/features/vec_features.py:69:12
-   |
-67 |       t: np.ndarray = np.arange(n)
-68 |       linreg_result = stats.linregress(t, arr)
-69 |       line_fit: dict[str, float] = dict(
-   |  _______________----------------___^
-   | |               |
-   | |               Declared type
-70 | |         slope=linreg_result.slope,
-71 | |         intercept=linreg_result.intercept,
-72 | |         r2=linreg_result.rvalue**2,
-73 | |     )
-   | |_____^ Incompatible value of type `dict[str, int | float | floating[_64Bit] | Any | floating[_64Bit | Any]]`
-74 |
-75 |       timeseries_features: dict[str, float] = dict(
-   |
-info: rule `invalid-assignment` is enabled by default
-
-error[invalid-return-type]: Return type does not match returned value
-   --> attention_motifs/features/vec_features.py:251:6
-    |
-249 | def vec_features_fast(
-250 |     x: Float[np.ndarray, "*n"],
-251 | ) -> Float[np.ndarray, f"{N_VEC_FEATURES}"]:
-    |      -------------------------------------- Expected `ndarray[Unknown, Unknown]` because of return type
-252 |     return {k: v for k, v in zip(VEC_FEATURES_NAMES, vec_features_arr(x))}
-    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `ndarray[Unknown, Unknown]`, found `dict[Unknown, Unknown]`
-    |
-info: rule `invalid-return-type` is enabled by default
-
-error[not-subscriptable]: Cannot subscript object of type `None` with no `__getitem__` method
-  --> attention_motifs/math/math.py:94:13
-   |
-92 |         raise ValueError("Linear programming failed: " + res.message)
-93 |
-94 |     m: float = res.x[0]
-   |                ^^^^^^^^
-95 |     b: float = res.x[1]
-96 |     y_pred: np.ndarray = m * x_arr + b
-   |
-info: rule `not-subscriptable` is enabled by default
-
-error[not-subscriptable]: Cannot subscript object of type `None` with no `__getitem__` method
-  --> attention_motifs/math/math.py:95:13
-   |
-94 |     m: float = res.x[0]
-95 |     b: float = res.x[1]
-   |                ^^^^^^^^
-96 |     y_pred: np.ndarray = m * x_arr + b
-97 |     r2: float = compute_r2(y_arr, y_pred)
-   |
-info: rule `not-subscriptable` is enabled by default
-
-error[invalid-return-type]: Return type does not match returned value
-  --> attention_motifs/math/transition_tensor.py:26:6
-   |
-24 |     p: Float[np.ndarray, " d"],
-25 |     q: Float[np.ndarray, " d"],
-26 | ) -> float:
-   |      ----- Expected `int | float` because of return type
-27 |     return np.linalg.norm(p - q, ord=2)
-   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `int | float`, found `floating[Any]`
-   |
-info: rule `invalid-return-type` is enabled by default
-
-error[invalid-argument-type]: Argument to function `transition_tensor` is incorrect
-   --> attention_motifs/math/transition_tensor.py:287:49
-    |
-286 |     # compute transition_tensor
-287 |     idxs, tt, res = transition_tensor(A, exact=20, approx_l10=3.0, approx_pts=20)
-    |                                                    ^^^^^^^^^^^^^^ Expected `int`, found `float`
-288 |
-289 |     #
-    |
-info: Function defined here
-  --> attention_motifs/math/transition_tensor.py:63:5
-   |
-63 | def transition_tensor(
-   |     ^^^^^^^^^^^^^^^^^
-64 |     A: Float[np.ndarray, "n_ctx n_ctx"],
-65 |     exact: int = 10,
-66 |     approx_l10: int = 3,
-   |     ------------------- Parameter declared here
-67 |     approx_pts: int = 20,
-68 |     res_norm: Callable[
-   |
-info: rule `invalid-argument-type` is enabled by default
 
 error[invalid-assignment]: Object of type `list[int | float | floating[Any]]` is not assignable to `list[int | float]`
    --> attention_motifs/math/transition_tensor.py:305:7
@@ -1872,90 +1216,6 @@ error[invalid-assignment]: Object of type `list[int | float | floating[Any]]` is
 307 |             popt: np.ndarray
     |
 info: rule `invalid-assignment` is enabled by default
-
-error[unresolved-attribute]: Attribute `T` is not defined on `None` in union `ndarray[Unknown, Unknown] | None`
-   --> attention_motifs/math/transition_tensor.py:318:17
-    |
-316 |     axs[3].set_title("residuals tensor")
-317 |     # aspect shoudl be such that the image is square, although the matrix is not
-318 |     axs[3].matshow(res.T, aspect=(res.shape[0] / res.shape[1]))
-    |                    ^^^^^
-319 |     axs[3].set_xticks(range(len(idxs)))
-320 |     axs[3].set_xticklabels(idxs)
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[unresolved-attribute]: Attribute `shape` is not defined on `None` in union `ndarray[Unknown, Unknown] | None`
-   --> attention_motifs/math/transition_tensor.py:318:32
-    |
-316 |     axs[3].set_title("residuals tensor")
-317 |     # aspect shoudl be such that the image is square, although the matrix is not
-318 |     axs[3].matshow(res.T, aspect=(res.shape[0] / res.shape[1]))
-    |                                   ^^^^^^^^^
-319 |     axs[3].set_xticks(range(len(idxs)))
-320 |     axs[3].set_xticklabels(idxs)
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[unresolved-attribute]: Attribute `shape` is not defined on `None` in union `ndarray[Unknown, Unknown] | None`
-   --> attention_motifs/math/transition_tensor.py:318:47
-    |
-316 |     axs[3].set_title("residuals tensor")
-317 |     # aspect shoudl be such that the image is square, although the matrix is not
-318 |     axs[3].matshow(res.T, aspect=(res.shape[0] / res.shape[1]))
-    |                                                  ^^^^^^^^^
-319 |     axs[3].set_xticks(range(len(idxs)))
-320 |     axs[3].set_xticklabels(idxs)
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[unresolved-attribute]: Attribute `shape` is not defined on `None` in union `ndarray[Unknown, Unknown] | None`
-   --> attention_motifs/math/transition_tensor.py:325:6
-    |
-323 |     #
-324 |     axs[4].set_title("residuals curves")
-325 |     dbg(res.shape)
-    |         ^^^^^^^^^
-326 |     for i in range(res.shape[0]):
-327 |         axs[4].plot(res[i, :], label=f"i={i}", color=cmap(i / res.shape[0]))
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[unresolved-attribute]: Attribute `shape` is not defined on `None` in union `ndarray[Unknown, Unknown] | None`
-   --> attention_motifs/math/transition_tensor.py:326:17
-    |
-324 |     axs[4].set_title("residuals curves")
-325 |     dbg(res.shape)
-326 |     for i in range(res.shape[0]):
-    |                    ^^^^^^^^^
-327 |         axs[4].plot(res[i, :], label=f"i={i}", color=cmap(i / res.shape[0]))
-328 |         axs[4].set_xticks(range(len(idxs)))
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[not-subscriptable]: Cannot subscript object of type `None` with no `__getitem__` method
-   --> attention_motifs/math/transition_tensor.py:327:15
-    |
-325 |     dbg(res.shape)
-326 |     for i in range(res.shape[0]):
-327 |         axs[4].plot(res[i, :], label=f"i={i}", color=cmap(i / res.shape[0]))
-    |                     ^^^^^^^^^
-328 |         axs[4].set_xticks(range(len(idxs)))
-329 |         axs[4].set_xticklabels(idxs)
-    |
-info: rule `not-subscriptable` is enabled by default
-
-error[unresolved-attribute]: Attribute `shape` is not defined on `None` in union `ndarray[Unknown, Unknown] | None`
-   --> attention_motifs/math/transition_tensor.py:327:57
-    |
-325 |     dbg(res.shape)
-326 |     for i in range(res.shape[0]):
-327 |         axs[4].plot(res[i, :], label=f"i={i}", color=cmap(i / res.shape[0]))
-    |                                                               ^^^^^^^^^
-328 |         axs[4].set_xticks(range(len(idxs)))
-329 |         axs[4].set_xticklabels(idxs)
-    |
-info: rule `unresolved-attribute` is enabled by default
 
 error[invalid-argument-type]: Argument to function `activations_main` is incorrect
   --> attention_motifs/pipeline/s1_activations.py:18:4
@@ -2052,38 +1312,6 @@ info: Function defined here
    |
 info: rule `invalid-argument-type` is enabled by default
 
-error[invalid-argument-type]: Argument to bound method `data_path` is incorrect
-   --> attention_motifs/pipeline/s3_feat_proc.py:119:43
-    |
-117 |     )
-118 |     # df_importance.sort(pl.col("PC0").abs(), descending=True)
-119 |     df_importance.write_ndjson(cfg.data_path("importance"))
-    |                                              ^^^^^^^^^^^^ Expected `Literal["raw", "norms", "scaled", "pca", "pca_npy", ... omitted 4 literals]`, found `Literal["importance"]`
-120 |
-121 |     return df_importance, pca_data
-    |
-info: Method defined here
-   --> attention_motifs/pipeline/cfg.py:240:6
-    |
-238 |         return self.figures_dir is not None
-239 |
-240 |     def data_path(self, fname: DataFilename) -> Path:
-    |         ^^^^^^^^^       ------------------- Parameter declared here
-241 |         return self.features_dir / self.data_fnames[fname]
-    |
-info: rule `invalid-argument-type` is enabled by default
-
-error[unresolved-attribute]: Attribute `mkdir` is not defined on `None` in union `Path | None`
-   --> attention_motifs/pipeline/s3_feat_proc.py:129:3
-    |
-128 |     if cfg.do_figures:
-129 |         cfg.figures_dir.mkdir(parents=True, exist_ok=True)
-    |         ^^^^^^^^^^^^^^^^^^^^^
-130 |
-131 |     # compute normalization
-    |
-info: rule `unresolved-attribute` is enabled by default
-
 error[no-matching-overload]: No overload of bound method `get` matches arguments
   --> attention_motifs/pipeline/s3b_feat_fig.py:66:16
    |
@@ -2109,226 +1337,48 @@ info:   (self, key: _KT@dict, default: _VT@dict, /) -> _VT@dict
 info:   [_T](self, key: _KT@dict, default: _T, /) -> _VT@dict | _T
 info: rule `no-matching-overload` is enabled by default
 
-error[invalid-argument-type]: Argument to bound method `data_path` is incorrect
-   --> attention_motifs/pipeline/s3b_feat_fig.py:115:62
-    |
-113 |     if cfg.do_figures:
-114 |         data_scaled: pl.DataFrame = pl.read_ndjson(cfg.data_path("scaled"))
-115 |         df_importance: pl.DataFrame = pl.read_ndjson(cfg.data_path("importance"))
-    |                                                                    ^^^^^^^^^^^^ Expected `Literal["raw", "norms", "scaled", "pca", "pca_npy", ... omitted 4 literals]`, found `Literal["importance"]`
-116 |         pca_data: np.ndarray = np.load(cfg.data_path("pca_npy"))
-117 |         pipeline_step_major("pipeline step 3b: process attention features")
-    |
-info: Method defined here
-   --> attention_motifs/pipeline/cfg.py:240:6
-    |
-238 |         return self.figures_dir is not None
-239 |
-240 |     def data_path(self, fname: DataFilename) -> Path:
-    |         ^^^^^^^^^       ------------------- Parameter declared here
-241 |         return self.features_dir / self.data_fnames[fname]
-    |
-info: rule `invalid-argument-type` is enabled by default
-
-error[invalid-assignment]: Object of type `str` is not assignable to `dict[Unknown, Unknown]`
-  --> attention_motifs/pipeline/s4b_write_frontend.py:27:14
+error[invalid-argument-type]: Argument to function `plot_head_embeddings_multi` is incorrect
+  --> attention_motifs/pipeline/s5b_head_embed_plots.py:59:5
    |
-26 |     # write attentionpedia
-27 |     ap_vis_cfg: dict = cfg.vis_configs["attentionpedia"]
-   |                 ----   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible value of type `str`
-   |                 |
-   |                 Declared type
-28 |     ap_dir: Path = vis_output_path / ap_vis_cfg["path"]
-29 |     ap_dir.mkdir(parents=True, exist_ok=True)
+57 |                   head_embed_df,
+58 |                   color_by="type.group",
+59 | /                 methods=cfg.embedding_methods[
+60 | |                     :3
+61 | |                 ],  # Limit to first 3 methods to avoid overcrowding
+   | |_________________^ Expected `list[str] | None`, found `list[Literal["isomap", "umap", "tsne", "pca"]]`
+62 |                   sizes=(12, 6),
+63 |                   figsize=(24, 32),
    |
-info: rule `invalid-assignment` is enabled by default
-
-error[invalid-assignment]: Object of type `str` is not assignable to `dict[Unknown, Unknown]`
-  --> attention_motifs/pipeline/s4b_write_frontend.py:38:25
-   |
-37 |     # write pattern embedding
-38 |     embed_pattern_vis_cfg: dict = cfg.vis_configs["embed_pattern"]
-   |                            ----   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible value of type `str`
-   |                            |
-   |                            Declared type
-39 |     embed_pattern_dir: Path = vis_output_path / embed_pattern_vis_cfg["path"]
-40 |     embed_pattern_dir.mkdir(parents=True, exist_ok=True)
-   |
-info: rule `invalid-assignment` is enabled by default
-
-error[invalid-assignment]: Object of type `str` is not assignable to `dict[Unknown, Unknown]`
-  --> attention_motifs/pipeline/s4b_write_frontend.py:47:22
-   |
-46 |     # write head embedding
-47 |     embed_head_vis_cfg: dict = cfg.vis_configs["embed_head"]
-   |                         ----   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible value of type `str`
-   |                         |
-   |                         Declared type
-48 |     embed_head_dir: Path = vis_output_path / embed_head_vis_cfg["path"]
-49 |     embed_head_dir.mkdir(parents=True, exist_ok=True)
-   |
-info: rule `invalid-assignment` is enabled by default
-
-error[unsupported-operator]: Unsupported `/` operation
-  --> attention_motifs/pipeline/s4b_write_frontend.py:59:3
-   |
-57 |         frontend_resources_path / "head_embed_table/index.html"
-58 |     ).read_text()
-59 |     (cfg.figures_dir / "head_embed_table.html").write_text(head_embed_table_html)
-   |      ---------------^^^-----------------------
-   |      |                 |
-   |      |                 Has type `Literal["head_embed_table.html"]`
-   |      Has type `Path | None`
-60 |
-61 |     classes_html: str = (frontend_resources_path / "classes/index.html").read_text()
-   |
-info: rule `unsupported-operator` is enabled by default
-
-error[unsupported-operator]: Unsupported `/` operation
-  --> attention_motifs/pipeline/s4b_write_frontend.py:62:3
-   |
-61 |     classes_html: str = (frontend_resources_path / "classes/index.html").read_text()
-62 |     (cfg.figures_dir / "classifications.html").write_text(classes_html)
-   |      ---------------^^^----------------------
-   |      |                 |
-   |      |                 Has type `Literal["classifications.html"]`
-   |      Has type `Path | None`
-63 |
-64 |     # write clustering dendrogram
-   |
-info: rule `unsupported-operator` is enabled by default
-
-error[unsupported-operator]: Unsupported `/` operation
-  --> attention_motifs/pipeline/s4b_write_frontend.py:74:3
-   |
-72 |     # write main index, style.css, and diagram svg
-73 |     main_index_html: str = (frontend_resources_path / "index.html").read_text()
-74 |     (cfg.figures_dir / "../index.html").write_text(main_index_html)
-   |      ---------------^^^---------------
-   |      |                 |
-   |      |                 Has type `Literal["../index.html"]`
-   |      Has type `Path | None`
-75 |     style_css: str = (frontend_resources_path / "style.css").read_text()
-76 |     (cfg.figures_dir / "../style.css").write_text(style_css)
-   |
-info: rule `unsupported-operator` is enabled by default
-
-error[unsupported-operator]: Unsupported `/` operation
-  --> attention_motifs/pipeline/s4b_write_frontend.py:76:3
-   |
-74 |     (cfg.figures_dir / "../index.html").write_text(main_index_html)
-75 |     style_css: str = (frontend_resources_path / "style.css").read_text()
-76 |     (cfg.figures_dir / "../style.css").write_text(style_css)
-   |      ---------------^^^--------------
-   |      |                 |
-   |      |                 Has type `Literal["../style.css"]`
-   |      Has type `Path | None`
-77 |     diagram_svg: str = (frontend_resources_path / "diagram.svg").read_text()
-78 |     (cfg.figures_dir / "../diagram.svg").write_text(diagram_svg)
-   |
-info: rule `unsupported-operator` is enabled by default
-
-error[unsupported-operator]: Unsupported `/` operation
-  --> attention_motifs/pipeline/s4b_write_frontend.py:78:3
-   |
-76 |     (cfg.figures_dir / "../style.css").write_text(style_css)
-77 |     diagram_svg: str = (frontend_resources_path / "diagram.svg").read_text()
-78 |     (cfg.figures_dir / "../diagram.svg").write_text(diagram_svg)
-   |      ---------------^^^----------------
-   |      |                 |
-   |      |                 Has type `Literal["../diagram.svg"]`
-   |      Has type `Path | None`
-   |
-info: rule `unsupported-operator` is enabled by default
-
-error[invalid-argument-type]: Argument to function `create_embedding_df_multi` is incorrect
-   --> attention_motifs/pipeline/s5_head_embed.py:110:3
-    |
-108 |         head_dists=head_dists,
-109 |         attnpedia=attentionpedia,
-110 |         embedding_methods=cfg.embedding_methods,
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `Sequence[Literal["isomap", "umap", "tsne", "pca"]]`, found `list[str]`
-111 |         n_components_list=cfg.embedding_n_components_list,
-112 |         n_neighbors_list=cfg.embedding_n_neighbors_list,
-    |
 info: Function defined here
-   --> attention_motifs/features/head_analysis.py:212:5
+   --> attention_motifs/features/head_analysis.py:435:5
     |
-212 | def create_embedding_df_multi(
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
-213 |     head_dists: DistanceTensorResult,
-214 |     attnpedia: AttentionPedia | None = None,
-215 |     embedding_methods: Sequence[EmbeddingMethod] = ("isomap", "umap", "tsne", "pca"),
-    |     -------------------------------------------------------------------------------- Parameter declared here
-216 |     n_components_list: Sequence[int] = (3,),
-217 |     n_neighbors_list: Sequence[int] = (15,),
+435 | def plot_head_embeddings_multi(
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+436 |     df: pl.DataFrame,
+437 |     attnpedia: AttentionPedia | None = None,
+    |
+   ::: attention_motifs/features/head_analysis.py:442:2
+    |
+440 |     alphas: tuple[float, float] = (0.7, 0.3),
+441 |     sizes: tuple[int, int] = (60, 20),
+442 |     methods: list[str] | None = None,
+    |     -------------------------------- Parameter declared here
+443 |     n_neighbors_list: list[int] | None = None,
+444 |     figsize: tuple[int, int] = (20, 16),
     |
 info: rule `invalid-argument-type` is enabled by default
-
-error[unsupported-operator]: Unsupported `/` operation
-   --> attention_motifs/pipeline/s5_head_embed.py:126:21
-    |
-125 |         # Save plot metadata as JSON
-126 |         plots_json_path = cfg.figures_dir / "head_embed_plots.json"
-    |                           ---------------^^^-----------------------
-    |                           |                 |
-    |                           |                 Has type `Literal["head_embed_plots.json"]`
-    |                           Has type `Path | None`
-127 |         cfg.figures_dir.mkdir(parents=True, exist_ok=True)
-    |
-info: rule `unsupported-operator` is enabled by default
-
-error[unresolved-attribute]: Attribute `mkdir` is not defined on `None` in union `Path | None`
-   --> attention_motifs/pipeline/s5_head_embed.py:127:3
-    |
-125 |         # Save plot metadata as JSON
-126 |         plots_json_path = cfg.figures_dir / "head_embed_plots.json"
-127 |         cfg.figures_dir.mkdir(parents=True, exist_ok=True)
-    |         ^^^^^^^^^^^^^^^^^^^^^
-128 |
-129 |         with open(plots_json_path, "w") as f:
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[unsupported-operator]: Unsupported `/` operation
-  --> attention_motifs/pipeline/s5b_head_embed_plots.py:48:31
-   |
-46 |     if cfg.do_figures:
-47 |         # Create subdirectory for SVGs
-48 |         head_embed_svgs_dir: Path = cfg.figures_dir / "head-embed-svgs"
-   |                                     ---------------^^^-----------------
-   |                                     |                 |
-   |                                     |                 Has type `Literal["head-embed-svgs"]`
-   |                                     Has type `Path | None`
-49 |         head_embed_svgs_dir.mkdir(parents=True, exist_ok=True)
-   |
-info: rule `unsupported-operator` is enabled by default
 
 error[unresolved-attribute]: Attribute `savefig` is not defined on `None` in union `Figure | None`
-   --> attention_motifs/pipeline/s5b_head_embed_plots.py:98:6
+   --> attention_motifs/pipeline/s5b_head_embed_plots.py:100:6
     |
- 96 |                     # Save as SVG
- 97 |                     svg_path = head_embed_svgs_dir / f"{prefix}.svg"
- 98 |                     fig.savefig(
+ 98 |                     # Save as SVG
+ 99 |                     svg_path = head_embed_svgs_dir / f"{prefix}.svg"
+100 |                     fig.savefig(
     |                     ^^^^^^^^^^^
- 99 |                         svg_path,
-100 |                         format="svg",
+101 |                         svg_path,
+102 |                         format="svg",
     |
 info: rule `unresolved-attribute` is enabled by default
-
-error[unsupported-operator]: Unsupported `/` operation
-   --> attention_motifs/pipeline/s5b_head_embed_plots.py:112:24
-    |
-111 |             # Check that plots metadata exists (should be created by s5)
-112 |             plots_json_source = cfg.figures_dir / "head_embed_plots.json"
-    |                                 ---------------^^^-----------------------
-    |                                 |                 |
-    |                                 |                 Has type `Literal["head_embed_plots.json"]`
-    |                                 Has type `Path | None`
-113 |             if plots_json_source.exists():
-114 |                 if cfg.verbose > 0:
-    |
-info: rule `unsupported-operator` is enabled by default
 
 error[invalid-return-type]: Return type does not match returned value
   --> attention_motifs/util/util.py:44:9
@@ -2663,4 +1713,4 @@ help: Remove the unused suppression comment
 70 | 
 71 | 	# Run server in background thread
 
-Found 141 diagnostics
+Found 80 diagnostics

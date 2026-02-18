@@ -10,6 +10,8 @@ import numpy as np
 import polars as pl
 from jaxtyping import Float
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from sklearn.decomposition import PCA
 import matplotlib.gridspec as gridspec
@@ -43,10 +45,11 @@ def null_stats(df: pl.DataFrame) -> pl.DataFrame:
 	for col in df.columns:
 		col_dtype: pl.DataType = df.schema[col]
 		# For columns whose dtype string contains "float", check both nulls and NaNs.
+		missing_expr: pl.Expr
 		if "float" in str(col_dtype).lower():
-			missing_expr: pl.Expr = pl.col(col).is_null() | pl.col(col).is_nan()
+			missing_expr = pl.col(col).is_null() | pl.col(col).is_nan()
 		else:
-			missing_expr: pl.Expr = pl.col(col).is_null()
+			missing_expr = pl.col(col).is_null()
 		count: int = df.select(missing_expr.sum()).item()
 		nan_counts[col] = count
 	return pl.DataFrame(
@@ -723,7 +726,7 @@ class DistanceTensorResult(SerializableDataclass):
 		bins: int = 50,
 		alpha: float = 0.01,
 		n_samples: int | None = 128,
-	) -> plt.Axes:
+	) -> Axes:
 		assert not self.is_reduced, "plot_hists() only works if we haven't reduced"
 		max_dist: float = np.max(self.distances)
 		bins = np.linspace(0, max_dist, bins)
@@ -765,7 +768,7 @@ class DistanceTensorResult(SerializableDataclass):
 		major_grid_colour: str = "red",
 		minor_grid_colour: str = "red",
 		show: bool = True,
-	) -> plt.Figure:
+	) -> Figure:
 		"""
 		Draw the distance matrix with:
 

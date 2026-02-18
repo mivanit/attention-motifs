@@ -119,6 +119,8 @@ def head_embed(cfg: PipelineConfig) -> None:
 
 	# Generate plot metadata for figures (if figures enabled)
 	if cfg.do_figures:
+		assert cfg.figures_dir is not None
+
 		prefixes = get_embedding_prefixes(head_embed_df)
 		plots_metadata = create_plots_metadata(prefixes)
 

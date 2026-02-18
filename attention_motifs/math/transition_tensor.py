@@ -24,7 +24,7 @@ def l2_norm(
 	p: Float[np.ndarray, " d"],
 	q: Float[np.ndarray, " d"],
 ) -> float:
-	return np.linalg.norm(p - q, ord=2)
+	return float(np.linalg.norm(p - q, ord=2))
 
 
 def kl_divergence(
@@ -263,7 +263,7 @@ def transition_tensor_torch(
 		)
 		for i_idx in range(n_idxs):
 			for i_ctx in range(n_ctx):
-				prev_power = idxs[i_idx - 1].item() if i_idx > 0 else -1
+				prev_power: int = int(idxs[i_idx - 1].item()) if i_idx > 0 else -1
 				if prev_power in A_powers:
 					res_resampled[i_idx, i_ctx] = res_norm(
 						tt_resampled[i_idx, i_ctx, :], A_powers[prev_power][i_ctx, :]
@@ -284,7 +284,7 @@ def tt_fig(
 	axs[0].matshow(A)
 
 	# compute transition_tensor
-	idxs, tt, res = transition_tensor(A, exact=20, approx_l10=3.0, approx_pts=20)
+	idxs, tt, res = transition_tensor(A, exact=20, approx_l10=3, approx_pts=20)
 
 	#
 	axs[1].set_title("transition tensor")
@@ -302,7 +302,7 @@ def tt_fig(
 		x: np.ndarray = np.arange(tt.shape[2])
 		y: np.ndarray = tt[i, 0, :]
 		# Initial parameter guess: amplitude, midpoint, steepness, baseline
-		p0: list[float] = [max(y) - min(y), np.median(x), 1.0, min(y)]
+		p0: list[float] = [float(max(y) - min(y)), float(np.median(x)), 1.0, float(min(y))]
 		try:
 			popt: np.ndarray
 			popt, _ = curve_fit(sigmoid, x, y, p0=p0)
@@ -315,6 +315,7 @@ def tt_fig(
 	#
 	axs[3].set_title("residuals tensor")
 	# aspect shoudl be such that the image is square, although the matrix is not
+	assert res is not None, "residuals must be computed for this plot"
 	axs[3].matshow(res.T, aspect=(res.shape[0] / res.shape[1]))
 	axs[3].set_xticks(range(len(idxs)))
 	axs[3].set_xticklabels(idxs)

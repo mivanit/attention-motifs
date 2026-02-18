@@ -52,37 +52,37 @@ class HierarchicalClusteringResult:
 		- linkage.npy: numpy array for Python
 		- linkage.json: JSON array for browser consumption
 		"""
-		path: Path = Path(path)
-		path.mkdir(parents=True, exist_ok=True)
+		output_dir: Path = Path(path)
+		output_dir.mkdir(parents=True, exist_ok=True)
 
 		# Save metadata as JSON
 		meta: dict = dict(
 			cls_values=self.cls_values,
 			linkage_method=self.linkage_method,
 		)
-		meta_path: Path = path / "clustering_meta.json"
+		meta_path: Path = output_dir / "clustering_meta.json"
 		with open(meta_path, "w") as f:
 			json.dump(meta, f, indent=2)
 
 		# Save linkage matrix as numpy (efficient for Python)
-		npy_path: Path = path / "linkage.npy"
+		npy_path: Path = output_dir / "linkage.npy"
 		np.save(npy_path, self.linkage_matrix)
 
 		# Save linkage matrix as JSON (for browser)
-		json_path: Path = path / "linkage.json"
+		json_path: Path = output_dir / "linkage.json"
 		with open(json_path, "w") as f:
 			json.dump(self.linkage_matrix.tolist(), f)
 
 	@classmethod
 	def read(cls, path: Path | str) -> "HierarchicalClusteringResult":
 		"""Load from file (directory with JSON + NPY files)."""
-		path: Path = Path(path)
+		input_dir: Path = Path(path)
 
-		meta_path: Path = path / "clustering_meta.json"
+		meta_path: Path = input_dir / "clustering_meta.json"
 		with open(meta_path, "r") as f:
 			meta: dict = json.load(f)
 
-		npy_path: Path = path / "linkage.npy"
+		npy_path: Path = input_dir / "linkage.npy"
 		linkage_matrix: Float[np.ndarray, "n_merges 4"] = np.load(npy_path)
 
 		return cls(

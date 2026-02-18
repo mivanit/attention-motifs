@@ -9,8 +9,8 @@ muutils.dbg.DBG_TENSOR_ARRAY_SUMMARY_DEFAULTS["sparkline_logy"] = True
 
 
 def compute_r2(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-	ss_res: float = np.sum((y_true - y_pred) ** 2)
-	ss_tot: float = np.sum((y_true - np.mean(y_true)) ** 2)
+	ss_res: float = float(np.sum((y_true - y_pred) ** 2))
+	ss_tot: float = float(np.sum((y_true - np.mean(y_true)) ** 2))
 	return 1 - ss_res / ss_tot if ss_tot != 0 else (1.0 if ss_res == 0 else 0.0)
 
 
@@ -58,13 +58,20 @@ def compute_envelope_params(
 	x_arr: np.ndarray = np.array(x, dtype=float)
 	y_arr: np.ndarray = np.array(y, dtype=float)
 
+	# Declare variables used across branches
+	m: float
+	b: float
+	y_pred: np.ndarray
+	r2: float
+	c: np.ndarray
+	A_ub: np.ndarray
+	b_ub: np.ndarray
+
 	if envelope_type == "bestfit":
 		# Ordinary least squares best-fit line.
-		m: float
-		b: float
 		m, b = np.polyfit(x_arr, y_arr, 1)
-		y_pred: np.ndarray = m * x_arr + b
-		r2: float = compute_r2(y_arr, y_pred)
+		y_pred = m * x_arr + b
+		r2 = compute_r2(y_arr, y_pred)
 		return m, b, r2
 
 	# For envelope constraints we compute the midpoint of x.
@@ -75,15 +82,15 @@ def compute_envelope_params(
 	if envelope_type == "lower":
 		# For lower envelope: maximize m*x_mid + b subject to m*x_i + b <= y_i.
 		# This is equivalent to minimizing -m*x_mid - b.
-		c: np.ndarray = np.array([-x_mid, -1.0])
-		A_ub: np.ndarray = np.column_stack((x_arr, np.ones_like(x_arr)))
-		b_ub: np.ndarray = y_arr.copy()
+		c = np.array([-x_mid, -1.0])
+		A_ub = np.column_stack((x_arr, np.ones_like(x_arr)))
+		b_ub = y_arr.copy()
 	elif envelope_type == "upper":
 		# For upper envelope: minimize m*x_mid + b subject to m*x_i + b >= y_i.
 		# Rewrite constraint: -m*x_i - b <= -y_i.
-		c: np.ndarray = np.array([x_mid, 1.0])
-		A_ub: np.ndarray = -np.column_stack((x_arr, np.ones_like(x_arr)))
-		b_ub: np.ndarray = -y_arr.copy()
+		c = np.array([x_mid, 1.0])
+		A_ub = -np.column_stack((x_arr, np.ones_like(x_arr)))
+		b_ub = -y_arr.copy()
 	else:
 		raise ValueError("envelope_type must be 'lower', 'upper', or 'bestfit'.")
 
@@ -91,10 +98,11 @@ def compute_envelope_params(
 	if not res.success:
 		raise ValueError("Linear programming failed: " + res.message)
 
-	m: float = res.x[0]
-	b: float = res.x[1]
-	y_pred: np.ndarray = m * x_arr + b
-	r2: float = compute_r2(y_arr, y_pred)
+	assert res.x is not None
+	m = res.x[0]
+	b = res.x[1]
+	y_pred = m * x_arr + b
+	r2 = compute_r2(y_arr, y_pred)
 	return m, b, r2
 
 

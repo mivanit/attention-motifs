@@ -60,7 +60,7 @@ def compute_pca(
 	feature_cols: list[str],
 ) -> tuple[pl.DataFrame, np.ndarray]:
 	if data_scaled is None:
-		data_scaled: pl.DataFrame = pl.read_ndjson(cfg.data_path("scaled"))
+		data_scaled = pl.read_ndjson(cfg.data_path("scaled"))
 
 	meta_cols: list[str] = [
 		col for col in data_scaled.columns if col.startswith("activation.")
@@ -126,6 +126,7 @@ def feat_proc(cfg: PipelineConfig) -> None:
 	pipeline_step_major("pipeline step 3: process attention features")
 
 	if cfg.do_figures:
+		assert cfg.figures_dir is not None
 		cfg.figures_dir.mkdir(parents=True, exist_ok=True)
 
 	# compute normalization

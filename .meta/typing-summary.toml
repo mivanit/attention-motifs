@@ -1,22 +1,20 @@
-# ty: Found 141 diagnostics
-# basedpyright: 183 errors, 7 warnings, 0 notes
-# mypy: Found 133 errors in 27 files (checked 60 source files)
+# ty: Found 80 diagnostics
+# basedpyright: 110 errors, 6 warnings, 0 notes
+# mypy: KeyError: 'is_bound'
 
 [type_errors.ty]
-total_errors = 141
+total_errors = 80
 
 [type_errors.ty.by_type]
-"invalid-argument-type" = 38
-"unresolved-attribute" = 23
+"invalid-argument-type" = 34
 "unknown-argument" = 16
-"unused-type-ignore-comment" = 15
-"invalid-assignment" = 15
-"unsupported-operator" = 9
-"no-matching-overload" = 8
-"invalid-return-type" = 6
-"not-subscriptable" = 3
+"invalid-assignment" = 7
+"no-matching-overload" = 7
+"unresolved-attribute" = 4
+"invalid-return-type" = 3
 "unresolved-reference" = 3
-"unused-ignore-comment" = 2
+"unused-type-ignore-comment" = 2
+"unsupported-operator" = 1
 "unresolved-import" = 1
 "invalid-parameter-default" = 1
 "missing-argument" = 1
@@ -24,35 +22,21 @@ total_errors = 141
 [type_errors.ty.by_file]
 "attention_motifs/features/analysis.py" = 22
 "attention_motifs/attnpedia/attnpedia.py" = 17
-"attention_motifs/features/head_analysis.py" = 13
-"attention_motifs/math/transition_tensor.py" = 10
-".meta/scripts/make_docs.py" = 8
-"attention_motifs/pipeline/s4b_write_frontend.py" = 8
 "attention_motifs/ablation/ablate.py" = 5
-"attention_motifs/features/vec_features.py" = 5
 "attention_motifs/ablation/experiment.py" = 4
 "tests/conftest.py" = 4
-"attention_motifs/pipeline/s5_head_embed.py" = 3
-"attention_motifs/pipeline/s5b_head_embed_plots.py" = 3
-".meta/scripts/check_torch.py" = 2
 "attention_motifs/ablation/metrics.py" = 2
-"attention_motifs/features/feat/transition_tensor.py" = 2
 "attention_motifs/features/features.py" = 2
 "attention_motifs/features/plotting.py" = 2
-"attention_motifs/math/math.py" = 2
 "attention_motifs/pipeline/s1_activations.py" = 2
-"attention_motifs/pipeline/s3_feat_proc.py" = 2
-"attention_motifs/pipeline/s3b_feat_fig.py" = 2
+"attention_motifs/pipeline/s5b_head_embed_plots.py" = 2
 "attention_motifs/util/util.py" = 2
-".meta/scripts/docs_clean.py" = 1
-".meta/scripts/export_requirements.py" = 1
-".meta/scripts/get_todos.py" = 1
-".meta/scripts/get_version.py" = 1
-".meta/scripts/pdoc_markdown2_cli.py" = 1
 "attention_motifs/features/feat/hist_beta_fit.py" = 1
 "attention_motifs/features/generate.py" = 1
+"attention_motifs/math/transition_tensor.py" = 1
 "attention_motifs/pipeline/s1b_render_patterns.py" = 1
 "attention_motifs/pipeline/s2_features.py" = 1
+"attention_motifs/pipeline/s3b_feat_fig.py" = 1
 "notebooks/01-pattern_features_generate.ipynb:cell 5" = 1
 "notebooks/02-pattern_features_process.ipynb:cell 6" = 1
 "notebooks/02-pattern_features_process.ipynb:cell 10" = 1
@@ -65,53 +49,44 @@ total_errors = 141
 "notebooks/A2-pattern_lens_demo.ipynb:cell 4" = 1
 
 [type_errors.basedpyright]
-total_errors = 183
+total_errors = 110
 
 [type_errors.basedpyright.by_type]
-"reportArgumentType" = 51
-"reportCallIssue" = 25
-"reportAssignmentType" = 21
-"reportPrivateImportUsage" = 20
-"reportRedeclaration" = 14
-"reportOptionalMemberAccess" = 11
+"reportArgumentType" = 43
+"reportCallIssue" = 24
+"reportAssignmentType" = 12
 "reportInvalidTypeForm" = 10
-"reportOptionalOperand" = 8
-"reportReturnType" = 7
-"reportAttributeAccessIssue" = 6
-"reportPossiblyUnboundVariable" = 4
-"reportOptionalSubscript" = 3
+"reportReturnType" = 5
+"reportAttributeAccessIssue" = 5
+"reportOptionalMemberAccess" = 3
+"reportPossiblyUnboundVariable" = 3
+"reportPrivateImportUsage" = 2
 "reportIncompatibleMethodOverride" = 1
 "reportIndexIssue" = 1
 "reportOperatorIssue" = 1
 
 [type_errors.basedpyright.by_file]
-"attention_motifs/features/analysis.py" = 28
-"attention_motifs/math/transition_tensor.py" = 16
+"attention_motifs/features/analysis.py" = 25
 "attention_motifs/attnpedia/attnpedia.py" = 15
-"attention_motifs/features/head_analysis.py" = 13
-"attention_motifs/features/plotting.py" = 13
-"attention_motifs/math/math.py" = 11
-"attention_motifs/pipeline/s4b_write_frontend.py" = 9
 "attention_motifs/ablation/experiment.py" = 8
-"attention_motifs/features/vec_features.py" = 8
 "attention_motifs/ablation/ablate.py" = 6
 "attention_motifs/ablation/metrics.py" = 6
-"attention_motifs/pipeline/cfg.py" = 4
-"attention_motifs/pipeline/s3b_feat_fig.py" = 4
-"attention_motifs/features/feat/transition_tensor.py" = 3
-"attention_motifs/pipeline/s3_feat_proc.py" = 3
-"attention_motifs/pipeline/s5_head_embed.py" = 3
-"attention_motifs/pipeline/s5b_head_embed_plots.py" = 3
+"attention_motifs/math/transition_tensor.py" = 6
+"attention_motifs/features/plotting.py" = 4
+"attention_motifs/features/head_analysis.py" = 3
+"attention_motifs/pipeline/cfg.py" = 3
+"attention_motifs/pipeline/s3b_feat_fig.py" = 3
 "attention_motifs/util/util.py" = 3
 "notebooks/A2-pattern_lens_demo.ipynb - cell 2" = 3
 "attention_motifs/consts.py" = 2
-"attention_motifs/features/clustering.py" = 2
 "attention_motifs/features/features.py" = 2
 "attention_motifs/pipeline/s1_activations.py" = 2
+"attention_motifs/pipeline/s5b_head_embed_plots.py" = 2
 "notebooks/05-ablation_candidates.ipynb - cell 8" = 2
 "tests/conftest.py" = 2
 "attention_motifs/features/feat/hist_beta_fit.py" = 1
 "attention_motifs/features/generate.py" = 1
+"attention_motifs/features/vec_features.py" = 1
 "attention_motifs/figure_funcs.py" = 1
 "attention_motifs/pipeline/s1b_render_patterns.py" = 1
 "attention_motifs/pipeline/s2_features.py" = 1
@@ -124,61 +99,26 @@ total_errors = 183
 "notebooks/A2-pattern_lens_demo.ipynb - cell 3" = 1
 
 [type_warnings.basedpyright]
-total_warnings = 7
+total_warnings = 6
 
 [type_warnings.basedpyright.by_type]
 "reportInvalidStringEscapeSequence" = 5
-"reportUnusedExpression" = 2
+"reportUnusedExpression" = 1
 
 [type_warnings.basedpyright.by_file]
 "attention_motifs/math/transition_tensor.py" = 5
-"data/features/head_dists_raw/test.py" = 1
 "notebooks/_dists_hist.py" = 1
 
 [type_errors.mypy]
-total_errors = 133
+total_errors = 5
 
 [type_errors.mypy.by_type]
-"arg-type" = 25
-"union-attr" = 18
-"import-untyped" = 14
-"no-redef" = 14
-"operator" = 13
-"assignment" = 12
-"index" = 12
-"return-value" = 7
-"call-overload" = 6
-"dict-item" = 5
-"attr-defined" = 3
-"misc" = 2
-"override" = 1
-"list-item" = 1
+"arg-type" = 2
+"return-value" = 1
+"assignment" = 1
+"import-untyped" = 1
 
 [type_errors.mypy.by_file]
-"attention_motifs/features/head_analysis.py" = 19
-"attention_motifs/attnpedia/attnpedia.py" = 13
-"attention_motifs/features/analysis.py" = 13
-"attention_motifs/pipeline/s4b_write_frontend.py" = 10
-"attention_motifs/math/math.py" = 9
-"attention_motifs/math/transition_tensor.py" = 9
-"attention_motifs/ablation/experiment.py" = 9
-"attention_motifs/features/clustering.py" = 8
-"attention_motifs/pipeline/cfg.py" = 4
-"attention_motifs/features/vec_features.py" = 4
-"attention_motifs/features/plotting.py" = 4
-"attention_motifs/ablation/ablate.py" = 4
-"attention_motifs/features/features.py" = 4
-"attention_motifs/pipeline/s3_feat_proc.py" = 3
-"attention_motifs/pipeline/s5b_head_embed_plots.py" = 3
-"attention_motifs/pipeline/s5_head_embed.py" = 3
+"tests/conftest.py" = 2
 "attention_motifs/util/util.py" = 2
-"attention_motifs/pipeline/s1_activations.py" = 2
-"attention_motifs/pipeline/s3b_feat_fig.py" = 2
-"attention_motifs/pipeline/s0_download_models.py" = 1
-"attention_motifs/consts.py" = 1
-"attention_motifs/features/feat/hist_beta_fit.py" = 1
-"attention_motifs/features/feat/transition_tensor.py" = 1
-"attention_motifs/pipeline/s1b_render_patterns.py" = 1
-"attention_motifs/ablation/metrics.py" = 1
-"attention_motifs/pipeline/s2_features.py" = 1
-"attention_motifs/features/generate.py" = 1
+"attention_motifs/features/vec_features.py" = 1

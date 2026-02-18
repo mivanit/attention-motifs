@@ -35,21 +35,21 @@ def vec_features(
 		hist.astype(float) / hist.sum() if hist.sum() > 0 else hist.astype(float)
 	)
 	dist_features = dict(
-		mean=np.mean(arr),
-		median=np.median(arr),
-		variance=np.var(arr, ddof=1),
+		mean=float(np.mean(arr)),
+		median=float(np.median(arr)),
+		variance=float(np.var(arr, ddof=1)),
 		# std=np.std(arr, ddof=1),
-		skewness=stats.skew(arr),
+		skewness=float(stats.skew(arr)),
 		# kurtosis=stats.kurtosis(arr),
-		entropy=stats.entropy(probs, base=2),
+		entropy=float(stats.entropy(probs, base=2)),
 		# L1_norm=np.sum(np.abs(arr)) / n,
 		# L2_norm=np.linalg.norm(arr, ord=2) / n,
-		rms=np.sqrt(np.mean(arr**2)),
+		rms=float(np.sqrt(np.mean(arr**2))),
 	)
 	if not reduced:
-		dist_features["energy"] = np.sum(arr**2)
-		dist_features["kurtosis"] = stats.kurtosis(arr)
-		dist_features["L2_norm"] = np.linalg.norm(arr, ord=2) / n
+		dist_features["energy"] = float(np.sum(arr**2))
+		dist_features["kurtosis"] = float(stats.kurtosis(arr))
+		dist_features["L2_norm"] = float(np.linalg.norm(arr, ord=2) / n)
 
 	# if compute_timeseries:
 	# Lag-1 Autocorrelation (Pearson correlation between arr[:-1] and arr[1:])
@@ -67,12 +67,12 @@ def vec_features(
 	t: np.ndarray = np.arange(n)
 	linreg_result = stats.linregress(t, arr)
 	line_fit: dict[str, float] = dict(
-		slope=linreg_result.slope,
-		intercept=linreg_result.intercept,
-		r2=linreg_result.rvalue**2,
+		slope=float(linreg_result.slope),
+		intercept=float(linreg_result.intercept),
+		r2=float(linreg_result.rvalue**2),
 	)
 
-	timeseries_features: dict[str, float] = dict(
+	timeseries_features = dict(
 		# zero_crossing_rate=np.sum(np.diff(np.signbit(arr))) / (n - 1),
 		autocorr_lag1=autocorr_lag1,
 		psd_total_power=psd_total_power,
@@ -248,5 +248,5 @@ def vec_features_arr(
 
 def vec_features_fast(
 	x: Float[np.ndarray, "*n"],
-) -> Float[np.ndarray, f"{N_VEC_FEATURES}"]:
+) -> dict[str, float]:
 	return {k: v for k, v in zip(VEC_FEATURES_NAMES, vec_features_arr(x))}

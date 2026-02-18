@@ -26,12 +26,15 @@ DataFilename = Literal[
 	"head_dists_raw",
 	"head_embed",
 	"clustering",
+	"importance",
 ]
 FigureFilename = Literal[
 	"pca", "cov_full", "cov_reduced", "pca_all", "head_dists", "head_embed"
 ]
 
 PlotKwargKey = Literal["pca_all_dpi",]
+
+EmbeddingMethod = Literal["isomap", "umap", "tsne", "pca"]
 
 DATA_FNAMES: dict[DataFilename, str] = dict( # ty: ignore[invalid-assignment]
 	raw="raw.jsonl",
@@ -196,7 +199,7 @@ class PipelineConfig:
 	pca_n_components: int = 16
 
 	# head embedding configuration
-	embedding_methods: list[str] = field(
+	embedding_methods: list[EmbeddingMethod] = field(
 		default_factory=lambda: ["isomap", "umap", "tsne", "pca"]
 	)
 	embedding_n_components_list: list[int] = field(default_factory=lambda: [2, 3])
@@ -216,7 +219,7 @@ class PipelineConfig:
 		default_factory=lambda: DATA_FNAMES,
 	)
 	vis_dir: Path = Path("data/vis")
-	vis_configs: dict[str, str] = field(
+	vis_configs: dict[str, dict[str, Any]] = field(
 		default_factory=lambda: DEFAULT_VIS_CONFIGS,
 	)
 
@@ -225,7 +228,7 @@ class PipelineConfig:
 	figures_fnames: dict[FigureFilename, str] = field(
 		default_factory=lambda: FIGURE_FNAMES,
 	)
-	plot_kwargs: dict[PlotKwargKey, str] = field(
+	plot_kwargs: dict[PlotKwargKey, int] = field(
 		default_factory=lambda: dict(
 			pca_all_dpi=500,  # default DPI for PCA all figure
 		),

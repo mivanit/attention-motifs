@@ -125,11 +125,16 @@ exclude = ["__pycache__"]
 
 # mypy config
 [tool.mypy]
-	packages = ["attention_motifs"]
+	files = ["attention_motifs", "tests", "notebooks"]
 
 # basedpyright config
 [tool.basedpyright]
 	typeCheckingMode = "standard"
+	include = ["attention_motifs", "tests", "notebooks"]
+
+# ty config
+[tool.ty.src]
+	include = ["attention_motifs", "tests", "notebooks"]
 
 [tool.pytest.ini_options]
 	addopts = "--jaxtyping-packages=pattern_lens,beartype.beartype -m 'not benchmark'"

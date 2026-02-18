@@ -1,10 +1,3 @@
-Enumeration of workspace source files is taking longer than 10 seconds.
-This may be because:
-* You have opened your home directory or entire hard drive as a workspace
-* Your workspace contains a very large number of directories and files
-* Your workspace contains a symlink to a directory with many files
-* Your workspace is remote, and file enumeration is slow
-To reduce this time, open a workspace directory with fewer files or add a pyrightconfig.json configuration file with an "exclude" section to exclude subdirectories from your workspace. For more details, refer to https://docs.basedpyright.com/v1.38.0/configuration/config-files
 /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/ablate.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/ablate.py:64:10 - error: Variable not allowed in type expression (reportInvalidTypeForm)
   /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/ablate.py:128:26 - error: Variable not allowed in type expression (reportInvalidTypeForm)
@@ -149,59 +142,45 @@ To reduce this time, open a workspace directory with fewer files or add a pyrigh
           "tuple[int, int, Tensor | ndarray[Unknown, Unknown]]" is not assignable to "tuple[int, int, ndarray[Unknown, Unknown]]"
     ... (reportReturnType)
 /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:47:4 - error: Declaration "missing_expr" is obscured by a declaration of the same name (reportRedeclaration)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:131:22 - error: No overloads for "array_summary" match the provided arguments
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:134:22 - error: No overloads for "array_summary" match the provided arguments
     Argument types: (ndarray[Any, Any]) (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:417:23 - error: Argument of type "list[float]" cannot be assigned to parameter "pos" of type "Bbox | tuple[float, float, float, float]" in function "set_position"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:420:23 - error: Argument of type "list[float]" cannot be assigned to parameter "pos" of type "Bbox | tuple[float, float, float, float]" in function "set_position"
     Type "list[float]" is not assignable to type "Bbox | tuple[float, float, float, float]"
       "list[float]" is not assignable to "Bbox"
       "list[float]" is not assignable to "tuple[float, float, float, float]" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:452:6 - error: Method "load" overrides class "SerializableDataclass" in an incompatible manner
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:455:6 - error: Method "load" overrides class "SerializableDataclass" in an incompatible manner
     Parameter 2 type mismatch: base parameter is type "dict[str, Any] | T@load", override parameter is type "dict[Unknown, Unknown]"
       Type "dict[str, Any] | object*" is not assignable to type "dict[Unknown, Unknown]"
         "object*" is not assignable to "dict[Unknown, Unknown]" (reportIncompatibleMethodOverride)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:458:4 - error: No parameter named "cls_values" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:459:4 - error: No parameter named "prompt_values" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:460:4 - error: No parameter named "distances" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:461:4 - error: No parameter named "is_reduced" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:546:4 - error: No parameter named "cls_values" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:547:4 - error: No parameter named "prompt_values" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:548:4 - error: No parameter named "distances" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:549:4 - error: No parameter named "is_reduced" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:587:4 - error: No parameter named "cls_values" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:588:4 - error: No parameter named "prompt_values" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:589:4 - error: No parameter named "distances" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:590:4 - error: No parameter named "is_reduced" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:703:4 - error: No parameter named "cls_values" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:704:4 - error: No parameter named "prompt_values" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:705:4 - error: No parameter named "distances" (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:726:11 - error: "Axes" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:729:10 - error: Type "NDArray[floating[Any]]" is not assignable to declared type "int"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:461:4 - error: No parameter named "cls_values" (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:462:4 - error: No parameter named "prompt_values" (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:463:4 - error: No parameter named "distances" (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:464:4 - error: No parameter named "is_reduced" (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:549:4 - error: No parameter named "cls_values" (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:550:4 - error: No parameter named "prompt_values" (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:551:4 - error: No parameter named "distances" (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:552:4 - error: No parameter named "is_reduced" (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:590:4 - error: No parameter named "cls_values" (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:591:4 - error: No parameter named "prompt_values" (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:592:4 - error: No parameter named "distances" (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:593:4 - error: No parameter named "is_reduced" (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:706:4 - error: No parameter named "cls_values" (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:707:4 - error: No parameter named "prompt_values" (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:708:4 - error: No parameter named "distances" (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:732:10 - error: Type "NDArray[floating[Any]]" is not assignable to declared type "int"
     "ndarray[Any, dtype[floating[Any]]]" is not assignable to "int" (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:745:6 - error: "__getitem__" method not defined on type "int" (reportIndexIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:768:11 - error: "Figure" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:795:18 - error: "tab10" is not a known attribute of module "matplotlib.cm" (reportAttributeAccessIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:832:4 - error: Argument of type "list[int | float]" cannot be assigned to parameter "bounds" of type "tuple[float, float, float, float]" in function "inset_axes"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:748:6 - error: "__getitem__" method not defined on type "int" (reportIndexIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:798:18 - error: "tab10" is not a known attribute of module "matplotlib.cm" (reportAttributeAccessIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:835:4 - error: Argument of type "list[int | float]" cannot be assigned to parameter "bounds" of type "tuple[float, float, float, float]" in function "inset_axes"
     "list[int | float]" is not assignable to "tuple[float, float, float, float]" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:840:4 - error: Argument of type "list[float | int]" cannot be assigned to parameter "bounds" of type "tuple[float, float, float, float]" in function "inset_axes"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:843:4 - error: Argument of type "list[float | int]" cannot be assigned to parameter "bounds" of type "tuple[float, float, float, float]" in function "inset_axes"
     "list[float | int]" is not assignable to "tuple[float, float, float, float]" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:849:4 - error: Argument of type "list[int | float]" cannot be assigned to parameter "bounds" of type "tuple[float, float, float, float]" in function "inset_axes"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:852:4 - error: Argument of type "list[int | float]" cannot be assigned to parameter "bounds" of type "tuple[float, float, float, float]" in function "inset_axes"
     "list[int | float]" is not assignable to "tuple[float, float, float, float]" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:861:4 - error: Argument of type "list[float | int]" cannot be assigned to parameter "bounds" of type "tuple[float, float, float, float]" in function "inset_axes"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:864:4 - error: Argument of type "list[float | int]" cannot be assigned to parameter "bounds" of type "tuple[float, float, float, float]" in function "inset_axes"
     "list[float | int]" is not assignable to "tuple[float, float, float, float]" (reportArgumentType)
-/home/miv/projects/attn/attention-motifs/attention_motifs/features/clustering.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/clustering.py:47:17 - error: Parameter declaration "path" is obscured by a declaration of the same name (reportRedeclaration)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/clustering.py:77:16 - error: Parameter declaration "path" is obscured by a declaration of the same name (reportRedeclaration)
 /home/miv/projects/attn/attention-motifs/attention_motifs/features/feat/hist_beta_fit.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/features/feat/hist_beta_fit.py:9:35 - error: "prefix_dict" is unknown import symbol (reportAttributeAccessIssue)
-/home/miv/projects/attn/attention-motifs/attention_motifs/features/feat/transition_tensor.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/feat/transition_tensor.py:19:33 - error: Argument of type "float" cannot be assigned to parameter "approx_l10" of type "int" in function "transition_tensor_torch"
-    "float" is not assignable to "int" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/feat/transition_tensor.py:66:2 - error: No overloads for "update" match the provided arguments (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/feat/transition_tensor.py:67:3 - error: Argument of type "dict[str, float64 | ArrayND[float64, AnyShape]]" cannot be assigned to parameter "m" of type "Iterable[tuple[str, float]]" in function "update"
-    "dict[str, float64 | ArrayND[float64, AnyShape]]" is not assignable to "Iterable[tuple[str, float]]"
-      Type parameter "_T_co@Iterable" is covariant, but "str" is not a subtype of "tuple[str, float]"
-        "str" is not assignable to "tuple[str, float]" (reportArgumentType)
 /home/miv/projects/attn/attention-motifs/attention_motifs/features/features.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/features/features.py:60:7 - error: Argument of type "dict[str, str | int]" cannot be assigned to parameter "d" of type "dict[str, float]" in function "prefix_dict"
     "dict[str, str | int]" is not assignable to "dict[str, float]"
@@ -215,78 +194,28 @@ To reduce this time, open a workspace directory with fewer files or add a pyrigh
       Parameter 1: type "Tensor" is incompatible with type "ndarray[Unknown, Unknown]"
         "Tensor" is not assignable to "ndarray[Unknown, Unknown]" (reportArgumentType)
 /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:147:3 - error: Declaration "embedding" is obscured by a declaration of the same name (reportRedeclaration)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:147:27 - error: Type "tuple[NDArray[float64] | Unknown, Unknown, Unknown] | NDArray[float64] | Unknown | coo_matrix[floating[_32Bit]] | Any" is not assignable to declared type "ndarray[Unknown, Unknown]"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:138:21 - error: Argument of type "Unknown | ndarray[Unknown, Unknown] | None" cannot be assigned to parameter "a" of type "ndarray[Any, Any]" in function "fill_diagonal"
+    Type "Unknown | ndarray[Unknown, Unknown] | None" is not assignable to type "ndarray[Any, Any]"
+      "None" is not assignable to "ndarray[Any, Any]" (reportArgumentType)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:151:15 - error: Type "tuple[NDArray[float64] | Unknown, Unknown, Unknown] | NDArray[float64] | Unknown | coo_matrix[floating[_32Bit]] | Any" is not assignable to declared type "ndarray[Unknown, Unknown]"
     Type "tuple[NDArray[float64] | Unknown, Unknown, Unknown] | NDArray[float64] | Unknown | coo_matrix[floating[_32Bit]] | Any" is not assignable to type "ndarray[Unknown, Unknown]"
       "coo_matrix[floating[_32Bit]]" is not assignable to "ndarray[Unknown, Unknown]" (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:147:49 - error: "similarity_matrix" is possibly unbound (reportPossiblyUnboundVariable)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:149:27 - error: Type "tuple[NDArray[float64] | Unknown, Unknown, Unknown] | NDArray[float64] | Unknown | coo_matrix[floating[_32Bit]] | Any" is not assignable to declared type "ndarray[Unknown, Unknown]"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:153:15 - error: Type "tuple[NDArray[float64] | Unknown, Unknown, Unknown] | NDArray[float64] | Unknown | coo_matrix[floating[_32Bit]] | Any" is not assignable to declared type "ndarray[Unknown, Unknown]"
     Type "tuple[NDArray[float64] | Unknown, Unknown, Unknown] | NDArray[float64] | Unknown | coo_matrix[floating[_32Bit]] | Any" is not assignable to type "ndarray[Unknown, Unknown]"
       "coo_matrix[floating[_32Bit]]" is not assignable to "ndarray[Unknown, Unknown]" (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:196:5 - error: Cannot assign to attribute "_embed_meta" for class "DataFrame"
-    Attribute "_embed_meta" is unknown (reportAttributeAccessIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:308:10 - error: "Axes" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:313:16 - error: "Figure" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:313:35 - error: "Axes" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:360:11 - error: "Figure" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:439:16 - error: "Figure" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:502:25 - error: Type "None" is not assignable to declared type "str"
-    "None" is not assignable to "str" (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:561:17 - error: "Line2D" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:572:17 - error: "Line2D" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
 /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:20:10 - error: "Figure" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:60:11 - error: "Figure" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:61:10 - error: "Axes" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:62:11 - error: "AxesImage" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:181:10 - error: "Axes" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:224:20 - error: "Line2D" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:234:21 - error: No overloads for "get" match the provided arguments (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:234:31 - error: Argument of type "None" cannot be assigned to parameter "key" of type "str" in function "get"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:238:21 - error: No overloads for "get" match the provided arguments (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:238:31 - error: Argument of type "None" cannot be assigned to parameter "key" of type "str" in function "get"
     "None" is not assignable to "str" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:237:27 - error: No overloads for "get" match the provided arguments (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:237:43 - error: Argument of type "None" cannot be assigned to parameter "key" of type "str" in function "get"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:241:27 - error: No overloads for "get" match the provided arguments (reportCallIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:241:43 - error: Argument of type "None" cannot be assigned to parameter "key" of type "str" in function "get"
     "None" is not assignable to "str" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:254:16 - error: "Line2D" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:292:11 - error: "Figure" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/plotting.py:293:10 - error: "Axes" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
 /home/miv/projects/attn/attention-motifs/attention_motifs/features/vec_features.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/vec_features.py:28:2 - error: Declaration "timeseries_features" is obscured by a declaration of the same name (reportRedeclaration)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/vec_features.py:37:18 - error: Type "dict[str, float64 | ArrayND[float64, AnyShape]]" is not assignable to declared type "dict[str, float]"
-    "dict[str, float64 | ArrayND[float64, AnyShape]]" is not assignable to "dict[str, float]"
-      Type parameter "_VT@dict" is invariant, but "float64 | ArrayND[float64, AnyShape]" is not the same as "float"
-      Consider switching from "dict" to "Mapping" which is covariant in the value type (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/vec_features.py:50:3 - error: Argument of type "signedinteger[Any]" cannot be assigned to parameter "value" of type "float" in function "__setitem__"
-    "signedinteger[Any]" is not assignable to "float" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/vec_features.py:51:3 - error: Argument of type "float64 | ArrayND[float64, AnyShape]" cannot be assigned to parameter "value" of type "float" in function "__setitem__"
-    Type "float64 | ArrayND[float64, AnyShape]" is not assignable to type "float"
-      "floating[_64Bit]" is not assignable to "float" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/vec_features.py:52:3 - error: Argument of type "floating[Any]" cannot be assigned to parameter "value" of type "float" in function "__setitem__"
-    "floating[Any]" is not assignable to "float" (reportArgumentType)
   /home/miv/projects/attn/attention-motifs/attention_motifs/features/vec_features.py:64:27 - error: Type "float64" is not assignable to declared type "float"
     "floating[_64Bit]" is not assignable to "float" (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/vec_features.py:69:31 - error: Type "dict[str, float64 | Any]" is not assignable to declared type "dict[str, float]"
-    "dict[str, float64 | Any]" is not assignable to "dict[str, float]"
-      Type parameter "_VT@dict" is invariant, but "float64 | Any" is not the same as "float"
-      Consider switching from "dict" to "Mapping" which is covariant in the value type (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/vec_features.py:252:9 - error: Type "dict[str, Any]" is not assignable to return type "ndarray[Unknown, Unknown]" (reportReturnType)
 /home/miv/projects/attn/attention-motifs/attention_motifs/figure_funcs.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/figure_funcs.py:7:2 - error: "AttentionMatrix" is not exported from module "pattern_lens.figure_util"
     Import from "pattern_lens.consts" instead (reportPrivateImportUsage)
-/home/miv/projects/attn/attention-motifs/attention_motifs/math/math.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/math.py:12:18 - error: Type "signedinteger[Any]" is not assignable to declared type "float"
-    "signedinteger[Any]" is not assignable to "float" (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/math.py:13:18 - error: Type "floating[Any]" is not assignable to declared type "float"
-    "floating[Any]" is not assignable to "float" (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/math.py:63:3 - error: Declaration "m" is obscured by a declaration of the same name (reportRedeclaration)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/math.py:64:3 - error: Declaration "b" is obscured by a declaration of the same name (reportRedeclaration)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/math.py:66:3 - error: Declaration "y_pred" is obscured by a declaration of the same name (reportRedeclaration)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/math.py:67:3 - error: Declaration "r2" is obscured by a declaration of the same name (reportRedeclaration)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/math.py:78:3 - error: Declaration "c" is obscured by a declaration of the same name (reportRedeclaration)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/math.py:79:3 - error: Declaration "A_ub" is obscured by a declaration of the same name (reportRedeclaration)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/math.py:80:3 - error: Declaration "b_ub" is obscured by a declaration of the same name (reportRedeclaration)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/math.py:94:13 - error: Object of type "None" is not subscriptable (reportOptionalSubscript)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/math.py:95:13 - error: Object of type "None" is not subscriptable (reportOptionalSubscript)
 /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:19:12 - warning: Unsupported escape sequence in string literal (reportInvalidStringEscapeSequence)
   /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:19:20 - warning: Unsupported escape sequence in string literal (reportInvalidStringEscapeSequence)
@@ -294,8 +223,6 @@ To reduce this time, open a workspace directory with fewer files or add a pyrigh
   /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:19:43 - warning: Unsupported escape sequence in string literal (reportInvalidStringEscapeSequence)
   /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:19:45 - warning: Unsupported escape sequence in string literal (reportInvalidStringEscapeSequence)
   /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:20:9 - error: Operator "-" not supported for type "bool_" when expected type is "float" (reportOperatorIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:27:9 - error: Type "floating[Any]" is not assignable to return type "float"
-    "floating[Any]" is not assignable to "float" (reportReturnType)
   /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:34:9 - error: Type "bool_" is not assignable to return type "float"
     "bool_" is not assignable to "float" (reportReturnType)
   /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:231:29 - error: Type "list[Number]" is not assignable to declared type "list[int]"
@@ -309,35 +236,18 @@ To reduce this time, open a workspace directory with fewer files or add a pyrigh
   /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:254:4 - error: Argument of type "Number | Unknown" cannot be assigned to parameter "key" of type "int" in function "__getitem__"
     Type "Number | Unknown" is not assignable to type "int"
       "float" is not assignable to "int" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:269:38 - error: Argument of type "Number | Unknown" cannot be assigned to parameter "key" of type "int" in function "__getitem__"
-    Type "Number | Unknown" is not assignable to type "int"
-      "float" is not assignable to "int" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:287:60 - error: Argument of type "float" cannot be assigned to parameter "approx_l10" of type "int" in function "transition_tensor"
-    "float" is not assignable to "int" (reportArgumentType)
   /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:305:39 - error: Type "list[Any | floating[Any] | float]" is not assignable to declared type "list[float]"
     "floating[Any]" is not assignable to "float" (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:318:21 - error: "T" is not a known attribute of "None" (reportOptionalMemberAccess)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:318:36 - error: "shape" is not a known attribute of "None" (reportOptionalMemberAccess)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:318:51 - error: "shape" is not a known attribute of "None" (reportOptionalMemberAccess)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:325:10 - error: "shape" is not a known attribute of "None" (reportOptionalMemberAccess)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:326:21 - error: "shape" is not a known attribute of "None" (reportOptionalMemberAccess)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:327:15 - error: Object of type "None" is not subscriptable (reportOptionalSubscript)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:327:61 - error: "shape" is not a known attribute of "None" (reportOptionalMemberAccess)
 /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/cfg.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/cfg.py:36:40 - error: Type "dict[str, str]" is not assignable to declared type "dict[DataFilename, str]"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/cfg.py:39:40 - error: Type "dict[str, str]" is not assignable to declared type "dict[DataFilename, str]"
     "dict[str, str]" is not assignable to "dict[DataFilename, str]"
       Type parameter "_KT@dict" is invariant, but "str" is not the same as "DataFilename" (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/cfg.py:49:44 - error: Type "dict[str, str]" is not assignable to declared type "dict[FigureFilename, str]"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/cfg.py:52:44 - error: Type "dict[str, str]" is not assignable to declared type "dict[FigureFilename, str]"
     "dict[str, str]" is not assignable to "dict[FigureFilename, str]"
       Type parameter "_KT@dict" is invariant, but "str" is not the same as "FigureFilename" (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/cfg.py:219:32 - error: Type "dict[str, dict[str, Any]]" is not assignable to declared type "dict[str, str]"
-    "dict[str, dict[str, Any]]" is not assignable to "dict[str, str]"
-      Type parameter "_VT@dict" is invariant, but "dict[str, Any]" is not the same as "str"
-      Consider switching from "dict" to "Mapping" which is covariant in the value type (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/cfg.py:228:41 - error: Type "dict[str, int]" is not assignable to declared type "dict[PlotKwargKey, str]"
-    "dict[str, int]" is not assignable to "dict[PlotKwargKey, str]"
-      Type parameter "_KT@dict" is invariant, but "str" is not the same as "PlotKwargKey"
-      Type parameter "_VT@dict" is invariant, but "int" is not the same as "str" (reportAssignmentType)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/cfg.py:231:41 - error: Type "dict[str, int]" is not assignable to declared type "dict[PlotKwargKey, int]"
+    "dict[str, int]" is not assignable to "dict[PlotKwargKey, int]"
+      Type parameter "_KT@dict" is invariant, but "str" is not the same as "PlotKwargKey" (reportAssignmentType)
 /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s1_activations.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s1_activations.py:18:14 - error: Argument of type "Path" cannot be assigned to parameter "save_path" of type "str" in function "activations_main"
     "Path" is not assignable to "str" (reportArgumentType)
@@ -351,62 +261,19 @@ To reduce this time, open a workspace directory with fewer files or add a pyrigh
     Type "(A: ndarray[Unknown, Unknown]) -> dict[str, float]" is not assignable to type "(Tensor) -> dict[str, float]"
       Parameter 1: type "Tensor" is incompatible with type "ndarray[Unknown, Unknown]"
         "Tensor" is not assignable to "ndarray[Unknown, Unknown]" (reportArgumentType)
-/home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s3_feat_proc.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s3_feat_proc.py:59:2 - error: Parameter declaration "data_scaled" is obscured by a declaration of the same name (reportRedeclaration)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s3_feat_proc.py:119:43 - error: Argument of type "Literal['importance']" cannot be assigned to parameter "fname" of type "DataFilename" in function "data_path"
-    Type "Literal['importance']" is not assignable to type "DataFilename"
-      "Literal['importance']" is not assignable to type "Literal['raw']"
-      "Literal['importance']" is not assignable to type "Literal['norms']"
-      "Literal['importance']" is not assignable to type "Literal['scaled']"
-      "Literal['importance']" is not assignable to type "Literal['pca']"
-      "Literal['importance']" is not assignable to type "Literal['pca_npy']"
-      "Literal['importance']" is not assignable to type "Literal['head_dists_zanj']"
-      "Literal['importance']" is not assignable to type "Literal['head_dists_raw']"
-    ... (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s3_feat_proc.py:129:19 - error: "mkdir" is not a known attribute of "None" (reportOptionalMemberAccess)
 /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s3b_feat_fig.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s3b_feat_fig.py:66:16 - error: No overloads for "get" match the provided arguments (reportCallIssue)
   /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s3b_feat_fig.py:66:36 - error: Argument of type "Literal['n_dims']" cannot be assigned to parameter "key" of type "PlotKwargKey" in function "get"
     "Literal['n_dims']" is not assignable to type "PlotKwargKey" (reportArgumentType)
   /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s3b_feat_fig.py:90:11 - error: "handles" is possibly unbound (reportPossiblyUnboundVariable)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s3b_feat_fig.py:115:62 - error: Argument of type "Literal['importance']" cannot be assigned to parameter "fname" of type "DataFilename" in function "data_path"
-    Type "Literal['importance']" is not assignable to type "DataFilename"
-      "Literal['importance']" is not assignable to type "Literal['raw']"
-      "Literal['importance']" is not assignable to type "Literal['norms']"
-      "Literal['importance']" is not assignable to type "Literal['scaled']"
-      "Literal['importance']" is not assignable to type "Literal['pca']"
-      "Literal['importance']" is not assignable to type "Literal['pca_npy']"
-      "Literal['importance']" is not assignable to type "Literal['head_dists_zanj']"
-      "Literal['importance']" is not assignable to type "Literal['head_dists_raw']"
-    ... (reportArgumentType)
-/home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s4b_write_frontend.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s4b_write_frontend.py:20:2 - error: Declaration "head_embed_table_html" is obscured by a declaration of the same name (reportRedeclaration)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s4b_write_frontend.py:27:21 - error: Type "str" is not assignable to declared type "dict[Unknown, Unknown]"
-    "str" is not assignable to "dict[Unknown, Unknown]" (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s4b_write_frontend.py:38:32 - error: Type "str" is not assignable to declared type "dict[Unknown, Unknown]"
-    "str" is not assignable to "dict[Unknown, Unknown]" (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s4b_write_frontend.py:47:29 - error: Type "str" is not assignable to declared type "dict[Unknown, Unknown]"
-    "str" is not assignable to "dict[Unknown, Unknown]" (reportAssignmentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s4b_write_frontend.py:59:3 - error: Operator "/" not supported for "None" (reportOptionalOperand)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s4b_write_frontend.py:62:3 - error: Operator "/" not supported for "None" (reportOptionalOperand)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s4b_write_frontend.py:74:3 - error: Operator "/" not supported for "None" (reportOptionalOperand)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s4b_write_frontend.py:76:3 - error: Operator "/" not supported for "None" (reportOptionalOperand)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s4b_write_frontend.py:78:3 - error: Operator "/" not supported for "None" (reportOptionalOperand)
-/home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s5_head_embed.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s5_head_embed.py:110:21 - error: Argument of type "list[str]" cannot be assigned to parameter "embedding_methods" of type "Sequence[EmbeddingMethod]" in function "create_embedding_df_multi"
-    "list[str]" is not assignable to "Sequence[EmbeddingMethod]"
-      Type parameter "_T_co@Sequence" is covariant, but "str" is not a subtype of "EmbeddingMethod"
-        Type "str" is not assignable to type "EmbeddingMethod"
-          "str" is not assignable to type "Literal['isomap']"
-          "str" is not assignable to type "Literal['umap']"
-          "str" is not assignable to type "Literal['tsne']"
-          "str" is not assignable to type "Literal['pca']" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s5_head_embed.py:126:21 - error: Operator "/" not supported for "None" (reportOptionalOperand)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s5_head_embed.py:127:19 - error: "mkdir" is not a known attribute of "None" (reportOptionalMemberAccess)
 /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s5b_head_embed_plots.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s5b_head_embed_plots.py:48:31 - error: Operator "/" not supported for "None" (reportOptionalOperand)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s5b_head_embed_plots.py:98:10 - error: "savefig" is not a known attribute of "None" (reportOptionalMemberAccess)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s5b_head_embed_plots.py:112:24 - error: Operator "/" not supported for "None" (reportOptionalOperand)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s5b_head_embed_plots.py:59:13 - error: Argument of type "list[EmbeddingMethod]" cannot be assigned to parameter "methods" of type "list[str] | None" in function "plot_head_embeddings_multi"
+    Type "list[EmbeddingMethod]" is not assignable to type "list[str] | None"
+      "list[EmbeddingMethod]" is not assignable to "list[str]"
+        Type parameter "_T@list" is invariant, but "EmbeddingMethod" is not the same as "str"
+        Consider switching from "list" to "Sequence" which is covariant
+      "list[EmbeddingMethod]" is not assignable to "None" (reportArgumentType)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s5b_head_embed_plots.py:100:10 - error: "savefig" is not a known attribute of "None" (reportOptionalMemberAccess)
 /home/miv/projects/attn/attention-motifs/attention_motifs/util/profiling.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/util/profiling.py:254:27 - error: "gpu_prof" is possibly unbound (reportPossiblyUnboundVariable)
 /home/miv/projects/attn/attention-motifs/attention_motifs/util/util.py
@@ -414,8 +281,6 @@ To reduce this time, open a workspace directory with fewer files or add a pyrigh
   /home/miv/projects/attn/attention-motifs/attention_motifs/util/util.py:60:27 - error: "npyio" is not a known attribute of module "numpy.lib" (reportAttributeAccessIssue)
   /home/miv/projects/attn/attention-motifs/attention_motifs/util/util.py:62:23 - error: Expression of type "None" cannot be assigned to parameter of type "list[int]"
     "None" is not assignable to "list[int]" (reportArgumentType)
-/home/miv/projects/attn/attention-motifs/data/features/head_dists_raw/test.py
-  /home/miv/projects/attn/attention-motifs/data/features/head_dists_raw/test.py:75:1 - warning: Expression value is unused (reportUnusedExpression)
 /home/miv/projects/attn/attention-motifs/notebooks/01-pattern_features_generate.ipynb - cell 3
   /home/miv/projects/attn/attention-motifs/notebooks/01-pattern_features_generate.ipynb:3:3:16 - error: Argument of type "(A: ndarray[Unknown, Unknown]) -> dict[str, float]" cannot be assigned to parameter "features_func" of type "(Tensor) -> dict[str, float]" in function "scalar_feature_table"
     Type "(A: ndarray[Unknown, Unknown]) -> dict[str, float]" is not assignable to type "(Tensor) -> dict[str, float]"
@@ -460,4 +325,4 @@ To reduce this time, open a workspace directory with fewer files or add a pyrigh
       "object" is not assignable to "tuple[bytes, socket]" (reportArgumentType)
   /home/miv/projects/attn/attention-motifs/tests/conftest.py:61:5 - error: Argument of type "object" cannot be assigned to parameter "server" of type "BaseServer" in function "__init__"
     "object" is not assignable to "BaseServer" (reportArgumentType)
-183 errors, 7 warnings, 0 notes
+110 errors, 6 warnings, 0 notes

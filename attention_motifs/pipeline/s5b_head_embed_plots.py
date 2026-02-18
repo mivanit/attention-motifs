@@ -44,6 +44,8 @@ def head_embed_plots(cfg: PipelineConfig) -> None:
 
 	# Generate figures if enabled
 	if cfg.do_figures:
+		assert cfg.figures_dir is not None
+
 		# Create subdirectory for SVGs
 		head_embed_svgs_dir: Path = cfg.figures_dir / "head-embed-svgs"
 		head_embed_svgs_dir.mkdir(parents=True, exist_ok=True)

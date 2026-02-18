@@ -14,7 +14,7 @@ def render_patterns(cfg: PipelineConfig) -> None:
 		pipeline_model_progress(idx, n_models, model)
 		figures_main(
 			model_name=model,
-			save_path=cfg.patterns_dir,
+			save_path=str(cfg.patterns_dir),
 			n_samples=cfg.prompts_n_samples,
 			force=cfg.force_overwrite,
 			figure_funcs_select={"attn"},

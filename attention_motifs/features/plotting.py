@@ -4,6 +4,10 @@ import polars as pl
 
 # plotting
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from matplotlib.image import AxesImage
+from matplotlib.lines import Line2D
 
 # scipy
 from sklearn.decomposition import PCA
@@ -17,7 +21,7 @@ def plot_correlation_matrix(
 	feature_cols: list[str],
 	sort_by: Literal["sum", "var", "none"] = "sum",
 	show: bool = True,
-) -> plt.Figure:
+) -> Figure:
 	"""Plot a correlation matrix of features and identify features with NaN correlations.
 
 	# Parameters:
@@ -57,9 +61,9 @@ def plot_correlation_matrix(
 		feature_cols = [feature_cols[i] for i in sort_idx]
 
 	# Plot with larger figure size
-	fig: plt.Figure = plt.figure(figsize=(25, 20))
-	ax: plt.Axes = fig.add_subplot(111)
-	cax: plt.AxesImage = ax.imshow(
+	fig: Figure = plt.figure(figsize=(25, 20))
+	ax: Axes = fig.add_subplot(111)
+	cax: AxesImage = ax.imshow(
 		corr_mat, aspect="auto", cmap="coolwarm", vmin=-1, vmax=1
 	)
 
@@ -178,7 +182,7 @@ def plot_embedding(
 	marker_size: int | dict[str, int] = 1,
 	color_map: dict | str | None = None,
 	unknown_color: str = "#bfbfbf",
-	ax: plt.Axes | None = None,
+	ax: Axes | None = None,
 	do_legend: bool = True,
 ) -> list:
 	"""Scatter plot of 2D embedding with points colored by label.
@@ -221,7 +225,7 @@ def plot_embedding(
 		cmap["unknown"] = unknown_color
 
 	# Store handles for legend
-	handles: list[plt.Line2D] = []
+	handles: list[Line2D] = []
 
 	# ------------------------------------------------------------------
 	# Plot each label group, picking the requested colour if available.
@@ -251,7 +255,7 @@ def plot_embedding(
 		)
 
 		# Phantom point for the legend
-		handle = plt.Line2D(
+		handle = Line2D(
 			[0],
 			[0],
 			marker="o",
@@ -289,8 +293,8 @@ def plot_embedding_kde(embedding: np.ndarray, labels: pl.Series, title: str) -> 
 	"""
 	import scipy.stats as stats
 
-	fig: plt.Figure = plt.figure(figsize=(12, 10))
-	ax: plt.Axes = fig.add_subplot(111)
+	fig: Figure = plt.figure(figsize=(12, 10))
+	ax: Axes = fig.add_subplot(111)
 
 	# Convert labels to numpy array
 	label_values = labels.to_numpy()
