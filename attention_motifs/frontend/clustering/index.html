@@ -135,20 +135,104 @@
       margin-bottom: 20px;
       font-size: 14px;
       color: #555;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
     
-    .stats span {
-      margin-right: 20px;
+    .stats-text {
+      display: flex;
+      gap: 20px;
+    }
+    
+    .stats-text span {
+      margin-right: 0;
     }
     
     .stats strong {
       color: #333;
     }
     
-    /* Main content layout */
-    .main-content {
+    .stats-sparkline {
       display: flex;
-      gap: 20px;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .stats-sparkline-label {
+      font-size: 12px;
+      color: #888;
+    }
+    
+    /* Split layout */
+    .split-container {
+      display: flex;
+      height: calc(100vh - 220px);
+      gap: 0;
+    }
+    
+    .left-pane {
+      flex: 1;
+      overflow: auto;
+      padding: 12px;
+    }
+    
+    .divider {
+      width: 6px;
+      background: #ddd;
+      cursor: col-resize;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    
+    .divider:hover,
+    .divider.dragging {
+      background: #1565c0;
+    }
+    
+    .right-pane {
+      width: 450px;
+      min-width: 300px;
+      max-width: 800px;
+      display: flex;
+      flex-direction: column;
+      background: white;
+      border-left: 1px solid #ddd;
+    }
+    
+    .right-pane-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    
+    .right-pane-header h3 {
+      margin: 0;
+      font-size: 16px;
+      color: #333;
+    }
+    
+    .right-pane-header #selected-count {
+      color: #888;
+      font-weight: normal;
+    }
+    
+    .right-pane-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .right-pane-controls label {
+      font-size: 13px;
+      color: #666;
+    }
+    
+    .right-pane-controls input[type="range"] {
+      width: 80px;
     }
     
     #model-grids-container {
@@ -246,55 +330,10 @@
       outline-offset: 1px;
     }
     
-    /* Side pane */
-    .side-pane {
-      width: 420px;
-      min-width: 420px;
-      max-height: calc(100vh - 260px);
-      overflow-y: auto;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-    
-    .side-pane-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      border-bottom: 1px solid #eee;
-      position: sticky;
-      top: 0;
-      background: white;
-      z-index: 10;
-    }
-    
-    .side-pane-header h3 {
-      margin: 0;
-      font-size: 16px;
-      color: #333;
-    }
-    
-    .side-pane-header #selected-count {
-      color: #888;
-      font-weight: normal;
-    }
-    
-    .side-pane-header button {
-      padding: 6px 12px;
-      font-size: 13px;
-      background: #f5f5f5;
-      color: #555;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    
-    .side-pane-header button:hover {
-      background: #eee;
-    }
-    
+    /* Pattern images container */
     #pattern-images {
+      flex: 1;
+      overflow-y: auto;
       padding: 12px;
     }
     
@@ -325,7 +364,12 @@
     .pattern-section-title {
       font-size: 14px;
       font-weight: 600;
-      color: #333;
+      color: #1565c0;
+      text-decoration: none;
+    }
+    
+    .pattern-section-title:hover {
+      text-decoration: underline;
     }
     
     .pattern-section-cluster {
@@ -333,18 +377,33 @@
       color: #888;
     }
     
-    .pattern-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    .pattern-arrow {
+      margin-left: auto;
+      font-size: 18px;
+      color: #1565c0;
+      text-decoration: none;
+      padding: 4px 8px;
+    }
+    
+    .pattern-arrow:hover {
+      background: #e3f2fd;
+      border-radius: 4px;
+    }
+    
+    .pattern-row {
+      display: flex;
       gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 8px;
     }
     
     .pattern-image {
-      width: 100%;
-      aspect-ratio: 1;
+      width: 100px;
+      height: 100px;
       object-fit: contain;
       border-radius: 4px;
       background: #f5f5f5;
+      flex-shrink: 0;
     }
     
     .pattern-image-placeholder {
@@ -357,45 +416,6 @@
       justify-content: center;
       color: #aaa;
       font-size: 11px;
-    }
-    
-    /* Legend */
-    .legend {
-      background: white;
-      padding: 16px 20px;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      margin-top: 20px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      color: #555;
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: 4px;
-      transition: background 0.2s;
-    }
-    
-    .legend-item:hover {
-      background: #f0f0f0;
-    }
-    
-    .legend-swatch {
-      width: 16px;
-      height: 16px;
-      border-radius: 3px;
-    }
-    
-    .legend-count {
-      color: #888;
-      font-size: 12px;
     }
     
     /* Tooltip */
@@ -498,20 +518,373 @@
 
       <div class="stats" id="stats"></div>
 
-      <div class="main-content">
-        <div id="model-grids-container"></div>
-        <div id="side-pane" class="side-pane">
-          <div class="side-pane-header">
+      <div class="split-container">
+        <div class="left-pane" id="left-pane">
+          <div id="model-grids-container"></div>
+        </div>
+        <div class="divider" id="divider"></div>
+        <div class="right-pane" id="right-pane">
+          <div class="right-pane-header">
             <h3>Selected Heads <span id="selected-count">(0)</span></h3>
-            <button id="clear-selection">Clear</button>
+            <div class="right-pane-controls">
+              <label>Size:</label>
+              <input
+                type="range"
+                id="pattern-size"
+                min="60"
+                max="200"
+                value="100"
+              />
+              <button id="randomize-prompts" class="toggle-btn">
+                Randomize
+              </button>
+              <button id="clear-selection" class="toggle-btn">Clear</button>
+            </div>
           </div>
           <div id="pattern-images"></div>
         </div>
       </div>
-
-      <div class="legend" id="legend"></div>
     </div>
 
+        <!-- begin 'sparklines.js' -->
+    <script>
+    // sparklines.js - Generate SVG sparklines and sparkbars from data arrays
+    // origin: https://github.com/mivanit/js-dev-toolkit
+    // license: GPLv3
+    
+    const _PLOT_OPTS_DEFAULT = {
+      width: 160,
+      height: 80,
+      color: "#4169E1",
+      shading: 0.3,
+      lineWidth: 2,
+      markers: null,
+      margin: 5,
+      style: "line",
+      barWidthRatio: 1,
+      logScale: false,
+    
+      xAxis: {
+        line: false,
+        ticks: false,
+        text_offset: 10,
+        text_y_position: 0,
+        label_margin: 5,
+        limits_length: 2,
+      },
+    
+      yAxis: {
+        line: false,
+        ticks: false,
+        text_offset: 2,
+        text_y_offset: 0,
+        label_margin: 10,
+        limits_length: 2,
+      },
+    
+      xlims: null,
+      ylims: null,
+    
+      bar: {
+        opacity: 0.8,
+        y_axis_shift_ratio: 0.6,
+        y_axis_reduction_factor: 1,
+      },
+    
+      axis_style: {
+        color: "#ccc",
+        width: 1,
+        font_size: 10,
+        text_color: "#666",
+      },
+    
+      gradient: {
+        start_offset: "0%",
+        end_offset: "100%",
+        end_opacity: 0,
+      },
+    
+      min_range: 1,
+    };
+    
+    function merge_options(options = {}) {
+      return {
+        ..._PLOT_OPTS_DEFAULT,
+        ...options,
+        xAxis: { ..._PLOT_OPTS_DEFAULT.xAxis, ...(options.xAxis || {}) },
+        yAxis: { ..._PLOT_OPTS_DEFAULT.yAxis, ...(options.yAxis || {}) },
+        bar: { ..._PLOT_OPTS_DEFAULT.bar, ...(options.bar || {}) },
+        axis_style: {
+          ..._PLOT_OPTS_DEFAULT.axis_style,
+          ...(options.axis_style || {}),
+        },
+        gradient: {
+          ..._PLOT_OPTS_DEFAULT.gradient,
+          ...(options.gradient || {}),
+        },
+      };
+    }
+    
+    function process_values(values, yvalues = null) {
+      if (!Array.isArray(values)) {
+        throw new Error(`First parameter must be an array, got: ${typeof values}`);
+      }
+    
+      if (values.length === 0) {
+        throw new Error("Values array cannot be empty");
+      }
+    
+      let xvals, yvals;
+    
+      if (yvalues === null) {
+        yvals = values;
+        xvals = Array.from({ length: values.length }, (_, i) => i);
+      } else {
+        if (!Array.isArray(yvalues)) {
+          throw new Error(
+            `Second parameter must be an array or null, got: ${typeof yvalues}`,
+          );
+        }
+        xvals = values;
+        yvals = yvalues;
+      }
+    
+      if (xvals.length !== yvals.length) {
+        throw new Error(
+          `x-values length (${xvals.length}) must match y-values length (${yvals.length})`,
+        );
+      }
+    
+      return { xvalues: xvals, yvalues: yvals };
+    }
+    
+    function plot(values, yvalues = null, options = {}) {
+      const opts = merge_options(options);
+      const { xvalues, yvalues: yvals } = process_values(values, yvalues);
+    
+      const needsLeftMargin = opts.yAxis.ticks;
+      const needsBottomMargin = opts.xAxis.ticks;
+      const barChartExtraMargin =
+        opts.style === "bar" && (opts.yAxis.line || opts.yAxis.ticks)
+          ? ((opts.width - 2 * opts.margin) / yvals.length) *
+            opts.bar.y_axis_shift_ratio
+          : 0;
+      const leftMargin =
+        (needsLeftMargin ? opts.margin + opts.yAxis.label_margin : opts.margin) +
+        barChartExtraMargin;
+      const bottomMargin = needsBottomMargin
+        ? opts.margin + opts.xAxis.label_margin
+        : opts.margin;
+    
+      const dataYmin = Math.min(...yvals);
+      const dataYmax = Math.max(...yvals);
+      let ymin = opts.ylims && opts.ylims[0] !== null ? opts.ylims[0] : dataYmin;
+      let ymax = opts.ylims && opts.ylims[1] !== null ? opts.ylims[1] : dataYmax;
+    
+      if (opts.logScale) {
+        if (yvals.some((v) => v < 0) || ymin < 0 || ymax < 0) {
+          throw new Error("Log scale requires all values >= 0");
+        }
+      }
+    
+      const transformY = opts.logScale
+        ? (y) => (y > 0 ? Math.log10(y) : 0)
+        : (y) => y;
+    
+      const positiveYvals = opts.logScale ? yvals.filter((v) => v > 0) : yvals;
+      const yminForScale =
+        opts.logScale && positiveYvals.length > 0
+          ? Math.min(...positiveYvals)
+          : ymin;
+      const ymaxForScale =
+        opts.logScale && positiveYvals.length > 0
+          ? Math.max(...positiveYvals)
+          : ymax;
+    
+      const yminTransformed = transformY(yminForScale);
+      const ymaxTransformed = transformY(ymaxForScale);
+      const yrange = ymaxTransformed - yminTransformed || opts.min_range;
+    
+      const dataXmin = Math.min(...xvalues);
+      const dataXmax = Math.max(...xvalues);
+      const xmin = opts.xlims && opts.xlims[0] !== null ? opts.xlims[0] : dataXmin;
+      const xmax = opts.xlims && opts.xlims[1] !== null ? opts.xlims[1] : dataXmax;
+      const xrange = xmax - xmin || opts.min_range;
+    
+      const chartWidth = opts.width - leftMargin - opts.margin;
+      const chartHeight = opts.height - opts.margin - bottomMargin;
+    
+      let svg = "<svg " + `width="${opts.width}" height="${opts.height}"` + ">";
+    
+      if (opts.style === "bar") {
+        const baseY = opts.height - bottomMargin;
+        const adjustedChartWidth = chartWidth - chartWidth / yvals.length / 2;
+    
+        let barSpacing;
+        if (yvals.length === 1) {
+          barSpacing = adjustedChartWidth;
+        } else {
+          const sortedIndices = [...Array(xvalues.length).keys()].sort(
+            (a, b) => xvalues[a] - xvalues[b],
+          );
+          let minSpacing = Infinity;
+          for (let j = 1; j < sortedIndices.length; j++) {
+            const prevX = xvalues[sortedIndices[j - 1]];
+            const currX = xvalues[sortedIndices[j]];
+            const spacing = ((currX - prevX) / xrange) * adjustedChartWidth;
+            if (spacing < minSpacing) minSpacing = spacing;
+          }
+          barSpacing =
+            minSpacing === Infinity
+              ? adjustedChartWidth / yvals.length
+              : minSpacing;
+        }
+    
+        const actualBarWidth = barSpacing * opts.barWidthRatio;
+    
+        yvals.forEach((yval, i) => {
+          if (opts.logScale && yval === 0) {
+            return;
+          }
+    
+          const xval = xvalues[i];
+          const x = leftMargin + ((xval - xmin) / xrange) * adjustedChartWidth;
+          const yvalTransformed = transformY(yval);
+          const barHeight =
+            Math.abs((yvalTransformed - yminTransformed) / yrange) * chartHeight;
+          const barY = baseY - barHeight;
+    
+          const barX = x - actualBarWidth / 2;
+    
+          svg += `<rect x="${barX}" y="${barY}" width="${actualBarWidth}" height="${barHeight}" fill="${opts.color}" opacity="${opts.bar.opacity}"/>`;
+        });
+      } else {
+        let path = "";
+        let dots = "";
+        const points = [];
+    
+        yvals.forEach((yval, i) => {
+          const xval = xvalues[i];
+          const x = leftMargin + ((xval - xmin) / xrange) * chartWidth;
+    
+          if (opts.logScale && yval === 0) {
+            return;
+          }
+    
+          const yvalTransformed = transformY(yval);
+          const y =
+            opts.margin +
+            (1 - (yvalTransformed - yminTransformed) / yrange) * chartHeight;
+          points.push({ x, y, xval, yval });
+    
+          const moveCmd =
+            i === 0 || (opts.logScale && i > 0 && yvals[i - 1] === 0) ? "M" : "L";
+          path += `${moveCmd} ${x} ${y} `;
+    
+          if (opts.markers !== null && opts.markers > 0) {
+            dots += `<circle cx="${x}" cy="${y}" r="${opts.markers}" fill="${opts.color}"/>`;
+          }
+        });
+    
+        if (opts.shading !== false) {
+          if (opts.shading === true) {
+            for (let i = 0; i < points.length - 1; i++) {
+              const p1 = points[i];
+              const p2 = points[i + 1];
+              const segmentPath = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p2.x} ${opts.height - bottomMargin} L ${p1.x} ${opts.height - bottomMargin} Z`;
+              svg += `<path d="${segmentPath}" fill="${opts.color}"/>`;
+            }
+          } else {
+            const gradId = `grad${Date.now()}${Math.random()}`;
+            const opacity = parseFloat(opts.shading);
+            svg += `
+              <defs>
+                <linearGradient id="${gradId}" x1="${opts.gradient.start_offset}" y1="${opts.gradient.start_offset}" x2="${opts.gradient.start_offset}" y2="${opts.gradient.end_offset}">
+                  <stop offset="${opts.gradient.start_offset}" style="stop-color:${opts.color};stop-opacity:${opacity}"/>
+                  <stop offset="${opts.gradient.end_offset}" style="stop-color:${opts.color};stop-opacity:${opts.gradient.end_opacity}"/>
+                </linearGradient>
+              </defs>`;
+    
+            for (let i = 0; i < points.length - 1; i++) {
+              const p1 = points[i];
+              const p2 = points[i + 1];
+              const segmentPath = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p2.x} ${opts.height - bottomMargin} L ${p1.x} ${opts.height - bottomMargin} Z`;
+              svg += `<path d="${segmentPath}" fill="url(#${gradId})"/>`;
+            }
+          }
+        }
+    
+        svg += `<path d="${path}" stroke="${opts.color}" stroke-width="${opts.lineWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+    
+        svg += dots;
+      }
+    
+      const formatYTick = (value) => {
+        if (!opts.logScale) {
+          return value;
+        }
+        if (value === 0) {
+          return "0";
+        }
+        return value.toExponential(1);
+      };
+    
+      if (opts.yAxis.line || opts.yAxis.ticks) {
+        const barShift =
+          opts.style === "bar"
+            ? (chartWidth / yvals.length) * opts.bar.y_axis_shift_ratio
+            : 0;
+        const yAxisX = leftMargin - barShift;
+    
+        if (opts.yAxis.line) {
+          svg += `<line x1="${yAxisX}" y1="${opts.margin}" x2="${yAxisX}" y2="${opts.height - bottomMargin}"
+                        stroke="${opts.axis_style.color}" stroke-width="${opts.axis_style.width}"/>`;
+        }
+        if (opts.yAxis.ticks) {
+          svg += `<text x="${yAxisX - opts.yAxis.text_offset}" y="${opts.margin + opts.yAxis.text_y_offset + opts.axis_style.font_size}" font-size="${opts.axis_style.font_size}" fill="${opts.axis_style.text_color}" text-anchor="end">${formatYTick(ymaxForScale)}</text>`;
+          const lowerLabel =
+            opts.logScale && ymin === 0 ? "0" : formatYTick(yminForScale);
+          svg += `<text x="${yAxisX - opts.yAxis.text_offset}" y="${opts.height - bottomMargin + opts.yAxis.text_offset}" font-size="${opts.axis_style.font_size}" fill="${opts.axis_style.text_color}" text-anchor="end">${lowerLabel}</text>`;
+        }
+      }
+    
+      if (opts.xAxis.line) {
+        const xAxisEnd =
+          opts.style === "bar"
+            ? leftMargin + chartWidth - chartWidth / yvals.length / 2
+            : opts.width - opts.margin;
+        svg += `<line x1="${leftMargin}" y1="${opts.height - bottomMargin}" x2="${xAxisEnd}" y2="${opts.height - bottomMargin}"
+                        stroke="${opts.axis_style.color}" stroke-width="${opts.axis_style.width}"/>`;
+      }
+      if (opts.xAxis.ticks && yvals.length > 0) {
+        const xTickEnd =
+          opts.style === "bar"
+            ? leftMargin + chartWidth - chartWidth / yvals.length / 2
+            : opts.width - opts.margin;
+        const xLabelY =
+          opts.height -
+          bottomMargin +
+          opts.xAxis.text_offset +
+          opts.xAxis.text_y_position;
+        svg += `<text x="${leftMargin}" y="${xLabelY}" font-size="${opts.axis_style.font_size}" fill="${opts.axis_style.text_color}" text-anchor="middle">${xmin}</text>`;
+        svg += `<text x="${xTickEnd}" y="${xLabelY}" font-size="${opts.axis_style.font_size}" fill="${opts.axis_style.text_color}" text-anchor="middle">${xmax}</text>`;
+      }
+    
+      svg += "</svg>";
+    
+      return svg;
+    }
+    
+    function sparkline(values, yvalues = null, options = {}) {
+      return plot(values, yvalues, { ...options, style: "line" });
+    }
+    
+    function sparkbars(values, yvalues = null, options = {}) {
+      return plot(values, yvalues, { ...options, style: "bar" });
+    }
+    
+    </script>
+    <!-- end 'sparklines.js' -->
         <!-- begin 'clusterState.js' -->
     <script>
     /**
@@ -660,6 +1033,8 @@
       patternsBaseUrl: "",
       tooltip: null,
       sortByCluster: false,
+      patternSize: 100,
+      promptIndices: {},
     };
     
     /**
@@ -712,8 +1087,15 @@
         // Set up side pane
         setupSidePane();
     
-        // Initial render
-        updateClusters(config.defaultNClusters);
+        // Set up resizable divider
+        setupResizableDivider();
+    
+        // Initial render with cut height = 5
+        const initialCutHeight = 5;
+        document.getElementById("cut-height").value = initialCutHeight;
+        document.getElementById("cut-height-value").textContent =
+          initialCutHeight.toFixed(1);
+        updateClustersByHeight(initialCutHeight);
       } catch (error) {
         console.error("Error initializing grid view:", error);
         container.innerHTML = `<div class="error">Error loading data: ${error.message}</div>`;
@@ -798,8 +1180,55 @@
         updateSidePane();
       });
     
+      // Pattern size slider
+      document.getElementById("pattern-size").addEventListener("input", (e) => {
+        gridState.patternSize = parseInt(e.target.value);
+        document.querySelectorAll(".pattern-image").forEach((img) => {
+          img.style.width = gridState.patternSize + "px";
+          img.style.height = gridState.patternSize + "px";
+        });
+      });
+    
+      // Randomize prompts button
+      document.getElementById("randomize-prompts").addEventListener("click", () => {
+        gridState.promptIndices = {};
+        updateSidePane();
+      });
+    
       // Initial empty state
       updateSidePane();
+    }
+    
+    /**
+     * Set up resizable divider for split layout
+     */
+    function setupResizableDivider() {
+      const divider = document.getElementById("divider");
+      const rightPane = document.getElementById("right-pane");
+      let isDragging = false;
+    
+      divider.addEventListener("mousedown", (e) => {
+        isDragging = true;
+        divider.classList.add("dragging");
+        document.body.style.cursor = "col-resize";
+        e.preventDefault();
+      });
+    
+      document.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+        const containerRect = divider.parentElement.getBoundingClientRect();
+        const newRightWidth = containerRect.right - e.clientX;
+        const clampedWidth = Math.max(300, Math.min(800, newRightWidth));
+        rightPane.style.width = clampedWidth + "px";
+      });
+    
+      document.addEventListener("mouseup", () => {
+        if (isDragging) {
+          isDragging = false;
+          divider.classList.remove("dragging");
+          document.body.style.cursor = "";
+        }
+      });
     }
     
     /**
@@ -883,7 +1312,6 @@
       window.CLUSTER_STATE.setAssignments(assignments, nClusters);
       renderModelGrids();
       updateStats(assignments, nClusters);
-      updateLegend(assignments);
     }
     
     /**
@@ -900,7 +1328,6 @@
       window.CLUSTER_STATE.setAssignments(assignments, nClusters);
       renderModelGrids();
       updateStats(assignments, nClusters);
-      updateLegend(assignments);
     }
     
     /**
@@ -1001,8 +1428,17 @@
             cell.classList.add("selected");
           }
     
-          // Click handler
-          cell.addEventListener("click", () => toggleHeadSelection(headId));
+          // Click handler - shift-click selects all heads in cluster
+          cell.addEventListener("click", (e) => {
+            if (e.shiftKey) {
+              const clusterId = window.CLUSTER_STATE.getClusterId(headId);
+              if (clusterId !== undefined) {
+                selectCluster(clusterId);
+              }
+            } else {
+              toggleHeadSelection(headId);
+            }
+          });
     
           // Tooltip handlers
           cell.addEventListener("mouseenter", (e) => showTooltip(e, headId));
@@ -1055,6 +1491,18 @@
     }
     
     /**
+     * Shuffle array in place using Fisher-Yates algorithm
+     */
+    function shuffleArray(array) {
+      const result = [...array];
+      for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [result[i], result[j]] = [result[j], result[i]];
+      }
+      return result;
+    }
+    
+    /**
      * Update side pane with selected heads' patterns
      */
     async function updateSidePane() {
@@ -1065,7 +1513,7 @@
     
       if (gridState.selectedHeads.length === 0) {
         patternImages.innerHTML =
-          '<div class="empty-state">Click on cells to select heads and view their attention patterns.</div>';
+          '<div class="empty-state">Click on cells to select heads and view their attention patterns. Shift-click to select all heads in a cluster.</div>';
         return;
       }
     
@@ -1075,7 +1523,7 @@
         const section = document.createElement("div");
         section.className = "pattern-section";
     
-        // Header with color swatch
+        // Header with color swatch, clickable title, and arrow link
         const header = document.createElement("div");
         header.className = "pattern-section-header";
     
@@ -1084,10 +1532,12 @@
         colorSwatch.style.backgroundColor = window.CLUSTER_STATE.getColor(headId);
         header.appendChild(colorSwatch);
     
-        const title = document.createElement("span");
-        title.className = "pattern-section-title";
-        title.textContent = headId;
-        header.appendChild(title);
+        // Clickable head name -> attentionpedia page
+        const titleLink = document.createElement("a");
+        titleLink.className = "pattern-section-title";
+        titleLink.textContent = headId;
+        titleLink.href = `../attnpedia/index.html?head=${encodeURIComponent(headId)}`;
+        header.appendChild(titleLink);
     
         const clusterId = window.CLUSTER_STATE.getClusterId(headId);
         if (clusterId !== undefined) {
@@ -1097,11 +1547,19 @@
           header.appendChild(clusterLabel);
         }
     
+        // Arrow link to attentionpedia
+        const arrowLink = document.createElement("a");
+        arrowLink.className = "pattern-arrow";
+        arrowLink.href = `../attnpedia/index.html?head=${encodeURIComponent(headId)}`;
+        arrowLink.textContent = "\u2192";
+        arrowLink.title = "View in AttentionPedia";
+        header.appendChild(arrowLink);
+    
         section.appendChild(header);
     
-        // Pattern grid
-        const patternGrid = document.createElement("div");
-        patternGrid.className = "pattern-grid";
+        // Pattern row (horizontal scrolling)
+        const patternRow = document.createElement("div");
+        patternRow.className = "pattern-row";
     
         // Load prompts for this model if not cached
         const [modelName, layerPart, headPart] = headId.split(":");
@@ -1128,13 +1586,21 @@
           }
         }
     
-        // Show up to 6 patterns
+        // Get or generate shuffled prompt indices for this model
         const prompts = gridState.prompts[modelName] || [];
-        const maxPatterns = Math.min(6, prompts.length);
+        if (!gridState.promptIndices[modelName] && prompts.length > 0) {
+          const indices = Array.from({ length: prompts.length }, (_, i) => i);
+          gridState.promptIndices[modelName] = shuffleArray(indices);
+        }
+    
+        // Show up to 8 patterns using shuffled order
+        const promptOrder = gridState.promptIndices[modelName] || [];
+        const maxPatterns = Math.min(8, promptOrder.length);
     
         for (let i = 0; i < maxPatterns; i++) {
-          const prompt = prompts[i];
-          const hash = prompt.hash || prompt.prompt_hash;
+          const promptIdx = promptOrder[i];
+          const prompt = prompts[promptIdx];
+          const hash = prompt?.hash || prompt?.prompt_hash;
     
           if (hash) {
             const imgUrl = `${gridState.patternsBaseUrl}/${modelName}/prompts/${hash}/L${layer}/H${head}/attn.png`;
@@ -1143,10 +1609,12 @@
             img.src = imgUrl;
             img.alt = `Pattern for ${headId}`;
             img.loading = "lazy";
+            img.style.width = gridState.patternSize + "px";
+            img.style.height = gridState.patternSize + "px";
             img.onerror = () => {
               img.style.display = "none";
             };
-            patternGrid.appendChild(img);
+            patternRow.appendChild(img);
           }
         }
     
@@ -1154,10 +1622,10 @@
           const placeholder = document.createElement("div");
           placeholder.className = "pattern-image-placeholder";
           placeholder.textContent = "No patterns";
-          patternGrid.appendChild(placeholder);
+          patternRow.appendChild(placeholder);
         }
     
-        section.appendChild(patternGrid);
+        section.appendChild(patternRow);
         patternImages.appendChild(section);
       }
     }
@@ -1194,7 +1662,7 @@
     }
     
     /**
-     * Update statistics display
+     * Update statistics display with sparkline
      */
     function updateStats(assignments, nClusters) {
       const sizes = window.CLUSTER_STATE.getClusterSizes();
@@ -1202,35 +1670,28 @@
     
       const statsEl = document.getElementById("stats");
       statsEl.innerHTML = `
-        <span><strong>Total Heads:</strong> ${gridState.nHeads}</span>
-        <span><strong>Clusters:</strong> ${nClusters}</span>
-        <span><strong>Largest Cluster:</strong> ${sortedSizes[0]} heads</span>
-        <span><strong>Smallest Cluster:</strong> ${sortedSizes[sortedSizes.length - 1]} heads</span>
+        <div class="stats-text">
+          <span><strong>Total Heads:</strong> ${gridState.nHeads}</span>
+          <span><strong>Clusters:</strong> ${nClusters}</span>
+          <span><strong>Largest:</strong> ${sortedSizes[0]}</span>
+          <span><strong>Smallest:</strong> ${sortedSizes[sortedSizes.length - 1]}</span>
+        </div>
+        <div class="stats-sparkline" id="stats-sparkline">
+          <span class="stats-sparkline-label">Distribution:</span>
+        </div>
       `;
-    }
     
-    /**
-     * Update legend display
-     */
-    function updateLegend(assignments) {
-      const sizes = window.CLUSTER_STATE.getClusterSizes();
-      const legendEl = document.getElementById("legend");
-    
-      const sortedClusters = Object.entries(sizes)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 20);
-    
-      legendEl.innerHTML = sortedClusters
-        .map(
-          ([clusterId, count]) => `
-          <div class="legend-item" onclick="selectCluster(${clusterId})">
-            <div class="legend-swatch" style="background: ${window.CLUSTER_STATE.colors[clusterId]}"></div>
-            <span>Cluster ${clusterId}</span>
-            <span class="legend-count">(${count})</span>
-          </div>
-        `,
-        )
-        .join("");
+      // Add sparkline bar chart
+      if (sortedSizes.length > 0) {
+        const sparklineContainer = document.getElementById("stats-sparkline");
+        const svgString = sparkbars(sortedSizes, null, {
+          width: 200,
+          height: 40,
+          color: "#1565c0",
+          yAxis: { ticks: true },
+        });
+        sparklineContainer.insertAdjacentHTML("beforeend", svgString);
+      }
     }
     
     /**

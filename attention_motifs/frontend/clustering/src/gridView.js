@@ -16,6 +16,8 @@ let gridState = {
   patternsBaseUrl: "",
   tooltip: null,
   sortByCluster: false,
+  patternSize: 100,
+  promptIndices: {},
 };
 
 /**
@@ -68,8 +70,15 @@ async function initGridView(config) {
     // Set up side pane
     setupSidePane();
 
-    // Initial render
-    updateClusters(config.defaultNClusters);
+    // Set up resizable divider
+    setupResizableDivider();
+
+    // Initial render with cut height = 5
+    const initialCutHeight = 5;
+    document.getElementById("cut-height").value = initialCutHeight;
+    document.getElementById("cut-height-value").textContent =
+      initialCutHeight.toFixed(1);
+    updateClustersByHeight(initialCutHeight);
   } catch (error) {
     console.error("Error initializing grid view:", error);
     container.innerHTML = `<div class="error">Error loading data: ${error.message}</div>`;
@@ -154,8 +163,55 @@ function setupSidePane() {
     updateSidePane();
   });
 
+  // Pattern size slider
+  document.getElementById("pattern-size").addEventListener("input", (e) => {
+    gridState.patternSize = parseInt(e.target.value);
+    document.querySelectorAll(".pattern-image").forEach((img) => {
+      img.style.width = gridState.patternSize + "px";
+      img.style.height = gridState.patternSize + "px";
+    });
+  });
+
+  // Randomize prompts button
+  document.getElementById("randomize-prompts").addEventListener("click", () => {
+    gridState.promptIndices = {};
+    updateSidePane();
+  });
+
   // Initial empty state
   updateSidePane();
+}
+
+/**
+ * Set up resizable divider for split layout
+ */
+function setupResizableDivider() {
+  const divider = document.getElementById("divider");
+  const rightPane = document.getElementById("right-pane");
+  let isDragging = false;
+
+  divider.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    divider.classList.add("dragging");
+    document.body.style.cursor = "col-resize";
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!isDragging) return;
+    const containerRect = divider.parentElement.getBoundingClientRect();
+    const newRightWidth = containerRect.right - e.clientX;
+    const clampedWidth = Math.max(300, Math.min(800, newRightWidth));
+    rightPane.style.width = clampedWidth + "px";
+  });
+
+  document.addEventListener("mouseup", () => {
+    if (isDragging) {
+      isDragging = false;
+      divider.classList.remove("dragging");
+      document.body.style.cursor = "";
+    }
+  });
 }
 
 /**
@@ -239,7 +295,6 @@ function updateClusters(nClusters) {
   window.CLUSTER_STATE.setAssignments(assignments, nClusters);
   renderModelGrids();
   updateStats(assignments, nClusters);
-  updateLegend(assignments);
 }
 
 /**
@@ -256,7 +311,6 @@ function updateClustersByHeight(cutHeight) {
   window.CLUSTER_STATE.setAssignments(assignments, nClusters);
   renderModelGrids();
   updateStats(assignments, nClusters);
-  updateLegend(assignments);
 }
 
 /**
@@ -357,8 +411,17 @@ function renderModelBox(container, modelName) {
         cell.classList.add("selected");
       }
 
-      // Click handler
-      cell.addEventListener("click", () => toggleHeadSelection(headId));
+      // Click handler - shift-click selects all heads in cluster
+      cell.addEventListener("click", (e) => {
+        if (e.shiftKey) {
+          const clusterId = window.CLUSTER_STATE.getClusterId(headId);
+          if (clusterId !== undefined) {
+            selectCluster(clusterId);
+          }
+        } else {
+          toggleHeadSelection(headId);
+        }
+      });
 
       // Tooltip handlers
       cell.addEventListener("mouseenter", (e) => showTooltip(e, headId));
@@ -411,6 +474,18 @@ function updateSelectedCells() {
 }
 
 /**
+ * Shuffle array in place using Fisher-Yates algorithm
+ */
+function shuffleArray(array) {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+/**
  * Update side pane with selected heads' patterns
  */
 async function updateSidePane() {
@@ -421,7 +496,7 @@ async function updateSidePane() {
 
   if (gridState.selectedHeads.length === 0) {
     patternImages.innerHTML =
-      '<div class="empty-state">Click on cells to select heads and view their attention patterns.</div>';
+      '<div class="empty-state">Click on cells to select heads and view their attention patterns. Shift-click to select all heads in a cluster.</div>';
     return;
   }
 
@@ -431,7 +506,7 @@ async function updateSidePane() {
     const section = document.createElement("div");
     section.className = "pattern-section";
 
-    // Header with color swatch
+    // Header with color swatch, clickable title, and arrow link
     const header = document.createElement("div");
     header.className = "pattern-section-header";
 
@@ -440,10 +515,12 @@ async function updateSidePane() {
     colorSwatch.style.backgroundColor = window.CLUSTER_STATE.getColor(headId);
     header.appendChild(colorSwatch);
 
-    const title = document.createElement("span");
-    title.className = "pattern-section-title";
-    title.textContent = headId;
-    header.appendChild(title);
+    // Clickable head name -> attentionpedia page
+    const titleLink = document.createElement("a");
+    titleLink.className = "pattern-section-title";
+    titleLink.textContent = headId;
+    titleLink.href = `../attnpedia/index.html?head=${encodeURIComponent(headId)}`;
+    header.appendChild(titleLink);
 
     const clusterId = window.CLUSTER_STATE.getClusterId(headId);
     if (clusterId !== undefined) {
@@ -453,11 +530,19 @@ async function updateSidePane() {
       header.appendChild(clusterLabel);
     }
 
+    // Arrow link to attentionpedia
+    const arrowLink = document.createElement("a");
+    arrowLink.className = "pattern-arrow";
+    arrowLink.href = `../attnpedia/index.html?head=${encodeURIComponent(headId)}`;
+    arrowLink.textContent = "\u2192";
+    arrowLink.title = "View in AttentionPedia";
+    header.appendChild(arrowLink);
+
     section.appendChild(header);
 
-    // Pattern grid
-    const patternGrid = document.createElement("div");
-    patternGrid.className = "pattern-grid";
+    // Pattern row (horizontal scrolling)
+    const patternRow = document.createElement("div");
+    patternRow.className = "pattern-row";
 
     // Load prompts for this model if not cached
     const [modelName, layerPart, headPart] = headId.split(":");
@@ -484,13 +569,21 @@ async function updateSidePane() {
       }
     }
 
-    // Show up to 6 patterns
+    // Get or generate shuffled prompt indices for this model
     const prompts = gridState.prompts[modelName] || [];
-    const maxPatterns = Math.min(6, prompts.length);
+    if (!gridState.promptIndices[modelName] && prompts.length > 0) {
+      const indices = Array.from({ length: prompts.length }, (_, i) => i);
+      gridState.promptIndices[modelName] = shuffleArray(indices);
+    }
+
+    // Show up to 8 patterns using shuffled order
+    const promptOrder = gridState.promptIndices[modelName] || [];
+    const maxPatterns = Math.min(8, promptOrder.length);
 
     for (let i = 0; i < maxPatterns; i++) {
-      const prompt = prompts[i];
-      const hash = prompt.hash || prompt.prompt_hash;
+      const promptIdx = promptOrder[i];
+      const prompt = prompts[promptIdx];
+      const hash = prompt?.hash || prompt?.prompt_hash;
 
       if (hash) {
         const imgUrl = `${gridState.patternsBaseUrl}/${modelName}/prompts/${hash}/L${layer}/H${head}/attn.png`;
@@ -499,10 +592,12 @@ async function updateSidePane() {
         img.src = imgUrl;
         img.alt = `Pattern for ${headId}`;
         img.loading = "lazy";
+        img.style.width = gridState.patternSize + "px";
+        img.style.height = gridState.patternSize + "px";
         img.onerror = () => {
           img.style.display = "none";
         };
-        patternGrid.appendChild(img);
+        patternRow.appendChild(img);
       }
     }
 
@@ -510,10 +605,10 @@ async function updateSidePane() {
       const placeholder = document.createElement("div");
       placeholder.className = "pattern-image-placeholder";
       placeholder.textContent = "No patterns";
-      patternGrid.appendChild(placeholder);
+      patternRow.appendChild(placeholder);
     }
 
-    section.appendChild(patternGrid);
+    section.appendChild(patternRow);
     patternImages.appendChild(section);
   }
 }
@@ -550,7 +645,7 @@ function hideTooltip() {
 }
 
 /**
- * Update statistics display
+ * Update statistics display with sparkline
  */
 function updateStats(assignments, nClusters) {
   const sizes = window.CLUSTER_STATE.getClusterSizes();
@@ -558,35 +653,28 @@ function updateStats(assignments, nClusters) {
 
   const statsEl = document.getElementById("stats");
   statsEl.innerHTML = `
-    <span><strong>Total Heads:</strong> ${gridState.nHeads}</span>
-    <span><strong>Clusters:</strong> ${nClusters}</span>
-    <span><strong>Largest Cluster:</strong> ${sortedSizes[0]} heads</span>
-    <span><strong>Smallest Cluster:</strong> ${sortedSizes[sortedSizes.length - 1]} heads</span>
+    <div class="stats-text">
+      <span><strong>Total Heads:</strong> ${gridState.nHeads}</span>
+      <span><strong>Clusters:</strong> ${nClusters}</span>
+      <span><strong>Largest:</strong> ${sortedSizes[0]}</span>
+      <span><strong>Smallest:</strong> ${sortedSizes[sortedSizes.length - 1]}</span>
+    </div>
+    <div class="stats-sparkline" id="stats-sparkline">
+      <span class="stats-sparkline-label">Distribution:</span>
+    </div>
   `;
-}
 
-/**
- * Update legend display
- */
-function updateLegend(assignments) {
-  const sizes = window.CLUSTER_STATE.getClusterSizes();
-  const legendEl = document.getElementById("legend");
-
-  const sortedClusters = Object.entries(sizes)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 20);
-
-  legendEl.innerHTML = sortedClusters
-    .map(
-      ([clusterId, count]) => `
-      <div class="legend-item" onclick="selectCluster(${clusterId})">
-        <div class="legend-swatch" style="background: ${window.CLUSTER_STATE.colors[clusterId]}"></div>
-        <span>Cluster ${clusterId}</span>
-        <span class="legend-count">(${count})</span>
-      </div>
-    `,
-    )
-    .join("");
+  // Add sparkline bar chart
+  if (sortedSizes.length > 0) {
+    const sparklineContainer = document.getElementById("stats-sparkline");
+    const svgString = sparkbars(sortedSizes, null, {
+      width: 200,
+      height: 40,
+      color: "#1565c0",
+      yAxis: { ticks: true },
+    });
+    sparklineContainer.insertAdjacentHTML("beforeend", svgString);
+  }
 }
 
 /**

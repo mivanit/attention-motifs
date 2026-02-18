@@ -57,20 +57,35 @@
 
       <div class="stats" id="stats"></div>
 
-      <div class="main-content">
-        <div id="model-grids-container"></div>
-        <div id="side-pane" class="side-pane">
-          <div class="side-pane-header">
+      <div class="split-container">
+        <div class="left-pane" id="left-pane">
+          <div id="model-grids-container"></div>
+        </div>
+        <div class="divider" id="divider"></div>
+        <div class="right-pane" id="right-pane">
+          <div class="right-pane-header">
             <h3>Selected Heads <span id="selected-count">(0)</span></h3>
-            <button id="clear-selection">Clear</button>
+            <div class="right-pane-controls">
+              <label>Size:</label>
+              <input
+                type="range"
+                id="pattern-size"
+                min="60"
+                max="200"
+                value="100"
+              />
+              <button id="randomize-prompts" class="toggle-btn">
+                Randomize
+              </button>
+              <button id="clear-selection" class="toggle-btn">Clear</button>
+            </div>
           </div>
           <div id="pattern-images"></div>
         </div>
       </div>
-
-      <div class="legend" id="legend"></div>
     </div>
 
+    <script src="sparklines.js"></script>
     <script src="clusterState.js"></script>
     <script src="gridView.js"></script>
     <script>
