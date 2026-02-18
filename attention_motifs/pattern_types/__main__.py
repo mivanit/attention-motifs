@@ -45,6 +45,7 @@ def export_command(args: argparse.Namespace) -> None:
 		cut_height=args.cut_height if args.n_clusters is None else None,
 		n_clusters=args.n_clusters,
 		clustering_path=str(clustering_path),
+		min_cluster_size=args.min_cluster_size,
 	)
 
 	# Print stats
@@ -94,6 +95,12 @@ def main() -> None:
 		type=str,
 		required=True,
 		help="Output path for pattern types JSON",
+	)
+	export_parser.add_argument(
+		"--min-cluster-size",
+		type=int,
+		default=None,
+		help="Minimum cluster size; smaller clusters get merged into 'misc'",
 	)
 	export_parser.set_defaults(func=export_command)
 

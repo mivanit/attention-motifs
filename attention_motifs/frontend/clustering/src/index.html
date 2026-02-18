@@ -52,10 +52,16 @@
         <div class="control-group">
           <label>Sort:</label>
           <button id="sort-toggle" class="toggle-btn">By Index</button>
+          <select id="model-order" class="dropdown">
+            <option value="data">Data Order</option>
+            <option value="size">By Size</option>
+            <option value="family">By Family</option>
+          </select>
         </div>
       </div>
 
       <div class="stats" id="stats"></div>
+      <div class="top-clusters" id="top-clusters"></div>
 
       <div class="split-container">
         <div class="left-pane" id="left-pane">

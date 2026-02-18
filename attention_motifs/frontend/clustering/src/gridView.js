@@ -18,7 +18,102 @@ let gridState = {
   sortByCluster: false,
   patternSize: 100,
   promptIndices: {},
+  logScale: false,
+  currentAssignments: null,
+  currentNClusters: 0,
+  modelSizes: {},
+  modelOrder: "data",
+  originalModelOrder: [],
 };
+
+/**
+ * Parse model sizes from TransformerLens CSV
+ * @param {string} csvText - Raw CSV content
+ * @returns {Object.<string, number>} Map of model name to n_params
+ */
+function parseModelSizes(csvText) {
+  const sizes = {};
+  const lines = csvText.trim().split("\n");
+
+  // Find column indices from header
+  const header = lines[0].split(",");
+  const nameIdx = header.findIndex((h) => h.includes("default_alias"));
+  const paramsIdx = header.findIndex((h) => h === "n_params.as_int");
+
+  if (nameIdx === -1 || paramsIdx === -1) {
+    console.warn("Could not find expected columns in CSV");
+    return sizes;
+  }
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(",");
+    const name = cols[nameIdx]?.trim();
+    const params = parseInt(cols[paramsIdx]);
+    if (name && !isNaN(params)) {
+      sizes[name] = params;
+    }
+  }
+
+  return sizes;
+}
+
+/**
+ * Extract model family/type from model name
+ * @param {string} modelName - e.g., "gpt2-small", "pythia-70m"
+ * @returns {string} Model family - e.g., "gpt2", "pythia"
+ */
+function getModelFamily(modelName) {
+  const parts = modelName.split("-");
+  if (parts.length > 1) {
+    return parts.slice(0, -1).join("-");
+  }
+  return modelName;
+}
+
+/**
+ * Get model names in current sort order
+ * @returns {string[]} Sorted model names
+ */
+function getSortedModelNames() {
+  const models = gridState.originalModelOrder;
+
+  if (gridState.modelOrder === "data") {
+    return models;
+  }
+
+  if (gridState.modelOrder === "size") {
+    return [...models].sort((a, b) => {
+      const sizeA = gridState.modelSizes[a] ?? Infinity;
+      const sizeB = gridState.modelSizes[b] ?? Infinity;
+      return sizeA - sizeB;
+    });
+  }
+
+  if (gridState.modelOrder === "family") {
+    // Group by family, sort families alphabetically, sort by size within family
+    const byFamily = {};
+    for (const model of models) {
+      const family = getModelFamily(model);
+      if (!byFamily[family]) byFamily[family] = [];
+      byFamily[family].push(model);
+    }
+
+    // Sort each family by size
+    for (const family of Object.keys(byFamily)) {
+      byFamily[family].sort((a, b) => {
+        const sizeA = gridState.modelSizes[a] ?? Infinity;
+        const sizeB = gridState.modelSizes[b] ?? Infinity;
+        return sizeA - sizeB;
+      });
+    }
+
+    // Sort families alphabetically and flatten
+    const sortedFamilies = Object.keys(byFamily).sort();
+    return sortedFamilies.flatMap((f) => byFamily[f]);
+  }
+
+  return models;
+}
 
 /**
  * Initialize the grid view visualization
@@ -59,6 +154,20 @@ async function initGridView(config) {
           n_heads: cfg.n_heads,
         };
       }
+    }
+
+    // Store original model order
+    gridState.originalModelOrder = Object.keys(gridState.modelConfigs);
+
+    // Fetch model sizes from TransformerLens model table
+    try {
+      const csvUrl =
+        "https://raw.githubusercontent.com/mivanit/transformerlens-model-table/refs/heads/main/docs/model_table.csv";
+      const csvResponse = await fetch(csvUrl);
+      const csvText = await csvResponse.text();
+      gridState.modelSizes = parseModelSizes(csvText);
+    } catch (e) {
+      console.warn("Failed to load model sizes:", e);
     }
 
     // Set up controls
@@ -138,6 +247,12 @@ function setupControls(defaultNClusters) {
       ? "By Cluster"
       : "By Index";
     sortToggle.classList.toggle("active", gridState.sortByCluster);
+    renderModelGrids();
+  });
+
+  // Model order dropdown
+  document.getElementById("model-order").addEventListener("change", (e) => {
+    gridState.modelOrder = e.target.value;
     renderModelGrids();
   });
 }
@@ -321,7 +436,7 @@ function renderModelGrids() {
   container.innerHTML = "";
   container.style.setProperty("--scale", gridState.scale);
 
-  for (const modelName of Object.keys(gridState.modelConfigs)) {
+  for (const modelName of getSortedModelNames()) {
     renderModelBox(container, modelName);
   }
 }
@@ -648,6 +763,10 @@ function hideTooltip() {
  * Update statistics display with sparkline
  */
 function updateStats(assignments, nClusters) {
+  // Store for re-rendering when toggling log scale
+  gridState.currentAssignments = assignments;
+  gridState.currentNClusters = nClusters;
+
   const sizes = window.CLUSTER_STATE.getClusterSizes();
   const sortedSizes = Object.values(sizes).sort((a, b) => b - a);
 
@@ -661,6 +780,7 @@ function updateStats(assignments, nClusters) {
     </div>
     <div class="stats-sparkline" id="stats-sparkline">
       <span class="stats-sparkline-label">Distribution:</span>
+      <button class="scale-toggle toggle-btn" id="scale-toggle">${gridState.logScale ? "Log" : "Linear"}</button>
     </div>
   `;
 
@@ -672,9 +792,67 @@ function updateStats(assignments, nClusters) {
       height: 40,
       color: "#1565c0",
       yAxis: { ticks: true },
+      logScale: gridState.logScale,
     });
     sparklineContainer.insertAdjacentHTML("beforeend", svgString);
+
+    // Add toggle handler
+    document.getElementById("scale-toggle").addEventListener("click", () => {
+      gridState.logScale = !gridState.logScale;
+      updateStats(gridState.currentAssignments, gridState.currentNClusters);
+    });
   }
+
+  // Render top clusters list
+  renderTopClusters();
+}
+
+/**
+ * Render the top 20 largest clusters as clickable chips
+ */
+function renderTopClusters() {
+  const container = document.getElementById("top-clusters");
+  if (!container) return;
+
+  const sizes = window.CLUSTER_STATE.getClusterSizes();
+
+  // Sort clusters by size descending, take top 20
+  const sortedClusters = Object.entries(sizes)
+    .map(([clusterId, size]) => ({ clusterId: parseInt(clusterId), size }))
+    .sort((a, b) => b.size - a.size)
+    .slice(0, 20);
+
+  container.innerHTML = `
+    <span class="top-clusters-label">Top ${sortedClusters.length} clusters:</span>
+    ${sortedClusters
+      .map(({ clusterId, size }) => {
+        const color =
+          window.CLUSTER_STATE.colors[
+            clusterId % window.CLUSTER_STATE.colors.length
+          ];
+        const heads = window.CLUSTER_STATE.getHeadsInCluster(clusterId);
+        const allSelected =
+          heads.length > 0 &&
+          heads.every((h) => gridState.selectedHeads.includes(h));
+        const selectedClass = allSelected ? "selected" : "";
+        return `
+          <div class="cluster-chip ${selectedClass}" data-cluster-id="${clusterId}">
+            <span class="cluster-chip-color" style="background-color: ${color}"></span>
+            <span class="cluster-chip-size">${size}</span>
+          </div>
+        `;
+      })
+      .join("")}
+  `;
+
+  // Add click handlers
+  container.querySelectorAll(".cluster-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const clusterId = parseInt(chip.dataset.clusterId);
+      selectCluster(clusterId);
+      renderTopClusters(); // Re-render to update selection state
+    });
+  });
 }
 
 /**

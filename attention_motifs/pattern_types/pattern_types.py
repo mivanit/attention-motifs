@@ -29,6 +29,7 @@ class PatternTypesMetaDict(TypedDict):
 	linkage_method: str
 	clustering_path: str
 	created_at: str
+	min_cluster_size: int | None
 
 
 class PatternTypesStatsDict(TypedDict):
@@ -89,6 +90,7 @@ class PatternTypesMeta:
 		linkage_method: Linkage method used (e.g., "average", "ward")
 		clustering_path: Path to source clustering data
 		created_at: ISO timestamp of when this was created
+		min_cluster_size: Minimum cluster size threshold (clusters below merged to misc)
 	"""
 
 	cut_height: float | None
@@ -96,6 +98,7 @@ class PatternTypesMeta:
 	linkage_method: str
 	clustering_path: str
 	created_at: str
+	min_cluster_size: int | None = None
 
 	def serialize(self) -> PatternTypesMetaDict:
 		"""Convert to JSON-compatible dict."""
@@ -105,6 +108,7 @@ class PatternTypesMeta:
 			linkage_method=self.linkage_method,
 			clustering_path=self.clustering_path,
 			created_at=self.created_at,
+			min_cluster_size=self.min_cluster_size,
 		)
 
 	@classmethod
@@ -116,6 +120,7 @@ class PatternTypesMeta:
 			linkage_method=data["linkage_method"],
 			clustering_path=data["clustering_path"],
 			created_at=data["created_at"],
+			min_cluster_size=data.get("min_cluster_size"),
 		)
 
 
@@ -233,6 +238,8 @@ class PatternTypes:
 
 	# --- Factory ---
 
+	MISC_CLUSTER_ID: int = -1
+
 	@classmethod
 	def from_clustering(
 		cls,
@@ -240,6 +247,7 @@ class PatternTypes:
 		cut_height: float | None = None,
 		n_clusters: int | None = None,
 		clustering_path: str = "",
+		min_cluster_size: int | None = None,
 	) -> "PatternTypes":
 		"""Create PatternTypes from a clustering result.
 
@@ -248,6 +256,7 @@ class PatternTypes:
 			cut_height: Height at which to cut the dendrogram
 			n_clusters: Number of clusters (alternative to cut_height)
 			clustering_path: Path to source clustering data (for metadata)
+			min_cluster_size: Minimum cluster size; smaller clusters merged into "misc"
 
 		Returns:
 			PatternTypes with unlabeled types and cluster assignments
@@ -257,6 +266,25 @@ class PatternTypes:
 			n_clusters=n_clusters,
 			cut_height=cut_height,
 		)
+
+		# Merge small clusters into misc if min_cluster_size specified
+		if min_cluster_size is not None and min_cluster_size > 1:
+			# Count cluster sizes
+			cluster_counts: dict[int, int] = {}
+			for cluster_id in assignments.values():
+				cluster_counts[cluster_id] = cluster_counts.get(cluster_id, 0) + 1
+
+			# Find small clusters
+			small_clusters: set[int] = {
+				cid for cid, count in cluster_counts.items() if count < min_cluster_size
+			}
+
+			# Reassign small cluster heads to misc
+			if small_clusters:
+				assignments = {
+					head_id: cls.MISC_CLUSTER_ID if cid in small_clusters else cid
+					for head_id, cid in assignments.items()
+				}
 
 		# Compute stats
 		n_heads: int = len(assignments)
@@ -275,6 +303,7 @@ class PatternTypes:
 			linkage_method=clustering.linkage_method,
 			clustering_path=clustering_path,
 			created_at=datetime.now(timezone.utc).isoformat(),
+			min_cluster_size=min_cluster_size,
 		)
 
 		# Create stats
@@ -284,10 +313,13 @@ class PatternTypes:
 		)
 
 		# Create unlabeled types for each cluster
-		types: list[PatternType] = [
-			PatternType(id=i, name="none", description="none")
-			for i in sorted(cluster_ids)
-		]
+		# Sort so misc (-1) comes first if present
+		types: list[PatternType] = []
+		for i in sorted(cluster_ids):
+			if i == cls.MISC_CLUSTER_ID:
+				types.append(PatternType(id=i, name="misc", description="Small clusters merged together"))
+			else:
+				types.append(PatternType(id=i, name="none", description="none"))
 
 		return cls(
 			meta=meta,
