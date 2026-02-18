@@ -16,16 +16,16 @@ prompts_n_samples = 2
 prompts_min_chars = 10
 prompts_max_chars = 100
 
+embedding_n_neighbors_list = [2, 4]
+
 # computing -- no effect on the results
-n_proc = 12
-device = "cuda:0"
+n_proc = 4
+device = "cpu"
 
 verbose = 99
 figures_dir = "tests/.temp/figures"
 
-
-embedding_n_neighbors_list = [2, 4]
-
 [vis_configs.attentionpedia.cfg]
-head_viewing = "tiny-stories-1M:L0:H0"
+head_viewing = "tiny-stories-1M:L0:H0" # default head to view?
+# TODO: what does this do?
 prompts_url = "../../patterns/tiny-stories-1M/prompts.jsonl"
