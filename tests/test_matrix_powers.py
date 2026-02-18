@@ -142,6 +142,7 @@ class TestMatrixPowers:
 		np.testing.assert_allclose(result[0], expected)
 		np.testing.assert_allclose(result_torch[0], expected)
 
+	@pytest.mark.benchmark
 	def test_performance(self) -> None:
 		"""Test that binary exponentiation is more efficient than naive approach."""
 		import time
