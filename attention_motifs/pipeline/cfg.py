@@ -231,6 +231,7 @@ class PipelineConfig:
 	plot_kwargs: dict[PlotKwargKey, int] = field(
 		default_factory=lambda: dict(
 			pca_all_dpi=500,  # default DPI for PCA all figure
+			n_dims=5,  # default number of dimensions for PCA and other embeddings
 		),
 	)
 	verbose: int = 1

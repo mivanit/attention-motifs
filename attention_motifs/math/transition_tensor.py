@@ -16,8 +16,8 @@ def cross_entropy(
 	p: Float[np.ndarray, " d"],
 	q: Float[np.ndarray, " d"],
 ) -> float:
-	"$H(p,q)=-\sum _{x\in {\mathcal {X}}}p(x)\,\log q(x)$"
-	return -np.sum(p * np.log(q))
+	r"$H(p,q)=-\sum _{x\in {\mathcal {X}}}p(x)\,\log q(x)$"
+	return -float(np.sum(p * np.log(q)))
 
 
 def l2_norm(
@@ -31,7 +31,7 @@ def kl_divergence(
 	p: Float[np.ndarray, " d"],
 	q: Float[np.ndarray, " d"],
 ) -> float:
-	return np.sum(p * np.log(p / q))
+	return float(np.sum(p * np.log(p / q)))
 
 
 def sigmoid(

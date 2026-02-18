@@ -235,10 +235,10 @@ def plot_embedding(
 
 		# Support per-label alpha / marker size like the original
 		alpha_value = (
-			alpha.get(label, alpha.get(None, 0.9)) if isinstance(alpha, dict) else alpha
+			alpha.get(str(label), 0.9) if isinstance(alpha, dict) else alpha
 		)
 		size_value = (
-			marker_size.get(label, marker_size.get(None, 1))
+			marker_size.get(str(label), 1)
 			if isinstance(marker_size, dict)
 			else marker_size
 		)

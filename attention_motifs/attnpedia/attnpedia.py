@@ -1,7 +1,7 @@
 import json
 import sys
 import matplotlib.colors as mcolors
-from typing import Callable, Literal
+from typing import Callable, TypedDict
 import warnings
 from pathlib import Path
 import importlib.resources
@@ -12,11 +12,11 @@ import polars as pl
 import attention_motifs
 
 ATTNPEDIA_PATH: Path = (
-	Path(importlib.resources.files(attention_motifs)) / "attnpedia" / "attn-pedia.json"
+	Path(str(importlib.resources.files(attention_motifs))) / "attnpedia" / "attn-pedia.json"
 )
 
 ATTNPEDIA_GROUPS_PATH: Path = (
-	Path(importlib.resources.files(attention_motifs))
+	Path(str(importlib.resources.files(attention_motifs)))
 	/ "attnpedia"
 	/ "attn-pedia-groups.json"
 )
@@ -89,23 +89,37 @@ def heads_from_strings(head_strs: list[str]) -> list[tuple[int, int]]:
 	return [parse_head(s) for s in head_strs]
 
 
-AttentionPediaSchema = list[
-	dict[
-		# all values are strings, except for the "classes" key
-		# which is a list of dictionaries
-		Literal["prefix", "url", "notes", "model", "classes"],
-		str
-		| list[
-			dict[
-				Literal["type", "heads"],
-				# "type" maps to a string, "heads" maps to a list of strings
-				# where each string is of the form "L{layer}:H{head}"
-				# e.g. "L0:H0", "L5:H7", etc.
-				str | list[str],
-			]
-		],
-	]
-]
+class HeadClassSchema(TypedDict):
+	"""Schema for a head classification entry.
+
+	Attributes:
+		type: Classification type name (e.g. "induction", "previous_token")
+		heads: List of head IDs in format "L{layer}:H{head}" (e.g. "L0:H0", "L5:H7")
+	"""
+
+	type: str
+	heads: list[str]
+
+
+class PaperGroupSchema(TypedDict):
+	"""Schema for a paper/research group entry in the AttentionPedia JSON.
+
+	Attributes:
+		prefix: Short identifier for the paper (e.g. "olsson2022")
+		url: URL to the paper or resource
+		notes: Additional notes about the paper's findings
+		model: Model name the classifications apply to (e.g. "gpt2-small")
+		classes: List of head classification entries from this paper
+	"""
+
+	prefix: str
+	url: str
+	notes: str
+	model: str
+	classes: list[HeadClassSchema]
+
+
+AttentionPediaSchema = list[PaperGroupSchema]
 
 
 class AttentionPedia:

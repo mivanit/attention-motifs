@@ -15,8 +15,8 @@ def generate_activations(cfg: PipelineConfig) -> None:
 		pipeline_model_progress(idx, n_models, model_name)
 		activations_main(
 			model_name=model_name,
-			save_path=cfg.patterns_dir,
-			prompts_path=cfg.prompts_file,
+			save_path=str(cfg.patterns_dir),
+			prompts_path=str(cfg.prompts_file),
 			raw_prompts=True,
 			min_chars=cfg.prompts_min_chars,
 			max_chars=cfg.prompts_max_chars,

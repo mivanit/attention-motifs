@@ -131,7 +131,7 @@ def filter_data(
 	)
 	for col in remove_cols:
 		# Assuming array_summary is defined elsewhere.
-		print(f"{col:<60} {array_summary(df_models_dropped[col].to_numpy())}")
+		print(f"{col:<60} {array_summary(df_models_dropped[col].to_numpy(), as_list=False)}")
 
 	df_filtered: pl.DataFrame = df_models_dropped.drop(remove_cols)
 	return df_filtered
@@ -417,7 +417,7 @@ def plot_importance_covariance(
 
 	if 0 < trim_frac < 0.5:
 		pos = ax_imp.get_position()
-		ax_imp.set_position([pos.x0, pos.y0, pos.width * (1 - trim_frac), pos.height])
+		ax_imp.set_position((pos.x0, pos.y0, pos.width * (1 - trim_frac), pos.height))
 
 	# ---------- optional histogram ---------------------------------------
 	# if bins:
@@ -729,7 +729,7 @@ class DistanceTensorResult(SerializableDataclass):
 	) -> Axes:
 		assert not self.is_reduced, "plot_hists() only works if we haven't reduced"
 		max_dist: float = np.max(self.distances)
-		bins = np.linspace(0, max_dist, bins)
+		bin_edges: np.ndarray = np.linspace(0, max_dist, bins)
 		n_heads: int = self.n_heads
 		print(f"{n_heads=}, {max_dist=}")
 		if n_samples is not None:
@@ -741,11 +741,11 @@ class DistanceTensorResult(SerializableDataclass):
 			for j in range(i + 1, n_heads):
 				hist, _ = np.histogram(
 					self.distances[i, j],
-					bins=bins,
+					bins=bin_edges,
 					density=True,
 				)
 				ax.plot(
-					bins[:-1] - self.mean_dists[i, j],
+					bin_edges[:-1] - self.mean_dists[i, j],
 					hist,
 					color="black",
 					alpha=alpha,
@@ -795,7 +795,7 @@ class DistanceTensorResult(SerializableDataclass):
 		# ---------------- colours ---------------------------------------------
 		models: list[str] = sorted({model for model, _, _ in sorted_entries})
 		model_rgb: dict[str, tuple[float, float, float]] = {
-			model: plt.cm.tab10(i)[:3] for i, model in enumerate(models)
+			model: plt.get_cmap("tab10")(i)[:3] for i, model in enumerate(models)
 		}
 
 		max_layer_for_model: dict[str, int] = {}
@@ -832,7 +832,7 @@ class DistanceTensorResult(SerializableDataclass):
 
 		# ---------------- stripes ------------------------------------------------
 		axis_top = axis_main.inset_axes(
-			[0, 1.0 + top_label_space * 0.4, 1, stripe_thickness],
+			(0, 1.0 + top_label_space * 0.4, 1, stripe_thickness),
 			transform=axis_main.transAxes,
 			sharex=axis_main,
 		)
@@ -840,7 +840,7 @@ class DistanceTensorResult(SerializableDataclass):
 		axis_top.set_axis_off()
 
 		axis_left = axis_main.inset_axes(
-			[-stripe_thickness - left_label_space * 0.4, 0, stripe_thickness, 1],
+			(-stripe_thickness - left_label_space * 0.4, 0, stripe_thickness, 1),
 			transform=axis_main.transAxes,
 			sharey=axis_main,
 		)
@@ -849,19 +849,19 @@ class DistanceTensorResult(SerializableDataclass):
 
 		# ---------------- model-label axes --------------------------------------
 		axis_top_labels = axis_main.inset_axes(
-			[
+			(
 				0,
 				1.0 + stripe_thickness + top_label_space * 0.2,
 				1,
 				top_label_space * 0.8,
-			],
+			),
 			transform=axis_main.transAxes,
 			sharex=axis_main,
 		)
 		axis_top_labels.set_axis_off()
 
 		axis_left_labels = axis_main.inset_axes(
-			[-stripe_thickness - left_label_space, 0, top_label_space * 0.8, 1],
+			(-stripe_thickness - left_label_space, 0, top_label_space * 0.8, 1),
 			transform=axis_main.transAxes,
 			sharey=axis_main,
 		)
