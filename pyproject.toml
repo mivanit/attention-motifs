@@ -37,7 +37,7 @@ dependencies = [
 	# symbolic regression
 	# "pysr>=1.3.1",
     # custom utils
-    "muutils>=0.8.9",
+    "muutils @ git+https://github.com/mivanit/muutils",
 	"zanj>=0.3.1",
 	"trnbl[tensorboard]>=0.1.1",
     # TL

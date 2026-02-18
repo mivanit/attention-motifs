@@ -203,7 +203,7 @@ multidict==6.7.1
     #   yarl
 multiprocess==0.70.18
     # via datasets
-muutils==0.8.12
+muutils @ git+https://github.com/mivanit/muutils@3db59700e9286add61732b60374537749513c036
     # via
     #   attention-motifs
     #   pattern-lens
