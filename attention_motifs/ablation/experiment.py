@@ -33,10 +33,7 @@ from attention_motifs.ablation.metrics import (
 	icl_score,
 )
 
-try:
-	from transformer_lens import HookedTransformer
-except ImportError:
-	HookedTransformer = None
+from transformer_lens import HookedTransformer
 
 
 @dataclass

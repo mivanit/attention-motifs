@@ -5,6 +5,7 @@ from typing import Callable, Iterable, Sequence
 import math
 from collections import defaultdict
 from statistics import median
+from typing import Self, Any
 
 import numpy as np
 import polars as pl
@@ -453,9 +454,12 @@ class DistanceTensorResult(SerializableDataclass):
 			is_reduced=True,
 		)
 
+	# this violates Liskov but its fine
 	@classmethod
-	def load(cls, data: dict) -> "DistanceTensorResult":
+	def load(cls, data: dict[str, Any]|Self) -> "DistanceTensorResult": # ty: ignore[invalid-method-override]
 		"""Load a `DistanceTensorResult` from a dictionary."""
+		if isinstance(data, cls):
+			return data
 		assert data["is_reduced"], (
 			"data must be reduced when loading -- non-reduced would be huge!"
 		)

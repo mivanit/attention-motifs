@@ -467,7 +467,7 @@ def copying_score(
 
 				if pos < logit_contribution.shape[1]:
 					logit_increase = logit_contribution[
-						batch_idx, pos, next_token
+						batch_idx, pos, int(next_token)
 					].item()
 					scores.append(logit_increase)
 

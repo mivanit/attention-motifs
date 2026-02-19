@@ -263,6 +263,7 @@ class AttentionPedia:
 		if self._head_type_colors is None or refresh:
 			self._generate_head_type_maps()
 
+		assert self._head_type_colors is not None
 		return self._head_type_colors
 
 	def head_type_groups(self, refresh: bool = False) -> dict[str, str]:
@@ -279,6 +280,7 @@ class AttentionPedia:
 		if self._head_type_groups is None or refresh:
 			self._generate_head_type_maps()
 
+		assert self._head_type_groups is not None
 		return self._head_type_groups
 
 	def _generate_head_type_maps(self) -> None:
@@ -374,11 +376,9 @@ def main() -> None:
 				"type_to_heads": pedia.type_to_heads(),
 				"type_metadata": pedia.type_metadata(),
 			}
-		case "dataframe":
-			result = pedia.dataframe().to_dict(orient="records")
-			lines = True
-		case "df":
-			result = pedia.dataframe().to_dict(orient="records")
+		case "dataframe"|"df":
+			# same as pandas.DataFrame(...).to_dict(orient="records")
+			result = pedia.dataframe().to_dicts()
 			lines = True
 		case "head-to-types":
 			result = pedia.head_to_types()

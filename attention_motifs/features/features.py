@@ -39,7 +39,7 @@ def process_prompt(
 	save_path: Path,
 	features_func: Callable[
 		[Float[np.ndarray, "n_ctx n_ctx"]],
-		dict[str, float],
+		dict[str, int|float],
 	],
 ) -> list[dict[str, int | float | str]]:
 	activations_path: Path
@@ -71,7 +71,8 @@ def process_prompt(
 						prefix="activation",
 					),
 					**prefix_dict(
-						features_func(A),
+						# returns dict[str, int|float], but type checker expects dict[str, int|float|str] so we ignore the type error
+						features_func(A), # ty: ignore[invalid-argument-type]
 						prefix="feat",
 					),
 				}
