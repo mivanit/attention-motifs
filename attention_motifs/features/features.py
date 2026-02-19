@@ -38,10 +38,12 @@ def process_prompt(
 	model_name: str,
 	save_path: Path,
 	features_func: Callable[
-		[Float[torch.Tensor, "n_ctx n_ctx"]],
+		[Float[np.ndarray, "n_ctx n_ctx"]],
 		dict[str, float],
 	],
 ) -> list[dict[str, int | float | str]]:
+	activations_path: Path
+	cache: dict[str, Float[np.ndarray, "batch n_heads d_head"]]
 	activations_path, cache = load_activations(
 		model_name=model_name,
 		prompt=prompt,
@@ -58,13 +60,13 @@ def process_prompt(
 				{
 					**prefix_dict(
 						dict(
-							model=model_name,
-							layer=layer_idx,
-							cache_key=cache_key,
-							head=head_idx,
+							model=str(model_name),
+							layer=str(layer_idx),
+							cache_key=str(cache_key),
+							head=int(head_idx),
 							cls=f"{model_name}:L{layer_idx}:H{head_idx}",
-							prompt=prompt["hash"],
-							n_ctx=A.shape[0],
+							prompt=str(prompt["hash"]),
+							n_ctx=int(A.shape[0]),
 						),
 						prefix="activation",
 					),
@@ -87,7 +89,7 @@ def get_layer_depth(row: dict, model_configs: dict[str, HTConfigMock]) -> float:
 
 def scalar_feature_table(
 	features_func: Callable[
-		[Float[torch.Tensor, "n_ctx n_ctx"]],
+		[Float[np.ndarray, "n_ctx n_ctx"]],
 		dict[str, float],
 	],
 	act_path: Path,
@@ -141,7 +143,7 @@ def scalar_feature_table(
 					features_func=features_func,
 				)
 			)
-			model_out: list[dict] = tqdm.tqdm(
+			model_out: list[dict] = tqdm.tqdm( # ty: ignore[invalid-assignment]
 				pool.imap(prompt_func, prompts),
 				total=len(prompts),
 			)

@@ -1,67 +1,16 @@
-error[invalid-assignment]: Object of type `None` is not assignable to `<class 'HookedTransformer'>`
-  --> attention_motifs/ablation/ablate.py:21:2
-   |
-19 |     from transformer_lens.hook_points import HookPoint
-20 | except ImportError:
-21 |     HookedTransformer = None
-   |     -----------------   ^^^^ Incompatible value of type `None`
-   |     |
-   |     Declared type `<class 'HookedTransformer'>`
-22 |     HookPoint = None
-   |
-info: Implicit shadowing of class `HookedTransformer`, add an annotation to make it explicit if this is intentional
-info: rule `invalid-assignment` is enabled by default
-
-error[invalid-assignment]: Object of type `None` is not assignable to `<class 'HookPoint'>`
-  --> attention_motifs/ablation/ablate.py:22:2
-   |
-20 | except ImportError:
-21 |     HookedTransformer = None
-22 |     HookPoint = None
-   |     ---------   ^^^^ Incompatible value of type `None`
-   |     |
-   |     Declared type `<class 'HookPoint'>`
-23 |
-24 | from attention_motifs.attnpedia import parse_head
-   |
-info: Implicit shadowing of class `HookPoint`, add an annotation to make it explicit if this is intentional
-info: rule `invalid-assignment` is enabled by default
-
-error[invalid-argument-type]: Argument to bound method `to_tokens` is incorrect
-   --> attention_motifs/ablation/ablate.py:161:36
-    |
-159 |                 # Tokenize if needed
-160 |                 if isinstance(batch[0], str):
-161 |                     tokens = self.model.to_tokens(batch)
-    |                                                   ^^^^^ Expected `str | list[str]`, found `list[str] | list[Tensor]`
-162 |                 else:
-163 |                     tokens = torch.stack(batch) if isinstance(batch, list) else batch
-    |
-info: Element `list[Tensor]` of this union is not assignable to `str | list[str]`
-info: Method defined here
-   --> .venv/lib/python3.13/site-packages/transformer_lens/HookedTransformer.py:786:9
-    |
-784 |             self.cfg.d_vocab_out = self.cfg.d_vocab
-785 |
-786 |     def to_tokens(
-    |         ^^^^^^^^^
-787 |         self,
-788 |         input: Union[str, List[str]],
-    |         ---------------------------- Parameter declared here
-789 |         prepend_bos: Optional[Union[bool, None]] = USE_DEFAULT_VALUE,
-790 |         padding_side: Optional[Union[Literal["left", "right"], None]] = USE_DEFAULT_VALUE,
-    |
-info: rule `invalid-argument-type` is enabled by default
-
+   Building attention-motifs @ file:///home/miv/projects/attn/attention-motifs
+      Built attention-motifs @ file:///home/miv/projects/attn/attention-motifs
+Uninstalled 1 package in 1ms
+Installed 1 package in 1ms
 error[invalid-argument-type]: Argument to function `stack` is incorrect
-   --> attention_motifs/ablation/ablate.py:163:27
+   --> attention_motifs/ablation/ablate.py:160:27
     |
-161 |                     tokens = self.model.to_tokens(batch)
-162 |                 else:
-163 |                     tokens = torch.stack(batch) if isinstance(batch, list) else batch
+158 |                     tokens = self.model.to_tokens(batch) # ty: ignore[invalid-argument-type]
+159 |                 else:
+160 |                     tokens = torch.stack(batch) if isinstance(batch, list) else batch
     |                                          ^^^^^ Expected `tuple[Tensor, ...] | list[Tensor] | None`, found `list[str] | list[Tensor]`
-164 |
-165 |                 # Run with hooks
+161 |
+162 |                 # Run with hooks
     |
 info: Element `list[str]` of this union is not assignable to `tuple[Tensor, ...] | list[Tensor] | None`
 info: Function defined here
@@ -79,14 +28,14 @@ info: Function defined here
 info: rule `invalid-argument-type` is enabled by default
 
 error[invalid-argument-type]: Argument to bound method `add_hook` is incorrect
-   --> attention_motifs/ablation/ablate.py:266:45
+   --> attention_motifs/ablation/ablate.py:264:45
     |
-264 |         # Register hooks by adding to the hook point's fwd_hooks list
-265 |         for hook_name, hook_fn in hooks:
-266 |             self.model.hook_dict[hook_name].add_hook(hook_fn)
+262 |         # Register hooks by adding to the hook point's fwd_hooks list
+263 |         for hook_name, hook_fn in hooks:
+264 |             self.model.hook_dict[hook_name].add_hook(hook_fn)
     |                                                      ^^^^^^^ Expected `_HookFunctionProtocol`, found `Unknown | ((Tensor, HookPoint, /) -> Tensor)`
-267 |
-268 |         try:
+265 |
+266 |         try:
     |
 info: Element `(Tensor, HookPoint, /) -> Tensor` of this union is not assignable to `_HookFunctionProtocol`
 info: Method defined here
@@ -129,11 +78,11 @@ error[invalid-argument-type]: Argument to function `heads_from_strings` is incor
     |
 info: Element `list[tuple[int, int]] & ~AlwaysFalsy` of this union is not assignable to `list[str]`
 info: Function defined here
-  --> attention_motifs/attnpedia/attnpedia.py:76:5
+  --> attention_motifs/attnpedia/attnpedia.py:78:5
    |
-76 | def heads_from_strings(head_strs: list[str]) -> list[tuple[int, int]]:
+78 | def heads_from_strings(head_strs: list[str]) -> list[tuple[int, int]]:
    |     ^^^^^^^^^^^^^^^^^^ -------------------- Parameter declared here
-77 |     """Convert list of head strings to (layer, head) tuples.
+79 |     """Convert list of head strings to (layer, head) tuples.
    |
 info: rule `invalid-argument-type` is enabled by default
 
@@ -148,102 +97,74 @@ error[invalid-argument-type]: Argument to function `heads_from_strings` is incor
     |
 info: Element `list[tuple[int, int]] & ~AlwaysFalsy` of this union is not assignable to `list[str]`
 info: Function defined here
-  --> attention_motifs/attnpedia/attnpedia.py:76:5
+  --> attention_motifs/attnpedia/attnpedia.py:78:5
    |
-76 | def heads_from_strings(head_strs: list[str]) -> list[tuple[int, int]]:
+78 | def heads_from_strings(head_strs: list[str]) -> list[tuple[int, int]]:
    |     ^^^^^^^^^^^^^^^^^^ -------------------- Parameter declared here
-77 |     """Convert list of head strings to (layer, head) tuples.
+79 |     """Convert list of head strings to (layer, head) tuples.
    |
 info: rule `invalid-argument-type` is enabled by default
 
-error[unsupported-operator]: Unsupported `/` operation
-   --> attention_motifs/ablation/experiment.py:383:17
-    |
-381 |         # Save intermediate results
-382 |         if output_dir:
-383 |             results.save(output_dir / f"{model_name.replace('/', '_')}_results.json")
-    |                          ----------^^^----------------------------------------------
-    |                          |            |
-    |                          |            Has type `str`
-    |                          Has type `(str & ~AlwaysTruthy & ~AlwaysFalsy) | Path`
-384 |
-385 |     return all_results
-    |
-info: rule `unsupported-operator` is enabled by default
-
-error[invalid-assignment]: Object of type `None` is not assignable to `<class 'HookedTransformer'>`
-  --> attention_motifs/ablation/metrics.py:27:2
-   |
-25 |     from transformer_lens import HookedTransformer
-26 | except ImportError:
-27 |     HookedTransformer = None
-   |     -----------------   ^^^^ Incompatible value of type `None`
-   |     |
-   |     Declared type `<class 'HookedTransformer'>`
-   |
-info: Implicit shadowing of class `HookedTransformer`, add an annotation to make it explicit if this is intentional
-info: rule `invalid-assignment` is enabled by default
-
 error[invalid-argument-type]: Method `__getitem__` of type `bound method Tensor.__getitem__(indices: SupportsIndex | slice[Any, Any, Any] | EllipsisType | ... omitted 3 union elements, /) -> Tensor` cannot be called with key of type `tuple[int, int, int | float]` on object of type `Tensor`
-   --> attention_motifs/ablation/metrics.py:472:23
+   --> attention_motifs/ablation/metrics.py:469:23
     |
-471 |                 if pos < logit_contribution.shape[1]:
-472 |                     logit_increase = logit_contribution[
+468 |                 if pos < logit_contribution.shape[1]:
+469 |                     logit_increase = logit_contribution[
     |                                      ^^^^^^^^^^^^^^^^^^
-473 |                         batch_idx, pos, next_token
-474 |                     ].item()
+470 |                         batch_idx, pos, next_token
+471 |                     ].item()
     |
 info: rule `invalid-argument-type` is enabled by default
 
 error[invalid-return-type]: Return type does not match returned value
-   --> attention_motifs/attnpedia/attnpedia.py:264:10
+   --> attention_motifs/attnpedia/attnpedia.py:266:10
     |
-262 |             self._generate_head_type_maps()
-263 |
-264 |         return self._head_type_colors
-    |                ^^^^^^^^^^^^^^^^^^^^^^ expected `dict[str, str]`, found `dict[str, str] | None`
+264 |             self._generate_head_type_maps()
 265 |
-266 |     def head_type_groups(self, refresh: bool = False) -> dict[str, str]:
+266 |         return self._head_type_colors
+    |                ^^^^^^^^^^^^^^^^^^^^^^ expected `dict[str, str]`, found `dict[str, str] | None`
+267 |
+268 |     def head_type_groups(self, refresh: bool = False) -> dict[str, str]:
     |
-   ::: attention_motifs/attnpedia/attnpedia.py:248:55
+   ::: attention_motifs/attnpedia/attnpedia.py:250:55
     |
-246 |         }
-247 |
-248 |     def head_type_colors(self, refresh: bool = False) -> dict[str, str]:
+248 |         }
+249 |
+250 |     def head_type_colors(self, refresh: bool = False) -> dict[str, str]:
     |                                                          -------------- Expected `dict[str, str]` because of return type
-249 |         """Get a mapping of attention head types to color codes.
+251 |         """Get a mapping of attention head types to color codes.
     |
 info: rule `invalid-return-type` is enabled by default
 
 error[invalid-return-type]: Return type does not match returned value
-   --> attention_motifs/attnpedia/attnpedia.py:280:10
+   --> attention_motifs/attnpedia/attnpedia.py:282:10
     |
-278 |             self._generate_head_type_maps()
-279 |
-280 |         return self._head_type_groups
-    |                ^^^^^^^^^^^^^^^^^^^^^^ expected `dict[str, str]`, found `dict[str, str] | None`
+280 |             self._generate_head_type_maps()
 281 |
-282 |     def _generate_head_type_maps(self) -> None:
+282 |         return self._head_type_groups
+    |                ^^^^^^^^^^^^^^^^^^^^^^ expected `dict[str, str]`, found `dict[str, str] | None`
+283 |
+284 |     def _generate_head_type_maps(self) -> None:
     |
-   ::: attention_motifs/attnpedia/attnpedia.py:266:55
+   ::: attention_motifs/attnpedia/attnpedia.py:268:55
     |
-264 |         return self._head_type_colors
-265 |
-266 |     def head_type_groups(self, refresh: bool = False) -> dict[str, str]:
+266 |         return self._head_type_colors
+267 |
+268 |     def head_type_groups(self, refresh: bool = False) -> dict[str, str]:
     |                                                          -------------- Expected `dict[str, str]` because of return type
-267 |         """Get a mapping of attention head types to their group names.
+269 |         """Get a mapping of attention head types to their group names.
     |
 info: rule `invalid-return-type` is enabled by default
 
 error[invalid-argument-type]: Argument to function `to_hex` is incorrect
-   --> attention_motifs/attnpedia/attnpedia.py:310:46
+   --> attention_motifs/attnpedia/attnpedia.py:312:46
     |
-308 |                         min(max(c * (1 + factor), 0), 1) for c in base_rgb
-309 |                     )
-310 |                     color_dict[type_name] = mcolors.rgb2hex(new_rgb)
+310 |                         min(max(c * (1 + factor), 0), 1) for c in base_rgb
+311 |                     )
+312 |                     color_dict[type_name] = mcolors.rgb2hex(new_rgb)
     |                                                             ^^^^^^^ Expected `tuple[int | float, int | float, int | float] | str | tuple[int | float, int | float, int | float, int | float] | tuple[tuple[int | float, int | float, int | float] | str, int | float] | tuple[tuple[int | float, int | float, int | float, int | float], int | float]`, found `tuple[int | float, ...]`
-311 |
-312 |             # Assign group to each type
+313 |
+314 |             # Assign group to each type
     |
 info: Function defined here
   --> .venv/lib/python3.13/site-packages/matplotlib/colors.pyi:44:5
@@ -258,14 +179,14 @@ info: Function defined here
 info: rule `invalid-argument-type` is enabled by default
 
 error[no-matching-overload]: No overload of bound method `to_dict` matches arguments
-   --> attention_motifs/attnpedia/attnpedia.py:376:13
+   --> attention_motifs/attnpedia/attnpedia.py:378:13
     |
-374 |             }
-375 |         case "dataframe":
-376 |             result = pedia.dataframe().to_dict(orient="records")
+376 |             }
+377 |         case "dataframe":
+378 |             result = pedia.dataframe().to_dict(orient="records")
     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-377 |             lines = True
-378 |         case "df":
+379 |             lines = True
+380 |         case "df":
     |
 info: First overload defined here
     --> .venv/lib/python3.13/site-packages/polars/dataframe/frame.py:1793:9
@@ -296,14 +217,14 @@ info: Overload implementation defined here
 info: rule `no-matching-overload` is enabled by default
 
 error[no-matching-overload]: No overload of bound method `to_dict` matches arguments
-   --> attention_motifs/attnpedia/attnpedia.py:379:13
+   --> attention_motifs/attnpedia/attnpedia.py:381:13
     |
-377 |             lines = True
-378 |         case "df":
-379 |             result = pedia.dataframe().to_dict(orient="records")
+379 |             lines = True
+380 |         case "df":
+381 |             result = pedia.dataframe().to_dict(orient="records")
     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-380 |             lines = True
-381 |         case "head-to-types":
+382 |             lines = True
+383 |         case "head-to-types":
     |
 info: First overload defined here
     --> .venv/lib/python3.13/site-packages/polars/dataframe/frame.py:1793:9
@@ -334,13 +255,13 @@ info: Overload implementation defined here
 info: rule `no-matching-overload` is enabled by default
 
 error[invalid-method-override]: Invalid override of method `load`
-   --> attention_motifs/features/analysis.py:455:6
+   --> attention_motifs/features/analysis.py:457:6
     |
-454 |     @classmethod
-455 |     def load(cls, data: dict) -> "DistanceTensorResult":
+456 |     @classmethod
+457 |     def load(cls, data: dict) -> "DistanceTensorResult":
     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Definition is incompatible with `SerializableDataclass.load`
-456 |         """Load a `DistanceTensorResult` from a dictionary."""
-457 |         assert data["is_reduced"], (
+458 |         """Load a `DistanceTensorResult` from a dictionary."""
+459 |         assert data["is_reduced"], (
     |
    ::: .venv/lib/python3.13/site-packages/muutils/json_serialize/serializable_dataclass.py:377:9
     |
@@ -353,109 +274,25 @@ error[invalid-method-override]: Invalid override of method `load`
 info: This violates the Liskov Substitution Principle
 info: rule `invalid-method-override` is enabled by default
 
-error[unresolved-import]: Module `attention_motifs.util` has no member `prefix_dict`
- --> attention_motifs/features/feat/hist_beta_fit.py:9:35
-  |
-7 | from attention_motifs.util.bins import Bins
-8 | from attention_motifs.features.vec_features import vec_features
-9 | from attention_motifs.util import prefix_dict
-  |                                   ^^^^^^^^^^^
-  |
-info: rule `unresolved-import` is enabled by default
-
 error[invalid-argument-type]: Argument to function `prefix_dict` is incorrect
-  --> attention_motifs/features/features.py:60:7
+  --> attention_motifs/features/features.py:74:7
    |
-58 |                   {
-59 |                       **prefix_dict(
-60 | /                         dict(
-61 | |                             model=model_name,
-62 | |                             layer=layer_idx,
-63 | |                             cache_key=cache_key,
-64 | |                             head=head_idx,
-65 | |                             cls=f"{model_name}:L{layer_idx}:H{head_idx}",
-66 | |                             prompt=prompt["hash"],
-67 | |                             n_ctx=A.shape[0],
-68 | |                         ),
-   | |_________________________^ Expected `dict[str, int | float]`, found `dict[str, int | float | str | Unknown]`
-69 |                           prefix="activation",
-70 |                       ),
+72 |                     ),
+73 |                     **prefix_dict(
+74 |                         features_func(A),
+   |                         ^^^^^^^^^^^^^^^^ Expected `dict[str, int | float | str]`, found `dict[str, int | float]`
+75 |                         prefix="feat",
+76 |                     ),
    |
 info: Function defined here
   --> attention_motifs/util/util.py:13:5
    |
-13 | def prefix_dict(
+13 | def prefix_dict[T_key](
    |     ^^^^^^^^^^^
-14 |     d: dict[str, float],
+14 |     d: dict[str, T_key],
    |     ------------------- Parameter declared here
 15 |     prefix: str | list[str],
 16 |     sep: str = ".",
-   |
-info: rule `invalid-argument-type` is enabled by default
-
-error[invalid-assignment]: Object of type `tqdm[Unknown]` is not assignable to `list[dict[Unknown, Unknown]]`
-   --> attention_motifs/features/features.py:144:15
-    |
-142 |                   )
-143 |               )
-144 |               model_out: list[dict] = tqdm.tqdm(
-    |  ________________________----------___^
-    | |                        |
-    | |                        Declared type
-145 | |                 pool.imap(prompt_func, prompts),
-146 | |                 total=len(prompts),
-147 | |             )
-    | |_____________^ Incompatible value of type `tqdm[Unknown]`
-148 |               output.extend(itertools.chain.from_iterable(model_out))
-    |
-info: rule `invalid-assignment` is enabled by default
-
-error[invalid-argument-type]: Argument to function `scalar_feature_table` is incorrect
-  --> attention_motifs/features/generate.py:45:3
-   |
-44 |     scalar_feature_table(
-45 |         features_func=compute_scalar_features,
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `(Tensor, /) -> dict[str, int | float]`, found `def compute_scalar_features(A: ndarray[Unknown, Unknown]) -> dict[str, int | float]`
-46 |         act_path=Path(args.act_path),
-47 |         models=models,
-   |
-info: Function defined here
-  --> attention_motifs/features/features.py:88:5
-   |
-88 |   def scalar_feature_table(
-   |       ^^^^^^^^^^^^^^^^^^^^
-89 | /     features_func: Callable[
-90 | |         [Float[torch.Tensor, "n_ctx n_ctx"]],
-91 | |         dict[str, float],
-92 | |     ],
-   | |_____- Parameter declared here
-93 |       act_path: Path,
-94 |       out_path: Path,
-   |
-info: rule `invalid-argument-type` is enabled by default
-
-error[invalid-argument-type]: Argument to function `scalar_feature_table` is incorrect
-  --> attention_motifs/pipeline/s2_features.py:12:3
-   |
-10 |     pipeline_step_major("pipeline step 2: compute attention features")
-11 |     scalar_feature_table(
-12 |         features_func=compute_scalar_features,
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `(Tensor, /) -> dict[str, int | float]`, found `def compute_scalar_features(A: ndarray[Unknown, Unknown]) -> dict[str, int | float]`
-13 |         act_path=cfg.patterns_dir,
-14 |         models=cfg.models,
-   |
-info: Function defined here
-  --> attention_motifs/features/features.py:88:5
-   |
-88 |   def scalar_feature_table(
-   |       ^^^^^^^^^^^^^^^^^^^^
-89 | /     features_func: Callable[
-90 | |         [Float[torch.Tensor, "n_ctx n_ctx"]],
-91 | |         dict[str, float],
-92 | |     ],
-   | |_____- Parameter declared here
-93 |       act_path: Path,
-94 |       out_path: Path,
    |
 info: rule `invalid-argument-type` is enabled by default
 
@@ -483,74 +320,6 @@ info:   (self, key: _KT@dict, default: None = None, /) -> _VT@dict | None
 info:   (self, key: _KT@dict, default: _VT@dict, /) -> _VT@dict
 info:   [_T](self, key: _KT@dict, default: _T, /) -> _VT@dict | _T
 info: rule `no-matching-overload` is enabled by default
-
-error[invalid-argument-type]: Argument to function `plot_head_embeddings_multi` is incorrect
-  --> attention_motifs/pipeline/s5b_head_embed_plots.py:59:5
-   |
-57 |                   head_embed_df,
-58 |                   color_by="type.group",
-59 | /                 methods=cfg.embedding_methods[
-60 | |                     :3
-61 | |                 ],  # Limit to first 3 methods to avoid overcrowding
-   | |_________________^ Expected `list[str] | None`, found `list[Literal["isomap", "umap", "tsne", "pca"]]`
-62 |                   sizes=(12, 6),
-63 |                   figsize=(24, 32),
-   |
-info: Function defined here
-   --> attention_motifs/features/head_analysis.py:435:5
-    |
-435 | def plot_head_embeddings_multi(
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
-436 |     df: pl.DataFrame,
-437 |     attnpedia: AttentionPedia | None = None,
-    |
-   ::: attention_motifs/features/head_analysis.py:442:2
-    |
-440 |     alphas: tuple[float, float] = (0.7, 0.3),
-441 |     sizes: tuple[int, int] = (60, 20),
-442 |     methods: list[str] | None = None,
-    |     -------------------------------- Parameter declared here
-443 |     n_neighbors_list: list[int] | None = None,
-444 |     figsize: tuple[int, int] = (20, 16),
-    |
-info: rule `invalid-argument-type` is enabled by default
-
-error[unresolved-attribute]: Attribute `savefig` is not defined on `None` in union `Figure | None`
-   --> attention_motifs/pipeline/s5b_head_embed_plots.py:100:6
-    |
- 98 |                     # Save as SVG
- 99 |                     svg_path = head_embed_svgs_dir / f"{prefix}.svg"
-100 |                     fig.savefig(
-    |                     ^^^^^^^^^^^
-101 |                         svg_path,
-102 |                         format="svg",
-    |
-info: rule `unresolved-attribute` is enabled by default
-
-error[invalid-argument-type]: Argument to function `scalar_feature_table` is incorrect
- --> notebooks/01-pattern_features_generate.ipynb:cell 5:3:2
-  |
-1 | DATA_RAW: pl.DataFrame = scalar_feature_table(
-2 |     act_path=Path("../docs/"),
-3 |     features_func=compute_scalar_features,
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected `(Tensor, /) -> dict[str, int | float]`, found `def compute_scalar_features(A: ndarray[Unknown, Unknown]) -> dict[str, int | float]`
-4 |     # models=["pythia-14m", "tiny-stories-1M"],
-5 |     out_path=PATH_BASE,
-  |
-info: Function defined here
-  --> attention_motifs/features/features.py:88:5
-   |
-88 |   def scalar_feature_table(
-   |       ^^^^^^^^^^^^^^^^^^^^
-89 | /     features_func: Callable[
-90 | |         [Float[torch.Tensor, "n_ctx n_ctx"]],
-91 | |         dict[str, float],
-92 | |     ],
-   | |_____- Parameter declared here
-93 |       act_path: Path,
-94 |       out_path: Path,
-   |
-info: rule `invalid-argument-type` is enabled by default
 
 error[unresolved-reference]: Name `display` used when not defined
  --> notebooks/02-pattern_features_process.ipynb:cell 6:9:1
@@ -734,4 +503,4 @@ info: Function defined here
     |
 info: rule `invalid-argument-type` is enabled by default
 
-Found 35 diagnostics
+Found 23 diagnostics

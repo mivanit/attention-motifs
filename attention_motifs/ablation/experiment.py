@@ -330,8 +330,8 @@ def run_cross_model_experiment(
 	    Results for each model.
 	"""
 	if output_dir:
-		output_dir = Path(output_dir)
-		output_dir.mkdir(parents=True, exist_ok=True)
+		output_dir_: Path = Path(output_dir)
+		output_dir_.mkdir(parents=True, exist_ok=True)
 
 	# Find candidate heads
 	print("Finding candidate induction heads...")
@@ -380,7 +380,7 @@ def run_cross_model_experiment(
 
 		# Save intermediate results
 		if output_dir:
-			results.save(output_dir / f"{model_name.replace('/', '_')}_results.json")
+			results.save(output_dir_ / f"{model_name.replace('/', '_')}_results.json")
 
 	return all_results
 

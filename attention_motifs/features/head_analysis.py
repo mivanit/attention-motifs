@@ -1,6 +1,6 @@
 import warnings
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Sequence, cast
 import itertools
 
 from jaxtyping import Float
@@ -439,7 +439,7 @@ def plot_head_embeddings_multi(
 	dims: tuple[int, int] = (0, 1),
 	alphas: tuple[float, float] = (0.7, 0.3),
 	sizes: tuple[int, int] = (60, 20),
-	methods: list[str] | None = None,
+	methods: list[EmbeddingMethod] | None = None,
 	n_neighbors_list: list[int] | None = None,
 	figsize: tuple[int, int] = (20, 16),
 ) -> tuple[Figure, np.ndarray]:
@@ -503,7 +503,7 @@ def plot_head_embeddings_multi(
 	unknown_color: str = attnpedia._unknown_color
 
 	# Find all available methods and n_neighbors values
-	methods_found: set[str] = set()
+	methods_found: set[EmbeddingMethod] = set()
 	n_neighbors_found: set[int] = set()
 	match_model_str: str | None = None
 
@@ -516,7 +516,8 @@ def plot_head_embeddings_multi(
 		# Extract information
 		# f"embed.{method}.d{n_components_val}.b{n_neighbors}"
 		try:
-			methods_found.add(parts[1])
+			assert parts[1] in EmbeddingMethod.__args__
+			methods_found.add(cast(EmbeddingMethod, parts[1]))
 			n_neighbors_found.add(int(parts[3][1:]))
 		except (ValueError, IndexError):
 			continue
@@ -525,7 +526,7 @@ def plot_head_embeddings_multi(
 	if not methods_found:
 		raise ValueError("No embedding columns found in DataFrame")
 
-	methods_list: list[str] = sorted(methods_found) if methods is None else methods
+	methods_list: list[EmbeddingMethod] = sorted(methods_found) if methods is None else methods
 	n_neighbors_vals: list[int] = (
 		sorted(n_neighbors_found) if n_neighbors_list is None else n_neighbors_list
 	)

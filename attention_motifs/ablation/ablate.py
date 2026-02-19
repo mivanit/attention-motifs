@@ -14,12 +14,8 @@ from torch import Tensor
 from jaxtyping import Float
 from tqdm import tqdm
 
-try:
-	from transformer_lens import HookedTransformer
-	from transformer_lens.hook_points import HookPoint
-except ImportError:
-	HookedTransformer = None
-	HookPoint = None
+from transformer_lens import HookedTransformer
+from transformer_lens.hook_points import HookPoint
 
 from attention_motifs.attnpedia import parse_head
 
@@ -158,11 +154,13 @@ class HeadAblator:
 
 				# Tokenize if needed
 				if isinstance(batch[0], str):
-					tokens = self.model.to_tokens(batch)
+					# we can safely assume everything in the batch is str
+					tokens = self.model.to_tokens(batch) # ty: ignore[invalid-argument-type]
 				else:
 					tokens = torch.stack(batch) if isinstance(batch, list) else batch
 
 				# Run with hooks
+
 				self.model.run_with_hooks(tokens, fwd_hooks=hooks)
 
 		# Compute means

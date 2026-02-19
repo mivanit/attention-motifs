@@ -96,6 +96,7 @@ def head_embed_plots(cfg: PipelineConfig) -> None:
 					)
 
 					# Save as SVG
+					assert fig is not None
 					svg_path = head_embed_svgs_dir / f"{prefix}.svg"
 					fig.savefig(
 						svg_path,

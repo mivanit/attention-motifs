@@ -21,10 +21,7 @@ from attention_motifs.ablation.data import (
 )
 from attention_motifs.ablation.ablate import AblationMethod
 
-try:
-	from transformer_lens import HookedTransformer
-except ImportError:
-	HookedTransformer = None
+from transformer_lens import HookedTransformer
 
 
 @dataclass

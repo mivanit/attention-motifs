@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Any
 
 import numpy as np
 from numpy.lib.npyio import NpzFile
@@ -10,11 +10,11 @@ import matplotlib.pyplot as plt
 from muutils.dbg import dbg
 
 
-def prefix_dict(
-	d: dict[str, float],
+def prefix_dict[T_key](
+	d: dict[str, T_key],
 	prefix: str | list[str],
 	sep: str = ".",
-) -> dict[str, float]:
+) -> dict[str, T_key]:
 	prefix_str: str = prefix if isinstance(prefix, str) else sep.join(prefix)
 	return {f"{prefix_str}{sep}{k}": v for k, v in d.items()}
 
