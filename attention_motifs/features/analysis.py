@@ -456,7 +456,7 @@ class DistanceTensorResult(SerializableDataclass):
 
 	# this violates Liskov but its fine
 	@classmethod
-	def load(cls, data: dict[str, Any]|Self) -> "DistanceTensorResult": # ty: ignore[invalid-method-override]
+	def load(cls, data: dict[str, Any] | Self) -> "DistanceTensorResult":  # ty: ignore[invalid-method-override]
 		"""Load a `DistanceTensorResult` from a dictionary."""
 		if isinstance(data, cls):
 			return data

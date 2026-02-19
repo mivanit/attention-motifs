@@ -526,7 +526,9 @@ def plot_head_embeddings_multi(
 	if not methods_found:
 		raise ValueError("No embedding columns found in DataFrame")
 
-	methods_list: list[EmbeddingMethod] = sorted(methods_found) if methods is None else methods
+	methods_list: list[EmbeddingMethod] = (
+		sorted(methods_found) if methods is None else methods
+	)
 	n_neighbors_vals: list[int] = (
 		sorted(n_neighbors_found) if n_neighbors_list is None else n_neighbors_list
 	)

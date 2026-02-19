@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Callable, Any
+from typing import Callable
 
 import numpy as np
 from numpy.lib.npyio import NpzFile

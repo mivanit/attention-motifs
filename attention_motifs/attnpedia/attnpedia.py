@@ -378,7 +378,7 @@ def main() -> None:
 				"type_to_heads": pedia.type_to_heads(),
 				"type_metadata": pedia.type_metadata(),
 			}
-		case "dataframe"|"df":
+		case "dataframe" | "df":
 			# same as pandas.DataFrame(...).to_dict(orient="records")
 			result = pedia.dataframe().to_dicts()
 			lines = True

@@ -10,7 +10,6 @@ import functools
 import multiprocessing as mp
 
 
-import torch
 import numpy as np
 from jaxtyping import Float
 import polars as pl
@@ -39,7 +38,7 @@ def process_prompt(
 	save_path: Path,
 	features_func: Callable[
 		[Float[np.ndarray, "n_ctx n_ctx"]],
-		dict[str, int|float],
+		dict[str, int | float],
 	],
 ) -> list[dict[str, int | float | str]]:
 	activations_path: Path
@@ -72,7 +71,7 @@ def process_prompt(
 					),
 					**prefix_dict(
 						# returns dict[str, int|float], but type checker expects dict[str, int|float|str] so we ignore the type error
-						features_func(A), # ty: ignore[invalid-argument-type]
+						features_func(A),  # ty: ignore[invalid-argument-type]
 						prefix="feat",
 					),
 				}
@@ -144,7 +143,7 @@ def scalar_feature_table(
 					features_func=features_func,
 				)
 			)
-			model_out: list[dict] = tqdm.tqdm( # ty: ignore[invalid-assignment]
+			model_out: list[dict] = tqdm.tqdm(  # ty: ignore[invalid-assignment]
 				pool.imap(prompt_func, prompts),
 				total=len(prompts),
 			)
