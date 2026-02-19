@@ -57,6 +57,46 @@
       margin-bottom: 20px;
     }
     
+    .controls-header {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .controls-left {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .controls-left .controls {
+      margin-bottom: 12px;
+    }
+    
+    .controls-left .controls:last-child {
+      margin-bottom: 0;
+    }
+    
+    .controls-right {
+      flex: 0 0 400px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #mini-dendrogram-container {
+      width: 100%;
+      height: 160px;
+    }
+    
+    #mini-dendrogram {
+      width: 100%;
+      height: 100%;
+    }
+    
     .controls {
       background: white;
       padding: 16px 20px;
@@ -566,6 +606,37 @@
       display: block;
     }
     
+    /* Selection notes */
+    .selection-notes {
+      padding: 12px;
+      border-top: 1px solid #eee;
+      flex-shrink: 0;
+    }
+    
+    .selection-notes label {
+      display: block;
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 6px;
+    }
+    
+    .selection-notes textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 13px;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    
+    .selection-notes textarea:focus {
+      outline: none;
+      border-color: #1565c0;
+    }
+    
     /* Tooltip */
     .tooltip {
       position: fixed;
@@ -696,87 +767,97 @@
     <div class="container">
       <h1>Hierarchical Clustering of Attention Heads</h1>
 
-      <div class="controls clustering-controls">
-        <div class="control-group">
-          <label for="n-clusters">Number of Clusters:</label>
-          <input type="range" id="n-clusters" min="2" max="50" value="10" />
-          <input
-            type="number"
-            id="n-clusters-input"
-            value="10"
-            min="2"
-            class="control-input"
-          />
-        </div>
-        <div class="control-group">
-          <label for="cut-height">Cut Height:</label>
-          <input
-            type="range"
-            id="cut-height"
-            min="0"
-            max="100"
-            value="50"
-            step="0.1"
-          />
-          <input
-            type="number"
-            id="cut-height-input"
-            value="0"
-            min="0"
-            step="0.001"
-            class="control-input"
-          />
-        </div>
-        <div class="control-group">
-          <label for="min-cluster-size">Min Cluster Size:</label>
-          <input
-            type="range"
-            id="min-cluster-size"
-            min="0"
-            max="100"
-            value="0"
-          />
-          <input
-            type="number"
-            id="min-cluster-size-input"
-            value="0"
-            min="0"
-            class="control-input"
-          />
-        </div>
-        <div class="control-group">
-          <button id="export-pattern-types" class="toggle-btn">
-            Export Pattern Types
-          </button>
-        </div>
-      </div>
+      <div class="controls-header">
+        <div class="controls-left">
+          <div class="controls clustering-controls">
+            <div class="control-group">
+              <label for="n-clusters">Number of Clusters:</label>
+              <input type="range" id="n-clusters" min="2" max="50" value="10" />
+              <input
+                type="number"
+                id="n-clusters-input"
+                value="10"
+                min="2"
+                class="control-input"
+              />
+            </div>
+            <div class="control-group">
+              <label for="cut-height">Cut Height:</label>
+              <input
+                type="range"
+                id="cut-height"
+                min="0"
+                max="100"
+                value="50"
+                step="0.1"
+              />
+              <input
+                type="number"
+                id="cut-height-input"
+                value="0"
+                min="0"
+                step="0.001"
+                class="control-input"
+              />
+            </div>
+            <div class="control-group">
+              <label for="min-cluster-size">Min Cluster Size:</label>
+              <input
+                type="range"
+                id="min-cluster-size"
+                min="0"
+                max="100"
+                value="0"
+              />
+              <input
+                type="number"
+                id="min-cluster-size-input"
+                value="0"
+                min="0"
+                class="control-input"
+              />
+            </div>
+            <div class="control-group">
+              <button id="export-pattern-types" class="toggle-btn">
+                Export Pattern Types
+              </button>
+            </div>
+          </div>
 
-      <div class="controls display-controls">
-        <div class="control-group">
-          <label for="scale">Model Map Scale:</label>
-          <input
-            type="range"
-            id="scale"
-            min="0.5"
-            max="2"
-            value="1"
-            step="0.1"
-          />
-          <span id="scale-value">1.0</span>
+          <div class="controls display-controls">
+            <div class="control-group">
+              <label for="scale">Model Map Scale:</label>
+              <input
+                type="range"
+                id="scale"
+                min="0.5"
+                max="2"
+                value="1"
+                step="0.1"
+              />
+              <span id="scale-value">1.0</span>
+            </div>
+            <div class="control-group">
+              <label>Sort Heads:</label>
+              <button id="sort-toggle" class="toggle-btn">By Index</button>
+            </div>
+            <div class="control-group">
+              <label for="model-order">Model Order:</label>
+              <select id="model-order" class="dropdown">
+                <option value="data">Data Order</option>
+                <option value="size">By Size</option>
+                <option value="family">By Family</option>
+              </select>
+            </div>
+            <span class="help-icon" id="model-data-help">❓</span>
+          </div>
         </div>
-        <div class="control-group">
-          <label>Sort Heads:</label>
-          <button id="sort-toggle" class="toggle-btn">By Index</button>
+
+        <div class="controls-right">
+          <div id="mini-dendrogram-container">
+            <svg id="mini-dendrogram"></svg>
+          </div>
         </div>
-        <div class="control-group">
-          <label for="model-order">Model Order:</label>
-          <select id="model-order" class="dropdown">
-            <option value="data">Data Order</option>
-            <option value="size">By Size</option>
-            <option value="family">By Family</option>
-          </select>
-        </div>
-        <span class="help-icon" id="model-data-help">❓</span>
       </div>
 
       <div class="stats" id="stats"></div>
@@ -806,6 +887,17 @@
             </div>
           </div>
           <div id="pattern-images"></div>
+          <div
+            class="selection-notes"
+            id="selection-notes-container"
+            style="display: none"
+          >
+            <label for="selection-note">Selection Note:</label>
+            <textarea
+              id="selection-note"
+              placeholder="Add a note about these selected heads..."
+            ></textarea>
+          </div>
         </div>
       </div>
     </div>
@@ -1903,6 +1995,7 @@
       modelOrder: "data",
       originalModelOrder: [],
       modelDataFrame: null,
+      selectionNote: "",
     };
     
     /**
@@ -2249,6 +2342,11 @@
         updateSidePane();
       });
     
+      // Selection note textarea
+      document.getElementById("selection-note").addEventListener("input", (e) => {
+        gridState.selectionNote = e.target.value;
+      });
+    
       // Initial empty state
       updateSidePane();
     }
@@ -2552,6 +2650,10 @@
         },
         types: types,
         assignments: assignments,
+        selection: {
+          heads: gridState.selectedHeads,
+          note: gridState.selectionNote,
+        },
       };
     
       // Trigger download
@@ -2805,14 +2907,19 @@
     async function updateSidePane() {
       const patternImages = document.getElementById("pattern-images");
       const selectedCount = document.getElementById("selected-count");
+      const notesContainer = document.getElementById("selection-notes-container");
     
       selectedCount.textContent = `(${gridState.selectedHeads.length})`;
     
       if (gridState.selectedHeads.length === 0) {
         patternImages.innerHTML =
           '<div class="empty-state">Click on cells to select heads and view their attention patterns. Shift-click to select all heads in a cluster.</div>';
+        notesContainer.style.display = "none";
         return;
       }
+    
+      // Show notes container when heads are selected
+      notesContainer.style.display = "block";
     
       patternImages.innerHTML = "";
     
@@ -3013,6 +3120,225 @@
     
       // Render top clusters list
       renderTopClusters();
+    
+      // Render mini dendrogram
+      renderMiniDendrogram();
+    }
+    
+    /**
+     * Build a simplified tree from linkage matrix, collapsed at cluster boundaries
+     * Returns a tree where leaves are clusters (not individual heads)
+     */
+    function buildClusterTree() {
+      const linkage = gridState.linkage;
+      const n = gridState.nHeads;
+      const assignments = window.CLUSTER_STATE.getAssignments();
+    
+      // Build full tree first
+      const nodes = [];
+    
+      // Leaf nodes (individual heads)
+      for (let i = 0; i < n; i++) {
+        const headId = gridState.clsValues[i];
+        nodes.push({
+          id: i,
+          isLeaf: true,
+          height: 0,
+          clusterId: assignments[headId],
+          count: 1,
+        });
+      }
+    
+      // Internal nodes from linkage
+      for (let i = 0; i < linkage.length; i++) {
+        const [idx1, idx2, distance, count] = linkage[i];
+        const left = nodes[Math.floor(idx1)];
+        const right = nodes[Math.floor(idx2)];
+    
+        // If both children have the same cluster, this node has that cluster
+        // If different clusters, this is a merge point (clusterId = null)
+        const clusterId =
+          left.clusterId === right.clusterId ? left.clusterId : null;
+    
+        nodes.push({
+          id: n + i,
+          isLeaf: false,
+          height: distance,
+          clusterId: clusterId,
+          count: count,
+          children: [left, right],
+        });
+      }
+    
+      const root = nodes[nodes.length - 1];
+    
+      // Now collapse: for any node where all descendants have the same cluster,
+      // replace it with a leaf representing that cluster
+      function collapse(node) {
+        if (node.isLeaf) {
+          return {
+            isLeaf: true,
+            clusterId: node.clusterId,
+            count: node.count,
+            height: node.height,
+          };
+        }
+    
+        // If this entire subtree is one cluster, collapse to leaf
+        if (node.clusterId !== null) {
+          return {
+            isLeaf: true,
+            clusterId: node.clusterId,
+            count: node.count,
+            height: node.height,
+          };
+        }
+    
+        // Otherwise, recurse
+        return {
+          isLeaf: false,
+          clusterId: null,
+          height: node.height,
+          count: node.count,
+          children: [collapse(node.children[0]), collapse(node.children[1])],
+        };
+      }
+    
+      return collapse(root);
+    }
+    
+    /**
+     * Render a simple horizontal dendrogram showing cluster structure
+     */
+    function renderMiniDendrogram() {
+      const svg = document.getElementById("mini-dendrogram");
+      if (!svg) return;
+    
+      const tree = buildClusterTree();
+      const sizes = window.CLUSTER_STATE.getClusterSizes();
+    
+      // Get dimensions
+      const rect = svg.getBoundingClientRect();
+      const width = rect.width || 380;
+      const height = rect.height || 160;
+      const margin = { top: 5, right: 50, bottom: 5, left: 5 };
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+    
+      // Count leaves and assign y positions
+      let leafCount = 0;
+      function countLeaves(node) {
+        if (node.isLeaf) {
+          node.leafIndex = leafCount++;
+          return 1;
+        }
+        return countLeaves(node.children[0]) + countLeaves(node.children[1]);
+      }
+      const totalLeaves = countLeaves(tree);
+    
+      // Get min and max heights for x scaling (to avoid long root line)
+      function getHeightRange(node) {
+        if (node.isLeaf) return { min: Infinity, max: 0 };
+        const left = getHeightRange(node.children[0]);
+        const right = getHeightRange(node.children[1]);
+        return {
+          min: Math.min(node.height, left.min, right.min),
+          max: Math.max(node.height, left.max, right.max),
+        };
+      }
+      const { min: minHeight, max: maxHeight } = getHeightRange(tree);
+      const heightRange = maxHeight - minHeight || 1;
+    
+      // Position nodes - scale x from minHeight to maxHeight
+      function positionNodes(node) {
+        if (node.isLeaf) {
+          node.x = innerWidth;
+          node.y = (node.leafIndex + 0.5) * (innerHeight / totalLeaves);
+          return node.y;
+        }
+    
+        const y0 = positionNodes(node.children[0]);
+        const y1 = positionNodes(node.children[1]);
+        // Scale so minHeight maps to ~20% from left, maxHeight maps to right edge
+        const normalizedHeight = (maxHeight - node.height) / heightRange;
+        node.x = innerWidth * (0.15 + normalizedHeight * 0.85);
+        node.y = (y0 + y1) / 2;
+        return node.y;
+      }
+      positionNodes(tree);
+    
+      // Clear and rebuild SVG
+      svg.innerHTML = "";
+    
+      // Create SVG group
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    
+      function renderNode(node) {
+        if (node.isLeaf) {
+          const color =
+            window.CLUSTER_STATE.colors[
+              node.clusterId >= 0
+                ? node.clusterId % window.CLUSTER_STATE.colors.length
+                : 0
+            ];
+          const displayColor = node.clusterId === -1 ? "#666" : color;
+          const size = sizes[node.clusterId] || node.count;
+    
+          // Create circle
+          const circle = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "circle",
+          );
+          circle.setAttribute("cx", margin.left + node.x);
+          circle.setAttribute("cy", margin.top + node.y);
+          circle.setAttribute("r", 6);
+          circle.setAttribute("fill", displayColor);
+          circle.setAttribute("stroke", "white");
+          circle.setAttribute("stroke-width", 1);
+          circle.setAttribute("cursor", "pointer");
+          circle.addEventListener("click", () => {
+            selectCluster(node.clusterId);
+            renderTopClusters();
+          });
+          g.appendChild(circle);
+    
+          // Create label
+          const text = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "text",
+          );
+          text.setAttribute("x", margin.left + node.x + 10);
+          text.setAttribute("y", margin.top + node.y + 4);
+          text.setAttribute("font-size", 11);
+          text.setAttribute("fill", "#333");
+          text.textContent = size;
+          g.appendChild(text);
+          return;
+        }
+    
+        // Draw elbow paths to children
+        for (const child of node.children) {
+          const x1 = margin.left + node.x;
+          const y1 = margin.top + node.y;
+          const x2 = margin.left + child.x;
+          const y2 = margin.top + child.y;
+    
+          const path = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "path",
+          );
+          path.setAttribute("d", `M${x1},${y1} H${x2} V${y2}`);
+          path.setAttribute("fill", "none");
+          path.setAttribute("stroke", "#999");
+          path.setAttribute("stroke-width", 1.5);
+          g.appendChild(path);
+    
+          renderNode(child);
+        }
+      }
+    
+      renderNode(tree);
+      svg.appendChild(g);
     }
     
     /**

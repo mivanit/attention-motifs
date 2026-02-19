@@ -1253,8 +1253,8 @@ function renderMiniDendrogram() {
   // Get dimensions
   const rect = svg.getBoundingClientRect();
   const width = rect.width || 380;
-  const height = rect.height || 130;
-  const margin = { top: 10, right: 60, bottom: 10, left: 10 };
+  const height = rect.height || 160;
+  const margin = { top: 5, right: 50, bottom: 5, left: 5 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
@@ -1269,18 +1269,20 @@ function renderMiniDendrogram() {
   }
   const totalLeaves = countLeaves(tree);
 
-  // Get max height for x scaling
-  function getMaxHeight(node) {
-    if (node.isLeaf) return 0;
-    return Math.max(
-      node.height,
-      getMaxHeight(node.children[0]),
-      getMaxHeight(node.children[1]),
-    );
+  // Get min and max heights for x scaling (to avoid long root line)
+  function getHeightRange(node) {
+    if (node.isLeaf) return { min: Infinity, max: 0 };
+    const left = getHeightRange(node.children[0]);
+    const right = getHeightRange(node.children[1]);
+    return {
+      min: Math.min(node.height, left.min, right.min),
+      max: Math.max(node.height, left.max, right.max),
+    };
   }
-  const maxHeight = getMaxHeight(tree) || 1;
+  const { min: minHeight, max: maxHeight } = getHeightRange(tree);
+  const heightRange = maxHeight - minHeight || 1;
 
-  // Position nodes
+  // Position nodes - scale x from minHeight to maxHeight
   function positionNodes(node) {
     if (node.isLeaf) {
       node.x = innerWidth;
@@ -1290,29 +1292,60 @@ function renderMiniDendrogram() {
 
     const y0 = positionNodes(node.children[0]);
     const y1 = positionNodes(node.children[1]);
-    node.x = innerWidth * (1 - node.height / maxHeight);
+    // Scale so minHeight maps to ~20% from left, maxHeight maps to right edge
+    const normalizedHeight = (maxHeight - node.height) / heightRange;
+    node.x = innerWidth * (0.15 + normalizedHeight * 0.85);
     node.y = (y0 + y1) / 2;
     return node.y;
   }
   positionNodes(tree);
 
-  // Build SVG content
-  let paths = "";
-  let circles = "";
-  let labels = "";
+  // Clear and rebuild SVG
+  svg.innerHTML = "";
+
+  // Create SVG group
+  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
 
   function renderNode(node) {
     if (node.isLeaf) {
-      const color = window.CLUSTER_STATE.colors[
-        node.clusterId >= 0
-          ? node.clusterId % window.CLUSTER_STATE.colors.length
-          : 0
-      ];
+      const color =
+        window.CLUSTER_STATE.colors[
+          node.clusterId >= 0
+            ? node.clusterId % window.CLUSTER_STATE.colors.length
+            : 0
+        ];
       const displayColor = node.clusterId === -1 ? "#666" : color;
       const size = sizes[node.clusterId] || node.count;
 
-      circles += `<circle cx="${margin.left + node.x}" cy="${margin.top + node.y}" r="6" fill="${displayColor}" stroke="white" stroke-width="1"/>`;
-      labels += `<text x="${margin.left + node.x + 10}" y="${margin.top + node.y + 4}" font-size="11" fill="#333">${size}</text>`;
+      // Create circle
+      const circle = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "circle",
+      );
+      circle.setAttribute("cx", margin.left + node.x);
+      circle.setAttribute("cy", margin.top + node.y);
+      circle.setAttribute("r", 6);
+      circle.setAttribute("fill", displayColor);
+      circle.setAttribute("stroke", "white");
+      circle.setAttribute("stroke-width", 1);
+      circle.setAttribute("cursor", "pointer");
+      circle.addEventListener("click", () => {
+        selectCluster(node.clusterId);
+        renderTopClusters();
+      });
+      g.appendChild(circle);
+
+      // Create label
+      const text = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "text",
+      );
+      text.setAttribute("x", margin.left + node.x + 10);
+      text.setAttribute("y", margin.top + node.y + 4);
+      text.setAttribute("font-size", 11);
+      text.setAttribute("fill", "#333");
+      text.textContent = size;
+      g.appendChild(text);
       return;
     }
 
@@ -1323,15 +1356,22 @@ function renderMiniDendrogram() {
       const x2 = margin.left + child.x;
       const y2 = margin.top + child.y;
 
-      // Elbow path: horizontal then vertical
-      paths += `<path d="M${x1},${y1} H${x2} V${y2}" fill="none" stroke="#999" stroke-width="1.5"/>`;
+      const path = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "path",
+      );
+      path.setAttribute("d", `M${x1},${y1} H${x2} V${y2}`);
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", "#999");
+      path.setAttribute("stroke-width", 1.5);
+      g.appendChild(path);
+
       renderNode(child);
     }
   }
 
   renderNode(tree);
-
-  svg.innerHTML = paths + circles + labels;
+  svg.appendChild(g);
 }
 
 /**
