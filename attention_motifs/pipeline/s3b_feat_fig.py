@@ -63,7 +63,7 @@ def plot_pca_all(
 	data_scaled: pl.DataFrame,
 	pca_data: np.ndarray,
 ) -> None:
-	n_dims: int = cfg.plot_kwargs.get("n_dims", 5)
+	n_dims: int = cfg.plot_kwargs.get("n_dims", 5)  # type: ignore[arg-type]
 	embed_fig, embed_ax = plt.subplots(
 		n_dims - 1,
 		n_dims - 1,

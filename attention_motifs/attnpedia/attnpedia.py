@@ -308,8 +308,10 @@ class AttentionPedia:
 					factor: float = 0.2 * (i / (len(types) - 1 or 1) - 0.5)
 
 					# Create variation (lighten/darken)
-					new_rgb: tuple = tuple(
-						min(max(c * (1 + factor), 0), 1) for c in base_rgb
+					new_rgb: tuple[float, float, float] = (
+						min(max(base_rgb[0] * (1 + factor), 0), 1),
+						min(max(base_rgb[1] * (1 + factor), 0), 1),
+						min(max(base_rgb[2] * (1 + factor), 0), 1),
 					)
 					color_dict[type_name] = mcolors.rgb2hex(new_rgb)
 

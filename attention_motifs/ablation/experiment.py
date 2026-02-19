@@ -195,12 +195,13 @@ def run_ablation_experiment(
 	if config is None:
 		config = ExperimentConfig()
 
+	# ignores here are fine, we can assume that candidate_heads and control_heads are lists of strings or tuples, but not mixed
 	# Convert string heads to tuples if needed
 	if candidate_heads and isinstance(candidate_heads[0], str):
-		candidate_heads = heads_from_strings(candidate_heads)
+		candidate_heads = heads_from_strings(candidate_heads) # ty: ignore[invalid-argument-type]
 
 	if control_heads and isinstance(control_heads[0], str):
-		control_heads = heads_from_strings(control_heads)
+		control_heads = heads_from_strings(control_heads) # ty: ignore[invalid-argument-type]
 
 	# Load model
 	print(f"Loading model: {model_name}")

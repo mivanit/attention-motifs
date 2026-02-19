@@ -157,7 +157,7 @@ class HeadAblator:
 					# we can safely assume everything in the batch is str
 					tokens = self.model.to_tokens(batch) # ty: ignore[invalid-argument-type]
 				else:
-					tokens = torch.stack(batch) if isinstance(batch, list) else batch
+					tokens = torch.stack(batch) if isinstance(batch, list) else batch # ty: ignore[invalid-argument-type]
 
 				# Run with hooks
 
@@ -251,7 +251,7 @@ class HeadAblator:
 			heads_by_layer[layer].append(head)
 
 		# Create hooks
-		hooks = [
+		hooks: list[tuple[str, Callable[[Tensor, HookPoint], Tensor]]] = [
 			(
 				self._get_hook_name(layer),
 				self._create_ablation_hook(layer, layer_heads, method),
@@ -261,7 +261,8 @@ class HeadAblator:
 
 		# Register hooks by adding to the hook point's fwd_hooks list
 		for hook_name, hook_fn in hooks:
-			self.model.hook_dict[hook_name].add_hook(hook_fn)
+			# add_hook expects `_HookFunctionProtocol: (tensor: Tensor, *, hook: HookPoint) -> Union[Any, None])` which is what we have, so ignore here is fine
+			self.model.hook_dict[hook_name].add_hook(hook_fn) # ty: ignore[invalid-argument-type]
 
 		try:
 			yield
