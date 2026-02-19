@@ -12,7 +12,9 @@ import polars as pl
 import attention_motifs
 
 ATTNPEDIA_PATH: Path = (
-	Path(str(importlib.resources.files(attention_motifs))) / "attnpedia" / "attn-pedia.json"
+	Path(str(importlib.resources.files(attention_motifs)))
+	/ "attnpedia"
+	/ "attn-pedia.json"
 )
 
 ATTNPEDIA_GROUPS_PATH: Path = (

@@ -302,7 +302,12 @@ def tt_fig(
 		x: np.ndarray = np.arange(tt.shape[2])
 		y: np.ndarray = tt[i, 0, :]
 		# Initial parameter guess: amplitude, midpoint, steepness, baseline
-		p0: list[float] = [float(max(y) - min(y)), float(np.median(x)), 1.0, float(min(y))]
+		p0: list[float] = [
+			float(max(y) - min(y)),
+			float(np.median(x)),
+			1.0,
+			float(min(y)),
+		]
 		try:
 			popt: np.ndarray
 			popt, _ = curve_fit(sigmoid, x, y, p0=p0)

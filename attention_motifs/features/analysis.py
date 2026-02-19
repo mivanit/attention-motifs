@@ -131,7 +131,9 @@ def filter_data(
 	)
 	for col in remove_cols:
 		# Assuming array_summary is defined elsewhere.
-		print(f"{col:<60} {array_summary(df_models_dropped[col].to_numpy(), as_list=False)}")
+		print(
+			f"{col:<60} {array_summary(df_models_dropped[col].to_numpy(), as_list=False)}"
+		)
 
 	df_filtered: pl.DataFrame = df_models_dropped.drop(remove_cols)
 	return df_filtered

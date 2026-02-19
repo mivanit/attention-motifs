@@ -22,7 +22,9 @@ def export_command(args: argparse.Namespace) -> None:
 
 	# Validate clustering path exists
 	if not clustering_path.exists():
-		print(f"Error: Clustering path does not exist: {clustering_path}", file=sys.stderr)
+		print(
+			f"Error: Clustering path does not exist: {clustering_path}", file=sys.stderr
+		)
 		sys.exit(1)
 
 	# Load clustering
@@ -37,7 +39,10 @@ def export_command(args: argparse.Namespace) -> None:
 		sys.exit(1)
 
 	if args.cut_height is not None and args.n_clusters is not None:
-		print("Warning: Both --cut-height and --n-clusters specified, using --n-clusters", file=sys.stderr)
+		print(
+			"Warning: Both --cut-height and --n-clusters specified, using --n-clusters",
+			file=sys.stderr,
+		)
 
 	# Create pattern types
 	pattern_types: PatternTypes = PatternTypes.from_clustering(
@@ -49,9 +54,14 @@ def export_command(args: argparse.Namespace) -> None:
 	)
 
 	# Print stats
-	print(f"Created {pattern_types.meta.n_clusters} clusters from {pattern_types.stats.n_heads} heads", file=sys.stderr)
+	print(
+		f"Created {pattern_types.meta.n_clusters} clusters from {pattern_types.stats.n_heads} heads",
+		file=sys.stderr,
+	)
 	print("Cluster sizes:", file=sys.stderr)
-	for cluster_id, size in sorted(pattern_types.stats.cluster_sizes.items(), key=lambda x: int(x[0])):
+	for cluster_id, size in sorted(
+		pattern_types.stats.cluster_sizes.items(), key=lambda x: int(x[0])
+	):
 		print(f"  Cluster {cluster_id}: {size} heads", file=sys.stderr)
 
 	# Save

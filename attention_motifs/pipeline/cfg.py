@@ -36,7 +36,7 @@ PlotKwargKey = Literal["pca_all_dpi",]
 
 EmbeddingMethod = Literal["isomap", "umap", "tsne", "pca"]
 
-DATA_FNAMES: dict[DataFilename, str] = dict( # ty: ignore[invalid-assignment]
+DATA_FNAMES: dict[DataFilename, str] = dict(  # ty: ignore[invalid-assignment]
 	raw="raw.jsonl",
 	norms="norms.jsonl",
 	scaled="scaled.jsonl",
@@ -49,7 +49,7 @@ DATA_FNAMES: dict[DataFilename, str] = dict( # ty: ignore[invalid-assignment]
 	clustering="clustering",
 )
 
-FIGURE_FNAMES: dict[FigureFilename, str] = dict( # ty: ignore[invalid-assignment]
+FIGURE_FNAMES: dict[FigureFilename, str] = dict(  # ty: ignore[invalid-assignment]
 	pca="pca.pdf",
 	cov_full="covariance-full.pdf",
 	cov_reduced="covariance-reduced.pdf",

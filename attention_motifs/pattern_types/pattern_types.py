@@ -4,7 +4,7 @@ This module provides a way to export clustering cuts at specific heights
 and assign human-readable labels to the resulting clusters.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -319,7 +319,13 @@ class PatternTypes:
 		for i in sorted(cluster_ids):
 			if i == cls.MISC_CLUSTER_ID:
 				merged_ids: str = ", ".join(str(c) for c in sorted(small_clusters))
-				types.append(PatternType(id=i, name="misc", description=f"Merged from clusters: {merged_ids}"))
+				types.append(
+					PatternType(
+						id=i,
+						name="misc",
+						description=f"Merged from clusters: {merged_ids}",
+					)
+				)
 			else:
 				types.append(PatternType(id=i, name="none", description="none"))
 
