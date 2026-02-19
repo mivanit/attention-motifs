@@ -501,7 +501,6 @@ typing-extensions==4.12.2
     #   attention-motifs
     #   grpcio
     #   huggingface-hub
-    #   ipython
     #   jaxtyping
     #   pydantic
     #   pydantic-core

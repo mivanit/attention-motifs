@@ -550,8 +550,6 @@ tinycss2==1.4.0
     # via bleach
 tokenizers==0.22.2
     # via transformers
-tomli==2.4.0 ; python_full_version <= '3.11'
-    # via coverage
 torch==2.10.0
     # via
     #   accelerate
@@ -623,7 +621,6 @@ typing-extensions==4.12.2
     #   beautifulsoup4
     #   grpcio
     #   huggingface-hub
-    #   ipython
     #   jaxtyping
     #   mypy
     #   optype

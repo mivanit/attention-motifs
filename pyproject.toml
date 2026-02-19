@@ -6,7 +6,7 @@ authors = [
 	{ name = "Michael Ivanitskiy", email = "mivanits@umich.edu" }
 ]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 
 dependencies = [
 	# standard
