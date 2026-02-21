@@ -87,7 +87,8 @@ def plot_pca_all(
 			embed_ax[i, k].axis("off")
 
 	plt.legend(
-		handles=handles,
+		# TODO: i think this is fine, but double check
+		handles=handles,  # pyright: ignore[reportPossiblyUnboundVariable]
 		loc="lower left",
 		bbox_to_anchor=(-3, 1),
 		title="Models",

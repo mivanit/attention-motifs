@@ -143,7 +143,7 @@ def scalar_feature_table(
 					features_func=features_func,
 				)
 			)
-			model_out: list[dict] = tqdm.tqdm(  # ty: ignore[invalid-assignment]
+			model_out: list[dict] = tqdm.tqdm(  # ty: ignore[invalid-assignment] # pyright: ignore[reportAssignmentType]
 				pool.imap(prompt_func, prompts),
 				total=len(prompts),
 			)

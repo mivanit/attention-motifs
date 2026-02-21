@@ -61,7 +61,7 @@ def vec_features(
 
 	# PSD using Welch's method (total power)
 	freqs, psd_vals = signal.welch(arr, nperseg=n)
-	psd_total_power: float = np.sum(psd_vals)
+	psd_total_power: float = float(np.sum(psd_vals))
 
 	# Linear regression using scipy.stats.linregress
 	t: np.ndarray = np.arange(n)

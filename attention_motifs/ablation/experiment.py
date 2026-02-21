@@ -24,6 +24,7 @@ from attention_motifs.ablation.candidates import (
 	find_candidate_induction_heads,
 )
 from attention_motifs.ablation.data import (
+	RepeatedSequence,
 	generate_repeated_sequences,
 )
 from attention_motifs.ablation.metrics import (
@@ -198,21 +199,23 @@ def run_ablation_experiment(
 	# ignores here are fine, we can assume that candidate_heads and control_heads are lists of strings or tuples, but not mixed
 	# Convert string heads to tuples if needed
 	if candidate_heads and isinstance(candidate_heads[0], str):
-		candidate_heads = heads_from_strings(candidate_heads)  # ty: ignore[invalid-argument-type]
+		candidate_heads = heads_from_strings(candidate_heads)  # ty: ignore[invalid-argument-type] # pyright: ignore[reportArgumentType]
 
 	if control_heads and isinstance(control_heads[0], str):
-		control_heads = heads_from_strings(control_heads)  # ty: ignore[invalid-argument-type]
+		control_heads = heads_from_strings(control_heads)  # ty: ignore[invalid-argument-type] # pyright: ignore[reportArgumentType]
 
 	# Load model
 	print(f"Loading model: {model_name}")
-	model = HookedTransformer.from_pretrained(model_name, device=device)
+	model: HookedTransformer = HookedTransformer.from_pretrained(
+		model_name, device=device
+	)
 
 	# Create ablator
-	ablator = HeadAblator(model)
+	ablator: HeadAblator = HeadAblator(model)
 
 	# Generate test sequences
 	print("Generating test sequences...")
-	sequences = generate_repeated_sequences(
+	sequences: list[RepeatedSequence] = generate_repeated_sequences(
 		tokenizer=model.tokenizer,
 		n_sequences=config.n_sequences,
 		seq_length=config.seq_length,
@@ -234,8 +237,8 @@ def run_ablation_experiment(
 
 	# Compute baseline metrics (no ablation)
 	print("Computing baseline metrics...")
-	baseline_loss = repeated_sequence_loss(model, sequences)
-	baseline_icl = icl_score(model, icl_prompts) if icl_prompts else 0.0
+	baseline_loss: float = repeated_sequence_loss(model, sequences)
+	baseline_icl: float = icl_score(model, icl_prompts) if icl_prompts else 0.0
 
 	results = ExperimentResults(
 		model_name=model_name,
@@ -258,7 +261,7 @@ def run_ablation_experiment(
 		head_str = f"{model_name}:L{layer}:H{head}"
 
 		# Compute baseline prefix score for this head
-		baseline_prefix = prefix_matching_score(model, layer, head, sequences)
+		baseline_prefix: float = prefix_matching_score(model, layer, head, sequences)
 
 		for method in config.ablation_methods:
 			# Run with ablation
@@ -267,7 +270,7 @@ def run_ablation_experiment(
 				ablated_prefix = prefix_matching_score(model, layer, head, sequences)
 				ablated_icl = icl_score(model, icl_prompts) if icl_prompts else 0.0
 
-			result = AblationResult(
+			result: AblationResult = AblationResult(
 				head=head_str,
 				ablation_method=method,
 				baseline_repeated_loss=baseline_loss,
@@ -378,6 +381,7 @@ def run_cross_model_experiment(
 
 		# Save intermediate results
 		if output_dir:
+			assert output_dir_
 			results.save(output_dir_ / f"{model_name.replace('/', '_')}_results.json")
 
 	return all_results
