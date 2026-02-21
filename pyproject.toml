@@ -66,6 +66,7 @@ dependencies = [
 		"pytest>=8.2.2",
 		# coverage
 		"pytest-cov>=4.1.0",
+		"pytest-xdist>=3.5.0",
 		"coverage-badge>=1.1.0",
 		# frontend testing
 		"pytest-playwright>=0.6.2",
@@ -137,7 +138,7 @@ exclude = ["__pycache__"]
 	include = ["attention_motifs", "tests", "notebooks"]
 
 [tool.pytest.ini_options]
-	addopts = "--jaxtyping-packages=pattern_lens,beartype.beartype -m 'not benchmark'"
+	addopts = "-n auto --jaxtyping-packages=pattern_lens,beartype.beartype -m 'not benchmark'"
 	markers = ["benchmark: marks tests as benchmark (deselect with '-m \"not benchmark\"')"]
 	filterwarnings = [
 		"ignore: PEP 484 type hint*:beartype.roar._roarwarn.BeartypeDecorHintPep585DeprecationWarning",
