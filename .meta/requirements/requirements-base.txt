@@ -529,7 +529,7 @@ xxhash==3.6.0
     # via datasets
 yarl==1.22.0
     # via aiohttp
-zanj @ git+https://github.com/mivanit/ZANJ@d99ce95ed7b3c4e00b0a7cb3e4e68c07e32aaa5d
+zanj @ git+https://github.com/mivanit/ZANJ@2fc63c724268b09f597d4c025dee005f00e8e190
     # via
     #   attention-motifs
     #   pattern-lens

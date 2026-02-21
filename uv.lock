@@ -4289,7 +4289,7 @@ wheels = [
 [[package]]
 name = "zanj"
 version = "0.5.2"
-source = { git = "https://github.com/mivanit/ZANJ#d99ce95ed7b3c4e00b0a7cb3e4e68c07e32aaa5d" }
+source = { git = "https://github.com/mivanit/ZANJ#2fc63c724268b09f597d4c025dee005f00e8e190" }
 dependencies = [
     { name = "jaxtyping" },
     { name = "muutils" },
