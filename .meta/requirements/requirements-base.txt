@@ -104,7 +104,7 @@ gitdb==4.0.12
     # via gitpython
 gitpython==3.1.46
     # via wandb
-grpcio==1.78.0
+grpcio==1.78.1
     # via tensorboard
 h11==0.16.0
     # via httpcore

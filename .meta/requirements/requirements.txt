@@ -126,9 +126,9 @@ gitdb==4.0.12
     # via gitpython
 gitpython==3.1.46
     # via wandb
-greenlet==3.3.1
+greenlet==3.3.2
     # via playwright
-grpcio==1.78.0
+grpcio==1.78.1
     # via tensorboard
 h11==0.16.0
     # via httpcore
@@ -498,7 +498,7 @@ rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
-ruff==0.15.1
+ruff==0.15.2
 safetensors==0.7.0
     # via
     #   accelerate
@@ -596,7 +596,7 @@ triton==3.6.0 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
 trnbl==0.1.1
     # via attention-motifs
-ty==0.0.17
+ty==0.0.18
 typeguard==4.4.2
     # via
     #   attention-motifs
