@@ -27,7 +27,7 @@ attrs==25.4.0
     #   igittigitt
     #   jsonschema
     #   referencing
-basedpyright==1.38.0
+basedpyright==1.38.1
 beartype==0.14.1
     # via
     #   attention-motifs
@@ -106,7 +106,7 @@ fancy-einsum==0.0.3
     # via transformer-lens
 fastjsonschema==2.21.2
     # via nbformat
-filelock==3.24.2
+filelock==3.24.3
     # via
     #   datasets
     #   huggingface-hub
@@ -279,7 +279,7 @@ networkx==3.6.1
     # via torch
 nodejs-wheel-binaries==24.13.1
     # via basedpyright
-numba==0.63.1
+numba==0.64.0
     # via
     #   pynndescent
     #   umap-learn
@@ -378,7 +378,7 @@ parso==0.8.6
     # via jedi
 pathspec==1.0.4
     # via mypy
-pattern-lens @ git+https://github.com/mivanit/pattern-lens@61adc0e68f97cb8ce65f85b0fb6b1396d1eefd18
+pattern-lens @ git+https://github.com/mivanit/pattern-lens@b8c3db0ef132ded6d8aa765c8e254c451251d098
     # via attention-motifs
 pdoc==16.0.0
 pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
@@ -480,14 +480,14 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-regex==2026.1.15
+regex==2026.2.19
     # via transformers
 requests==2.32.5
     # via
     #   datasets
     #   pytest-base-url
     #   wandb
-rich==14.3.2
+rich==14.3.3
     # via
     #   rich-click
     #   transformer-lens
@@ -581,7 +581,7 @@ traitlets==5.14.3
     #   nbclient
     #   nbconvert
     #   nbformat
-transformer-lens @ git+https://github.com/TransformerLensOrg/TransformerLens@3c82bf5b32ea843aeda7cfcae03ede85a02dae06
+transformer-lens @ git+https://github.com/TransformerLensOrg/TransformerLens@b9e6bb1af37208a034de3f5c097cfd995fddddb8
     # via
     #   attention-motifs
     #   pattern-lens
@@ -651,7 +651,7 @@ webencodings==0.5.1
     # via
     #   bleach
     #   tinycss2
-werkzeug==3.1.5
+werkzeug==3.1.6
     # via tensorboard
 widgetsnbextension==4.0.15
     # via ipywidgets
@@ -659,7 +659,7 @@ xxhash==3.6.0
     # via datasets
 yarl==1.22.0
     # via aiohttp
-zanj==0.5.2
+zanj @ git+https://github.com/mivanit/ZANJ@d99ce95ed7b3c4e00b0a7cb3e4e68c07e32aaa5d
     # via
     #   attention-motifs
     #   pattern-lens

@@ -84,7 +84,7 @@ fancy-einsum==0.0.3
     # via transformer-lens
 fastjsonschema==2.21.2
     # via nbformat
-filelock==3.24.2
+filelock==3.24.3
     # via
     #   datasets
     #   huggingface-hub
@@ -217,7 +217,7 @@ nest-asyncio==1.6.0
     # via ipykernel
 networkx==3.6.1
     # via torch
-numba==0.63.1
+numba==0.64.0
     # via
     #   pynndescent
     #   umap-learn
@@ -302,7 +302,7 @@ pandas==3.0.1 ; python_full_version < '3.14'
     #   transformer-lens
 parso==0.8.6
     # via jedi
-pattern-lens @ git+https://github.com/mivanit/pattern-lens@61adc0e68f97cb8ce65f85b0fb6b1396d1eefd18
+pattern-lens @ git+https://github.com/mivanit/pattern-lens@b8c3db0ef132ded6d8aa765c8e254c451251d098
     # via attention-motifs
 pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
     # via ipython
@@ -381,13 +381,13 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-regex==2026.1.15
+regex==2026.2.19
     # via transformers
 requests==2.32.5
     # via
     #   datasets
     #   wandb
-rich==14.3.2
+rich==14.3.3
     # via
     #   transformer-lens
     #   typer
@@ -467,7 +467,7 @@ traitlets==5.14.3
     #   jupyter-core
     #   matplotlib-inline
     #   nbformat
-transformer-lens @ git+https://github.com/TransformerLensOrg/TransformerLens@3c82bf5b32ea843aeda7cfcae03ede85a02dae06
+transformer-lens @ git+https://github.com/TransformerLensOrg/TransformerLens@b9e6bb1af37208a034de3f5c097cfd995fddddb8
     # via
     #   attention-motifs
     #   pattern-lens
@@ -521,7 +521,7 @@ wandb==0.25.0
     # via transformer-lens
 wcwidth==0.6.0
     # via prompt-toolkit
-werkzeug==3.1.5
+werkzeug==3.1.6
     # via tensorboard
 widgetsnbextension==4.0.15
     # via ipywidgets
@@ -529,7 +529,7 @@ xxhash==3.6.0
     # via datasets
 yarl==1.22.0
     # via aiohttp
-zanj==0.5.2
+zanj @ git+https://github.com/mivanit/ZANJ@d99ce95ed7b3c4e00b0a7cb3e4e68c07e32aaa5d
     # via
     #   attention-motifs
     #   pattern-lens
