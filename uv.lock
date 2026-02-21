@@ -233,6 +233,7 @@ dependencies = [
 dev = [
     { name = "basedpyright" },
     { name = "coverage-badge" },
+    { name = "filelock" },
     { name = "lmcat" },
     { name = "mypy" },
     { name = "nbconvert" },
@@ -283,6 +284,7 @@ requires-dist = [
 dev = [
     { name = "basedpyright" },
     { name = "coverage-badge", specifier = ">=1.1.0" },
+    { name = "filelock", specifier = ">=3.13.0" },
     { name = "lmcat", specifier = ">=0.2.0" },
     { name = "mypy", specifier = ">=1.0.1" },
     { name = "nbconvert" },

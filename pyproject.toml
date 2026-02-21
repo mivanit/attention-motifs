@@ -67,6 +67,7 @@ dependencies = [
 		# coverage
 		"pytest-cov>=4.1.0",
 		"pytest-xdist>=3.5.0",
+		"filelock>=3.13.0",
 		"coverage-badge>=1.1.0",
 		# frontend testing
 		"pytest-playwright>=0.6.2",
