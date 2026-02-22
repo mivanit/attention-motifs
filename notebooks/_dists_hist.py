@@ -71,7 +71,7 @@ colors: dict[str, str] = {
 vmin = np.min(x)
 vmax = np.max(x)
 
-vmin, vmax
+_ = vmin, vmax
 
 # %%
 

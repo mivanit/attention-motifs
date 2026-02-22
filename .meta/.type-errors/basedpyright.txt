@@ -18,98 +18,45 @@
     "list[tuple[str, (Tensor, HookPoint) -> Tensor]]" is not assignable to "list[tuple[str | ((...) -> Unknown), (...) -> Unknown]]"
       Type parameter "_T@list" is invariant, but "tuple[str, (Tensor, HookPoint) -> Tensor]" is not the same as "tuple[str | ((...) -> Unknown), (...) -> Unknown]"
       Consider switching from "list" to "Sequence" which is covariant (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/ablate.py:264:45 - error: Argument of type "(Tensor, HookPoint) -> Tensor" cannot be assigned to parameter "hook" of type "HookFunction" in function "add_hook"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/ablate.py:265:45 - error: Argument of type "(Tensor, HookPoint) -> Tensor" cannot be assigned to parameter "hook" of type "HookFunction" in function "add_hook"
     Type "(Tensor, HookPoint) -> Tensor" is not assignable to type "(tensor: Tensor, *, hook: HookPoint) -> (Any | None)"
       Missing keyword parameter "tensor"
         Position-only parameter mismatch; parameter "tensor" is not position-only
         Position-only parameter mismatch; expected 2 but received 0
         Function accepts too few positional parameters; expected 2 but received 1
         Missing keyword parameter "hook" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/ablate.py:350:22 - error: Argument of type "list[tuple[str, (Tensor, HookPoint) -> Tensor]]" cannot be assigned to parameter "fwd_hooks" of type "list[tuple[str | ((...) -> Unknown), (...) -> Unknown]]" in function "run_with_hooks"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/ablate.py:351:22 - error: Argument of type "list[tuple[str, (Tensor, HookPoint) -> Tensor]]" cannot be assigned to parameter "fwd_hooks" of type "list[tuple[str | ((...) -> Unknown), (...) -> Unknown]]" in function "run_with_hooks"
     "list[tuple[str, (Tensor, HookPoint) -> Tensor]]" is not assignable to "list[tuple[str | ((...) -> Unknown), (...) -> Unknown]]"
       Type parameter "_T@list" is invariant, but "tuple[str, (Tensor, HookPoint) -> Tensor]" is not the same as "tuple[str | ((...) -> Unknown), (...) -> Unknown]"
       Consider switching from "list" to "Sequence" which is covariant (reportArgumentType)
 /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/experiment.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/experiment.py:203:40 - error: Argument of type "list[tuple[int, int]] | list[str]" cannot be assigned to parameter "head_strs" of type "list[str]" in function "heads_from_strings"
-    Type "list[tuple[int, int]] | list[str]" is not assignable to type "list[str]"
-      "list[tuple[int, int]]" is not assignable to "list[str]"
-        Type parameter "_T@list" is invariant, but "tuple[int, int]" is not the same as "str"
-        Consider switching from "list" to "Sequence" which is covariant (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/experiment.py:206:38 - error: Argument of type "list[tuple[int, int]] | list[str]" cannot be assigned to parameter "head_strs" of type "list[str]" in function "heads_from_strings"
-    Type "list[tuple[int, int]] | list[str]" is not assignable to type "list[str]"
-      "list[tuple[int, int]]" is not assignable to "list[str]"
-        Type parameter "_T@list" is invariant, but "tuple[int, int]" is not the same as "str"
-        Consider switching from "list" to "Sequence" which is covariant (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/experiment.py:210:28 - error: "from_pretrained" is not a known attribute of "None" (reportOptionalMemberAccess)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/experiment.py:263:50 - error: Argument of type "str | int" cannot be assigned to parameter "layer" of type "int" in function "prefix_matching_score"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/experiment.py:264:57 - error: Argument of type "str | int" cannot be assigned to parameter "layer" of type "int" in function "prefix_matching_score"
     Type "str | int" is not assignable to type "int"
       "str" is not assignable to "int" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/experiment.py:263:57 - error: Argument of type "str | int" cannot be assigned to parameter "head" of type "int" in function "prefix_matching_score"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/experiment.py:264:64 - error: Argument of type "str | int" cannot be assigned to parameter "head" of type "int" in function "prefix_matching_score"
     Type "str | int" is not assignable to type "int"
       "str" is not assignable to "int" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/experiment.py:267:30 - error: Argument of type "list[tuple[str | int, str | int]]" cannot be assigned to parameter "heads" of type "list[tuple[int, int]]"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/experiment.py:268:30 - error: Argument of type "list[tuple[str | int, str | int]]" cannot be assigned to parameter "heads" of type "list[tuple[int, int]]"
     Type "str | int" is not assignable to type "int"
       "str" is not assignable to "int"
     Type "str | int" is not assignable to type "int"
       "str" is not assignable to "int" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/experiment.py:269:51 - error: Argument of type "str | int" cannot be assigned to parameter "layer" of type "int" in function "prefix_matching_score"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/experiment.py:270:51 - error: Argument of type "str | int" cannot be assigned to parameter "layer" of type "int" in function "prefix_matching_score"
     Type "str | int" is not assignable to type "int"
       "str" is not assignable to "int" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/experiment.py:269:58 - error: Argument of type "str | int" cannot be assigned to parameter "head" of type "int" in function "prefix_matching_score"
+  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/experiment.py:270:58 - error: Argument of type "str | int" cannot be assigned to parameter "head" of type "int" in function "prefix_matching_score"
     Type "str | int" is not assignable to type "int"
       "str" is not assignable to "int" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/experiment.py:383:17 - error: Operator "/" not supported for types "Path | Unbound" and "str"
-    Operator "/" not supported for types "Unbound" and "str" when expected type is "Path | str" (reportOperatorIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/experiment.py:383:17 - error: "output_dir_" is possibly unbound (reportPossiblyUnboundVariable)
-/home/miv/projects/attn/attention-motifs/attention_motifs/ablation/metrics.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/ablation/metrics.py:469:23 - error: Argument of type "tuple[int, int, Number]" cannot be assigned to parameter "indices" of type "_Index | tuple[_Index, ...]" in function "__getitem__"
-    Type "tuple[int, int, Number]" is not assignable to type "_Index | tuple[_Index, ...]"
-      "tuple[int, int, Number]" is incompatible with protocol "SupportsIndex"
-        "__index__" is not present
-      "tuple[int, int, Number]" is not assignable to "bool"
-      "tuple[int, int, Number]" is not assignable to "int"
-      "tuple[int, int, Number]" is not assignable to "slice[Any, Any, Any]"
-      "tuple[int, int, Number]" is not assignable to "EllipsisType"
-      "tuple[int, int, Number]" is not assignable to "Tensor" (reportArgumentType)
-/home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:266:10 - error: Type "dict[str, str] | None" is not assignable to return type "dict[str, str]"
-    Type "dict[str, str] | None" is not assignable to type "dict[str, str]"
-      "None" is not assignable to "dict[str, str]" (reportReturnType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:282:10 - error: Type "dict[str, str] | None" is not assignable to return type "dict[str, str]"
-    Type "dict[str, str] | None" is not assignable to type "dict[str, str]"
-      "None" is not assignable to "dict[str, str]" (reportReturnType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:378:13 - error: No overloads for "to_dict" match the provided arguments
-    Argument types: (Literal['records']) (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/attnpedia/attnpedia.py:381:13 - error: No overloads for "to_dict" match the provided arguments
-    Argument types: (Literal['records']) (reportCallIssue)
-/home/miv/projects/attn/attention-motifs/attention_motifs/consts.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/consts.py:162:9 - error: Return type of generator function must be compatible with "Generator[Tensor | ndarray[Unknown, Unknown], Any, Any]"
-    Type "Generator[Tensor | ndarray[Unknown, Unknown], Unknown, Unknown]" is not assignable to type "Iterator[Tensor] | Iterator[ndarray[Unknown, Unknown]]"
-      "Generator[Tensor | ndarray[Unknown, Unknown], Unknown, Unknown]" is not assignable to "Iterator[Tensor]"
-        Type parameter "_T_co@Iterator" is covariant, but "Tensor | ndarray[Unknown, Unknown]" is not a subtype of "Tensor"
-          Type "Tensor | ndarray[Unknown, Unknown]" is not assignable to type "Tensor"
-            "ndarray[Unknown, Unknown]" is not assignable to "Tensor"
-      "Generator[Tensor | ndarray[Unknown, Unknown], Unknown, Unknown]" is not assignable to "Iterator[ndarray[Unknown, Unknown]]"
-        Type parameter "_T_co@Iterator" is covariant, but "Tensor | ndarray[Unknown, Unknown]" is not a subtype of "ndarray[Unknown, Unknown]"
-          Type "Tensor | ndarray[Unknown, Unknown]" is not assignable to type "ndarray[Unknown, Unknown]"
-    ... (reportReturnType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/consts.py:210:9 - error: Return type of generator function must be compatible with "Generator[tuple[int, int, Tensor | ndarray[Unknown, Unknown]], Any, Any]"
-    Type "Generator[tuple[int, int, Tensor | ndarray[Unknown, Unknown]], Unknown, Unknown]" is not assignable to type "Iterator[tuple[int, int, Tensor]] | Iterator[tuple[int, int, ndarray[Unknown, Unknown]]]"
-      "Generator[tuple[int, int, Tensor | ndarray[Unknown, Unknown]], Unknown, Unknown]" is not assignable to "Iterator[tuple[int, int, Tensor]]"
-        Type parameter "_T_co@Iterator" is covariant, but "tuple[int, int, Tensor | ndarray[Unknown, Unknown]]" is not a subtype of "tuple[int, int, Tensor]"
-          "tuple[int, int, Tensor | ndarray[Unknown, Unknown]]" is not assignable to "tuple[int, int, Tensor]"
-            Tuple entry 3 is incorrect type
-      "Generator[tuple[int, int, Tensor | ndarray[Unknown, Unknown]], Unknown, Unknown]" is not assignable to "Iterator[tuple[int, int, ndarray[Unknown, Unknown]]]"
-        Type parameter "_T_co@Iterator" is covariant, but "tuple[int, int, Tensor | ndarray[Unknown, Unknown]]" is not a subtype of "tuple[int, int, ndarray[Unknown, Unknown]]"
-          "tuple[int, int, Tensor | ndarray[Unknown, Unknown]]" is not assignable to "tuple[int, int, ndarray[Unknown, Unknown]]"
-    ... (reportReturnType)
 /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:457:6 - error: Method "load" overrides class "SerializableDataclass" in an incompatible manner
-    Parameter 2 type mismatch: base parameter is type "SerializableDataclass", override parameter is type "dict[Unknown, Unknown]"
-      "SerializableDataclass" is not assignable to "dict[Unknown, Unknown]" (reportIncompatibleMethodOverride)
-/home/miv/projects/attn/attention-motifs/attention_motifs/features/features.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/features.py:146:28 - error: Type "tqdm[list[dict[str, int | float | str]]]" is not assignable to declared type "list[dict[Unknown, Unknown]]"
-    "tqdm[list[dict[str, int | float | str]]]" is not assignable to "list[dict[Unknown, Unknown]]" (reportAssignmentType)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:459:6 - error: Method "load" overrides class "SerializableDataclass" in an incompatible manner
+    Parameter 2 type mismatch: base parameter is type "SerializableDataclass", override parameter is type "dict[str, Any] | DistanceTensorResult"
+      Type "SerializableDataclass" is not assignable to type "dict[str, Any] | DistanceTensorResult"
+        "SerializableDataclass" is not assignable to "dict[str, Any]"
+        "SerializableDataclass" is not assignable to "DistanceTensorResult" (reportIncompatibleMethodOverride)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:463:10 - error: "__getitem__" method not defined on type "DistanceTensorResult*" (reportIndexIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:467:15 - error: "__getitem__" method not defined on type "DistanceTensorResult*" (reportIndexIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:468:18 - error: "__getitem__" method not defined on type "DistanceTensorResult*" (reportIndexIssue)
+  /home/miv/projects/attn/attention-motifs/attention_motifs/features/analysis.py:469:14 - error: "__getitem__" method not defined on type "DistanceTensorResult*" (reportIndexIssue)
 /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:138:21 - error: Argument of type "Unknown | ndarray[Unknown, Unknown] | None" cannot be assigned to parameter "a" of type "ndarray[Any, Any]" in function "fill_diagonal"
     Type "Unknown | ndarray[Unknown, Unknown] | None" is not assignable to type "ndarray[Any, Any]"
@@ -120,12 +67,6 @@
   /home/miv/projects/attn/attention-motifs/attention_motifs/features/head_analysis.py:153:15 - error: Type "tuple[NDArray[float64] | Unknown, Unknown, Unknown] | NDArray[float64] | Unknown | coo_matrix[floating[_32Bit]] | Any" is not assignable to declared type "ndarray[Unknown, Unknown]"
     Type "tuple[NDArray[float64] | Unknown, Unknown, Unknown] | NDArray[float64] | Unknown | coo_matrix[floating[_32Bit]] | Any" is not assignable to type "ndarray[Unknown, Unknown]"
       "coo_matrix[floating[_32Bit]]" is not assignable to "ndarray[Unknown, Unknown]" (reportAssignmentType)
-/home/miv/projects/attn/attention-motifs/attention_motifs/features/vec_features.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/features/vec_features.py:64:27 - error: Type "float64" is not assignable to declared type "float"
-    "floating[_64Bit]" is not assignable to "float" (reportAssignmentType)
-/home/miv/projects/attn/attention-motifs/attention_motifs/figure_funcs.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/figure_funcs.py:7:2 - error: "AttentionMatrix" is not exported from module "pattern_lens.figure_util"
-    Import from "pattern_lens.consts" instead (reportPrivateImportUsage)
 /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py
   /home/miv/projects/attn/attention-motifs/attention_motifs/math/transition_tensor.py:231:29 - error: Type "list[Number]" is not assignable to declared type "list[int]"
     "list[Number]" is not assignable to "list[int]"
@@ -148,43 +89,4 @@
   /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/cfg.py:231:41 - error: Type "dict[str, int]" is not assignable to declared type "dict[PlotKwargKey, int]"
     "dict[str, int]" is not assignable to "dict[PlotKwargKey, int]"
       Type parameter "_KT@dict" is invariant, but "str" is not the same as "PlotKwargKey" (reportAssignmentType)
-/home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s3b_feat_fig.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s3b_feat_fig.py:66:16 - error: No overloads for "get" match the provided arguments (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s3b_feat_fig.py:66:36 - error: Argument of type "Literal['n_dims']" cannot be assigned to parameter "key" of type "PlotKwargKey" in function "get"
-    "Literal['n_dims']" is not assignable to type "PlotKwargKey" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/attention_motifs/pipeline/s3b_feat_fig.py:90:11 - error: "handles" is possibly unbound (reportPossiblyUnboundVariable)
-/home/miv/projects/attn/attention-motifs/attention_motifs/util/profiling.py
-  /home/miv/projects/attn/attention-motifs/attention_motifs/util/profiling.py:254:27 - error: "gpu_prof" is possibly unbound (reportPossiblyUnboundVariable)
-/home/miv/projects/attn/attention-motifs/notebooks/02-pattern_features_process.ipynb - cell 13
-  /home/miv/projects/attn/attention-motifs/notebooks/02-pattern_features_process.ipynb:13:25:10 - error: "handles" is possibly unbound (reportPossiblyUnboundVariable)
-/home/miv/projects/attn/attention-motifs/notebooks/05-ablation_candidates.ipynb - cell 8
-  /home/miv/projects/attn/attention-motifs/notebooks/05-ablation_candidates.ipynb:8:5:14 - error: No overloads for "linspace" match the provided arguments (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/notebooks/05-ablation_candidates.ipynb:8:5:29 - error: Argument of type "PythonLiteral | None" cannot be assigned to parameter "stop" of type "_ArrayLikeComplex_co" in function "linspace"
-    Type "PythonLiteral | None" is not assignable to type "_ArrayLikeComplex_co"
-      Type "Decimal" is not assignable to type "_ArrayLikeComplex_co"
-        "Decimal" is incompatible with protocol "_SupportsArray[dtype[bool_ | integer[Any] | floating[Any] | complexfloating[Any, Any]]]"
-          "__array__" is not present
-        "Decimal" is incompatible with protocol "_NestedSequence[_SupportsArray[dtype[bool_ | integer[Any] | floating[Any] | complexfloating[Any, Any]]]]"
-          "__len__" is not present
-          "__getitem__" is not present
-          "__contains__" is not present
-    ... (reportArgumentType)
-/home/miv/projects/attn/attention-motifs/notebooks/06-ablation_study.ipynb - cell 18
-  /home/miv/projects/attn/attention-motifs/notebooks/06-ablation_study.ipynb:18:24:48 - error: No parameter named "labels" (reportCallIssue)
-/home/miv/projects/attn/attention-motifs/notebooks/06-ablation_study.ipynb - cell 10
-  /home/miv/projects/attn/attention-motifs/notebooks/06-ablation_study.ipynb:10:20:17 - error: "Reds" is not a known attribute of module "matplotlib.cm" (reportAttributeAccessIssue)
-/home/miv/projects/attn/attention-motifs/notebooks/A0-attn_example.ipynb - cell 3
-  /home/miv/projects/attn/attention-motifs/notebooks/A0-attn_example.ipynb:3:3:44 - error: "tokenize" is not a known attribute of "None" (reportOptionalMemberAccess)
-/home/miv/projects/attn/attention-motifs/notebooks/A2-pattern_lens_demo.ipynb - cell 2
-  /home/miv/projects/attn/attention-motifs/notebooks/A2-pattern_lens_demo.ipynb:2:6:2 - error: Argument of type "(attn_matrix: ndarray[Unknown, Unknown], ax: Axes) -> None" cannot be assigned to parameter "func" of type "AttentionMatrixFigureFunc" in function "register_attn_figure_func"
-    Type "(attn_matrix: ndarray[Unknown, Unknown], ax: Axes) -> None" is not assignable to type "AttentionMatrixFigureFunc"
-      Parameter 2: type "Path" is incompatible with type "Axes"
-        "Path" is not assignable to "Axes" (reportArgumentType)
-  /home/miv/projects/attn/attention-motifs/notebooks/A2-pattern_lens_demo.ipynb:2:7:2 - error: Expected 1 more positional argument (reportCallIssue)
-  /home/miv/projects/attn/attention-motifs/notebooks/A2-pattern_lens_demo.ipynb:2:8:50 - error: "Axes" is not exported from module "matplotlib.pyplot" (reportPrivateImportUsage)
-/home/miv/projects/attn/attention-motifs/notebooks/A2-pattern_lens_demo.ipynb - cell 3
-  /home/miv/projects/attn/attention-motifs/notebooks/A2-pattern_lens_demo.ipynb:3:4:12 - error: Argument of type "Path" cannot be assigned to parameter "save_path" of type "str" in function "figures_main"
-    "Path" is not assignable to "str" (reportArgumentType)
-/home/miv/projects/attn/attention-motifs/notebooks/_dists_hist.py
-  /home/miv/projects/attn/attention-motifs/notebooks/_dists_hist.py:74:1 - warning: Expression value is unused (reportUnusedExpression)
-49 errors, 1 warning, 0 notes
+24 errors, 0 warnings, 0 notes

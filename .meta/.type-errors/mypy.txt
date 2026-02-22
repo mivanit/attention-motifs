@@ -1,31 +1,43 @@
 attention_motifs/pipeline/cfg.py:234: error: Dict entry 1 has incompatible type "Literal['n_dims']": "int"; expected "Literal['pca_all_dpi']": "int"  [dict-item]
 attention_motifs/pipeline/s4b_write_frontend.py:6: error: Skipping analyzing "js_embedding_vis": module is installed, but missing library stubs or py.typed marker  [import-untyped]
-tests/conftest.py:63: error: Argument 3 to "QuietHTTPRequestHandler" has incompatible type "**dict[str, object]"; expected "socket | tuple[bytes, socket]"  [arg-type]
-tests/conftest.py:63: error: Argument 3 to "QuietHTTPRequestHandler" has incompatible type "**dict[str, object]"; expected "BaseServer"  [arg-type]
+attention_motifs/pipeline/s0_download_models.py:1: error: Skipping analyzing "transformer_lens": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+tests/conftest.py:88: error: Argument 3 to "QuietHTTPRequestHandler" has incompatible type "**dict[str, object]"; expected "socket | tuple[bytes, socket]"  [arg-type]
+tests/conftest.py:88: error: Argument 3 to "QuietHTTPRequestHandler" has incompatible type "**dict[str, object]"; expected "BaseServer"  [arg-type]
 attention_motifs/features/vec_features.py:6: error: Skipping analyzing "numba": module is installed, but missing library stubs or py.typed marker  [import-untyped]
-attention_motifs/consts.py:210: error: Incompatible types in "yield" (actual type "tuple[int, int, Tensor | ndarray[Any, Any]]", expected type "tuple[int, int, Tensor] | tuple[int, int, ndarray[Any, Any]]")  [misc]
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/home/miv/projects/attn/attention-motifs/.venv/lib/python3.13/site-packages/mypy/__main__.py", line 37, in <module>
-    console_entry()
-    ~~~~~~~~~~~~~^^
-  File "/home/miv/projects/attn/attention-motifs/.venv/lib/python3.13/site-packages/mypy/__main__.py", line 15, in console_entry
-    main()
-    ~~~~^^
-  File "mypy/main.py", line 135, in main
-  File "mypy/main.py", line 219, in run_build
-  File "mypy/build.py", line 222, in build
-  File "mypy/build.py", line 301, in _build
-  File "mypy/build.py", line 2952, in dispatch
-  File "mypy/build.py", line 3347, in process_graph
-  File "mypy/build.py", line 925, in wait_for_done
-  File "mypy/build.py", line 3455, in process_stale_scc
-  File "mypy/build.py", line 3412, in process_fresh_modules
-  File "mypy/build.py", line 2124, in load_tree
-  File "mypy/nodes.py", line 437, in deserialize
-  File "mypy/nodes.py", line 4751, in deserialize
-  File "mypy/nodes.py", line 4644, in deserialize
-  File "mypy/nodes.py", line 286, in deserialize
-  File "mypy/nodes.py", line 1350, in deserialize
-KeyError: 'setter_type'
+attention_motifs/consts.py:211: error: Incompatible types in "yield" (actual type "tuple[int, int, Tensor | ndarray[Any, Any]]", expected type "tuple[int, int, Tensor] | tuple[int, int, ndarray[Any, Any]]")  [misc]
+attention_motifs/features/plotting.py:331: error: Slice index must be an integer, SupportsIndex or None  [misc]
+attention_motifs/features/features.py:74: error: Argument 1 to "prefix_dict" has incompatible type "dict[str, int | float]"; expected "dict[str, int | float | str]"  [arg-type]
+attention_motifs/features/features.py:74: note: "dict" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
+attention_motifs/features/features.py:74: note: Consider using "Mapping" instead, which is covariant in the value type
+attention_motifs/features/features.py:146: error: Incompatible types in assignment (expression has type "tqdm[list[dict[str, int | float | str]]]", variable has type "list[dict[Any, Any]]")  [assignment]
+attention_motifs/features/analysis.py:16: error: Skipping analyzing "mpl_toolkits.axes_grid1": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/features/analysis.py:17: error: Skipping analyzing "sklearn.decomposition": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/features/analysis.py:463: error: Value of type "dict[str, Any] | Self" is not indexable  [index]
+attention_motifs/features/analysis.py:467: error: Value of type "dict[str, Any] | Self" is not indexable  [index]
+attention_motifs/features/analysis.py:468: error: Value of type "dict[str, Any] | Self" is not indexable  [index]
+attention_motifs/features/analysis.py:469: error: Value of type "dict[str, Any] | Self" is not indexable  [index]
+attention_motifs/ablation/ablate.py:17: error: Skipping analyzing "transformer_lens": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/ablation/ablate.py:18: error: Skipping analyzing "transformer_lens.hook_points": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/ablation/ablate.py:18: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
+attention_motifs/ablation/ablate.py:149: error: Incompatible types in assignment (expression has type "tqdm[int]", variable has type "range")  [assignment]
+attention_motifs/ablation/ablate.py:160: error: Argument 1 to "stack" has incompatible type "list[str] | list[Tensor]"; expected "tuple[Tensor, ...] | list[Tensor] | None"  [arg-type]
+attention_motifs/pipeline/s3b_feat_fig.py:66: error: No overload variant of "get" of "dict" matches argument types "str", "int"  [call-overload]
+attention_motifs/pipeline/s3b_feat_fig.py:66: note: Error code "call-overload" not covered by "type: ignore" comment
+attention_motifs/pipeline/s3b_feat_fig.py:66: note: Possible overload variants:
+attention_motifs/pipeline/s3b_feat_fig.py:66: note:     def get(self, Literal['pca_all_dpi'], None = ..., /) -> int | None
+attention_motifs/pipeline/s3b_feat_fig.py:66: note:     def get(self, Literal['pca_all_dpi'], int, /) -> int
+attention_motifs/pipeline/s3b_feat_fig.py:66: note:     def [_T] get(self, Literal['pca_all_dpi'], _T, /) -> int | _T
+attention_motifs/features/head_analysis.py:519: error: "<typing special form>" has no attribute "__args__"  [attr-defined]
+attention_motifs/pipeline/s5b_head_embed_plots.py:89: error: Incompatible types in assignment (expression has type "Figure | None", variable has type "Figure")  [assignment]
+attention_motifs/ablation/metrics.py:24: error: Skipping analyzing "transformer_lens": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+tests/test_ablation.py:362: error: Skipping analyzing "transformer_lens": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/ablation/experiment.py:37: error: Skipping analyzing "transformer_lens": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+attention_motifs/ablation/experiment.py:202: error: Argument 1 to "heads_from_strings" has incompatible type "list[tuple[int, int]] | list[str]"; expected "list[str]"  [arg-type]
+attention_motifs/ablation/experiment.py:205: error: Argument 1 to "heads_from_strings" has incompatible type "list[tuple[int, int]] | list[str]"; expected "list[str]"  [arg-type]
+attention_motifs/ablation/experiment.py:258: error: Incompatible types in assignment (expression has type "tqdm[Sequence[object]]", variable has type "list[Sequence[object]]")  [assignment]
+attention_motifs/ablation/experiment.py:264: error: Argument 2 to "prefix_matching_score" has incompatible type "object"; expected "int"  [arg-type]
+attention_motifs/ablation/experiment.py:264: error: Argument 3 to "prefix_matching_score" has incompatible type "object"; expected "int"  [arg-type]
+attention_motifs/ablation/experiment.py:268: error: List item 0 has incompatible type "tuple[object, object]"; expected "tuple[int, int]"  [list-item]
+attention_motifs/ablation/experiment.py:270: error: Argument 2 to "prefix_matching_score" has incompatible type "object"; expected "int"  [arg-type]
+attention_motifs/ablation/experiment.py:270: error: Argument 3 to "prefix_matching_score" has incompatible type "object"; expected "int"  [arg-type]
+Found 34 errors in 16 files (checked 59 source files)

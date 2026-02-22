@@ -159,7 +159,8 @@ def tensor_batches(
 			assert idx + batch_size >= len(arr), "this state should be inaccesible"
 			break
 		idx += batch_size
-		yield arr_slice
+		# @overload narrows return type for callers; generator yields union which checker can't verify
+		yield arr_slice  # pyright: ignore[reportReturnType]
 
 
 @overload
@@ -206,7 +207,7 @@ def tensor_batches_indexed(
 				"this state should be inaccesible"
 			)
 			break
-		# yield (start, end, slice)
-		yield idx_start, idx_end, arr_slice
+		# @overload narrows return type for callers; generator yields union which checker can't verify
+		yield idx_start, idx_end, arr_slice  # pyright: ignore[reportReturnType]
 		# increment index
 		idx_start += batch_size

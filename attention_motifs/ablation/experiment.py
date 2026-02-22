@@ -330,8 +330,9 @@ def run_cross_model_experiment(
 	dict[str, ExperimentResults]
 	    Results for each model.
 	"""
+	output_dir_: Path | None = None
 	if output_dir:
-		output_dir_: Path = Path(output_dir)
+		output_dir_ = Path(output_dir)
 		output_dir_.mkdir(parents=True, exist_ok=True)
 
 	# Find candidate heads
