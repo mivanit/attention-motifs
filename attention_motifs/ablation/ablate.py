@@ -155,13 +155,13 @@ class HeadAblator:
 				# Tokenize if needed
 				if isinstance(batch[0], str):
 					# we can safely assume everything in the batch is str
-					tokens = self.model.to_tokens(batch)  # ty: ignore[invalid-argument-type]
+					tokens = self.model.to_tokens(batch)  # ty: ignore[invalid-argument-type] # pyright: ignore[reportArgumentType]
 				else:
-					tokens = torch.stack(batch) if isinstance(batch, list) else batch  # ty: ignore[invalid-argument-type]
+					tokens = torch.stack(batch) if isinstance(batch, list) else batch  # ty: ignore[invalid-argument-type] # pyright: ignore[reportArgumentType]
 
 				# Run with hooks
 
-				self.model.run_with_hooks(tokens, fwd_hooks=hooks)
+				self.model.run_with_hooks(tokens, fwd_hooks=hooks)  # pyright: ignore[reportArgumentType]
 
 		# Compute means
 		for (layer, head), total in activation_sums.items():
@@ -262,7 +262,7 @@ class HeadAblator:
 		# Register hooks by adding to the hook point's fwd_hooks list
 		for hook_name, hook_fn in hooks:
 			# add_hook expects `_HookFunctionProtocol: (tensor: Tensor, *, hook: HookPoint) -> Union[Any, None])` which is what we have, so ignore here is fine
-			self.model.hook_dict[hook_name].add_hook(hook_fn)  # ty: ignore[invalid-argument-type]
+			self.model.hook_dict[hook_name].add_hook(hook_fn)  # ty: ignore[invalid-argument-type] # pyright: ignore[reportArgumentType]
 
 		try:
 			yield
@@ -348,5 +348,7 @@ class HeadAblator:
 		]
 
 		return self.model.run_with_hooks(
-			tokens, fwd_hooks=hooks, return_type=return_type
+			tokens,
+			fwd_hooks=hooks,  # pyright: ignore[reportArgumentType]
+			return_type=return_type,
 		)

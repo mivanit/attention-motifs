@@ -32,31 +32,32 @@ FigureFilename = Literal[
 	"pca", "cov_full", "cov_reduced", "pca_all", "head_dists", "head_embed"
 ]
 
-PlotKwargKey = Literal["pca_all_dpi",]
+PlotKwargKey = Literal["pca_all_dpi", "n_dims"]
 
 EmbeddingMethod = Literal["isomap", "umap", "tsne", "pca"]
 
-DATA_FNAMES: dict[DataFilename, str] = dict(  # ty: ignore[invalid-assignment]
-	raw="raw.jsonl",
-	norms="norms.jsonl",
-	scaled="scaled.jsonl",
-	importance="importance.jsonl",
-	pca="pca.jsonl",
-	pca_npy="pca.npy",
-	head_dists_zanj="head_dists.zanj",
-	head_dists_raw="head_dists_raw",
-	head_embed="head_embed.jsonl",
-	clustering="clustering",
-)
+DATA_FNAMES: dict[DataFilename, str] = {
+	"raw": "raw.jsonl",
+	"norms": "norms.jsonl",
+	"scaled": "scaled.jsonl",
+	"importance": "importance.jsonl",
+	"pca": "pca.jsonl",
+	"pca_npy": "pca.npy",
+	"head_dists_zanj": "head_dists.zanj",
+	"head_dists_raw": "head_dists_raw",
+	"head_embed": "head_embed.jsonl",
+	"clustering": "clustering.jsonl",
+}
 
-FIGURE_FNAMES: dict[FigureFilename, str] = dict(  # ty: ignore[invalid-assignment]
-	pca="pca.pdf",
-	cov_full="covariance-full.pdf",
-	cov_reduced="covariance-reduced.pdf",
-	pca_all="pca-all.png",
-	head_dists="head-dists-heatmap.pdf",
-	head_embed="head-embed.pdf",
-)
+FIGURE_FNAMES: dict[FigureFilename, str] = {
+	"pca": "pca.pdf",
+	"cov_full": "covariance-full.pdf",
+	"cov_reduced": "covariance-reduced.pdf",
+	"pca_all": "pca-all.png",
+	"head_dists": "head-dists-heatmap.pdf",
+	"head_embed": "head-embed.pdf",
+}
+
 
 DEFAULT_VIS_CONFIGS: dict[str, dict[str, Any]] = dict(
 	attentionpedia=dict(
@@ -229,10 +230,12 @@ class PipelineConfig:
 		default_factory=lambda: FIGURE_FNAMES,
 	)
 	plot_kwargs: dict[PlotKwargKey, int] = field(
-		default_factory=lambda: dict(
-			pca_all_dpi=500,  # default DPI for PCA all figure
-			n_dims=5,  # default number of dimensions for PCA and other embeddings
-		),
+		default_factory=lambda: {
+			# default DPI for PCA all figure
+			"pca_all_dpi": 500,
+			# default number of dimensions for PCA and other embeddings  
+			"n_dims": 5,  # type: ignore[dict-item]
+		},
 	)
 	verbose: int = 1
 

@@ -456,10 +456,11 @@ class DistanceTensorResult(SerializableDataclass):
 
 	# this violates Liskov but its fine
 	@classmethod
-	def load(cls, data: dict[str, Any] | Self) -> "DistanceTensorResult":  # ty: ignore[invalid-method-override]
+	def load(cls, data: dict[str, Any] | Self) -> "DistanceTensorResult":  # ty: ignore[invalid-method-override] # pyright: ignore[reportIncompatibleMethodOverride]
 		"""Load a `DistanceTensorResult` from a dictionary."""
 		if isinstance(data, cls):
 			return data
+		assert isinstance(data, dict)
 		assert data["is_reduced"], (
 			"data must be reduced when loading -- non-reduced would be huge!"
 		)

@@ -135,6 +135,7 @@ def create_head_embedding_df(
 				np.max(similarity_matrix) - np.min(similarity_matrix)
 			)
 			# set diagonal to 1 (self is most similar to self)
+			assert similarity_matrix is not None
 			np.fill_diagonal(similarity_matrix, 1.0)
 			# Create PCA reducer
 			reducer = PCA(
@@ -148,9 +149,15 @@ def create_head_embedding_df(
 	embedding: np.ndarray
 	if embedding_method == "pca":
 		assert similarity_matrix is not None  # guaranteed by case "pca" above
-		embedding = reducer.fit_transform(similarity_matrix)
+		embedding_result = reducer.fit_transform(similarity_matrix)
 	else:
-		embedding = reducer.fit_transform(distance_matrix)
+		embedding_result = reducer.fit_transform(distance_matrix)
+	# Ensure dense array output (sklearn can return sparse matrices in some cases)
+	embedding = (
+		embedding_result
+		if isinstance(embedding_result, np.ndarray)
+		else np.asarray(embedding_result)
+	)
 
 	# Parse cls values
 	parsed_cls: list[tuple[str, int, int]] = [
@@ -516,7 +523,7 @@ def plot_head_embeddings_multi(
 		# Extract information
 		# f"embed.{method}.d{n_components_val}.b{n_neighbors}"
 		try:
-			assert parts[1] in EmbeddingMethod.__args__
+			assert parts[1] in EmbeddingMethod.__args__  # type: ignore[attr-defined]
 			methods_found.add(cast(EmbeddingMethod, parts[1]))
 			n_neighbors_found.add(int(parts[3][1:]))
 		except (ValueError, IndexError):

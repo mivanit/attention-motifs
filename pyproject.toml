@@ -129,6 +129,18 @@ exclude = ["__pycache__"]
 [tool.mypy]
 	files = ["attention_motifs", "tests", "notebooks"]
 
+# ignore missing imports for libraries without type stubs
+[[tool.mypy.overrides]]
+module = [
+	"transformer_lens",
+	"transformer_lens.*",
+	"numba",
+	"mpl_toolkits.*",
+	"sklearn.*",
+	"js_embedding_vis",
+]
+ignore_missing_imports = true
+
 # basedpyright config
 [tool.basedpyright]
 	typeCheckingMode = "standard"

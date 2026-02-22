@@ -86,7 +86,7 @@ def head_embed_plots(cfg: PipelineConfig) -> None:
 						print(f"  [{i + 1}/{len(prefixes)}] Generating {prefix}")
 
 					# Create individual plot
-					fig, _ = plot_head_embeddings(
+					fig, _ = plot_head_embeddings(  # type: ignore[assignment]
 						head_embed_df,
 						prefix=prefix,
 						color_by="type.group",

@@ -228,12 +228,12 @@ def transition_tensor_torch(
 	n_idxs: int = len(idxs)
 
 	# Compute powers of A iteratively
-	needed_powers: list[int] = sorted(p.item() for p in set(idxs) if p >= 0)
+	needed_powers: list[int] = sorted(int(p.item()) for p in set(idxs) if p >= 0)
 	# Only add powers-1 if we're computing residuals
 	if residuals:
 		prev_powers = set(idxs - 1)
 		needed_powers = sorted(
-			set(needed_powers).union(p for p in prev_powers if p >= 0)
+			set(needed_powers).union(int(p.item()) for p in prev_powers if p >= 0)
 		)
 
 	A_powers_arr: Float[Tensor, "len(needed_powers) n_ctx n_ctx"] = matrix_powers_torch(
@@ -251,7 +251,7 @@ def transition_tensor_torch(
 
 	# Stack the matrices in the order specified by idxs
 	tt_resampled: Float[Tensor, "n_idxs n_ctx n_ctx"] = torch.stack(
-		[A_powers[p.item()] for p in idxs],
+		[A_powers[int(p.item())] for p in idxs],
 		dim=0,
 	)
 

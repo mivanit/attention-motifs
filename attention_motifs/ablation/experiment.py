@@ -10,6 +10,7 @@ Orchestrates the complete workflow:
 from dataclasses import dataclass, field
 from pathlib import Path
 import json
+from typing import cast
 
 import polars as pl
 from tqdm import tqdm
@@ -196,13 +197,20 @@ def run_ablation_experiment(
 	if config is None:
 		config = ExperimentConfig()
 
-	# ignores here are fine, we can assume that candidate_heads and control_heads are lists of strings or tuples, but not mixed
 	# Convert string heads to tuples if needed
+	# Use separate typed variables to help pyright with type narrowing
+	candidate_heads_int: list[tuple[int, int]]
 	if candidate_heads and isinstance(candidate_heads[0], str):
-		candidate_heads = heads_from_strings(candidate_heads)  # ty: ignore[invalid-argument-type] # pyright: ignore[reportArgumentType]
+		candidate_heads_int = heads_from_strings(cast(list[str], candidate_heads))
+	else:
+		candidate_heads_int = cast(list[tuple[int, int]], candidate_heads)
 
-	if control_heads and isinstance(control_heads[0], str):
-		control_heads = heads_from_strings(control_heads)  # ty: ignore[invalid-argument-type] # pyright: ignore[reportArgumentType]
+	control_heads_int: list[tuple[int, int]] | None = None
+	if control_heads:
+		if isinstance(control_heads[0], str):
+			control_heads_int = heads_from_strings(cast(list[str], control_heads))
+		else:
+			control_heads_int = cast(list[tuple[int, int]], control_heads)
 
 	# Load model
 	print(f"Loading model: {model_name}")
@@ -248,9 +256,9 @@ def run_ablation_experiment(
 	)
 
 	# Combine candidate and control heads
-	all_heads = list(candidate_heads)
-	if control_heads:
-		all_heads.extend(control_heads)
+	all_heads: list[tuple[int, int]] = list(candidate_heads_int)
+	if control_heads_int:
+		all_heads.extend(control_heads_int)
 
 	# Run ablation for each head and method
 	head_iterator = all_heads
