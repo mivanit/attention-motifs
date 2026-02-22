@@ -55,20 +55,18 @@ def _run_pipeline() -> None:
 		"TRANSFORMERS_VERBOSITY": "error",
 		"SPINNER_UPDATE_INTERVAL": "60",
 	}
+	# UV_NOSYNC=1 avoids nested uv lock deadlock: the outer `uv run python -m
+	# pytest` holds a uv workspace lock, and without --no-sync the inner
+	# `uv run python` (from make) would try to acquire the same lock.
 	result: subprocess.CompletedProcess[str] = subprocess.run(
-		["make", "am-pipeline-test"],
+		["make", "am-pipeline-test", "UV_NOSYNC=1"],
 		cwd=TESTS_DIR.parent,  # Project root
-		capture_output=True,
 		text=True,
 		timeout=600,  # 10 minute timeout for pipeline
 		env=quiet_env,
 	)
 	if result.returncode != 0:
-		pytest.fail(
-			f"Pipeline failed with code {result.returncode}:\n"
-			f"stdout: {result.stdout}\n"
-			f"stderr: {result.stderr}"
-		)
+		pytest.fail(f"Pipeline failed with code {result.returncode}")
 
 
 @pytest.fixture(scope="session")
