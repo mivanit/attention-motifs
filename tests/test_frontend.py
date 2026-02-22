@@ -5,7 +5,7 @@ The test pipeline generates all required data, so any error should fail the test
 """
 
 import pytest
-from playwright.sync_api import ConsoleMessage, Error as PlaywrightError, Page
+from playwright.sync_api import ConsoleMessage, Error as PlaywrightError, Page, Response
 
 # Pages to test with their paths relative to tests/.temp/
 FRONTEND_PAGES: list[tuple[str, str]] = [
@@ -75,6 +75,15 @@ class TestFrontendPages:
 
 		page.on("pageerror", handle_page_error)
 
+		# Track failed network requests (to get actual URLs for 404s)
+		failed_requests: list[str] = []
+
+		def handle_response(response: Response) -> None:
+			if response.status >= 400:
+				failed_requests.append(f"{response.status} {response.url}")
+
+		page.on("response", handle_response)
+
 		# Load the page with timeout
 		try:
 			page.goto(url, timeout=30000, wait_until="networkidle")
@@ -94,9 +103,14 @@ class TestFrontendPages:
 
 		if all_errors:
 			error_report: str = "\n".join(f"  - {e}" for e in all_errors)
+			failed_report: str = ""
+			if failed_requests:
+				failed_report = "\nFailed requests:\n" + "\n".join(
+					f"  - {r}" for r in failed_requests
+				)
 			pytest.fail(
 				f"Page '{description}' ({page_path}) had {len(all_errors)} error(s):\n"
-				f"{error_report}"
+				f"{error_report}{failed_report}"
 			)
 
 
