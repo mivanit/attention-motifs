@@ -46,7 +46,7 @@ DATA_FNAMES: dict[DataFilename, str] = {
 	"head_dists_zanj": "head_dists.zanj",
 	"head_dists_raw": "head_dists_raw",
 	"head_embed": "head_embed.jsonl",
-	"clustering": "clustering.jsonl",
+	"clustering": "clustering",
 }
 
 FIGURE_FNAMES: dict[FigureFilename, str] = {
