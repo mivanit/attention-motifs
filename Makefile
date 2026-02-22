@@ -838,6 +838,11 @@ am-test-frontend: tests/.temp/.pipeline_complete
 	@echo "run frontend integration tests with Playwright"
 	$(PYTHON) -m pytest $(TESTS_DIR)/test_frontend.py -v --browser chromium $(PYTEST_OPTIONS)
 
+.PHONY: am-download-pile-10k
+am-download-pile-10k:
+	@echo "Download Pile-10k and convert to JSONL"
+	$(PYTHON) -m attention_motifs.download_pile_10k data/text/pile_10k.jsonl
+
 .PHONY: install-playwright
 install-playwright:
 	@echo "Install Playwright browsers"
