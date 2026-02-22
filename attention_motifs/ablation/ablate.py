@@ -7,7 +7,7 @@ their causal role in model behavior.
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Iterator
+from typing import Callable, Iterable, Iterator
 
 import torch
 from torch import Tensor
@@ -144,20 +144,21 @@ class HeadAblator:
 		]
 
 		# Process prompts in batches
-		iterator = range(0, len(prompts), batch_size)
+		batch_indices: Iterable[int] = range(0, len(prompts), batch_size)
 		if show_progress:
-			iterator = tqdm(iterator, desc="Computing mean activations")
+			batch_indices = tqdm(batch_indices, desc="Computing mean activations")
 
 		with torch.no_grad():
-			for i in iterator:
+			for i in batch_indices:
 				batch = prompts[i : i + batch_size]
 
 				# Tokenize if needed
 				if isinstance(batch[0], str):
 					# we can safely assume everything in the batch is str
-					tokens = self.model.to_tokens(batch)  # ty: ignore[invalid-argument-type] # pyright: ignore[reportArgumentType]
+					tokens = self.model.to_tokens(batch)  # type: ignore[arg-type]
 				else:
-					tokens = torch.stack(batch) if isinstance(batch, list) else batch  # ty: ignore[invalid-argument-type] # pyright: ignore[reportArgumentType]
+					# isinstance on batch[0] doesn't narrow the list type for mypy
+					tokens = torch.stack(batch) if isinstance(batch, list) else batch  # type: ignore[arg-type]
 
 				# Run with hooks
 

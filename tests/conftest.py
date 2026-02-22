@@ -81,6 +81,7 @@ def http_server(
 	server_dir: Path = ensure_pipeline_output
 	base_url: str = f"http://localhost:{HTTP_SERVER_PORT}"
 
+	# factory wrapper loses type info for *args/**kwargs
 	def handler_factory(*args: object, **kwargs: object) -> QuietHTTPRequestHandler:
 		return QuietHTTPRequestHandler(
 			*args,  # type: ignore[arg-type]

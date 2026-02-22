@@ -327,8 +327,8 @@ def plot_embedding_kde(embedding: np.ndarray, labels: pl.Series, title: str) -> 
 				y_min -= 0.1 * y_range
 				y_max += 0.1 * y_range
 
-				# Create grid
-				xx, yy = np.mgrid[x_min:x_max:100j, y_min:y_max:100j]
+				# Create grid using numpy's complex step syntax: 100j means "100 evenly spaced points"
+				xx, yy = np.mgrid[x_min:x_max:100j, y_min:y_max:100j]  # type: ignore[misc]
 				positions = np.vstack([xx.ravel(), yy.ravel()])
 
 				# Compute kernel density

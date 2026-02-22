@@ -10,7 +10,7 @@ Orchestrates the complete workflow:
 from dataclasses import dataclass, field
 from pathlib import Path
 import json
-from typing import cast
+from typing import Iterable, cast
 
 import polars as pl
 from tqdm import tqdm
@@ -261,11 +261,11 @@ def run_ablation_experiment(
 		all_heads.extend(control_heads_int)
 
 	# Run ablation for each head and method
-	head_iterator = all_heads
+	heads_to_ablate: Iterable[tuple[int, int]] = all_heads
 	if show_progress:
-		head_iterator = tqdm(all_heads, desc="Ablating heads")
+		heads_to_ablate = tqdm(all_heads, desc="Ablating heads")
 
-	for layer, head in head_iterator:
+	for layer, head in heads_to_ablate:
 		head_str = f"{model_name}:L{layer}:H{head}"
 
 		# Compute baseline prefix score for this head

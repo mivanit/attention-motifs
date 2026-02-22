@@ -70,8 +70,8 @@ def process_prompt(
 						prefix="activation",
 					),
 					**prefix_dict(
-						# returns dict[str, int|float], but type checker expects dict[str, int|float|str] so we ignore the type error
-						features_func(A),  # ty: ignore[invalid-argument-type]
+						# returns dict[str, int|float], but type checker expects dict[str, int|float|str] (dict is invariant)
+						features_func(A),  # type: ignore[arg-type]
 						prefix="feat",
 					),
 				}
@@ -143,7 +143,8 @@ def scalar_feature_table(
 					features_func=features_func,
 				)
 			)
-			model_out: list[dict] = tqdm.tqdm(  # ty: ignore[invalid-assignment] # pyright: ignore[reportAssignmentType]
+			# tqdm wraps iterator, not a list, but we iterate it immediately
+			model_out: list[dict] = tqdm.tqdm(  # type: ignore[assignment]
 				pool.imap(prompt_func, prompts),
 				total=len(prompts),
 			)
