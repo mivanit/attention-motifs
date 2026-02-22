@@ -43,38 +43,62 @@ class QuietHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 		pass
 
 
+def _run_pipeline() -> None:
+	"""Run the test pipeline, failing the test session if it errors."""
+	print(f"\n[fixture] Running test pipeline to generate {TESTS_TEMP_DIR}")
+	# suppress progress bars from tqdm, HuggingFace, and transformers
+	# while keeping actual log/print messages intact
+	quiet_env: dict[str, str] = {
+		**os.environ,
+		"TQDM_DISABLE": "1",
+		"HF_HUB_DISABLE_PROGRESS_BARS": "1",
+		"TRANSFORMERS_VERBOSITY": "error",
+		"SPINNER_UPDATE_INTERVAL": "60",
+	}
+	result: subprocess.CompletedProcess[str] = subprocess.run(
+		["make", "am-pipeline-test"],
+		cwd=TESTS_DIR.parent,  # Project root
+		capture_output=True,
+		text=True,
+		timeout=600,  # 10 minute timeout for pipeline
+		env=quiet_env,
+	)
+	if result.returncode != 0:
+		pytest.fail(
+			f"Pipeline failed with code {result.returncode}:\n"
+			f"stdout: {result.stdout}\n"
+			f"stderr: {result.stderr}"
+		)
+
+
 @pytest.fixture(scope="session")
-def ensure_pipeline_output() -> Path:
+def ensure_pipeline_output(
+	tmp_path_factory: pytest.TempPathFactory,
+	worker_id: str,
+) -> Path:
 	"""Ensure the test pipeline has been run and output exists.
 
-	If tests/.temp/ doesn't exist, runs `make am-pipeline-test` to generate it.
+	If tests/.temp/.pipeline_complete doesn't exist, runs `make am-pipeline-test`
+	to generate it. Uses file locking with xdist to prevent multiple workers from
+	running the pipeline concurrently (which would cause race conditions as the
+	Makefile target starts with ``rm -rf tests/.temp/``).
+
 	Returns the path to the temp directory.
 	"""
-	if not (TESTS_TEMP_DIR / ".pipeline_complete").exists():
-		print(f"\n[fixture] Running test pipeline to generate {TESTS_TEMP_DIR}")
-		# suppress progress bars from tqdm, HuggingFace, and transformers
-		# while keeping actual log/print messages intact
-		quiet_env: dict[str, str] = {
-			**os.environ,
-			"TQDM_DISABLE": "1",
-			"HF_HUB_DISABLE_PROGRESS_BARS": "1",
-			"TRANSFORMERS_VERBOSITY": "error",
-			"SPINNER_UPDATE_INTERVAL": "60",
-		}
-		result: subprocess.CompletedProcess[str] = subprocess.run(
-			["make", "am-pipeline-test"],
-			cwd=TESTS_DIR.parent,  # Project root
-			capture_output=True,
-			text=True,
-			timeout=600,  # 10 minute timeout for pipeline
-			env=quiet_env,
-		)
-		if result.returncode != 0:
-			pytest.fail(
-				f"Pipeline failed with code {result.returncode}:\n"
-				f"stdout: {result.stdout}\n"
-				f"stderr: {result.stderr}"
-			)
+	if worker_id == "master":
+		# Not running with xdist - run directly
+		if not (TESTS_TEMP_DIR / ".pipeline_complete").exists():
+			_run_pipeline()
+		return TESTS_TEMP_DIR
+
+	# Running with xdist - coordinate via file lock
+	root_tmp_dir: Path = tmp_path_factory.getbasetemp().parent
+	lock_file: Path = root_tmp_dir / "pipeline.lock"
+
+	with filelock.FileLock(str(lock_file)):
+		if not (TESTS_TEMP_DIR / ".pipeline_complete").exists():
+			_run_pipeline()
+
 	return TESTS_TEMP_DIR
 
 
