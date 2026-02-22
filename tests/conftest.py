@@ -50,7 +50,7 @@ def ensure_pipeline_output() -> Path:
 	If tests/.temp/ doesn't exist, runs `make am-pipeline-test` to generate it.
 	Returns the path to the temp directory.
 	"""
-	if not TESTS_TEMP_DIR.exists() or not (TESTS_TEMP_DIR / "vis").exists():
+	if not (TESTS_TEMP_DIR / ".pipeline_complete").exists():
 		print(f"\n[fixture] Running test pipeline to generate {TESTS_TEMP_DIR}")
 		# suppress progress bars from tqdm, HuggingFace, and transformers
 		# while keeping actual log/print messages intact
