@@ -1,6 +1,6 @@
 # ty: All checks passed!
 # basedpyright: 0 errors, 0 warnings, 0 notes
-# mypy: Success: no issues found in 59 source files
+# mypy: Success: no issues found in 60 source files
 
 [type_errors.ty]
 total_errors = 0
