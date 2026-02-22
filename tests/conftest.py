@@ -59,6 +59,7 @@ def ensure_pipeline_output() -> Path:
 			"TQDM_DISABLE": "1",
 			"HF_HUB_DISABLE_PROGRESS_BARS": "1",
 			"TRANSFORMERS_VERBOSITY": "error",
+			"SPINNER_UPDATE_INTERVAL": "60",
 		}
 		result: subprocess.CompletedProcess[str] = subprocess.run(
 			["make", "am-pipeline-test"],

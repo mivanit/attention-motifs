@@ -2,6 +2,8 @@ import os
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+_SPINNER_INTERVAL: float = float(os.environ.get("SPINNER_UPDATE_INTERVAL", "0.1"))
+
 import itertools
 import json
 from pathlib import Path
@@ -114,13 +116,13 @@ def scalar_feature_table(
 
 	for idx, model in enumerate(models):
 		print_log(f"  # model: '{model}'")
-		with SpinnerContext(message="setting up paths", **SPINNER_KWARGS):
+		with SpinnerContext(message="setting up paths", update_interval=_SPINNER_INTERVAL, **SPINNER_KWARGS):
 			model_path: Path = act_path / model
 			with open(model_path / "model_cfg.json", "r") as f:
 				model_cfg = HTConfigMock.load(json.load(f))
 			model_configs[model] = model_cfg
 
-		with SpinnerContext(message="loading prompts", **SPINNER_KWARGS):
+		with SpinnerContext(message="loading prompts", update_interval=_SPINNER_INTERVAL, **SPINNER_KWARGS):
 			# load prompts
 			with open(model_path / "prompts.jsonl", "r") as f:
 				prompts: list[dict] = [json.loads(line) for line in f.readlines()]
