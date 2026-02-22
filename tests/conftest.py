@@ -1,6 +1,7 @@
 """Pytest configuration and fixtures for frontend tests."""
 
 import http.server
+import os
 import socket
 import socketserver
 import subprocess
@@ -51,12 +52,21 @@ def ensure_pipeline_output() -> Path:
 	"""
 	if not TESTS_TEMP_DIR.exists() or not (TESTS_TEMP_DIR / "vis").exists():
 		print(f"\n[fixture] Running test pipeline to generate {TESTS_TEMP_DIR}")
+		# suppress progress bars from tqdm, HuggingFace, and transformers
+		# while keeping actual log/print messages intact
+		quiet_env: dict[str, str] = {
+			**os.environ,
+			"TQDM_DISABLE": "1",
+			"HF_HUB_DISABLE_PROGRESS_BARS": "1",
+			"TRANSFORMERS_VERBOSITY": "error",
+		}
 		result: subprocess.CompletedProcess[str] = subprocess.run(
 			["make", "am-pipeline-test"],
 			cwd=TESTS_DIR.parent,  # Project root
 			capture_output=True,
 			text=True,
 			timeout=600,  # 10 minute timeout for pipeline
+			env=quiet_env,
 		)
 		if result.returncode != 0:
 			pytest.fail(
