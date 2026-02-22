@@ -233,7 +233,7 @@ class PipelineConfig:
 		default_factory=lambda: {
 			# default DPI for PCA all figure
 			"pca_all_dpi": 500,
-			# default number of dimensions for PCA and other embeddings  
+			# default number of dimensions for PCA and other embeddings
 			"n_dims": 5,  # type: ignore[dict-item]
 		},
 	)
