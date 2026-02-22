@@ -1,14 +1,1 @@
-tests/conftest.py:88: error: Argument 3 to "QuietHTTPRequestHandler" has incompatible type "**dict[str, object]"; expected "socket | tuple[bytes, socket]"  [arg-type]
-tests/conftest.py:88: error: Argument 3 to "QuietHTTPRequestHandler" has incompatible type "**dict[str, object]"; expected "BaseServer"  [arg-type]
-attention_motifs/consts.py:211: error: Incompatible types in "yield" (actual type "tuple[int, int, Tensor | ndarray[Any, Any]]", expected type "tuple[int, int, Tensor] | tuple[int, int, ndarray[Any, Any]]")  [misc]
-attention_motifs/features/plotting.py:331: error: Slice index must be an integer, SupportsIndex or None  [misc]
-attention_motifs/features/features.py:74: error: Argument 1 to "prefix_dict" has incompatible type "dict[str, int | float]"; expected "dict[str, int | float | str]"  [arg-type]
-attention_motifs/features/features.py:74: note: "dict" is invariant -- see https://mypy.readthedocs.io/en/stable/common_issues.html#variance
-attention_motifs/features/features.py:74: note: Consider using "Mapping" instead, which is covariant in the value type
-attention_motifs/features/features.py:146: error: Incompatible types in assignment (expression has type "tqdm[list[dict[str, int | float | str]]]", variable has type "list[dict[Any, Any]]")  [assignment]
-attention_motifs/ablation/ablate.py:149: error: Incompatible types in assignment (expression has type "tqdm[int]", variable has type "range")  [assignment]
-attention_motifs/ablation/ablate.py:160: error: Argument 1 to "stack" has incompatible type "list[str] | list[Tensor]"; expected "tuple[Tensor, ...] | list[Tensor] | None"  [arg-type]
-attention_motifs/features/head_analysis.py:20: error: Skipping analyzing "umap": module is installed, but missing library stubs or py.typed marker  [import-untyped]
-attention_motifs/features/head_analysis.py:20: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
-attention_motifs/ablation/experiment.py:266: error: Incompatible types in assignment (expression has type "tqdm[tuple[int, int]]", variable has type "list[tuple[int, int]]")  [assignment]
-Found 10 errors in 7 files (checked 59 source files)
+Success: no issues found in 59 source files

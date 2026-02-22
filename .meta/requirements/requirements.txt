@@ -85,7 +85,9 @@ cuda-pathfinder==1.3.4 ; platform_machine == 'x86_64' and sys_platform == 'linux
 cycler==0.12.1
     # via matplotlib
 datasets==4.5.0
-    # via transformer-lens
+    # via
+    #   pattern-lens
+    #   transformer-lens
 debugpy==1.8.20
     # via ipykernel
 decorator==5.2.1
@@ -380,7 +382,7 @@ parso==0.8.6
     # via jedi
 pathspec==1.0.4
     # via mypy
-pattern-lens @ git+https://github.com/mivanit/pattern-lens@b8c3db0ef132ded6d8aa765c8e254c451251d098
+pattern-lens @ git+https://github.com/mivanit/pattern-lens@1acd3e1f35c04a2b6a5887f9c430c3112f46d3ae
     # via attention-motifs
 pdoc==16.0.0
 pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
@@ -607,7 +609,7 @@ typeguard==4.4.2
     #   jaxtyping
     #   pattern-lens
     #   transformer-lens
-typer==0.24.0
+typer==0.24.1
     # via typer-slim
 typer-slim==0.24.0
     # via
@@ -663,7 +665,7 @@ xxhash==3.6.0
     # via datasets
 yarl==1.22.0
     # via aiohttp
-zanj @ git+https://github.com/mivanit/ZANJ@2fc63c724268b09f597d4c025dee005f00e8e190
+zanj @ git+https://github.com/mivanit/ZANJ@51176a27d0d486af19fda5c35ae62d1d83b90963
     # via
     #   attention-motifs
     #   pattern-lens

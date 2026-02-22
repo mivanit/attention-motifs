@@ -17,7 +17,7 @@ from tqdm import tqdm
 from sklearn.manifold import TSNE, Isomap
 from sklearn.decomposition import PCA
 import sklearn.base
-import umap
+import umap  # type: ignore[import-untyped]
 
 # attention-motifs
 from attention_motifs.features.analysis import parse_cls, DistanceTensorResult

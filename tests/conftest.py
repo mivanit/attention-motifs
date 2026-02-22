@@ -86,7 +86,7 @@ def http_server(
 		return QuietHTTPRequestHandler(
 			*args,  # type: ignore[arg-type]
 			directory=str(server_dir),
-			**kwargs,
+			**kwargs,  # type: ignore[arg-type]
 		)
 
 	if worker_id == "master":

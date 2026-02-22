@@ -1,18 +1,13 @@
-# ty: Found 4 diagnostics
+# ty: All checks passed!
 # basedpyright: 0 errors, 0 warnings, 0 notes
-# mypy: Found 10 errors in 7 files (checked 59 source files)
+# mypy: Success: no issues found in 59 source files
 
 [type_errors.ty]
-total_errors = 4
+total_errors = 0
 
 [type_errors.ty.by_type]
-"unused-type-ignore-comment" = 4
 
 [type_errors.ty.by_file]
-"attention_motifs/consts.py" = 1
-"attention_motifs/features/head_analysis.py" = 1
-"attention_motifs/pipeline/cfg.py" = 1
-"attention_motifs/pipeline/s3b_feat_fig.py" = 1
 
 [type_errors.basedpyright]
 total_errors = 0
@@ -22,19 +17,8 @@ total_errors = 0
 [type_errors.basedpyright.by_file]
 
 [type_errors.mypy]
-total_errors = 10
+total_errors = 0
 
 [type_errors.mypy.by_type]
-"arg-type" = 4
-"assignment" = 3
-"misc" = 2
-"import-untyped" = 1
 
 [type_errors.mypy.by_file]
-"tests/conftest.py" = 2
-"attention_motifs/features/features.py" = 2
-"attention_motifs/ablation/ablate.py" = 2
-"attention_motifs/consts.py" = 1
-"attention_motifs/features/plotting.py" = 1
-"attention_motifs/features/head_analysis.py" = 1
-"attention_motifs/ablation/experiment.py" = 1

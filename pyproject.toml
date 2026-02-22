@@ -150,6 +150,9 @@ ignore_missing_imports = true
 [tool.ty.src]
 	include = ["attention_motifs", "tests", "notebooks"]
 
+[tool.ty.rules]
+	unused-type-ignore-comment = "ignore"
+
 [tool.pytest.ini_options]
 	addopts = "-n auto --jaxtyping-packages=pattern_lens,beartype.beartype -m 'not benchmark'"
 	markers = ["benchmark: marks tests as benchmark (deselect with '-m \"not benchmark\"')"]
