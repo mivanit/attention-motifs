@@ -5,11 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from attention_motifs.features.clustering import HierarchicalClusteringResult
 from attention_motifs.pattern_types.pattern_types import (
 	PatternType,
+	PatternTypeDict,
 	PatternTypes,
+	PatternTypesDict,
 	PatternTypesMeta,
 	PatternTypesStats,
 )
@@ -56,7 +59,7 @@ def _make_pattern_types() -> PatternTypes:
 class TestPatternType:
 	def test_serialize_load_roundtrip(self) -> None:
 		pt: PatternType = PatternType(id=3, name="pos", description="Positional")
-		data: dict = pt.serialize()
+		data: PatternTypeDict = pt.serialize()
 		restored: PatternType = PatternType.load(data)
 		assert restored.id == 3
 		assert restored.name == "pos"
@@ -64,7 +67,7 @@ class TestPatternType:
 
 	def test_load_defaults(self) -> None:
 		"""Missing name/description default to 'none'."""
-		data: dict = {"id": 0}
+		data: PatternTypeDict = {"id": 0}  # type: ignore[typeddict-item]
 		pt: PatternType = PatternType.load(data)
 		assert pt.name == "none"
 		assert pt.description == "none"
@@ -78,7 +81,7 @@ class TestPatternType:
 class TestPatternTypesSerialization:
 	def test_serialize_load_roundtrip(self) -> None:
 		original: PatternTypes = _make_pattern_types()
-		data: dict = original.serialize()
+		data: PatternTypesDict = original.serialize()
 		restored: PatternTypes = PatternTypes.load(data)
 
 		assert restored.meta.cut_height == original.meta.cut_height
@@ -166,7 +169,9 @@ def _make_clustering(n_heads: int = 6) -> HierarchicalClusteringResult:
 class TestPatternTypesFromClustering:
 	def test_basic(self) -> None:
 		clustering: HierarchicalClusteringResult = _make_clustering()
-		pt: PatternTypes = PatternTypes.from_clustering(clustering, n_clusters=2)
+		pt: PatternTypes = PatternTypes.from_clustering(
+			clustering, n_clusters=2
+		)
 		assert pt.meta.n_clusters == 2
 		assert pt.stats.n_heads == 6
 		assert len(pt.assignments) == 6
@@ -195,7 +200,9 @@ class TestPatternTypesFromClustering:
 
 	def test_from_clustering_cut_height(self) -> None:
 		clustering: HierarchicalClusteringResult = _make_clustering()
-		pt: PatternTypes = PatternTypes.from_clustering(clustering, cut_height=1.0)
+		pt: PatternTypes = PatternTypes.from_clustering(
+			clustering, cut_height=1.0
+		)
 		assert pt.meta.cut_height == 1.0
 		assert pt.stats.n_heads == 6
 		assert len(pt.assignments) == 6
