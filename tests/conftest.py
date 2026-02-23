@@ -1,5 +1,6 @@
 """Pytest configuration and fixtures for frontend tests."""
 
+import atexit
 import http.server
 import os
 import socket
@@ -8,7 +9,6 @@ import subprocess
 import threading
 import time
 from pathlib import Path
-from typing import Generator
 
 import filelock
 import pytest
@@ -17,6 +17,9 @@ import pytest
 TESTS_DIR: Path = Path(__file__).parent
 TESTS_TEMP_DIR: Path = TESTS_DIR / ".temp"
 HTTP_SERVER_PORT: int = 8765
+
+# Module-level server reference for cleanup
+_httpd: socketserver.TCPServer | None = None
 
 
 def _is_port_in_use(port: int) -> bool:
@@ -35,12 +38,74 @@ def _wait_for_port(port: int, timeout: float = 5.0) -> bool:
 	return False
 
 
+def _shutdown_server() -> None:
+	"""Shut down the HTTP server if running."""
+	global _httpd
+	if _httpd is not None:
+		_httpd.shutdown()
+		_httpd = None
+
+
 class QuietHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 	"""HTTP request handler that suppresses logging."""
 
 	def log_message(self, format: str, *args: object) -> None:
 		"""Suppress all log messages."""
 		pass
+
+
+def _make_handler_factory(
+	directory: str,
+) -> type[QuietHTTPRequestHandler]:
+	"""Create a handler class bound to a specific directory."""
+
+	class BoundHandler(QuietHTTPRequestHandler):
+		def __init__(self, *args: object, **kwargs: object) -> None:
+			super().__init__(
+				*args,  # type: ignore[arg-type]
+				directory=directory,
+				**kwargs,  # type: ignore[arg-type]
+			)
+
+	return BoundHandler
+
+
+def pytest_configure(config: pytest.Config) -> None:
+	"""Start HTTP server on the controller process (not xdist workers).
+
+	The controller outlives all workers, so the server stays up for the
+	entire test session. Workers just connect to it.
+	"""
+	global _httpd
+	if hasattr(config, "workerinput"):
+		return  # xdist worker — skip
+
+	# Ensure directory exists (server can serve before pipeline completes;
+	# tests wait for pipeline via the ensure_pipeline_output fixture)
+	TESTS_TEMP_DIR.mkdir(parents=True, exist_ok=True)
+
+	socketserver.TCPServer.allow_reuse_address = True
+	_httpd = socketserver.TCPServer(
+		("", HTTP_SERVER_PORT),
+		_make_handler_factory(str(TESTS_TEMP_DIR)),
+	)
+	server_thread: threading.Thread = threading.Thread(
+		target=_httpd.serve_forever,
+		daemon=True,
+	)
+	server_thread.start()
+
+	if not _wait_for_port(HTTP_SERVER_PORT):
+		pytest.exit(f"HTTP server failed to start on port {HTTP_SERVER_PORT}")
+
+	print(f"\n[conftest] HTTP server running at http://localhost:{HTTP_SERVER_PORT}")
+	atexit.register(_shutdown_server)
+
+
+def pytest_unconfigure(config: pytest.Config) -> None:
+	"""Shut down HTTP server on session end (including KeyboardInterrupt)."""
+	if not hasattr(config, "workerinput"):
+		_shutdown_server()
 
 
 def _run_pipeline() -> None:
@@ -101,66 +166,11 @@ def ensure_pipeline_output(
 
 
 @pytest.fixture(scope="session")
-def http_server(
-	ensure_pipeline_output: Path,
-	tmp_path_factory: pytest.TempPathFactory,
-	worker_id: str,
-) -> Generator[str, None, None]:
-	"""Start an HTTP server serving tests/.temp/ for the test session.
+def http_server(ensure_pipeline_output: Path) -> str:
+	"""Return the base URL of the shared HTTP server.
 
-	With xdist, coordinates so only one worker starts the server.
-	Yields the base URL (e.g., 'http://localhost:8765').
+	The server is started by the controller process in pytest_configure
+	and lives for the entire session. This fixture just ensures the
+	pipeline has run (so pages have data) before returning the URL.
 	"""
-	server_dir: Path = ensure_pipeline_output
-	base_url: str = f"http://localhost:{HTTP_SERVER_PORT}"
-
-	# factory wrapper loses type info for *args/**kwargs
-	def handler_factory(*args: object, **kwargs: object) -> QuietHTTPRequestHandler:
-		return QuietHTTPRequestHandler(
-			*args,  # type: ignore[arg-type]
-			directory=str(server_dir),
-			**kwargs,  # type: ignore[arg-type]
-		)
-
-	if worker_id == "master":
-		# Not running with xdist - start server normally
-		httpd: socketserver.TCPServer = socketserver.TCPServer(
-			("", HTTP_SERVER_PORT),
-			handler_factory,
-		)
-		server_thread: threading.Thread = threading.Thread(
-			target=httpd.serve_forever,
-			daemon=True,
-		)
-		server_thread.start()
-		print(f"\n[fixture] HTTP server running at {base_url}")
-		yield base_url
-		httpd.shutdown()
-		print("\n[fixture] HTTP server stopped")
-		return
-
-	# Running with xdist - coordinate via file lock
-	root_tmp_dir: Path = tmp_path_factory.getbasetemp().parent
-	lock_file: Path = root_tmp_dir / "http_server.lock"
-
-	with filelock.FileLock(str(lock_file)):
-		if not _is_port_in_use(HTTP_SERVER_PORT):
-			# We're the first worker - start the server
-			httpd = socketserver.TCPServer(
-				("", HTTP_SERVER_PORT),
-				handler_factory,
-			)
-			server_thread = threading.Thread(
-				target=httpd.serve_forever,
-				daemon=True,
-			)
-			server_thread.start()
-			print(f"\n[fixture] HTTP server started by {worker_id} at {base_url}")
-
-	# Wait for server to be ready (in case another worker is starting it)
-	if not _wait_for_port(HTTP_SERVER_PORT):
-		pytest.fail(f"HTTP server failed to start on port {HTTP_SERVER_PORT}")
-
-	yield base_url
-	# Note: We don't shutdown the server here because other workers may still need it.
-	# The server runs as a daemon thread and will be cleaned up when its parent process exits.
+	return f"http://localhost:{HTTP_SERVER_PORT}"

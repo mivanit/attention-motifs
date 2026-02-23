@@ -157,7 +157,10 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 	addopts = "-n auto --jaxtyping-packages=pattern_lens,beartype.beartype -m 'not benchmark'"
-	markers = ["benchmark: marks tests as benchmark (deselect with '-m \"not benchmark\"')"]
+	markers = [
+		"benchmark: marks tests as benchmark (deselect with '-m \"not benchmark\"')",
+		"playwright: frontend tests requiring Playwright browser",
+	]
 	filterwarnings = [
 		"ignore: PEP 484 type hint*:beartype.roar._roarwarn.BeartypeDecorHintPep585DeprecationWarning",
 	]
