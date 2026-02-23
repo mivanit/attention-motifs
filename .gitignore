@@ -8,7 +8,6 @@ docs/demo/**
 notebooks/outputs/**
 # tests temp dir
 notebooks/figures/**
-tests/_temp/**
 tests/.temp/**
 notebooks/test.ipynb
 data/activations/**
