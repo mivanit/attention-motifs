@@ -58,18 +58,23 @@ _DEFAULT_CUDA_CONTEXT_BYTES: int = 500_000_000
 
 def estimate_vram_bytes(
 	n_params: int,
-	safety_factor: float = 3.0,
-	dtype_bytes: int = 4,
+	safety_factor: float = 10.0,
 	cuda_context_bytes: int = _DEFAULT_CUDA_CONTEXT_BYTES,
 ) -> int:
 	"""Estimate VRAM needed for inference with activation caching.
 
-	The estimate accounts for model weights (``n_params * dtype_bytes``)
-	multiplied by a ``safety_factor`` to cover activation cache, intermediate
-	tensors, and CUDA allocator overhead, plus a fixed
-	``cuda_context_bytes`` term for the per-process CUDA context (~300-800 MB).
+	Returns ``n_params * safety_factor + cuda_context_bytes``.
+
+	The ``safety_factor`` is multiplied directly with the raw parameter count
+	to produce a byte estimate.  It must therefore account for **all**
+	per-parameter overhead: floating-point precision (e.g. 4 bytes for fp32,
+	2 for fp16), activation caches, intermediate tensors, and CUDA allocator
+	fragmentation.  The default of 10.0 is deliberately conservative.
+
+	Batch-size-related memory usage is **not** modelled here — adjust
+	``safety_factor`` or ``cuda_context_bytes`` if your workload needs it.
 	"""
-	return int(n_params * dtype_bytes * safety_factor) + cuda_context_bytes
+	return int(n_params * safety_factor) + cuda_context_bytes
 
 
 # ---------------------------------------------------------------------------

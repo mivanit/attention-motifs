@@ -125,7 +125,10 @@ device = "cuda:0"
 # enable with --parallel-models on the CLI, or set to true here
 parallel_models = true
 devices = ["cuda:0"]
-vram_safety_factor = 2.0
+# multiplied with n_params to estimate VRAM in bytes.  must account for dtype
+# size (e.g. 4 for fp32), activation caches, and allocator overhead.
+# batch-size memory is not modelled — increase this if you hit OOM.
+vram_safety_factor = 10.0
 # number of prompts per forward pass during activation gathering
 batch_size = 32
 

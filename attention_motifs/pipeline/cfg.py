@@ -217,7 +217,7 @@ class PipelineConfig:
 	# multi-model parallelism (s1)
 	parallel_models: bool = False
 	devices: list[str] = field(default_factory=lambda: ["cuda:0"])
-	vram_safety_factor: float = 3.0
+	vram_safety_factor: float = 10.0
 	cuda_context_bytes: int = 500_000_000
 	batch_size: int = 32
 
@@ -397,7 +397,7 @@ class PipelineConfig:
 			force_overwrite=data.get("force_overwrite", False),  # default to False
 			parallel_models=data.get("parallel_models", False),
 			devices=data.get("devices", [data.get("device", "cpu")]),
-			vram_safety_factor=data.get("vram_safety_factor", 3.0),
+			vram_safety_factor=data.get("vram_safety_factor", 10.0),
 			cuda_context_bytes=data.get("cuda_context_bytes", 500_000_000),
 			batch_size=data.get("batch_size", 32),
 			figures_dir=(
@@ -523,7 +523,9 @@ class PipelineConfig:
 			"--vram-safety-factor",
 			type=float,
 			default=None,
-			help="Safety multiplier for VRAM estimation (default: 3.0)",
+			help="Multiplied with n_params to estimate VRAM in bytes (default: 10.0). "
+			"Must account for dtype size, activation caches, and allocator overhead. "
+			"Batch-size memory is not modelled — adjust this if needed.",
 		)
 		parser.add_argument(
 			"--cuda-context-bytes",

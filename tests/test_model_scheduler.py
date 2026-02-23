@@ -166,26 +166,26 @@ class TestDownloadCSV:
 
 class TestEstimateVramBytes:
 	def test_estimate_vram_default(self) -> None:
-		"""1M params → 12MB model + 500MB CUDA context at safety_factor=3.0."""
+		"""1M params × 10.0 + 500MB CUDA context."""
 		result: int = estimate_vram_bytes(1_000_000)
-		assert result == 1_000_000 * 4 * 3 + 500_000_000
+		assert result == 1_000_000 * 10 + 500_000_000
 
 	def test_estimate_vram_custom_factor(self) -> None:
 		"""Custom safety factor still adds CUDA context overhead."""
 		result: int = estimate_vram_bytes(1_000_000, safety_factor=2.0)
-		assert result == 1_000_000 * 4 * 2 + 500_000_000
+		assert result == 1_000_000 * 2 + 500_000_000
 
 	def test_estimate_vram_zero_context(self) -> None:
-		"""cuda_context_bytes=0 gives model-only estimate (old behavior)."""
+		"""cuda_context_bytes=0 gives model-only estimate."""
 		result: int = estimate_vram_bytes(1_000_000, cuda_context_bytes=0)
-		assert result == 1_000_000 * 4 * 3
+		assert result == 1_000_000 * 10
 
 	def test_estimate_vram_custom_context(self) -> None:
 		"""Custom CUDA context overhead."""
 		result: int = estimate_vram_bytes(
 			1_000_000, safety_factor=2.0, cuda_context_bytes=800_000_000
 		)
-		assert result == 1_000_000 * 4 * 2 + 800_000_000
+		assert result == 1_000_000 * 2 + 800_000_000
 
 
 class TestCorePool:
@@ -1447,7 +1447,7 @@ device = "cpu"
 		cfg: PipelineConfig = PipelineConfig.read(cfg_path)
 
 		assert cfg.parallel_models is False
-		assert cfg.vram_safety_factor == 3.0
+		assert cfg.vram_safety_factor == 10.0
 		assert cfg.batch_size == 32  # default
 
 	def test_config_devices_fallback_to_device(self, tmp_path: Path) -> None:
