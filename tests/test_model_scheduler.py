@@ -674,7 +674,7 @@ class TestRunAll:
 
 		assert scheduler.completed == []
 		assert len(scheduler.failed) == 1
-		assert scheduler.failed[0] == ("broken-model", 1)
+		assert scheduler.failed[0][:2] == ("broken-model", 1)
 
 	@patch(
 		"attention_motifs.pipeline.model_scheduler.get_total_vram",
@@ -826,7 +826,7 @@ class TestRunAll:
 
 		assert scheduler.completed == []
 		assert len(scheduler.failed) == 1
-		assert scheduler.failed[0] == ("huge-model", -1)
+		assert scheduler.failed[0] == ("huge-model", -1, "")
 
 	@patch(
 		"attention_motifs.pipeline.model_scheduler.get_total_vram",
@@ -888,9 +888,9 @@ class TestRunAll:
 
 		assert scheduler.completed == []
 		assert len(scheduler.failed) == 3
-		failed_names: set[str] = {name for name, _code in scheduler.failed}
+		failed_names: set[str] = {name for name, _code, _log in scheduler.failed}
 		assert failed_names == {"huge-1", "huge-2", "huge-3"}
-		assert all(code == -1 for _name, code in scheduler.failed)
+		assert all(code == -1 for _name, code, _log in scheduler.failed)
 
 
 class TestSpawnModel:
@@ -1121,7 +1121,7 @@ class TestPollRunning:
 		# committed VRAM released
 		assert scheduler._device_committed["cuda:0"] == 0
 		# model recorded as failed
-		assert scheduler.failed == [("broken-model", 1)]
+		assert scheduler.failed == [("broken-model", 1, "/tmp/broken-model_parallel.log")]
 		assert scheduler.running == []
 		# log file closed
 		mock_log.close.assert_called_once()
@@ -1183,6 +1183,7 @@ class TestPollRunning:
 
 		log_messages: list[str] = []
 		scheduler._log = lambda msg: log_messages.append(msg)  # type: ignore[assignment]
+		scheduler._log_error = lambda msg: log_messages.append(msg)  # type: ignore[assignment]
 
 		scheduler._poll_running()
 

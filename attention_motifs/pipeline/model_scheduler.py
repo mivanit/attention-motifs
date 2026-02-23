@@ -14,6 +14,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import TextIO
 
 import torch
@@ -339,7 +340,7 @@ class ModelScheduler:
 
 		self.running: list[RunningModel] = []
 		self.completed: list[str] = []
-		self.failed: list[tuple[str, int]] = []  # (model_name, exit_code)
+		self.failed: list[tuple[str, int, str]] = []  # (model_name, exit_code, log_path)
 
 		# track VRAM committed to running (but possibly not yet loaded) models
 		self._device_committed: dict[str, int] = {d: 0 for d in devices}
@@ -352,7 +353,13 @@ class ModelScheduler:
 
 	def _log(self, msg: str) -> None:
 		"""Print a scheduler status message."""
-		print(f"\033[93m[scheduler] {msg}\033[m")
+		ts: str = datetime.now().strftime("%H:%M:%S")
+		print(f"\033[93m[scheduler {ts}] {msg}\033[m")
+
+	def _log_error(self, msg: str) -> None:
+		"""Print a scheduler error message in red."""
+		ts: str = datetime.now().strftime("%H:%M:%S")
+		print(f"\033[91m[scheduler {ts}] {msg}\033[m")
 
 	def _poll_running(self) -> None:
 		"""Check for completed subprocesses and collect results."""
@@ -378,8 +385,8 @@ class ModelScheduler:
 				)
 			else:
 				elapsed_str = _format_elapsed(time.monotonic() - rm.start_time)
-				self.failed.append((rm.model.name, retcode))
-				self._log(
+				self.failed.append((rm.model.name, retcode, rm.log_path))
+				self._log_error(
 					f"FAILED {rm.model.name} on {rm.device} "
 					f"in {elapsed_str} (exit code {retcode}), "
 					f"see log: {rm.log_path}"
@@ -514,6 +521,18 @@ class ModelScheduler:
 			f"{n_done}/{self.total_models} done ---"
 		)
 
+		for device in self.devices:
+			try:
+				free: int = get_free_vram(device)
+				total: int = get_total_vram(device)
+				used_pct: float = 100.0 * (1.0 - free / total) if total > 0 else 0.0
+				self._log(
+					f"  {device}: {used_pct:.0f}% VRAM used "
+					f"({free // (1024**2)}MB free / {total // (1024**2)}MB)"
+				)
+			except (RuntimeError, ValueError):
+				pass
+
 		for rm in self.running:
 			elapsed_str: str = _format_elapsed(now - rm.start_time)
 			last_line: str = _tail_log(rm.log_path)
@@ -536,6 +555,7 @@ class ModelScheduler:
 			f"scheduling {self.total_models} models across devices {self.devices}"
 		)
 		self._log(f"CPU cores available: {self.core_pool.n_available}")
+		run_start: float = time.monotonic()
 
 		try:
 			while self.pending or self.running:
@@ -556,12 +576,12 @@ class ModelScheduler:
 				# guard: if nothing is running and nothing could be scheduled,
 				# we're stuck — no point sleeping forever
 				if self.pending and not self.running and not scheduled_any:
-					self._log(
+					self._log_error(
 						f"ERROR: {len(self.pending)} model(s) cannot be scheduled "
 						f"(insufficient VRAM or no reachable devices). Giving up."
 					)
 					for m in self.pending:
-						self.failed.append((m.name, -1))
+						self.failed.append((m.name, -1, ""))
 					self.pending.clear()
 					break
 
@@ -574,10 +594,16 @@ class ModelScheduler:
 			raise
 
 		# summary
+		total_elapsed: str = _format_elapsed(time.monotonic() - run_start)
 		self._log(
-			f"all done: {len(self.completed)} completed, {len(self.failed)} failed"
+			f"all done in {total_elapsed}: "
+			f"{len(self.completed)} completed, {len(self.failed)} failed"
 		)
 		if self.failed:
-			self._log("failed models:")
-			for name, code in self.failed:
-				self._log(f"  {name} (exit code {code})")
+			self._log_error(f"{len(self.failed)} model(s) failed:")
+			for name, code, log_path in self.failed:
+				self._log_error(f"  {name} (exit code {code})")
+				if log_path:
+					last_line: str = _tail_log(log_path)
+					if last_line:
+						self._log_error(f"    last output: {last_line}")
