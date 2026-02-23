@@ -1093,6 +1093,7 @@ class TestSpawnModel:
 		# cores should be returned after the OSError
 		assert scheduler.core_pool.n_available == initial_cores
 
+	@patch("attention_motifs.pipeline.model_scheduler.subprocess.Popen")
 	def test_spawn_popen_valueerror_releases_cores(
 		self,
 		mock_popen: MagicMock,
