@@ -114,7 +114,7 @@ pca_n_components = 6
 # computing
 # ============================================================
 # numbper of cpus to use for CPU tasks
-n_proc = 12
+n_proc = 64
 # whether to force an overwrite of existing attention patterns
 force_overwrite = false
 # device to use for torch tensors -- generally "cpu", "cuda", or "mps"
@@ -123,9 +123,9 @@ device = "cuda:0"
 
 # multi-model parallelism for s1 (run models concurrently based on VRAM)
 # enable with --parallel-models on the CLI, or set to true here
-# parallel_models = true
-# devices = ["cuda:0"]
-# vram_safety_factor = 3.0
+parallel_models = true
+devices = ["cuda:0"]
+vram_safety_factor = 2.0
 
 # output paths
 # ============================================================
