@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 import urllib.error
 from pathlib import Path
 from typing import Any
@@ -1339,6 +1340,61 @@ class TestCleanupRunning:
 		proc2.terminate.assert_called_once()
 		log1.close.assert_called_once()
 		log2.close.assert_called_once()
+		assert scheduler.running == []
+
+	def test_cleanup_waits_for_process_exit(self) -> None:
+		"""After terminate(), cleanup waits for the process to actually exit."""
+		scheduler: ModelScheduler = _make_scheduler(models=[])
+
+		proc: MagicMock = MagicMock()
+		log: MagicMock = MagicMock()
+		m: ScheduledModel = _make_scheduled_model("m1", 14_000_000)
+		scheduler.running = [
+			RunningModel(
+				model=m,
+				process=proc,
+				device="cuda:0",
+				cpu_cores=[0],
+				log_file=log,
+				log_path="/tmp/m1.log",
+				start_time=0.0,
+			),
+		]
+
+		scheduler._cleanup_running()
+
+		proc.terminate.assert_called_once()
+		proc.wait.assert_called_once_with(timeout=5)
+		proc.kill.assert_not_called()
+
+	def test_cleanup_kills_on_timeout(self) -> None:
+		"""If wait() times out, process is force-killed via SIGKILL."""
+		scheduler: ModelScheduler = _make_scheduler(models=[])
+
+		proc: MagicMock = MagicMock()
+		proc.wait.side_effect = [
+			subprocess.TimeoutExpired(cmd="test", timeout=5),
+			None,  # second wait() after kill() succeeds
+		]
+		log: MagicMock = MagicMock()
+		m: ScheduledModel = _make_scheduled_model("m1", 14_000_000)
+		scheduler.running = [
+			RunningModel(
+				model=m,
+				process=proc,
+				device="cuda:0",
+				cpu_cores=[0],
+				log_file=log,
+				log_path="/tmp/m1.log",
+				start_time=0.0,
+			),
+		]
+
+		scheduler._cleanup_running()
+
+		proc.terminate.assert_called_once()
+		proc.kill.assert_called_once()
+		log.close.assert_called_once()
 		assert scheduler.running == []
 
 
