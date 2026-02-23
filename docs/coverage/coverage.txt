@@ -9,63 +9,64 @@ attention_motifs/ablation/experiment.py                 118     83    30%   97-9
 attention_motifs/ablation/metrics.py                    122     94    23%   123-164, 209-257, 291-329, 366-382, 424-474
 attention_motifs/attnpedia/__init__.py                    2      0   100%
 attention_motifs/attnpedia/__main__.py                    3      3     0%   1-4
-attention_motifs/attnpedia/attnpedia.py                 152     56    63%   27, 30, 137-140, 183, 202-210, 241, 263-267, 280-284, 337-349, 354-405, 409
+attention_motifs/attnpedia/attnpedia.py                 152     47    69%   27, 30, 137-140, 183, 263-267, 281, 337-349, 354-405, 409
 attention_motifs/consts.py                               92     20    78%   47, 53-62, 73, 113-120, 159-160, 193, 206-209
 attention_motifs/download_pile_10k.py                    26     26     0%   3-45
 attention_motifs/features/__init__.py                     0      0   100%
-attention_motifs/features/analysis.py                   353    294    17%   45-56, 92-140, 166-203, 224-238, 282-309, 335-436, 449, 461-467, 475-477, 484-506, 513-515, 537-555, 564-567, 574-596, 605-608, 613-621, 666-712, 719-720, 737-764, 788-915, 924-956, 965-985
+attention_motifs/features/analysis.py                   353     60    83%   93-97, 337-339, 462, 546-551, 564-567, 574-596, 613-621, 703, 719-720, 737-764, 914, 965-985
 attention_motifs/features/clustering.py                  56      0   100%
 attention_motifs/features/feat/__init__.py                0      0   100%
 attention_motifs/features/feat/hist_beta_fit.py           9      9     0%   1-39
 attention_motifs/features/feat/transition_tensor.py      17     17     0%   1-78
-attention_motifs/features/features.py                    81     81     0%   1-222
+attention_motifs/features/features.py                    81     20    75%   48-82, 105, 193-202, 213-222
 attention_motifs/features/generate.py                    12     12     0%   1-44
-attention_motifs/features/head_analysis.py              197    171    13%   29-41, 85-220, 257-305, 328-439, 482-626
-attention_motifs/features/plotting.py                   141    141     0%   1-376
+attention_motifs/features/head_analysis.py              197     30    85%   89, 94, 145-146, 216-218, 300-303, 340-341, 354-358, 366, 393, 415-419, 426, 432, 434, 492, 504-505, 529-530, 534, 585
+attention_motifs/features/plotting.py                   141     76    46%   38-103, 205, 217, 274, 292-376
 attention_motifs/features/vec_features.py                97     56    42%   140-225
-attention_motifs/figure_funcs.py                         13     13     0%   6-193
+attention_motifs/figure_funcs.py                         13      3    77%   53, 189, 193
 attention_motifs/math/__init__.py                         0      0   100%
-attention_motifs/math/cos_sim.py                          8      8     0%   1-23
-attention_motifs/math/math.py                            51     51     0%   1-133
+attention_motifs/math/cos_sim.py                          8      5    38%   11-23
+attention_motifs/math/math.py                            51     40    22%   12-14, 19, 53-106, 113, 129-133
 attention_motifs/math/matrix_powers.py                   66      2    97%   106, 117
-attention_motifs/math/transition_tensor.py              106     55    48%   20, 27, 34, 60, 125-126, 145-148, 234-235, 250, 261-268, 283-337
+attention_motifs/math/transition_tensor.py              106     55    48%   20, 27, 34, 60, 125-126, 145-152, 238-239, 254, 265-272, 287-341
 attention_motifs/pattern_types/__init__.py                2      0   100%
 attention_motifs/pattern_types/__main__.py               39     39     0%   10-122
 attention_motifs/pattern_types/pattern_types.py         127      1    99%   219
 attention_motifs/pipeline/__init__.py                     0      0   100%
-attention_motifs/pipeline/cfg.py                        164     21    87%   177, 182, 252, 255, 258-262, 347, 363, 367, 548, 550, 552, 554, 556, 558, 560, 562, 566, 576, 598
-attention_motifs/pipeline/full.py                        54     54     0%   1-102
-attention_motifs/pipeline/model_scheduler.py            292     12    96%   273, 277-282, 526-527, 554-555, 632
+attention_motifs/pipeline/cfg.py                        164     14    91%   177, 182, 259, 367, 550, 552, 554, 556, 558, 560, 562, 564, 568, 578
+attention_motifs/pipeline/full.py                        54     19    65%   41, 46-66, 75, 82-84, 93-95
+attention_motifs/pipeline/model_scheduler.py            292     12    96%   278, 282-287, 531-532, 559-560, 637
 attention_motifs/pipeline/model_table.py                 40      3    92%   34-36
-attention_motifs/pipeline/s0_download_models.py          16     16     0%   1-29
-attention_motifs/pipeline/s1_activations.py              47      8    83%   38-58, 144-147
-attention_motifs/pipeline/s1b_render_patterns.py         14     14     0%   1-29
-attention_motifs/pipeline/s1c_write_idxs.py               9      9     0%   1-29
-attention_motifs/pipeline/s2_features.py                  9      9     0%   1-25
-attention_motifs/pipeline/s3_feat_proc.py                53     53     0%   1-149
-attention_motifs/pipeline/s3b_feat_fig.py                38     38     0%   1-137
-attention_motifs/pipeline/s4_head_dist.py                20     20     0%   1-39
-attention_motifs/pipeline/s4b_write_frontend.py          49     49     0%   1-86
-attention_motifs/pipeline/s4c_clustering.py              23     23     0%   3-54
-attention_motifs/pipeline/s5_head_embed.py               60     28    53%   96-150, 154-157
-attention_motifs/pipeline/s5b_head_embed_plots.py        54     54     0%   1-137
+attention_motifs/pipeline/s0_download_models.py          21     21     0%   1-35
+attention_motifs/pipeline/s1_activations.py              47      3    94%   144-147
+attention_motifs/pipeline/s1b_render_patterns.py         14      4    71%   25-29
+attention_motifs/pipeline/s1c_write_idxs.py               9      3    67%   26-29
+attention_motifs/pipeline/s2_features.py                  9      3    67%   22-25
+attention_motifs/pipeline/s3_feat_proc.py                53      4    92%   63, 146-149
+attention_motifs/pipeline/s3b_feat_fig.py                38      3    92%   134-137
+attention_motifs/pipeline/s4_head_dist.py                20      3    85%   36-39
+attention_motifs/pipeline/s4b_write_frontend.py          49      3    94%   83-86
+attention_motifs/pipeline/s4c_clustering.py              23      2    91%   53-54
+attention_motifs/pipeline/s5_head_embed.py               60      3    95%   154-157
+attention_motifs/pipeline/s5b_head_embed_plots.py        54      9    83%   111-112, 123-130, 134-137
 attention_motifs/pipeline/state.py                       49      0   100%
 attention_motifs/util/__init__.py                         0      0   100%
 attention_motifs/util/bins.py                            32      0   100%
 attention_motifs/util/profiling.py                      140    140     0%   3-296
 attention_motifs/util/util.py                            39     25    36%   31-45, 54, 67-90
-tests/conftest.py                                        57     10    82%   34-35, 41-43, 78, 96, 104-105, 117
+tests/conftest.py                                        60     12    80%   34-35, 41-43, 78, 90-91, 99, 107-108, 120
 tests/test_ablation.py                                  160      2    99%   368-369
+tests/test_analysis.py                                  121      0   100%
 tests/test_bins.py                                       51      0   100%
 tests/test_clustering.py                                 66      0   100%
 tests/test_consts.py                                     49      0   100%
 tests/test_frontend.py                                   59     20    66%   35, 74, 83, 90-111, 132-133, 149-153
 tests/test_matrix_powers.py                              84     15    82%   148-173
-tests/test_model_scheduler.py                           848      1    99%   608
+tests/test_model_scheduler.py                           858      1    99%   608
 tests/test_parsing.py                                   105      0   100%
 tests/test_pattern_types.py                             104      0   100%
 tests/test_pipeline_state.py                             98      0   100%
 tests/test_transition_tensor.py                          41      0   100%
 tests/test_vec_features.py                               76      0   100%
 -----------------------------------------------------------------------------------
-TOTAL                                                  5218   2017    61%
+TOTAL                                                  5357   1183    78%
