@@ -209,6 +209,7 @@ ignore_missing_imports = true
     no_clean = [
         ".nojekyll",  # For GitHub Pages
 		"demo/",
+		"notes/",
         # "resources/", # Templates, CSS, etc. this, or whatever is specified as DOCS_RESOURCES_DIR in makefile will always be preserved
     ]
 
