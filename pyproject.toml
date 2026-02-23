@@ -123,6 +123,9 @@ exclude = ["__pycache__"]
 		"notebooks/**" = [
 			"E402", # notebooks can import wherever they want
 		]
+		"attention_motifs/pipeline/full.py" = [
+			"E402", # full pipeline has some deferred imports
+		]
 
 [tool.hatch.metadata]
 	allow-direct-references = true
