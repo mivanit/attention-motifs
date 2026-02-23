@@ -126,6 +126,8 @@ device = "cuda:0"
 parallel_models = true
 devices = ["cuda:0"]
 vram_safety_factor = 2.0
+# number of prompts per forward pass during activation gathering
+batch_size = 32
 
 # output paths
 # ============================================================

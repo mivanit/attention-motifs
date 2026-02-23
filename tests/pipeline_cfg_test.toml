@@ -21,6 +21,8 @@ embedding_n_neighbors_list = [2, 4]
 # computing -- no effect on the results
 n_proc = 4
 device = "cpu"
+# number of prompts per forward pass during activation gathering
+batch_size = 2
 
 verbose = 99
 figures_dir = "tests/.temp/figures"
