@@ -487,7 +487,7 @@ class ModelScheduler:
 				stderr=subprocess.STDOUT,
 				text=True,
 			)
-		except OSError:
+		except BaseException:
 			log_file.close()
 			self.core_pool.release(cpu_cores)
 			raise

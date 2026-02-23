@@ -1093,6 +1093,24 @@ class TestSpawnModel:
 		# cores should be returned after the OSError
 		assert scheduler.core_pool.n_available == initial_cores
 
+	def test_spawn_popen_valueerror_releases_cores(
+		self,
+		mock_popen: MagicMock,
+		tmp_path: Path,
+	) -> None:
+		"""Non-OSError from Popen still releases cores and closes log file."""
+		mock_popen.side_effect = ValueError("invalid argument")
+
+		model: ScheduledModel = _make_scheduled_model("gpt2-small", 85_000_000)
+		scheduler: ModelScheduler = _make_scheduler(models=[model], total_cpu_cores=8)
+		scheduler.save_path = str(tmp_path)
+		initial_cores: int = scheduler.core_pool.n_available
+
+		with pytest.raises(ValueError, match="invalid argument"):
+			scheduler._spawn_model(model, "cuda:0")
+
+		assert scheduler.core_pool.n_available == initial_cores
+
 
 # ===========================================================================
 # _poll_running tests
