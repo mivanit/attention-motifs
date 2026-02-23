@@ -230,7 +230,28 @@ class TestBuildSubprocessCmd:
 		assert "--prompts" in cmd
 		assert "--raw-prompts" in cmd
 		assert "--n-samples" in cmd
+		assert "--batch-size" in cmd
+		bs_idx: int = cmd.index("--batch-size")
+		assert cmd[bs_idx + 1] == "32"  # default
 		assert "--force" not in cmd
+
+	def test_cmd_includes_batch_size(self) -> None:
+		"""Custom batch_size appears in command."""
+		cmd: list[str] = _build_subprocess_cmd(
+			model_name="gpt2-small",
+			device="cuda:0",
+			save_path="/data",
+			prompts_path="/data/p.jsonl",
+			n_samples=10,
+			min_chars=10,
+			max_chars=100,
+			force=False,
+			cpu_cores=[],
+			batch_size=64,
+		)
+		assert "--batch-size" in cmd
+		idx: int = cmd.index("--batch-size")
+		assert cmd[idx + 1] == "64"
 
 	def test_cmd_with_force(self) -> None:
 		"""Includes --force."""
@@ -299,6 +320,12 @@ class TestBuildSubprocessEnv:
 		"""UV_NOSYNC=1 set to avoid uv lock contention."""
 		env: dict[str, str] = _build_subprocess_env(n_threads=1)
 		assert env["UV_NOSYNC"] == "1"
+
+	@patch.dict("os.environ", {"CUDA_VISIBLE_DEVICES": "0,1"})
+	def test_env_strips_cuda_visible_devices(self) -> None:
+		"""CUDA_VISIBLE_DEVICES removed so subprocesses see all GPUs."""
+		env: dict[str, str] = _build_subprocess_env(n_threads=4)
+		assert "CUDA_VISIBLE_DEVICES" not in env
 
 
 class TestParseDeviceIndex:
@@ -461,6 +488,25 @@ class TestFindBestFit:
 		scheduler: ModelScheduler = _make_scheduler(total_cpu_cores=8)
 		# exhaust all cores
 		scheduler.core_pool.allocate(8)
+		result: tuple[ScheduledModel, str] | None = scheduler._find_best_fit()
+		assert result is None
+
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_total_vram",
+		return_value=24_000_000_000,
+	)
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_free_vram",
+		return_value=20_000_000_000,
+	)
+	def test_find_fit_insufficient_cores(
+		self, _mock_free: MagicMock, _mock_total: MagicMock
+	) -> None:
+		"""1 core available but _MIN_CORES_PER_PROCESS is 2 → returns None."""
+		scheduler: ModelScheduler = _make_scheduler(total_cpu_cores=8)
+		# leave only 1 core — below the minimum of 2
+		scheduler.core_pool.allocate(7)
+		assert scheduler.core_pool.n_available == 1
 		result: tuple[ScheduledModel, str] | None = scheduler._find_best_fit()
 		assert result is None
 
@@ -933,6 +979,51 @@ class TestSpawnModel:
 		with pytest.raises(FileNotFoundError):
 			scheduler._spawn_model(model, "cuda:0")
 
+	@patch("attention_motifs.pipeline.model_scheduler.subprocess.Popen")
+	def test_spawn_fair_share_cores(
+		self,
+		mock_popen: MagicMock,
+		tmp_path: Path,
+	) -> None:
+		"""Core allocation uses fair share: total_cores // n_models_remaining."""
+		mock_proc: MagicMock = MagicMock()
+		mock_proc.poll.return_value = None
+		mock_popen.return_value = mock_proc
+
+		m1: ScheduledModel = _make_scheduled_model("m1", 14_000_000)
+		m2: ScheduledModel = _make_scheduled_model("m2", 14_000_000)
+		m3: ScheduledModel = _make_scheduled_model("m3", 14_000_000)
+		scheduler: ModelScheduler = _make_scheduler(
+			models=[m1, m2, m3], total_cpu_cores=12
+		)
+		scheduler.save_path = str(tmp_path)
+
+		# 3 models pending, 0 running → 12 // 3 = 4 cores for first spawn
+		scheduler._spawn_model(m1, "cuda:0")
+		assert scheduler.core_pool.n_available == 8  # 12 - 4
+
+	@patch("attention_motifs.pipeline.model_scheduler.subprocess.Popen")
+	def test_spawn_popen_oserror_releases_cores(
+		self,
+		mock_popen: MagicMock,
+		tmp_path: Path,
+	) -> None:
+		"""Popen raises OSError → cores returned to pool, error re-raised."""
+		mock_popen.side_effect = OSError("No such file or directory")
+
+		model: ScheduledModel = _make_scheduled_model("gpt2-small", 85_000_000)
+		scheduler: ModelScheduler = _make_scheduler(
+			models=[model], total_cpu_cores=8
+		)
+		scheduler.save_path = str(tmp_path)
+		initial_cores: int = scheduler.core_pool.n_available
+
+		with pytest.raises(OSError, match="No such file"):
+			scheduler._spawn_model(model, "cuda:0")
+
+		# cores should be returned after the OSError
+		assert scheduler.core_pool.n_available == initial_cores
+
 
 # ===========================================================================
 # _poll_running tests
@@ -977,6 +1068,64 @@ class TestPollRunning:
 		# log file closed
 		mock_log.close.assert_called_once()
 
+	def test_poll_running_releases_cores_on_success(self) -> None:
+		"""Exit code 0 → cores released, VRAM freed, model in completed."""
+		model: ScheduledModel = _make_scheduled_model("good-model", 85_000_000)
+		scheduler: ModelScheduler = _make_scheduler(models=[])
+
+		scheduler.core_pool.available = [3, 4, 5, 6, 7]
+		scheduler._device_committed["cuda:0"] = model.estimated_vram
+
+		mock_proc: MagicMock = MagicMock()
+		mock_proc.poll.return_value = 0
+		mock_log: MagicMock = MagicMock()
+
+		rm: RunningModel = RunningModel(
+			model=model,
+			process=mock_proc,
+			device="cuda:0",
+			cpu_cores=[0, 1, 2],
+			log_file=mock_log,
+		)
+		scheduler.running.append(rm)
+
+		scheduler._poll_running()
+
+		assert scheduler.core_pool.n_available == 8
+		assert 0 in scheduler.core_pool.available
+		assert scheduler._device_committed["cuda:0"] == 0
+		assert scheduler.completed == ["good-model"]
+		assert scheduler.failed == []
+		assert scheduler.running == []
+		mock_log.close.assert_called_once()
+
+	def test_poll_running_failure_logs_path(self) -> None:
+		"""Failure message includes the log file path."""
+		model: ScheduledModel = _make_scheduled_model("broken-model", 85_000_000)
+		scheduler: ModelScheduler = _make_scheduler(models=[])
+		scheduler._device_committed["cuda:0"] = model.estimated_vram
+
+		mock_proc: MagicMock = MagicMock()
+		mock_proc.poll.return_value = 1
+		mock_log: MagicMock = MagicMock()
+		mock_log.name = "/tmp/broken-model_parallel.log"
+
+		rm: RunningModel = RunningModel(
+			model=model,
+			process=mock_proc,
+			device="cuda:0",
+			cpu_cores=[],
+			log_file=mock_log,
+		)
+		scheduler.running.append(rm)
+
+		log_messages: list[str] = []
+		scheduler._log = lambda msg: log_messages.append(msg)  # type: ignore[assignment]
+
+		scheduler._poll_running()
+
+		assert any("/tmp/broken-model_parallel.log" in msg for msg in log_messages)
+
 
 # ===========================================================================
 # cfg.py tests (parallel scheduling fields)
@@ -1007,6 +1156,7 @@ vram_safety_factor = 2.5
 		assert cfg.parallel_models is True
 		assert cfg.devices == ["cuda:0", "cuda:1"]
 		assert cfg.vram_safety_factor == 2.5
+		assert cfg.batch_size == 32  # default when not specified
 
 	def test_config_defaults_without_parallel_fields(self, tmp_path: Path) -> None:
 		"""Missing parallel fields → sensible defaults."""
@@ -1027,6 +1177,7 @@ device = "cpu"
 
 		assert cfg.parallel_models is False
 		assert cfg.vram_safety_factor == 3.0
+		assert cfg.batch_size == 32  # default
 
 	def test_config_devices_fallback_to_device(self, tmp_path: Path) -> None:
 		"""No `devices` key → [device] used."""
@@ -1068,6 +1219,32 @@ device = "cuda:1"
 			["tests/pipeline_cfg_test.toml", "--vram-safety-factor", "2.5"]
 		)
 		assert cfg.vram_safety_factor == 2.5
+
+	def test_config_loads_batch_size(self, tmp_path: Path) -> None:
+		"""TOML with explicit batch_size → parsed correctly."""
+		toml_content: str = """\
+prompts_file = "data/text/pile_demo.jsonl"
+patterns_dir = "data/patterns"
+features_dir = "data/features"
+prompts_n_samples = 10
+prompts_min_chars = 10
+prompts_max_chars = 100
+models = ["gpt2-small"]
+n_proc = 4
+device = "cpu"
+batch_size = 64
+"""
+		cfg_path: Path = tmp_path / "test.toml"
+		cfg_path.write_text(toml_content)
+		cfg: PipelineConfig = PipelineConfig.read(cfg_path)
+		assert cfg.batch_size == 64
+
+	def test_config_cli_batch_size(self) -> None:
+		"""--batch-size 16 parsed correctly."""
+		cfg: PipelineConfig = PipelineConfig.from_cli(
+			["tests/pipeline_cfg_test.toml", "--batch-size", "16"]
+		)
+		assert cfg.batch_size == 16
 
 	def test_config_validates_devices_nonempty(self, tmp_path: Path) -> None:
 		"""Empty devices list fails validation."""
@@ -1186,6 +1363,7 @@ class TestGenerateActivationsParallel:
 		cfg.models = ["gpt2-small", "unknown-model"]
 		cfg.devices = ["cuda:0"]
 		cfg.vram_safety_factor = 3.0
+		cfg.batch_size = 16
 
 		mock_table: dict[str, ModelInfo] = {
 			"gpt2-small": ModelInfo(name="gpt2-small", n_params=85_000_000),
@@ -1214,11 +1392,13 @@ class TestGenerateActivationsParallel:
 			scheduled_models: list[ScheduledModel] = call_kwargs["models"]
 			assert len(scheduled_models) == 1
 			assert scheduled_models[0].name == "gpt2-small"
+			assert call_kwargs["batch_size"] == 16
 
 			# run_all called on the scheduler
 			mock_scheduler_instance.run_all.assert_called_once()
 
-			# unknown model falls back to sequential
+			# unknown model falls back to sequential with batch_size
 			mock_act_main.assert_called_once()
 			act_call_kwargs: dict[str, Any] = dict(mock_act_main.call_args.kwargs)
 			assert act_call_kwargs["model_name"] == "unknown-model"
+			assert act_call_kwargs["batch_size"] == 16
