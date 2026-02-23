@@ -143,6 +143,10 @@ def transition_tensor(
 	res_resampled: Float[np.ndarray, "n_idxs n_ctx"] | None
 	if residuals:
 		res_resampled = np.full((n_idxs, n_ctx), np.nan, dtype=A.dtype)
+		# TODO: bug -- when i_idx == 0, tt_resampled[-1] grabs the *last* element
+		# (highest power) via Python negative indexing instead of identity.
+		# Docstring says residuals[0] should be NaN. Fix: range(1, n_idxs).
+		# Only affects tt_fig plotting, not the pipeline (which uses the torch version).
 		for i_idx in range(n_idxs):
 			for i_ctx in range(n_ctx):
 				res_resampled[i_idx, i_ctx] = res_norm(
