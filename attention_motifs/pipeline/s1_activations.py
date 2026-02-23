@@ -45,6 +45,7 @@ def _generate_activations_sequential(cfg: PipelineConfig) -> None:
 def _generate_activations_parallel(cfg: PipelineConfig) -> None:
 	"""VRAM-aware parallel path — multiple models via subprocesses."""
 	from attention_motifs.pipeline.model_table import (
+		MODEL_TABLE_CACHE,
 		ModelInfo,
 		fetch_model_table,
 		get_model_params,
@@ -64,8 +65,8 @@ def _generate_activations_parallel(cfg: PipelineConfig) -> None:
 			n_params: int = get_model_params(model_name, model_table)
 		except KeyError:
 			print(
-				f"\033[93m[scheduler] warning: {model_name!r} not in model table, "
-				f"will run sequentially as fallback\033[m"
+				f"\033[93m[scheduler] could not find model {model_name!r} in cached model table "
+				f"{MODEL_TABLE_CACHE}, will run serially\033[m"
 			)
 			skipped.append(model_name)
 			continue
