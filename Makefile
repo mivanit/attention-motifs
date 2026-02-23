@@ -626,7 +626,10 @@ publish: check version build verify-git
 .PHONY: clean
 clean:
 	@echo "clean up temporary files"
-	rm -rf .ruff_cache .pytest_cache .coverage dist build $(PACKAGE_NAME).egg-info $(TESTS_TEMP_DIR)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# .coverage* glob also removes .coverage.* parallel sidecar files from `coverage run --parallel-mode`
+	rm -rf .ruff_cache .pytest_cache .coverage* dist build $(PACKAGE_NAME).egg-info $(TESTS_TEMP_DIR)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	-find . -type d -name '__pycache__' -exec rm -rf {} +
 	-find . -type d -name '.mypy_cache' -exec rm -rf {} +
 	-find $(PACKAGE_NAME) $(TESTS_DIR) $(DOCS_DIR) -type f -name '*.py[co]' -delete
