@@ -535,6 +535,125 @@ class TestRunAll:
 		assert len(scheduler.failed) == 1
 		assert scheduler.failed[0] == ("broken-model", 1)
 
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_total_vram",
+		return_value=24_000_000_000,
+	)
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_free_vram",
+		return_value=24_000_000_000,
+	)
+	@patch("attention_motifs.pipeline.model_scheduler.time.sleep")
+	@patch("attention_motifs.pipeline.model_scheduler.subprocess.Popen")
+	def test_run_all_multiple_models_sequential(
+		self,
+		mock_popen: MagicMock,
+		_mock_sleep: MagicMock,
+		_mock_free: MagicMock,
+		_mock_total: MagicMock,
+		tmp_path: Path,
+	) -> None:
+		"""Large models run one at a time — each nearly fills GPU."""
+		# Each model est ~15GB (1.25B * 4 * 3), only one fits in 24GB at a time
+		# because committed VRAM tracking prevents overscheduling
+		model1: ScheduledModel = _make_scheduled_model("large-1", 1_250_000_000)
+		model2: ScheduledModel = _make_scheduled_model("large-2", 1_250_000_000)
+
+		proc1: MagicMock = MagicMock()
+		proc1.poll.side_effect = [None, None, None, 0]
+		proc2: MagicMock = MagicMock()
+		proc2.poll.side_effect = [None, 0]
+		mock_popen.side_effect = [proc1, proc2]
+
+		scheduler: ModelScheduler = _make_scheduler(models=[model1, model2])
+		scheduler.save_path = str(tmp_path)
+		scheduler.run_all()
+
+		assert len(scheduler.completed) == 2
+		assert scheduler.failed == []
+		assert mock_popen.call_count == 2
+
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_total_vram",
+		return_value=24_000_000_000,
+	)
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_free_vram",
+		return_value=24_000_000_000,
+	)
+	@patch("attention_motifs.pipeline.model_scheduler.time.sleep")
+	@patch("attention_motifs.pipeline.model_scheduler.subprocess.Popen")
+	def test_run_all_multiple_models_concurrent(
+		self,
+		mock_popen: MagicMock,
+		_mock_sleep: MagicMock,
+		_mock_free: MagicMock,
+		_mock_total: MagicMock,
+		tmp_path: Path,
+	) -> None:
+		"""Small models run concurrently — both fit on GPU together."""
+		tiny1: ScheduledModel = _make_scheduled_model("tiny-1", 14_000_000)
+		tiny2: ScheduledModel = _make_scheduled_model("tiny-2", 14_000_000)
+
+		proc1: MagicMock = MagicMock()
+		proc1.poll.side_effect = [None, None, 0]
+		proc2: MagicMock = MagicMock()
+		proc2.poll.side_effect = [None, 0]
+		mock_popen.side_effect = [proc1, proc2]
+
+		scheduler: ModelScheduler = _make_scheduler(models=[tiny1, tiny2])
+		scheduler.save_path = str(tmp_path)
+		scheduler.run_all()
+
+		assert set(scheduler.completed) == {"tiny-1", "tiny-2"}
+		assert scheduler.failed == []
+		assert mock_popen.call_count == 2
+
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_total_vram",
+		return_value=24_000_000_000,
+	)
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_free_vram",
+		return_value=24_000_000_000,
+	)
+	@patch("attention_motifs.pipeline.model_scheduler.time.sleep")
+	@patch("attention_motifs.pipeline.model_scheduler.subprocess.Popen")
+	def test_run_all_mixed_sizes(
+		self,
+		mock_popen: MagicMock,
+		_mock_sleep: MagicMock,
+		_mock_free: MagicMock,
+		_mock_total: MagicMock,
+		tmp_path: Path,
+	) -> None:
+		"""Large model gets GPU alone, then small models pack together."""
+		# Large: 1.9B params → est ~22.8GB. After spawn, effective = 1.2GB.
+		# Small: 180M params → est ~2.16GB — doesn't fit alongside large.
+		large: ScheduledModel = _make_scheduled_model("large", 1_900_000_000)
+		small1: ScheduledModel = _make_scheduled_model("small-1", 180_000_000)
+		small2: ScheduledModel = _make_scheduled_model("small-2", 180_000_000)
+
+		large_proc: MagicMock = MagicMock()
+		large_proc.poll.side_effect = [None, 0]
+		small1_proc: MagicMock = MagicMock()
+		small1_proc.poll.side_effect = [None, None, 0]
+		small2_proc: MagicMock = MagicMock()
+		small2_proc.poll.side_effect = [None, 0]
+		mock_popen.side_effect = [large_proc, small1_proc, small2_proc]
+
+		scheduler: ModelScheduler = _make_scheduler(
+			models=[large, small1, small2]
+		)
+		scheduler.save_path = str(tmp_path)
+		scheduler.run_all()
+
+		assert len(scheduler.completed) == 3
+		assert scheduler.failed == []
+		# large completes first, before smalls are scheduled
+		assert scheduler.completed[0] == "large"
+		assert mock_popen.call_count == 3
+
 	def test_run_all_empty_models(self) -> None:
 		"""No models → returns immediately."""
 		scheduler: ModelScheduler = _make_scheduler(models=[])
@@ -573,7 +692,7 @@ class TestSpawnModel:
 		scheduler._spawn_model(model, "cuda:0")
 
 		# check subprocess.Popen was called with env containing thread vars
-		call_kwargs: dict[str, Any] = mock_popen.call_args.kwargs
+		call_kwargs: dict[str, Any] = dict(mock_popen.call_args.kwargs)
 		env: dict[str, str] = call_kwargs["env"]
 		assert "OMP_NUM_THREADS" in env
 		assert int(env["OMP_NUM_THREADS"]) >= 1
@@ -739,6 +858,51 @@ device = "cuda:1"
 			["tests/pipeline_cfg_test.toml", "--devices", "cuda:0,cuda:1"]
 		)
 		assert cfg.devices == ["cuda:0", "cuda:1"]
+
+	def test_config_cli_vram_safety_factor(self) -> None:
+		"""--vram-safety-factor 2.5 parsed correctly."""
+		cfg: PipelineConfig = PipelineConfig.from_cli(
+			["tests/pipeline_cfg_test.toml", "--vram-safety-factor", "2.5"]
+		)
+		assert cfg.vram_safety_factor == 2.5
+
+	def test_config_validates_devices_nonempty(self, tmp_path: Path) -> None:
+		"""Empty devices list fails validation."""
+		toml_content: str = """\
+prompts_file = "data/text/pile_demo.jsonl"
+patterns_dir = "data/patterns"
+features_dir = "data/features"
+prompts_n_samples = 10
+prompts_min_chars = 10
+prompts_max_chars = 100
+models = ["gpt2-small"]
+n_proc = 4
+device = "cpu"
+devices = []
+"""
+		cfg_path: Path = tmp_path / "test.toml"
+		cfg_path.write_text(toml_content)
+		with pytest.raises(AssertionError, match="devices"):
+			PipelineConfig.read(cfg_path)
+
+	def test_config_validates_vram_safety_positive(self, tmp_path: Path) -> None:
+		"""Negative safety factor fails validation."""
+		toml_content: str = """\
+prompts_file = "data/text/pile_demo.jsonl"
+patterns_dir = "data/patterns"
+features_dir = "data/features"
+prompts_n_samples = 10
+prompts_min_chars = 10
+prompts_max_chars = 100
+models = ["gpt2-small"]
+n_proc = 4
+device = "cpu"
+vram_safety_factor = -1.0
+"""
+		cfg_path: Path = tmp_path / "test.toml"
+		cfg_path.write_text(toml_content)
+		with pytest.raises(AssertionError, match="vram_safety_factor"):
+			PipelineConfig.read(cfg_path)
 
 
 # ===========================================================================
