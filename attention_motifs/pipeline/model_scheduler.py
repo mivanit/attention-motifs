@@ -147,6 +147,7 @@ def _build_subprocess_cmd(
 	max_chars: int,
 	force: bool,
 	cpu_cores: list[int],
+	batch_size: int = 32,
 ) -> list[str]:
 	"""Build the command list to run pattern_lens.activations for one model.
 
@@ -171,6 +172,8 @@ def _build_subprocess_cmd(
 		str(max_chars),
 		"--n-samples",
 		str(n_samples),
+		"--batch-size",
+		str(batch_size),
 	]
 
 	if force:
@@ -196,6 +199,9 @@ def _build_subprocess_env(n_threads: int) -> dict[str, str]:
 	env["MKL_NUM_THREADS"] = thread_str
 	# avoid uv workspace lock contention between subprocesses
 	env["UV_NOSYNC"] = "1"
+	# strip CUDA_VISIBLE_DEVICES so subprocesses can see all GPUs —
+	# the scheduler passes --device explicitly to each subprocess
+	env.pop("CUDA_VISIBLE_DEVICES", None)
 	return env
 
 
@@ -228,6 +234,7 @@ class ModelScheduler:
 		max_chars: int,
 		force: bool,
 		total_cpu_cores: int | None = None,
+		batch_size: int = 32,
 	) -> None:
 		# sort largest first for greedy bin-packing
 		self.pending: list[ScheduledModel] = sorted(
@@ -240,6 +247,7 @@ class ModelScheduler:
 		self.min_chars: int = min_chars
 		self.max_chars: int = max_chars
 		self.force: bool = force
+		self.batch_size: int = batch_size
 
 		self.running: list[RunningModel] = []
 		self.completed: list[str] = []
@@ -248,6 +256,9 @@ class ModelScheduler:
 		# track VRAM committed to running (but possibly not yet loaded) models
 		self._device_committed: dict[str, int] = {d: 0 for d in devices}
 
+		self._total_cores: int = (
+			total_cpu_cores if total_cpu_cores is not None else (os.cpu_count() or 1)
+		)
 		self.core_pool: CorePool = CorePool.from_system(total_cpu_cores)
 		self.total_models: int = len(models)
 
@@ -277,8 +288,10 @@ class ModelScheduler:
 				)
 			else:
 				self.failed.append((rm.model.name, retcode))
+				log_path: str = rm.log_file.name
 				self._log(
-					f"FAILED {rm.model.name} on {rm.device} (exit code {retcode})"
+					f"FAILED {rm.model.name} on {rm.device} (exit code {retcode}), "
+					f"see log: {log_path}"
 				)
 
 		self.running = still_running
@@ -321,11 +334,14 @@ class ModelScheduler:
 
 	def _spawn_model(self, model: ScheduledModel, device: str) -> None:
 		"""Spawn a subprocess for a single model."""
-		# allocate CPU cores: divide available cores among (running + 1) processes
-		n_running: int = len(self.running) + 1
-		cores_per_process: int = max(
-			_MIN_CORES_PER_PROCESS,
-			self.core_pool.n_available // max(1, n_running),
+		# allocate CPU cores: fair share based on total models remaining
+		n_models_remaining: int = len(self.running) + len(self.pending)
+		cores_per_process: int = min(
+			max(
+				_MIN_CORES_PER_PROCESS,
+				self._total_cores // max(1, n_models_remaining),
+			),
+			self.core_pool.n_available,
 		)
 		cpu_cores: list[int] = self.core_pool.allocate(cores_per_process)
 
@@ -339,6 +355,7 @@ class ModelScheduler:
 			max_chars=self.max_chars,
 			force=self.force,
 			cpu_cores=cpu_cores,
+			batch_size=self.batch_size,
 		)
 		env: dict[str, str] = _build_subprocess_env(n_threads=len(cpu_cores))
 
@@ -376,6 +393,21 @@ class ModelScheduler:
 			)
 		)
 
+	def _cleanup_running(self) -> None:
+		"""Terminate all running subprocesses and close log files."""
+		for rm in self.running:
+			try:
+				rm.process.terminate()
+			except OSError:
+				pass
+			try:
+				rm.log_file.close()
+			except OSError:
+				pass
+		if self.running:
+			self._log(f"terminated {len(self.running)} running subprocess(es)")
+		self.running.clear()
+
 	def run_all(self) -> None:
 		"""Schedule and run all models. Blocks until all complete."""
 		self._log(
@@ -383,21 +415,40 @@ class ModelScheduler:
 		)
 		self._log(f"CPU cores available: {self.core_pool.n_available}")
 
-		while self.pending or self.running:
-			self._poll_running()
-
-			# try to schedule more models
-			while self.pending:
-				fit: tuple[ScheduledModel, str] | None = self._find_best_fit()
-				if fit is None:
-					break
-				model, device = fit
-				self._spawn_model(model, device)
-				# re-poll in case scheduling freed something
+		try:
+			while self.pending or self.running:
 				self._poll_running()
 
-			if self.running:
-				time.sleep(_POLL_INTERVAL_SECONDS)
+				# try to schedule more models
+				scheduled_any: bool = False
+				while self.pending:
+					fit: tuple[ScheduledModel, str] | None = self._find_best_fit()
+					if fit is None:
+						break
+					model, device = fit
+					self._spawn_model(model, device)
+					scheduled_any = True
+					# re-poll in case scheduling freed something
+					self._poll_running()
+
+				# guard: if nothing is running and nothing could be scheduled,
+				# we're stuck — no point sleeping forever
+				if self.pending and not self.running and not scheduled_any:
+					self._log(
+						f"ERROR: {len(self.pending)} model(s) cannot be scheduled "
+						f"(insufficient VRAM or no reachable devices). Giving up."
+					)
+					for m in self.pending:
+						self.failed.append((m.name, -1))
+					self.pending.clear()
+					break
+
+				if self.running:
+					time.sleep(_POLL_INTERVAL_SECONDS)
+		except BaseException:
+			self._log("interrupted — cleaning up running subprocesses")
+			self._cleanup_running()
+			raise
 
 		# summary
 		self._log(

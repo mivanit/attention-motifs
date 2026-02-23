@@ -218,6 +218,7 @@ class PipelineConfig:
 	parallel_models: bool = False
 	devices: list[str] = field(default_factory=lambda: ["cuda:0"])
 	vram_safety_factor: float = 3.0
+	batch_size: int = 32
 
 	# output paths
 	features_dir: Path
@@ -393,6 +394,7 @@ class PipelineConfig:
 			parallel_models=data.get("parallel_models", False),
 			devices=data.get("devices", [data.get("device", "cpu")]),
 			vram_safety_factor=data.get("vram_safety_factor", 3.0),
+			batch_size=data.get("batch_size", 32),
 			figures_dir=(
 				Path(data["figures_dir"]) if "figures_dir" in data else None
 				# default to None if not specified
@@ -518,6 +520,12 @@ class PipelineConfig:
 			default=None,
 			help="Safety multiplier for VRAM estimation (default: 3.0)",
 		)
+		parser.add_argument(
+			"--batch-size",
+			type=int,
+			default=None,
+			help="Batch size for activation generation (default: 32)",
+		)
 
 		args: argparse.Namespace = parser.parse_args(argv)
 
@@ -553,6 +561,8 @@ class PipelineConfig:
 			config.devices = [d.strip() for d in args.devices.split(",") if d.strip()]
 		if args.vram_safety_factor is not None:
 			config.vram_safety_factor = args.vram_safety_factor
+		if args.batch_size is not None:
+			config.batch_size = args.batch_size
 
 		# 3. Final sanity check
 		config.validate_cfg()

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import urllib.error
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -10,6 +11,7 @@ import pytest
 
 from attention_motifs.pipeline.model_table import (
 	ModelInfo,
+	_download_csv,
 	_parse_csv,
 	fetch_model_table,
 	get_model_params,
@@ -17,6 +19,7 @@ from attention_motifs.pipeline.model_table import (
 from attention_motifs.pipeline.model_scheduler import (
 	CorePool,
 	ModelScheduler,
+	RunningModel,
 	ScheduledModel,
 	_build_subprocess_cmd,
 	_build_subprocess_env,
@@ -122,6 +125,35 @@ class TestFetchModelTable:
 			mock_download.assert_called_once()
 			assert "gpt2-small" in table
 
+	def test_fetch_model_table_force_refresh(self, tmp_path: Path) -> None:
+		"""Cache exists but force_refresh=True → _download_csv still called."""
+		cache_path: Path = tmp_path / "model_table.csv"
+		cache_path.write_text(SAMPLE_CSV)
+
+		with (
+			patch(
+				"attention_motifs.pipeline.model_table.MODEL_TABLE_CACHE", cache_path
+			),
+			patch(
+				"attention_motifs.pipeline.model_table._download_csv",
+				return_value=SAMPLE_CSV,
+			) as mock_download,
+		):
+			table: dict[str, ModelInfo] = fetch_model_table(force_refresh=True)
+			mock_download.assert_called_once()
+			assert "gpt2-small" in table
+
+
+class TestDownloadCSV:
+	@patch("attention_motifs.pipeline.model_table.urllib.request.urlopen")
+	def test_download_csv_network_failure(
+		self, mock_urlopen: MagicMock, tmp_path: Path
+	) -> None:
+		"""urllib.request.urlopen raises URLError → propagates."""
+		mock_urlopen.side_effect = urllib.error.URLError("Connection refused")
+		with pytest.raises(urllib.error.URLError, match="Connection refused"):
+			_download_csv("https://example.com/table.csv", tmp_path / "cache.csv")
+
 
 # ===========================================================================
 # model_scheduler.py tests
@@ -160,6 +192,14 @@ class TestCorePool:
 		pool: CorePool = CorePool(available=[4, 5])
 		pool.release([0, 2])
 		assert pool.available == [0, 2, 4, 5]
+
+	def test_core_pool_allocate_zero(self) -> None:
+		"""Allocating 0 cores returns empty list, pool unchanged."""
+		pool: CorePool = CorePool(available=[0, 1, 2, 3])
+		allocated: list[int] = pool.allocate(0)
+		assert allocated == []
+		assert pool.available == [0, 1, 2, 3]
+		assert pool.n_available == 4
 
 	def test_core_pool_from_system(self) -> None:
 		"""Creates with correct count."""
@@ -270,6 +310,15 @@ class TestParseDeviceIndex:
 
 	def test_device_1(self) -> None:
 		assert _parse_device_index("cuda:1") == 1
+
+	def test_parse_device_index_no_colon(self) -> None:
+		"""'cpu' has no colon — returns default 0 (documents behavior)."""
+		assert _parse_device_index("cpu") == 0
+
+	def test_parse_device_index_non_numeric(self) -> None:
+		"""'cuda:abc' — int('abc') raises ValueError."""
+		with pytest.raises(ValueError):
+			_parse_device_index("cuda:abc")
 
 
 class TestGetFreeVram:
@@ -437,6 +486,20 @@ class TestFindBestFit:
 		# get_free_vram says 24GB free (stale — model not loaded yet)
 		# but total - committed = 24GB - 23.5GB = 500MB
 		# gpt2-small needs ~1020MB → should NOT fit
+		result: tuple[ScheduledModel, str] | None = scheduler._find_best_fit()
+		assert result is None
+
+	@patch("attention_motifs.pipeline.model_scheduler.get_total_vram")
+	@patch("attention_motifs.pipeline.model_scheduler.get_free_vram")
+	def test_find_fit_vram_query_runtime_error(
+		self, mock_free: MagicMock, mock_total: MagicMock
+	) -> None:
+		"""All devices raise RuntimeError → returns None."""
+		mock_free.side_effect = RuntimeError("CUDA device not available")
+		mock_total.side_effect = RuntimeError("CUDA device not available")
+
+		model: ScheduledModel = _make_scheduled_model("pythia-14m", 14_000_000)
+		scheduler: ModelScheduler = _make_scheduler(models=[model])
 		result: tuple[ScheduledModel, str] | None = scheduler._find_best_fit()
 		assert result is None
 
@@ -642,9 +705,7 @@ class TestRunAll:
 		small2_proc.poll.side_effect = [None, 0]
 		mock_popen.side_effect = [large_proc, small1_proc, small2_proc]
 
-		scheduler: ModelScheduler = _make_scheduler(
-			models=[large, small1, small2]
-		)
+		scheduler: ModelScheduler = _make_scheduler(models=[large, small1, small2])
 		scheduler.save_path = str(tmp_path)
 		scheduler.run_all()
 
@@ -660,6 +721,72 @@ class TestRunAll:
 		scheduler.run_all()
 		assert scheduler.completed == []
 		assert scheduler.failed == []
+
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_total_vram",
+		return_value=4_000_000_000,
+	)
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_free_vram",
+		return_value=100_000_000,
+	)
+	def test_run_all_starvation_when_no_model_fits(
+		self,
+		_mock_free: MagicMock,
+		_mock_total: MagicMock,
+	) -> None:
+		"""All models too large → scheduler gives up and marks them as failed.
+
+		When no model fits any device and nothing is running, the scheduler
+		detects the starvation condition and marks remaining models as failed
+		with exit code -1 rather than looping forever.
+		"""
+		# 100B params → ~1.2TB estimated VRAM, never fits in 4GB GPU
+		huge: ScheduledModel = _make_scheduled_model("huge-model", 100_000_000_000)
+		scheduler: ModelScheduler = _make_scheduler(models=[huge])
+		scheduler.run_all()
+
+		assert scheduler.completed == []
+		assert len(scheduler.failed) == 1
+		assert scheduler.failed[0] == ("huge-model", -1)
+
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_total_vram",
+		return_value=24_000_000_000,
+	)
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_free_vram",
+		return_value=20_000_000_000,
+	)
+	@patch("attention_motifs.pipeline.model_scheduler.time.sleep")
+	@patch("attention_motifs.pipeline.model_scheduler.subprocess.Popen")
+	def test_run_all_keyboard_interrupt_cleans_up(
+		self,
+		mock_popen: MagicMock,
+		mock_sleep: MagicMock,
+		_mock_free: MagicMock,
+		_mock_total: MagicMock,
+		tmp_path: Path,
+	) -> None:
+		"""KeyboardInterrupt during sleep terminates running subprocesses.
+
+		The try/finally in run_all ensures subprocesses are cleaned up
+		when the scheduler is interrupted.
+		"""
+		mock_proc: MagicMock = MagicMock()
+		mock_proc.poll.return_value = None  # never finishes
+		mock_popen.return_value = mock_proc
+		mock_sleep.side_effect = KeyboardInterrupt()
+
+		model: ScheduledModel = _make_scheduled_model("pythia-14m", 14_000_000)
+		scheduler: ModelScheduler = _make_scheduler(models=[model])
+		scheduler.save_path = str(tmp_path)
+
+		with pytest.raises(KeyboardInterrupt):
+			scheduler.run_all()
+
+		# cleanup: process.terminate() is called on running subprocesses
+		mock_proc.terminate.assert_called_once()
 
 
 class TestSpawnModel:
@@ -773,6 +900,82 @@ class TestSpawnModel:
 
 		log_path: Path = tmp_path / "gpt2-small_parallel.log"
 		assert log_path.exists()
+
+	@patch("attention_motifs.pipeline.model_scheduler.subprocess.Popen")
+	def test_spawn_model_slash_in_name(
+		self,
+		mock_popen: MagicMock,
+		tmp_path: Path,
+	) -> None:
+		"""Model name with '/' → log file uses '_' instead (no nested dirs)."""
+		mock_proc: MagicMock = MagicMock()
+		mock_proc.poll.return_value = None
+		mock_popen.return_value = mock_proc
+
+		model: ScheduledModel = _make_scheduled_model(
+			"meta-llama/Llama-3.2-1B", 1_000_000_000
+		)
+		scheduler: ModelScheduler = _make_scheduler(models=[model])
+		scheduler.save_path = str(tmp_path)
+		scheduler._spawn_model(model, "cuda:0")
+
+		expected_log: Path = tmp_path / "meta-llama_Llama-3.2-1B_parallel.log"
+		assert expected_log.exists()
+		# no nested directory created
+		assert not (tmp_path / "meta-llama").exists()
+
+	def test_spawn_log_path_missing_parent(self, tmp_path: Path) -> None:
+		"""save_path parent dir doesn't exist → FileNotFoundError."""
+		model: ScheduledModel = _make_scheduled_model("gpt2-small", 85_000_000)
+		scheduler: ModelScheduler = _make_scheduler(models=[model])
+		scheduler.save_path = str(tmp_path / "nonexistent" / "nested")
+
+		with pytest.raises(FileNotFoundError):
+			scheduler._spawn_model(model, "cuda:0")
+
+
+# ===========================================================================
+# _poll_running tests
+# ===========================================================================
+
+
+class TestPollRunning:
+	"""Tests for ModelScheduler._poll_running resource cleanup."""
+
+	def test_poll_running_releases_cores_on_failure(self) -> None:
+		"""Non-zero exit → cores released, committed VRAM decreased, model in failed."""
+		model: ScheduledModel = _make_scheduled_model("broken-model", 85_000_000)
+		scheduler: ModelScheduler = _make_scheduler(models=[])
+
+		# simulate prior allocation: remove cores 0-2 from pool
+		scheduler.core_pool.available = [3, 4, 5, 6, 7]
+		scheduler._device_committed["cuda:0"] = model.estimated_vram
+
+		mock_proc: MagicMock = MagicMock()
+		mock_proc.poll.return_value = 1  # non-zero exit
+		mock_log: MagicMock = MagicMock()
+
+		rm: RunningModel = RunningModel(
+			model=model,
+			process=mock_proc,
+			device="cuda:0",
+			cpu_cores=[0, 1, 2],
+			log_file=mock_log,
+		)
+		scheduler.running.append(rm)
+
+		scheduler._poll_running()
+
+		# cores returned to pool
+		assert scheduler.core_pool.n_available == 8
+		assert 0 in scheduler.core_pool.available
+		# committed VRAM released
+		assert scheduler._device_committed["cuda:0"] == 0
+		# model recorded as failed
+		assert scheduler.failed == [("broken-model", 1)]
+		assert scheduler.running == []
+		# log file closed
+		mock_log.close.assert_called_once()
 
 
 # ===========================================================================
@@ -962,3 +1165,60 @@ class TestGenerateActivationsBranching:
 			s1_mod.generate_activations(cfg)
 			mock_par.assert_called_once_with(cfg)
 			mock_seq.assert_not_called()
+
+
+class TestGenerateActivationsParallel:
+	"""Integration test for the full _generate_activations_parallel flow."""
+
+	@patch.dict(
+		"sys.modules",
+		{"pattern_lens.activations": MagicMock()},
+	)
+	def test_generate_activations_parallel_full_flow(self) -> None:
+		"""Known model → scheduler, unknown model → sequential fallback."""
+		import importlib
+		import attention_motifs.pipeline.s1_activations as s1_mod
+
+		importlib.reload(s1_mod)
+
+		cfg: PipelineConfig = PipelineConfig.read(Path("tests/pipeline_cfg_test.toml"))
+		cfg.parallel_models = True
+		cfg.models = ["gpt2-small", "unknown-model"]
+		cfg.devices = ["cuda:0"]
+		cfg.vram_safety_factor = 3.0
+
+		mock_table: dict[str, ModelInfo] = {
+			"gpt2-small": ModelInfo(name="gpt2-small", n_params=85_000_000),
+		}
+		mock_scheduler_instance: MagicMock = MagicMock()
+
+		with (
+			patch(
+				"attention_motifs.pipeline.model_table.fetch_model_table",
+				return_value=mock_table,
+			) as mock_fetch,
+			patch(
+				"attention_motifs.pipeline.model_scheduler.ModelScheduler",
+				return_value=mock_scheduler_instance,
+			) as mock_scheduler_cls,
+			patch.object(s1_mod, "activations_main") as mock_act_main,
+		):
+			s1_mod._generate_activations_parallel(cfg)
+
+			# model table fetched
+			mock_fetch.assert_called_once()
+
+			# scheduler created with only the known model
+			mock_scheduler_cls.assert_called_once()
+			call_kwargs: dict[str, Any] = dict(mock_scheduler_cls.call_args.kwargs)
+			scheduled_models: list[ScheduledModel] = call_kwargs["models"]
+			assert len(scheduled_models) == 1
+			assert scheduled_models[0].name == "gpt2-small"
+
+			# run_all called on the scheduler
+			mock_scheduler_instance.run_all.assert_called_once()
+
+			# unknown model falls back to sequential
+			mock_act_main.assert_called_once()
+			act_call_kwargs: dict[str, Any] = dict(mock_act_main.call_args.kwargs)
+			assert act_call_kwargs["model_name"] == "unknown-model"

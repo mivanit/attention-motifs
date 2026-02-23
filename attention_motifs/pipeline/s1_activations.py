@@ -38,6 +38,7 @@ def _generate_activations_sequential(cfg: PipelineConfig) -> None:
 			shuffle=False,
 			stacked_heads=False,
 			device=cfg.device,
+			batch_size=cfg.batch_size,
 		)
 
 
@@ -89,6 +90,7 @@ def _generate_activations_parallel(cfg: PipelineConfig) -> None:
 			max_chars=cfg.prompts_max_chars,
 			force=cfg.force_overwrite,
 			total_cpu_cores=os.cpu_count(),
+			batch_size=cfg.batch_size,
 		)
 		scheduler.run_all()
 
@@ -112,6 +114,7 @@ def _generate_activations_parallel(cfg: PipelineConfig) -> None:
 				shuffle=False,
 				stacked_heads=False,
 				device=cfg.device,
+				batch_size=cfg.batch_size,
 			)
 
 

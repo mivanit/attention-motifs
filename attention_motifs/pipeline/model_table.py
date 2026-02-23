@@ -59,6 +59,7 @@ def fetch_model_table(force_refresh: bool = False) -> dict[str, ModelInfo]:
 	content: str
 	if MODEL_TABLE_CACHE.exists() and not force_refresh:
 		content = MODEL_TABLE_CACHE.read_text()
+		print(f"Using cached model table from {MODEL_TABLE_CACHE}")
 	else:
 		print(f"Downloading model table from {MODEL_TABLE_URL}")
 		content = _download_csv(MODEL_TABLE_URL, MODEL_TABLE_CACHE)
