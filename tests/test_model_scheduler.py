@@ -1741,7 +1741,17 @@ class TestPrintStatus:
 		scheduler._print_status()
 		assert log_messages == []
 
-	def test_status_with_tqdm_progress(self, tmp_path: Path) -> None:
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_total_vram",
+		return_value=24_000_000_000,
+	)
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_free_vram",
+		return_value=4_000_000_000,
+	)
+	def test_status_with_tqdm_progress(
+		self, _mock_free: MagicMock, _mock_total: MagicMock, tmp_path: Path
+	) -> None:
 		"""Running model with tqdm output shows percentage."""
 		model: ScheduledModel = _make_scheduled_model("gpt2-small", 85_000_000)
 		scheduler: ModelScheduler = _make_scheduler(models=[])
@@ -1774,13 +1784,24 @@ class TestPrintStatus:
 		scheduler._log = lambda msg: log_messages.append(msg)  # type: ignore[assignment]
 		scheduler._print_status()
 
-		# header + 1 model line
-		assert len(log_messages) == 2
+		# header + VRAM line + 1 model line
+		assert len(log_messages) == 3
 		assert "1 running" in log_messages[0]
-		assert "50%" in log_messages[1]
-		assert "gpt2-small" in log_messages[1]
+		assert "VRAM used" in log_messages[1]
+		assert "50%" in log_messages[2]
+		assert "gpt2-small" in log_messages[2]
 
-	def test_status_with_non_tqdm_output(self, tmp_path: Path) -> None:
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_total_vram",
+		return_value=24_000_000_000,
+	)
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_free_vram",
+		return_value=4_000_000_000,
+	)
+	def test_status_with_non_tqdm_output(
+		self, _mock_free: MagicMock, _mock_total: MagicMock, tmp_path: Path
+	) -> None:
 		"""Running model without tqdm shows last log line."""
 		model: ScheduledModel = _make_scheduled_model("gpt2-small", 85_000_000)
 		scheduler: ModelScheduler = _make_scheduler(models=[])
@@ -1809,5 +1830,5 @@ class TestPrintStatus:
 		scheduler._log = lambda msg: log_messages.append(msg)  # type: ignore[assignment]
 		scheduler._print_status()
 
-		assert len(log_messages) == 2
-		assert "loading model" in log_messages[1]
+		assert len(log_messages) == 3
+		assert "loading model" in log_messages[2]
