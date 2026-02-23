@@ -104,7 +104,8 @@ data = candidates.serialize()  # -> dict
 candidates = CandidateHeads.load(data)  # dict -> instance
 ```
 
-When a class needs automatic serialization via `zanj`, use `SerializableDataclass` from `muutils`:
+When a class needs automatic serialization (especially with numpy arrays) via `zanj`, use `@serializable_dataclass` + `SerializableDataclass` from `muutils`:
+
 ```python
 from muutils.json_serialize import (
 	SerializableDataclass,
@@ -114,8 +115,74 @@ from muutils.json_serialize import (
 
 @serializable_dataclass
 class MyResult(SerializableDataclass):
-	embeddings: Float[np.ndarray, "n_heads n_dims"]
-	method: str
+	cls_values: list[str]
+	distances: Float[np.ndarray, "h h"]
+	is_reduced: bool = serializable_field(default=False)
+```
+
+**How it works:**
+
+- `@serializable_dataclass` replaces `@dataclass` (calls it internally -- don't use both)
+- Auto-generates `.serialize()`, `.load()`
+- Auto-registers with ZANJ (`register_handler=True` by default) so ZANJ can reconstruct the class
+
+**`serializable_field()`:**
+
+- Use `serializable_field()` when you need:
+  - Defaults on a serializable field: `serializable_field(default=False)`
+  - Custom serialization: `serializable_field(serialization_fn=lambda x: x.tolist())`
+  - Custom deserialization: `serializable_field(deserialize_fn=lambda x: np.array(x))`
+  - `loading_fn` is a legacy alternative to `deserialize_fn` that receives the **entire dict** instead of just the field value -- prefer `deserialize_fn`
+
+**Decorator params:**
+
+- `methods_no_override=["serialize", "load"]` -- skip auto-generating these methods so you can define custom ones
+- `properties_to_serialize=["my_prop"]` -- include `@property` values in serialized output
+- `frozen=True`, `kw_only=True` -- passed through to `@dataclass`
+
+**ZANJ save/read pattern:**
+
+```python
+from zanj import ZANJ
+
+@serializable_dataclass()
+class MyClass(SerializableDataclass):
+	# anything which we can normally do `json.dump()` on works out of the box
+	count: int
+	name: str
+	data: dict[str, int]
+	vocab: list[str]
+	# as do numpy/torch arrays, dataframes, and nested dataclasses:
+	array: Float[np.ndarray, "n d"]
+	dataframe: pd.DataFrame
+	other_serializable_dataclass: OtherClass # automatically converted, if `OtherClass` is also a `SerializableDataclass`
+
+	# custom classes require custom serialization functions:
+	device: torch.device = serializable_field(
+		serialization_fn=lambda x: str(x),
+		deserialize_fn=lambda x: torch.device(x),
+	)
+	optimizer: type[torch.optim.Optimizer] = serializable_field(
+		serialization_fn=lambda x: x.__name__,
+		deserialize_fn=lambda x: getattr(torch.optim, x),
+	)
+	some_kind_of_object: Any = serializable_field(
+		serialization_fn=lambda x: custom_serialize(x),
+		deserialize_fn=lambda x: custom_deserialize(x),
+	)
+
+	# .load() and .serialize() are auto-generated
+
+	def save(self, path: Path | str, zanj: ZANJ | None = None) -> None:
+		if zanj is None:
+			zanj = ZANJ()
+		zanj.save(self.serialize(), path)
+
+	@classmethod
+	def read(cls, path: Path | str, zanj: ZANJ | None = None) -> "MyClass":
+		if zanj is None:
+			zanj = ZANJ()
+		return zanj.read(path)
 ```
 
 ## Dataclass Conventions
