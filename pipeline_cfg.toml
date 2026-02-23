@@ -121,6 +121,12 @@ force_overwrite = false
 # can be set thru cli with `--device`
 device = "cuda:0"
 
+# multi-model parallelism for s1 (run models concurrently based on VRAM)
+# enable with --parallel-models on the CLI, or set to true here
+# parallel_models = true
+# devices = ["cuda:0"]
+# vram_safety_factor = 3.0
+
 # output paths
 # ============================================================
 # where to put the data of features extracted from the patterns

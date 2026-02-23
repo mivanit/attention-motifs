@@ -214,6 +214,11 @@ class PipelineConfig:
 	device: str = "cpu"
 	smart_mode: bool = False
 
+	# multi-model parallelism (s1)
+	parallel_models: bool = False
+	devices: list[str] = field(default_factory=lambda: ["cuda:0"])
+	vram_safety_factor: float = 3.0
+
 	# output paths
 	features_dir: Path
 	data_fnames: dict[DataFilename, str] = field(
@@ -318,6 +323,14 @@ class PipelineConfig:
 			"prompts_max_chars must be greater than or equal to prompts_min_chars"
 		)
 
+		assert isinstance(self.devices, list) and len(self.devices) > 0, (
+			"devices must be a non-empty list of device strings"
+		)
+		assert (
+			isinstance(self.vram_safety_factor, (int, float))
+			and self.vram_safety_factor > 0
+		), "vram_safety_factor must be a positive number"
+
 		# Basic validation for embedding parameters
 		valid_methods = {"isomap", "umap", "tsne", "pca"}
 		assert all(method in valid_methods for method in self.embedding_methods), (
@@ -377,6 +390,9 @@ class PipelineConfig:
 			prompts_max_chars=data["prompts_max_chars"],
 			device=data.get("device", "cpu"),  # default to 'cpu' if not specified
 			force_overwrite=data.get("force_overwrite", False),  # default to False
+			parallel_models=data.get("parallel_models", False),
+			devices=data.get("devices", [data.get("device", "cpu")]),
+			vram_safety_factor=data.get("vram_safety_factor", 3.0),
 			figures_dir=(
 				Path(data["figures_dir"]) if "figures_dir" in data else None
 				# default to None if not specified
@@ -485,6 +501,23 @@ class PipelineConfig:
 			action="store_true",
 			help="Enable smart mode: skip previously completed steps if config unchanged",
 		)
+		parser.add_argument(
+			"--parallel-models",
+			action="store_true",
+			help="Enable VRAM-aware parallel model scheduling for s1",
+		)
+		parser.add_argument(
+			"--devices",
+			type=str,
+			default=None,
+			help="Comma-separated list of CUDA devices (e.g., 'cuda:0,cuda:1')",
+		)
+		parser.add_argument(
+			"--vram-safety-factor",
+			type=float,
+			default=None,
+			help="Safety multiplier for VRAM estimation (default: 3.0)",
+		)
 
 		args: argparse.Namespace = parser.parse_args(argv)
 
@@ -514,6 +547,12 @@ class PipelineConfig:
 			config.figures_dir = args.figures_dir
 		if args.smart:
 			config.smart_mode = True
+		if args.parallel_models:
+			config.parallel_models = True
+		if args.devices is not None:
+			config.devices = [d.strip() for d in args.devices.split(",") if d.strip()]
+		if args.vram_safety_factor is not None:
+			config.vram_safety_factor = args.vram_safety_factor
 
 		# 3. Final sanity check
 		config.validate_cfg()
