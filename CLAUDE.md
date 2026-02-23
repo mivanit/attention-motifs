@@ -7,41 +7,84 @@
 ## Type Hinting
 
 ALWAYS TYPE HINT EVERYTHING. Every function, every variable declaration. Use jaxtyping for hinting arrays whenever practical.
+
+**Variable declarations must always have type annotations**, even when the type is obvious:
 ```python
-# always type hint functions
+# WRONG -- never do this
+path = Path("output")
+data = json.load(f)
+result = {}
+n = len(items)
+
+# RIGHT -- always annotate
+path: Path = Path("output")
+data: dict = json.load(f)
+result: dict[str, int] = {}
+n: int = len(items)
+```
+
+**Function signatures** -- always annotate all parameters and return type:
+```python
 def add(x: int, y: int) -> int:
 	return x + y
 
-# be as explicit as possible
 def process_data(data: list[dict[str, int]]) -> dict[str, int]:
-	# always type hint variables too
 	intermediate_result: dict[str, int] = {}
 	for item in data:
-		# process item and update intermediate_result
 		intermediate_result[item['key']] = item['value'] * 2
 	return intermediate_result
-
-def save_data(path: Path, data: dict[str, int]) -> None:
-	# type hint even when it's obvious!
-	new_path: Path = path.with_suffix('.json')
-
-	...
-
-import numpy as np
-from jaxtyping import Float, Int
-
-
-def process_array(
-	arr: Float[np.ndarray, "batch features"],
-) -> Float[np.ndarray, "batch features"]:
-	intermediate: Float[np.ndarray, "batch features"] = arr * 2
-	# put a space before the dim name if there is only one dim -- its a ruff thing
-	batch_nonzero_features: Int[np.ndarray, " batch"] = (intermediate > 0).astype(int)
-
-	...
 ```
 
+**Modern union syntax** -- use `X | Y` and `X | None`, not `Union` or `Optional`:
+```python
+# WRONG
+from typing import Union, Optional
+def foo(x: Optional[str] = None) -> Union[int, str]: ...
 
+# RIGHT
+def foo(x: str | None = None) -> int | str: ...
+```
+
+## Jaxtyping for Arrays
+
+Use `jaxtyping` (`Float`, `Int`, etc.) to annotate array shapes for both numpy and torch:
+```python
+import numpy as np
+import torch
+from jaxtyping import Float, Int
+
+# torch tensors
+pattern: Float[torch.Tensor, "n_ctx n_ctx"] = model.get_pattern()
+tokens: Int[torch.Tensor, "batch n_ctx"] = tokenizer(text)
+head_output: Float[torch.Tensor, "batch pos d_head"] = z_output
+
+# numpy arrays
+embeddings: Float[np.ndarray, "n_heads n_features"] = pca.transform(raw)
+labels: Int[np.ndarray, " n_heads"] = cluster_result.labels
+
+# IMPORTANT: put a space before the dim name if there is only one dim (ruff F722)
+counts: Int[np.ndarray, " batch"] = (arr > 0).sum(axis=1)
+#                        ^ space here
+```
+
+Define **type aliases** for commonly used shapes:
+```python
+AttentionPattern = Float[torch.Tensor, "n_ctx n_ctx"]
+AttentionPatternBatch = Float[torch.Tensor, "batch n_ctx n_ctx"]
+TokenSequence = Int[torch.Tensor, "n_ctx"]
+```
+
+## Makefile Edits
+
+The Makefile is from a template. When modifying template recipes (anything above the custom `am-*` section at the bottom), wrap changed lines with bare `~~` divider comments -- no text on the divider lines:
+
+```makefile
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+PYTEST_OPTIONS ?= --durations=20
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+```
+
+Edits within the custom `am-*` section at the bottom do not need dividers.
 
 ## Serialization Patterns
 
@@ -61,6 +104,42 @@ data = candidates.serialize()  # -> dict
 candidates = CandidateHeads.load(data)  # dict -> instance
 ```
 
+When a class needs automatic serialization via `zanj`, use `SerializableDataclass` from `muutils`:
+```python
+from muutils.json_serialize import (
+	SerializableDataclass,
+	serializable_dataclass,
+	serializable_field,
+)
+
+@serializable_dataclass
+class MyResult(SerializableDataclass):
+	embeddings: Float[np.ndarray, "n_heads n_dims"]
+	method: str
+```
+
+## Dataclass Conventions
+
+- **`kw_only=True`** for config-style dataclasses with many fields:
+  ```python
+  @dataclass(kw_only=True)
+  class PipelineConfig:
+      prompts_file: Path
+      n_samples: int
+      device: str = "cpu"
+  ```
+
+## Literal Types
+
+Use `Literal[...]` type aliases for constrained string values (not string Enums):
+```python
+EmbeddingMethod = Literal["isomap", "umap", "tsne", "pca"]
+DataFilename = Literal["raw", "norms", "scaled", "pca", "pca_npy"]
+
+# Then use in signatures and dataclass fields:
+embedding_methods: list[EmbeddingMethod] = field(...)
+```
+
 ## Project Structure
 
 | Directory | Purpose | Editable? |
@@ -73,10 +152,12 @@ candidates = CandidateHeads.load(data)  # dict -> instance
 ## Data Generation
 
 **How `data/` is generated:**
+
 - `make am-pipeline` → runs steps s0-s5b
 - Config: `pipeline_cfg.toml`
 
 **Pipeline steps:**
+
 - s1: Extract attention patterns → `data/patterns/`
 - s2-s3: Compute features → `data/features/`
 - s4b: Copy frontend → `data/vis/`
@@ -93,6 +174,7 @@ Output: data/vis/*/index.html  ← DON'T EDIT (generated)
 ```
 
 **Frontend editability:**
+
 | Path | Editable? |
 |------|-----------|
 | `attention_motifs/frontend/**/src/**` | ✅ Yes (source) |
@@ -102,12 +184,14 @@ Output: data/vis/*/index.html  ← DON'T EDIT (generated)
 ## Common Commands
 
 **General:**
+
 | Command | Description |
 |---------|-------------|
 | `make test` | Run test suite |
 | `make format` | Format code (ruff/prettier) |
 
 **Attention-Motifs (`am-*`):**
+
 | Command | Description |
 |---------|-------------|
 | `make am-pipeline` | Run full pipeline (uses `$(PIPELINE_CFG_PATH)`, default: `pipeline_cfg.toml`) |
@@ -120,6 +204,7 @@ Output: data/vis/*/index.html  ← DON'T EDIT (generated)
 | `make am-clean` | Delete ALL generated files in data/ (careful!) |
 
 **Typical workflows:**
+
 - Edit frontend source → `make am-frontend-bundle` → `make am-rebuild-interfaces`
 - Run full analysis → `make am-pipeline PIPELINE_CFG_PATH=my_config.toml`
 - View results locally → `make am-server-embed` or `make am-server-patternlens`
