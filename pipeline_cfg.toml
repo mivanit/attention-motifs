@@ -3,7 +3,7 @@
 # prompts file -- should be newline-delimited jsonl with each row having keys "text" and "meta"
 # example:
 # {"text": "Inorganic phosphate uptake in intact vacuoles isolated from suspension-cultured cells", "meta": {"pile_set_name": "PubMed Abstracts"}}
-prompts_file = "data/text/pile_demo.jsonl"
+prompts_file = "data/text/pile_10k.jsonl"
 # where to save patters -- both npz files of activations, and in step 1b png files of activation patterns
 # structure is:
 # `{patterns_dir}/{model_name}/prompts/{prompt_hash}/activations.npz`
@@ -13,7 +13,7 @@ patterns_dir = "data/patterns"
 # prompts processing
 # ============================================================
 # how many total prompts to use
-prompts_n_samples = 128
+prompts_n_samples = 1024
 # minimum chars per prompt
 prompts_min_chars = 64
 # maximum chars per prompt
@@ -62,7 +62,7 @@ models = [
 	"pythia-1b",
 	"pythia-1.4b",
 	"pythia-2.8b",
-	"pythia-6.9b",
+	# "pythia-6.9b", # too big for 24GB vram
 	# "pythia-12b",
 	# tinystories
 	"tiny-stories-1M",
