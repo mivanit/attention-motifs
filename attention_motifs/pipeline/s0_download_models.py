@@ -1,5 +1,10 @@
 from transformer_lens import HookedTransformer
 
+# import consts to load HF_TOKEN into os.environ before downloading gated models
+from attention_motifs.consts import HF_TOKEN as _HF_TOKEN
+
+assert isinstance(_HF_TOKEN, str)
+
 from attention_motifs.pipeline.cfg import (
 	PipelineConfig,
 	pipeline_step_major,
