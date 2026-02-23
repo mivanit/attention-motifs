@@ -575,6 +575,35 @@ class TestFindBestFit:
 		assert result is not None
 		assert result[1] == "cuda:1"
 
+	@patch("attention_motifs.pipeline.model_scheduler.get_total_vram")
+	@patch("attention_motifs.pipeline.model_scheduler.get_free_vram")
+	def test_find_fit_partial_device_failure(
+		self, mock_free: MagicMock, mock_total: MagicMock
+	) -> None:
+		"""cuda:0 raises RuntimeError, cuda:1 works → model on cuda:1."""
+
+		def free_side_effect(device: str) -> int:
+			if device == "cuda:0":
+				raise RuntimeError("CUDA error on device 0")
+			return 20_000_000_000
+
+		def total_side_effect(device: str) -> int:
+			if device == "cuda:0":
+				raise RuntimeError("CUDA error on device 0")
+			return 24_000_000_000
+
+		mock_free.side_effect = free_side_effect
+		mock_total.side_effect = total_side_effect
+
+		model: ScheduledModel = _make_scheduled_model("pythia-14m", 14_000_000)
+		scheduler: ModelScheduler = _make_scheduler(
+			models=[model], devices=["cuda:0", "cuda:1"]
+		)
+		result: tuple[ScheduledModel, str] | None = scheduler._find_best_fit()
+		assert result is not None
+		assert result[0] == model
+		assert result[1] == "cuda:1"
+
 
 class TestRunAll:
 	"""Tests for ModelScheduler.run_all with mocked Popen and VRAM queries."""
@@ -834,6 +863,32 @@ class TestRunAll:
 		# cleanup: process.terminate() is called on running subprocesses
 		mock_proc.terminate.assert_called_once()
 
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_total_vram",
+		return_value=4_000_000_000,
+	)
+	@patch(
+		"attention_motifs.pipeline.model_scheduler.get_free_vram",
+		return_value=100_000_000,
+	)
+	def test_run_all_starvation_multiple_models(
+		self,
+		_mock_free: MagicMock,
+		_mock_total: MagicMock,
+	) -> None:
+		"""Multiple models too large → all marked failed with exit code -1."""
+		huge1: ScheduledModel = _make_scheduled_model("huge-1", 100_000_000_000)
+		huge2: ScheduledModel = _make_scheduled_model("huge-2", 50_000_000_000)
+		huge3: ScheduledModel = _make_scheduled_model("huge-3", 25_000_000_000)
+		scheduler: ModelScheduler = _make_scheduler(models=[huge1, huge2, huge3])
+		scheduler.run_all()
+
+		assert scheduler.completed == []
+		assert len(scheduler.failed) == 3
+		failed_names: set[str] = {name for name, _code in scheduler.failed}
+		assert failed_names == {"huge-1", "huge-2", "huge-3"}
+		assert all(code == -1 for _name, code in scheduler.failed)
+
 
 class TestSpawnModel:
 	"""Tests for _spawn_model internals."""
@@ -1012,9 +1067,7 @@ class TestSpawnModel:
 		mock_popen.side_effect = OSError("No such file or directory")
 
 		model: ScheduledModel = _make_scheduled_model("gpt2-small", 85_000_000)
-		scheduler: ModelScheduler = _make_scheduler(
-			models=[model], total_cpu_cores=8
-		)
+		scheduler: ModelScheduler = _make_scheduler(models=[model], total_cpu_cores=8)
 		scheduler.save_path = str(tmp_path)
 		initial_cores: int = scheduler.core_pool.n_available
 
@@ -1125,6 +1178,108 @@ class TestPollRunning:
 		scheduler._poll_running()
 
 		assert any("/tmp/broken-model_parallel.log" in msg for msg in log_messages)
+
+	def test_poll_running_keeps_still_running(self) -> None:
+		"""Mixed: one process done, one still running → running list filtered correctly."""
+		done_model: ScheduledModel = _make_scheduled_model("done-model", 85_000_000)
+		busy_model: ScheduledModel = _make_scheduled_model("busy-model", 85_000_000)
+		scheduler: ModelScheduler = _make_scheduler(models=[])
+
+		scheduler.core_pool.available = [4, 5, 6, 7]
+		scheduler._device_committed["cuda:0"] = (
+			done_model.estimated_vram + busy_model.estimated_vram
+		)
+
+		busy_proc: MagicMock = MagicMock()
+		busy_proc.poll.return_value = None  # still running
+		busy_log: MagicMock = MagicMock()
+
+		done_proc: MagicMock = MagicMock()
+		done_proc.poll.return_value = 0
+		done_log: MagicMock = MagicMock()
+
+		scheduler.running = [
+			RunningModel(
+				model=busy_model,
+				process=busy_proc,
+				device="cuda:0",
+				cpu_cores=[0, 1],
+				log_file=busy_log,
+			),
+			RunningModel(
+				model=done_model,
+				process=done_proc,
+				device="cuda:0",
+				cpu_cores=[2, 3],
+				log_file=done_log,
+			),
+		]
+
+		scheduler._poll_running()
+
+		assert len(scheduler.running) == 1
+		assert scheduler.running[0].model.name == "busy-model"
+		assert scheduler.completed == ["done-model"]
+		# done log closed, busy log NOT closed
+		done_log.close.assert_called_once()
+		busy_log.close.assert_not_called()
+
+
+# ===========================================================================
+# _cleanup_running tests
+# ===========================================================================
+
+
+class TestCleanupRunning:
+	"""Tests for ModelScheduler._cleanup_running."""
+
+	def test_cleanup_running_terminates_and_closes(self) -> None:
+		"""All running processes terminated and log files closed."""
+		scheduler: ModelScheduler = _make_scheduler(models=[])
+
+		proc1: MagicMock = MagicMock()
+		log1: MagicMock = MagicMock()
+		proc2: MagicMock = MagicMock()
+		log2: MagicMock = MagicMock()
+
+		m1: ScheduledModel = _make_scheduled_model("m1", 14_000_000)
+		m2: ScheduledModel = _make_scheduled_model("m2", 14_000_000)
+		scheduler.running = [
+			RunningModel(model=m1, process=proc1, device="cuda:0", cpu_cores=[0], log_file=log1),
+			RunningModel(model=m2, process=proc2, device="cuda:0", cpu_cores=[1], log_file=log2),
+		]
+
+		scheduler._cleanup_running()
+
+		proc1.terminate.assert_called_once()
+		proc2.terminate.assert_called_once()
+		log1.close.assert_called_once()
+		log2.close.assert_called_once()
+		assert scheduler.running == []
+
+	def test_cleanup_running_oserror_continues(self) -> None:
+		"""OSError on first terminate doesn't stop cleanup of second process."""
+		scheduler: ModelScheduler = _make_scheduler(models=[])
+
+		proc1: MagicMock = MagicMock()
+		proc1.terminate.side_effect = OSError("process already dead")
+		log1: MagicMock = MagicMock()
+		proc2: MagicMock = MagicMock()
+		log2: MagicMock = MagicMock()
+
+		m1: ScheduledModel = _make_scheduled_model("m1", 14_000_000)
+		m2: ScheduledModel = _make_scheduled_model("m2", 14_000_000)
+		scheduler.running = [
+			RunningModel(model=m1, process=proc1, device="cuda:0", cpu_cores=[0], log_file=log1),
+			RunningModel(model=m2, process=proc2, device="cuda:0", cpu_cores=[1], log_file=log2),
+		]
+
+		scheduler._cleanup_running()  # should not raise
+
+		proc2.terminate.assert_called_once()
+		log1.close.assert_called_once()
+		log2.close.assert_called_once()
+		assert scheduler.running == []
 
 
 # ===========================================================================
@@ -1402,3 +1557,45 @@ class TestGenerateActivationsParallel:
 			act_call_kwargs: dict[str, Any] = dict(mock_act_main.call_args.kwargs)
 			assert act_call_kwargs["model_name"] == "unknown-model"
 			assert act_call_kwargs["batch_size"] == 16
+
+	@patch.dict(
+		"sys.modules",
+		{"pattern_lens.activations": MagicMock()},
+	)
+	def test_parallel_all_models_unknown(self) -> None:
+		"""All models unknown → scheduler never created, all run sequentially."""
+		import importlib
+		import attention_motifs.pipeline.s1_activations as s1_mod
+
+		importlib.reload(s1_mod)
+
+		cfg: PipelineConfig = PipelineConfig.read(Path("tests/pipeline_cfg_test.toml"))
+		cfg.parallel_models = True
+		cfg.models = ["unknown-1", "unknown-2"]
+		cfg.devices = ["cuda:0"]
+		cfg.vram_safety_factor = 3.0
+
+		# empty table → every model raises KeyError
+		mock_table: dict[str, ModelInfo] = {}
+
+		with (
+			patch(
+				"attention_motifs.pipeline.model_table.fetch_model_table",
+				return_value=mock_table,
+			),
+			patch(
+				"attention_motifs.pipeline.model_scheduler.ModelScheduler",
+			) as mock_scheduler_cls,
+			patch.object(s1_mod, "activations_main") as mock_act_main,
+		):
+			s1_mod._generate_activations_parallel(cfg)
+
+			# scheduler never created
+			mock_scheduler_cls.assert_not_called()
+
+			# both models run via sequential fallback
+			assert mock_act_main.call_count == 2
+			call_models: list[str] = [
+				call.kwargs["model_name"] for call in mock_act_main.call_args_list
+			]
+			assert call_models == ["unknown-1", "unknown-2"]
