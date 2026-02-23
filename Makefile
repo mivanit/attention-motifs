@@ -457,16 +457,17 @@ docs-md:
 # - removes .gitignore from html dir (we publish coverage with docs)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # changed: am-pipeline-test-cov runs pipeline under `coverage run`;
-# `coverage combine --append` merges the resulting .coverage.* into .coverage
+# `coverage combine` merges pipeline .coverage.* into .coverage first,
+# then pytest --cov-append adds test coverage on top
 .PHONY: cov
 cov:
 	@echo "generate coverage reports"
 	@if [ ! -f .coverage ]; then \
 		echo ".coverage not found, running pipeline+tests with coverage..."; \
 		$(MAKE) am-pipeline-test-cov; \
-		$(MAKE) test PYTEST_OPTIONS="$(PYTEST_OPTIONS) --cov=." ; \
+		$(PYTHON) -m coverage combine; \
+		$(MAKE) test PYTEST_OPTIONS="$(PYTEST_OPTIONS) --cov=. --cov-append" ; \
 	fi
-	-$(PYTHON) -m coverage combine --append  # `-` ignores exit code when no .coverage.* files exist
 	mkdir $(COVERAGE_REPORTS_DIR) -p
 	$(PYTHON) -m coverage report -m > $(COVERAGE_REPORTS_DIR)/coverage.txt
 	$(PYTHON) $(SCRIPTS_DIR)/generate_badge.py --coverage $(COVERAGE_REPORTS_DIR)/coverage.txt > $(COVERAGE_REPORTS_DIR)/coverage.svg
