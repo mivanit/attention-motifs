@@ -82,10 +82,13 @@ def pytest_configure(config: pytest.Config) -> None:
 	TESTS_TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
 	socketserver.TCPServer.allow_reuse_address = True
-	_httpd = socketserver.TCPServer(
-		("", HTTP_SERVER_PORT),
-		_make_handler_factory(str(TESTS_TEMP_DIR)),
-	)
+	try:
+		_httpd = socketserver.TCPServer(
+			("", HTTP_SERVER_PORT),
+			_make_handler_factory(str(TESTS_TEMP_DIR)),
+		)
+	except OSError as exc:
+		pytest.exit(f"Cannot bind HTTP server to port {HTTP_SERVER_PORT}: {exc}")
 	server_thread: threading.Thread = threading.Thread(
 		target=_httpd.serve_forever,
 		daemon=True,
