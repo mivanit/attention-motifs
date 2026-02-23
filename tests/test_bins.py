@@ -47,7 +47,10 @@ class TestLogBins:
 	def test_small_start_prepends_zero(self) -> None:
 		"""start < _log_min with _zero_in_small_start_log → first edge is 0."""
 		bins: Bins = Bins(
-			n_bins=8, start=1e-6, stop=1.0, scale="log",
+			n_bins=8,
+			start=1e-6,
+			stop=1.0,
+			scale="log",
 			_zero_in_small_start_log=True,
 		)
 		assert bins.edges[0].item() == 0.0

@@ -5,7 +5,7 @@ from attention_motifs.consts import HF_TOKEN as _HF_TOKEN
 
 assert isinstance(_HF_TOKEN, str)
 
-from attention_motifs.pipeline.cfg import (
+from attention_motifs.pipeline.cfg import (  # noqa: E402
 	PipelineConfig,
 	pipeline_step_major,
 	pipeline_model_progress,

@@ -115,9 +115,7 @@ class TestSerialization:
 	def test_serialize_load_roundtrip(self) -> None:
 		original: HierarchicalClusteringResult = _make_clustering()
 		data: dict = original.serialize()
-		restored: HierarchicalClusteringResult = (
-			HierarchicalClusteringResult.load(data)
-		)
+		restored: HierarchicalClusteringResult = HierarchicalClusteringResult.load(data)
 		assert restored.cls_values == original.cls_values
 		assert restored.linkage_method == original.linkage_method
 		np.testing.assert_array_almost_equal(
@@ -133,8 +131,8 @@ class TestSerialization:
 		assert (output_dir / "linkage.npy").exists()
 		assert (output_dir / "linkage.json").exists()
 
-		restored: HierarchicalClusteringResult = (
-			HierarchicalClusteringResult.read(output_dir)
+		restored: HierarchicalClusteringResult = HierarchicalClusteringResult.read(
+			output_dir
 		)
 		assert restored.cls_values == original.cls_values
 		assert restored.linkage_method == original.linkage_method

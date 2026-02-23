@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-import pytest
 
 from attention_motifs.features.clustering import HierarchicalClusteringResult
 from attention_motifs.pattern_types.pattern_types import (
@@ -167,9 +166,7 @@ def _make_clustering(n_heads: int = 6) -> HierarchicalClusteringResult:
 class TestPatternTypesFromClustering:
 	def test_basic(self) -> None:
 		clustering: HierarchicalClusteringResult = _make_clustering()
-		pt: PatternTypes = PatternTypes.from_clustering(
-			clustering, n_clusters=2
-		)
+		pt: PatternTypes = PatternTypes.from_clustering(clustering, n_clusters=2)
 		assert pt.meta.n_clusters == 2
 		assert pt.stats.n_heads == 6
 		assert len(pt.assignments) == 6
@@ -198,9 +195,7 @@ class TestPatternTypesFromClustering:
 
 	def test_from_clustering_cut_height(self) -> None:
 		clustering: HierarchicalClusteringResult = _make_clustering()
-		pt: PatternTypes = PatternTypes.from_clustering(
-			clustering, cut_height=1.0
-		)
+		pt: PatternTypes = PatternTypes.from_clustering(clustering, cut_height=1.0)
 		assert pt.meta.cut_height == 1.0
 		assert pt.stats.n_heads == 6
 		assert len(pt.assignments) == 6
