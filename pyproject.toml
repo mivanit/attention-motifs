@@ -37,8 +37,8 @@ dependencies = [
 	# symbolic regression
 	# "pysr>=1.3.1",
     # custom utils
-    "muutils @ git+https://github.com/mivanit/muutils",
-	"zanj @ git+https://github.com/mivanit/ZANJ",
+    "muutils>=0.9.0",
+	"zanj>=0.6.0",
 	"trnbl[tensorboard]>=0.1.1",
     # TL
     # "transformer-lens>=2.17.0",
@@ -52,7 +52,7 @@ dependencies = [
 	# pattern-lens
 	# "pattern-lens>=0.5.0",
 	# pattern-lens from git
-	"pattern-lens @ git+https://github.com/mivanit/pattern-lens",
+	"pattern-lens>=0.6.0",
 	"js-embedding-vis @ git+https://github.com/mivanit/js-embedding-vis"
 ]
 
