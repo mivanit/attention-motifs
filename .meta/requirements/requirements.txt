@@ -82,6 +82,7 @@ cycler==0.12.1
     # via matplotlib
 datasets==4.5.0
     # via
+    #   attention-motifs
     #   pattern-lens
     #   transformer-lens
 debugpy==1.8.20
@@ -90,7 +91,7 @@ decorator==5.2.1
     # via ipython
 defusedxml==0.7.1
     # via nbconvert
-dill==0.4.0
+dill==0.3.8
     # via
     #   datasets
     #   multiprocess
@@ -117,7 +118,7 @@ frozenlist==1.8.0
     # via
     #   aiohttp
     #   aiosignal
-fsspec==2025.10.0
+fsspec==2024.3.1
     # via
     #   datasets
     #   huggingface-hub
@@ -251,7 +252,7 @@ multidict==6.7.1
     # via
     #   aiohttp
     #   yarl
-multiprocess==0.70.18
+multiprocess==0.70.16
     # via datasets
 muutils==0.9.0
     # via
