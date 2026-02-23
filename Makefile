@@ -163,8 +163,9 @@ endif
 # --------------------------------------------------
 
 # base options for pytest, user can set this when running make to add more options
-PYTEST_OPTIONS ?=
-
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+PYTEST_OPTIONS ?= --durations=20
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # ==================================================
 # default target (help)
