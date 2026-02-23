@@ -773,6 +773,11 @@ am-pipeline-test:
 tests/.temp/.pipeline_complete:
 	$(MAKE) am-pipeline-test
 
+.PHONY: am-download-models
+am-download-models:
+	@echo "download models specified in $(PIPELINE_CFG_PATH)"
+	$(PYTHON) -m attention_motifs.pipeline.s0_download_models $(PIPELINE_CFG_PATH)
+
 
 # display stuff
 # --------------------------------------------------
