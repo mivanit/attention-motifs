@@ -253,7 +253,7 @@ multidict==6.7.1
     #   yarl
 multiprocess==0.70.18
     # via datasets
-muutils @ git+https://github.com/mivanit/muutils@3db59700e9286add61732b60374537749513c036
+muutils==0.9.0
     # via
     #   attention-motifs
     #   lmcat
@@ -374,7 +374,7 @@ parso==0.8.6
     # via jedi
 pathspec==1.0.4
     # via mypy
-pattern-lens @ git+https://github.com/mivanit/pattern-lens@7338b9b0ea3a7f58b25263c5f04194616a332ebb
+pattern-lens==0.6.0
     # via attention-motifs
 pdoc==16.0.0
 pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
@@ -657,7 +657,7 @@ xxhash==3.6.0
     # via datasets
 yarl==1.22.0
     # via aiohttp
-zanj @ git+https://github.com/mivanit/ZANJ@51176a27d0d486af19fda5c35ae62d1d83b90963
+zanj==0.6.0
     # via
     #   attention-motifs
     #   pattern-lens
