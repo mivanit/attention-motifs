@@ -23,7 +23,10 @@ from attention_motifs.pipeline.model_scheduler import (
 	ScheduledModel,
 	_build_subprocess_cmd,
 	_build_subprocess_env,
+	_format_elapsed,
 	_parse_device_index,
+	_parse_tqdm,
+	_tail_log,
 	estimate_vram_bytes,
 	get_free_vram,
 	get_total_vram,
@@ -1105,6 +1108,8 @@ class TestPollRunning:
 			device="cuda:0",
 			cpu_cores=[0, 1, 2],
 			log_file=mock_log,
+			log_path="/tmp/broken-model_parallel.log",
+			start_time=0.0,
 		)
 		scheduler.running.append(rm)
 
@@ -1139,6 +1144,8 @@ class TestPollRunning:
 			device="cuda:0",
 			cpu_cores=[0, 1, 2],
 			log_file=mock_log,
+			log_path="/tmp/good-model_parallel.log",
+			start_time=0.0,
 		)
 		scheduler.running.append(rm)
 
@@ -1169,6 +1176,8 @@ class TestPollRunning:
 			device="cuda:0",
 			cpu_cores=[],
 			log_file=mock_log,
+			log_path="/tmp/broken-model_parallel.log",
+			start_time=0.0,
 		)
 		scheduler.running.append(rm)
 
@@ -1205,6 +1214,8 @@ class TestPollRunning:
 				device="cuda:0",
 				cpu_cores=[0, 1],
 				log_file=busy_log,
+				log_path="/tmp/busy-model_parallel.log",
+				start_time=0.0,
 			),
 			RunningModel(
 				model=done_model,
@@ -1212,6 +1223,8 @@ class TestPollRunning:
 				device="cuda:0",
 				cpu_cores=[2, 3],
 				log_file=done_log,
+				log_path="/tmp/done-model_parallel.log",
+				start_time=0.0,
 			),
 		]
 
@@ -1245,8 +1258,8 @@ class TestCleanupRunning:
 		m1: ScheduledModel = _make_scheduled_model("m1", 14_000_000)
 		m2: ScheduledModel = _make_scheduled_model("m2", 14_000_000)
 		scheduler.running = [
-			RunningModel(model=m1, process=proc1, device="cuda:0", cpu_cores=[0], log_file=log1),
-			RunningModel(model=m2, process=proc2, device="cuda:0", cpu_cores=[1], log_file=log2),
+			RunningModel(model=m1, process=proc1, device="cuda:0", cpu_cores=[0], log_file=log1, log_path="/tmp/m1.log", start_time=0.0),
+			RunningModel(model=m2, process=proc2, device="cuda:0", cpu_cores=[1], log_file=log2, log_path="/tmp/m2.log", start_time=0.0),
 		]
 
 		scheduler._cleanup_running()
@@ -1270,8 +1283,8 @@ class TestCleanupRunning:
 		m1: ScheduledModel = _make_scheduled_model("m1", 14_000_000)
 		m2: ScheduledModel = _make_scheduled_model("m2", 14_000_000)
 		scheduler.running = [
-			RunningModel(model=m1, process=proc1, device="cuda:0", cpu_cores=[0], log_file=log1),
-			RunningModel(model=m2, process=proc2, device="cuda:0", cpu_cores=[1], log_file=log2),
+			RunningModel(model=m1, process=proc1, device="cuda:0", cpu_cores=[0], log_file=log1, log_path="/tmp/m1.log", start_time=0.0),
+			RunningModel(model=m2, process=proc2, device="cuda:0", cpu_cores=[1], log_file=log2, log_path="/tmp/m2.log", start_time=0.0),
 		]
 
 		scheduler._cleanup_running()  # should not raise
@@ -1599,3 +1612,201 @@ class TestGenerateActivationsParallel:
 				call.kwargs["model_name"] for call in mock_act_main.call_args_list
 			]
 			assert call_models == ["unknown-1", "unknown-2"]
+
+
+# ===========================================================================
+# _format_elapsed tests
+# ===========================================================================
+
+
+class TestFormatElapsed:
+	def test_zero_seconds(self) -> None:
+		assert _format_elapsed(0.0) == "0:00"
+
+	def test_under_minute(self) -> None:
+		assert _format_elapsed(45.0) == "0:45"
+
+	def test_one_minute_five_seconds(self) -> None:
+		assert _format_elapsed(65.0) == "1:05"
+
+	def test_hour_boundary(self) -> None:
+		assert _format_elapsed(3661.0) == "1:01:01"
+
+	def test_fractional_seconds_truncated(self) -> None:
+		assert _format_elapsed(59.9) == "0:59"
+
+
+# ===========================================================================
+# _tail_log tests
+# ===========================================================================
+
+
+class TestTailLog:
+	def test_empty_file(self, tmp_path: Path) -> None:
+		"""Empty log file returns empty string."""
+		log: Path = tmp_path / "empty.log"
+		log.write_text("")
+		assert _tail_log(str(log)) == ""
+
+	def test_nonexistent_file(self) -> None:
+		"""Missing file returns empty string, no exception."""
+		assert _tail_log("/nonexistent/path/to/file.log") == ""
+
+	def test_normal_text(self, tmp_path: Path) -> None:
+		"""Returns last non-empty line."""
+		log: Path = tmp_path / "normal.log"
+		log.write_text("first line\nsecond line\nthird line\n")
+		assert _tail_log(str(log)) == "third line"
+
+	def test_tqdm_carriage_returns(self, tmp_path: Path) -> None:
+		"""Handles tqdm \\r-delimited output — returns last segment."""
+		log: Path = tmp_path / "tqdm.log"
+		log.write_text(
+			"loading model\n"
+			"\r  0%|          | 0/100"
+			"\r 50%|#####     | 50/100 [00:05<00:05, 10.0it/s]"
+			"\r100%|##########| 100/100 [00:10<00:00, 10.0it/s]"
+		)
+		result: str = _tail_log(str(log))
+		assert "100%" in result
+		assert "100/100" in result
+
+	def test_strips_ansi_codes(self, tmp_path: Path) -> None:
+		"""ANSI escape codes are stripped from output."""
+		log: Path = tmp_path / "ansi.log"
+		log.write_text("\033[93m[scheduler] hello world\033[m\n")
+		result: str = _tail_log(str(log))
+		assert "\033[" not in result
+		assert "[scheduler] hello world" in result
+
+	def test_trailing_empty_lines(self, tmp_path: Path) -> None:
+		"""Skips trailing empty lines."""
+		log: Path = tmp_path / "trailing.log"
+		log.write_text("real content\n\n\n")
+		assert _tail_log(str(log)) == "real content"
+
+
+# ===========================================================================
+# _parse_tqdm tests
+# ===========================================================================
+
+
+class TestParseTqdm:
+	def test_valid_tqdm_line(self) -> None:
+		"""Standard tqdm output parsed correctly."""
+		line: str = "Computing activations:  45%|####5     | 461/1024 [00:12<00:14, 38.42it/s]"
+		result: tuple[int, int, str] | None = _parse_tqdm(line)
+		assert result is not None
+		current, total, rate = result
+		assert current == 461
+		assert total == 1024
+		assert "38.42" in rate
+
+	def test_non_tqdm_text(self) -> None:
+		"""Non-tqdm text returns None."""
+		assert _parse_tqdm("loading model") is None
+
+	def test_empty_string(self) -> None:
+		assert _parse_tqdm("") is None
+
+	def test_tqdm_with_postfix(self) -> None:
+		"""tqdm line with postfix info still parses."""
+		line: str = "  75%|#######5  | 768/1024 [00:20<00:06, 37.12it/s, n_ctx=237]"
+		result: tuple[int, int, str] | None = _parse_tqdm(line)
+		assert result is not None
+		assert result[0] == 768
+		assert result[1] == 1024
+
+	def test_tqdm_100_percent(self) -> None:
+		"""100% completion parses correctly."""
+		line: str = "100%|##########| 1024/1024 [00:30<00:00, 34.13it/s]"
+		result: tuple[int, int, str] | None = _parse_tqdm(line)
+		assert result is not None
+		assert result[0] == 1024
+		assert result[1] == 1024
+
+
+# ===========================================================================
+# _print_status tests
+# ===========================================================================
+
+
+class TestPrintStatus:
+	def test_no_running_models(self) -> None:
+		"""No output when nothing is running."""
+		scheduler: ModelScheduler = _make_scheduler(models=[])
+		log_messages: list[str] = []
+		scheduler._log = lambda msg: log_messages.append(msg)  # type: ignore[assignment]
+		scheduler._print_status()
+		assert log_messages == []
+
+	def test_status_with_tqdm_progress(self, tmp_path: Path) -> None:
+		"""Running model with tqdm output shows percentage."""
+		model: ScheduledModel = _make_scheduled_model("gpt2-small", 85_000_000)
+		scheduler: ModelScheduler = _make_scheduler(models=[])
+
+		# write tqdm output to a log file
+		log: Path = tmp_path / "gpt2-small_parallel.log"
+		log.write_text(
+			"loading model\nloaded gpt2-small\n"
+			"\r 50%|#####     | 512/1024 [00:10<00:10, 51.2it/s]"
+		)
+
+		mock_proc: MagicMock = MagicMock()
+		mock_proc.poll.return_value = None
+		mock_log: MagicMock = MagicMock()
+
+		import time
+
+		rm: RunningModel = RunningModel(
+			model=model,
+			process=mock_proc,
+			device="cuda:0",
+			cpu_cores=[0, 1],
+			log_file=mock_log,
+			log_path=str(log),
+			start_time=time.monotonic() - 10.0,
+		)
+		scheduler.running.append(rm)
+
+		log_messages: list[str] = []
+		scheduler._log = lambda msg: log_messages.append(msg)  # type: ignore[assignment]
+		scheduler._print_status()
+
+		# header + 1 model line
+		assert len(log_messages) == 2
+		assert "1 running" in log_messages[0]
+		assert "50%" in log_messages[1]
+		assert "gpt2-small" in log_messages[1]
+
+	def test_status_with_non_tqdm_output(self, tmp_path: Path) -> None:
+		"""Running model without tqdm shows last log line."""
+		model: ScheduledModel = _make_scheduled_model("gpt2-small", 85_000_000)
+		scheduler: ModelScheduler = _make_scheduler(models=[])
+
+		log: Path = tmp_path / "gpt2-small_parallel.log"
+		log.write_text("loading model\n")
+
+		mock_proc: MagicMock = MagicMock()
+		mock_proc.poll.return_value = None
+		mock_log: MagicMock = MagicMock()
+
+		import time
+
+		rm: RunningModel = RunningModel(
+			model=model,
+			process=mock_proc,
+			device="cuda:0",
+			cpu_cores=[0, 1],
+			log_file=mock_log,
+			log_path=str(log),
+			start_time=time.monotonic(),
+		)
+		scheduler.running.append(rm)
+
+		log_messages: list[str] = []
+		scheduler._log = lambda msg: log_messages.append(msg)  # type: ignore[assignment]
+		scheduler._print_status()
+
+		assert len(log_messages) == 2
+		assert "loading model" in log_messages[1]

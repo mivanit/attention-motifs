@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import platform
+import re
 import subprocess
 import sys
 import time
@@ -41,6 +42,8 @@ class RunningModel:
 	device: str
 	cpu_cores: list[int]
 	log_file: TextIO
+	log_path: str
+	start_time: float
 
 
 # ---------------------------------------------------------------------------
@@ -206,6 +209,91 @@ def _build_subprocess_env(n_threads: int) -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
+# Log tailing / progress parsing
+# ---------------------------------------------------------------------------
+
+_ANSI_RE: re.Pattern[str] = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
+
+# matches standard tqdm output:  desc: NN%|bar| cur/total [elapsed<remaining, rate]
+_TQDM_RE: re.Pattern[str] = re.compile(
+	r"(?P<pct>\d+)%\|[^|]*\|\s*(?P<cur>\d+)/(?P<tot>\d+)"
+	r"\s*\[(?P<elapsed>[^<]+)<(?P<remain>[^,]+),\s*(?P<rate>[^\]]+)\]"
+)
+
+
+def _format_elapsed(seconds: float) -> str:
+	"""Format elapsed seconds as ``M:SS`` or ``H:MM:SS``."""
+	total_s: int = int(seconds)
+	hours: int = total_s // 3600
+	minutes: int = (total_s % 3600) // 60
+	secs: int = total_s % 60
+	if hours > 0:
+		return f"{hours}:{minutes:02d}:{secs:02d}"
+	return f"{minutes}:{secs:02d}"
+
+
+def _tail_log(log_path: str, max_bytes: int = 4096) -> str:
+	"""Read the last meaningful line from a subprocess log file.
+
+	Opens a separate read handle (independent of the write handle held by
+	Popen), seeks near the end, and returns the last non-empty content.
+	Handles tqdm's ``\\r``-delimited progress by splitting on ``\\r`` and
+	taking the last segment.
+
+	Returns ``""`` if the file is empty or unreadable.
+	"""
+	try:
+		with open(log_path, "r", errors="replace") as f:
+			f.seek(0, 2)
+			size: int = f.tell()
+			if size == 0:
+				return ""
+			f.seek(max(0, size - max_bytes))
+			data: str = f.read()
+	except OSError:
+		return ""
+
+	# find the last non-empty line
+	lines: list[str] = data.split("\n")
+	last_line: str = ""
+	for line in reversed(lines):
+		stripped: str = line.strip()
+		if stripped:
+			last_line = stripped
+			break
+
+	if not last_line:
+		return ""
+
+	# tqdm uses \r for in-place updates — take the last segment
+	if "\r" in last_line:
+		segments: list[str] = last_line.split("\r")
+		for seg in reversed(segments):
+			seg_stripped: str = seg.strip()
+			if seg_stripped:
+				last_line = seg_stripped
+				break
+
+	# strip ANSI escape codes
+	result: str = _ANSI_RE.sub("", last_line)
+	return result[:200]
+
+
+def _parse_tqdm(line: str) -> tuple[int, int, str] | None:
+	"""Parse a tqdm progress line.
+
+	Returns ``(current, total, rate)`` or ``None`` if not a tqdm line.
+	"""
+	match: re.Match[str] | None = _TQDM_RE.search(line)
+	if match is None:
+		return None
+	current: int = int(match.group("cur"))
+	total: int = int(match.group("tot"))
+	rate: str = match.group("rate").strip()
+	return current, total, rate
+
+
+# ---------------------------------------------------------------------------
 # Scheduler
 # ---------------------------------------------------------------------------
 
@@ -281,17 +369,20 @@ class ModelScheduler:
 			self._device_committed[rm.device] -= rm.model.estimated_vram
 
 			if retcode == 0:
+				elapsed_str: str = _format_elapsed(time.monotonic() - rm.start_time)
 				self.completed.append(rm.model.name)
 				self._log(
 					f"completed {rm.model.name} on {rm.device} "
+					f"in {elapsed_str} "
 					f"({len(self.completed)}/{self.total_models} done)"
 				)
 			else:
+				elapsed_str = _format_elapsed(time.monotonic() - rm.start_time)
 				self.failed.append((rm.model.name, retcode))
-				log_path: str = rm.log_file.name
 				self._log(
-					f"FAILED {rm.model.name} on {rm.device} (exit code {retcode}), "
-					f"see log: {log_path}"
+					f"FAILED {rm.model.name} on {rm.device} "
+					f"in {elapsed_str} (exit code {retcode}), "
+					f"see log: {rm.log_path}"
 				)
 
 		self.running = still_running
@@ -390,6 +481,8 @@ class ModelScheduler:
 				device=device,
 				cpu_cores=cpu_cores,
 				log_file=log_file,
+				log_path=log_path,
+				start_time=time.monotonic(),
 			)
 		)
 
@@ -407,6 +500,35 @@ class ModelScheduler:
 		if self.running:
 			self._log(f"terminated {len(self.running)} running subprocess(es)")
 		self.running.clear()
+
+	def _print_status(self) -> None:
+		"""Print a compact status block showing running models' progress."""
+		if not self.running:
+			return
+
+		now: float = time.monotonic()
+		n_done: int = len(self.completed) + len(self.failed)
+		self._log(
+			f"--- status: {len(self.running)} running, "
+			f"{len(self.pending)} pending, "
+			f"{n_done}/{self.total_models} done ---"
+		)
+
+		for rm in self.running:
+			elapsed_str: str = _format_elapsed(now - rm.start_time)
+			last_line: str = _tail_log(rm.log_path)
+			progress: tuple[int, int, str] | None = _parse_tqdm(last_line)
+
+			if progress is not None:
+				current, total, rate = progress
+				pct: float = 100.0 * current / total if total > 0 else 0.0
+				status: str = f"{pct:3.0f}% ({current}/{total}) [{rate}]"
+			elif last_line:
+				status = last_line[:80]
+			else:
+				status = "(no output yet)"
+
+			self._log(f"  {rm.model.name:<35s} {rm.device:<8s} {elapsed_str:>8s}  {status}")
 
 	def run_all(self) -> None:
 		"""Schedule and run all models. Blocks until all complete."""
@@ -444,6 +566,7 @@ class ModelScheduler:
 					break
 
 				if self.running:
+					self._print_status()
 					time.sleep(_POLL_INTERVAL_SECONDS)
 		except BaseException:
 			self._log("interrupted — cleaning up running subprocesses")
