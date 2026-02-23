@@ -1,5 +1,7 @@
 import attention_motifs.consts  # noqa: F401  # Load HF_TOKEN into os.environ early
 
+print("Importing modules...")
+
 import time
 from pathlib import Path
 from typing import Callable
