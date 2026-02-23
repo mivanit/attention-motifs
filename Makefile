@@ -409,9 +409,12 @@ typing-summary:
 # make test PYTEST_OPTIONS="--maxfail=1 -x"
 # pytest config in pyproject.toml:[tool.pytest.ini_options]
 .PHONY: test
-test:
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# pipeline must complete before tests start (avoids xdist subprocess hangs)
+test: tests/.temp/.pipeline_complete
 	@echo "running tests"
 	$(PYTHON) -m pytest $(PYTEST_OPTIONS) $(TESTS_DIR)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .PHONY: check
 check: format-check test typing
@@ -452,18 +455,24 @@ docs-md:
 # - generates SVG badge: $(COVERAGE_REPORTS_DIR)/coverage.svg
 # - generates HTML report: $(COVERAGE_REPORTS_DIR)/html/
 # - removes .gitignore from html dir (we publish coverage with docs)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# changed: am-pipeline-test-cov runs pipeline under `coverage run`;
+# `coverage combine --append` merges the resulting .coverage.* into .coverage
 .PHONY: cov
 cov:
 	@echo "generate coverage reports"
 	@if [ ! -f .coverage ]; then \
-		echo ".coverage not found, running tests first..."; \
+		echo ".coverage not found, running pipeline+tests with coverage..."; \
+		$(MAKE) am-pipeline-test-cov; \
 		$(MAKE) test PYTEST_OPTIONS="$(PYTEST_OPTIONS) --cov=." ; \
 	fi
+	-$(PYTHON) -m coverage combine --append
 	mkdir $(COVERAGE_REPORTS_DIR) -p
 	$(PYTHON) -m coverage report -m > $(COVERAGE_REPORTS_DIR)/coverage.txt
 	$(PYTHON) $(SCRIPTS_DIR)/generate_badge.py --coverage $(COVERAGE_REPORTS_DIR)/coverage.txt > $(COVERAGE_REPORTS_DIR)/coverage.svg
 	$(PYTHON) -m coverage html --directory=$(COVERAGE_REPORTS_DIR)/html/
 	rm -rf $(COVERAGE_REPORTS_DIR)/html/.gitignore
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # runs the coverage report, then the docs, then the combined docs
 .PHONY: docs
@@ -768,6 +777,14 @@ am-pipeline-test:
 	@echo "run the whole pipeline with test data"
 	rm -rf tests/.temp/ || true
 	$(MAKE) am-pipeline PIPELINE_CFG_PATH=$(TEST_CONFIG)
+	touch tests/.temp/.pipeline_complete
+
+.PHONY: am-pipeline-test-cov
+am-pipeline-test-cov:
+	@echo "run the whole pipeline with test data (under coverage)"
+	rm -rf tests/.temp/ || true
+	$(PYTHON) -m coverage run --parallel-mode --source=$(PACKAGE_NAME) \
+		-m $(PACKAGE_NAME).pipeline.full $(TEST_CONFIG)
 	touch tests/.temp/.pipeline_complete
 
 # Marker file for test pipeline completion

@@ -2,15 +2,12 @@
 
 import atexit
 import http.server
-import os
 import socket
 import socketserver
-import subprocess
 import threading
 import time
 from pathlib import Path
 
-import filelock
 import pytest
 
 # Constants
@@ -108,60 +105,16 @@ def pytest_unconfigure(config: pytest.Config) -> None:
 		_shutdown_server()
 
 
-def _run_pipeline() -> None:
-	"""Run the test pipeline, failing the test session if it errors."""
-	print(f"\n[fixture] Running test pipeline to generate {TESTS_TEMP_DIR}")
-	# suppress progress bars from tqdm, HuggingFace, and transformers
-	# while keeping actual log/print messages intact
-	quiet_env: dict[str, str] = {
-		**os.environ,
-		"TQDM_DISABLE": "1",
-		"HF_HUB_DISABLE_PROGRESS_BARS": "1",
-		"TRANSFORMERS_VERBOSITY": "error",
-		"SPINNER_UPDATE_INTERVAL": "60",
-	}
-	# UV_NOSYNC=1 avoids nested uv lock deadlock: the outer `uv run python -m
-	# pytest` holds a uv workspace lock, and without --no-sync the inner
-	# `uv run python` (from make) would try to acquire the same lock.
-	result: subprocess.CompletedProcess[str] = subprocess.run(
-		["make", "am-pipeline-test", "UV_NOSYNC=1"],
-		cwd=TESTS_DIR.parent,  # Project root
-		text=True,
-		timeout=600,  # 10 minute timeout for pipeline
-		env=quiet_env,
-	)
-	if result.returncode != 0:
-		pytest.fail(f"Pipeline failed with code {result.returncode}")
-
-
 @pytest.fixture(scope="session")
-def ensure_pipeline_output(
-	tmp_path_factory: pytest.TempPathFactory,
-	worker_id: str,
-) -> Path:
-	"""Ensure the test pipeline has been run and output exists.
+def ensure_pipeline_output() -> Path:
+	"""Ensure test pipeline output exists, skip frontend tests if not.
 
-	If tests/.temp/.pipeline_complete doesn't exist, runs `make am-pipeline-test`
-	to generate it. Uses file locking with xdist to prevent multiple workers from
-	running the pipeline concurrently (which would cause race conditions as the
-	Makefile target starts with ``rm -rf tests/.temp/``).
-
-	Returns the path to the temp directory.
+	The pipeline is run by ``make test`` (via the ``tests/.temp/.pipeline_complete``
+	prerequisite) before pytest starts. If running pytest directly without make,
+	frontend tests are skipped.
 	"""
-	if worker_id == "master":
-		# Not running with xdist - run directly
-		if not (TESTS_TEMP_DIR / ".pipeline_complete").exists():
-			_run_pipeline()
-		return TESTS_TEMP_DIR
-
-	# Running with xdist - coordinate via file lock
-	root_tmp_dir: Path = tmp_path_factory.getbasetemp().parent
-	lock_file: Path = root_tmp_dir / "pipeline.lock"
-
-	with filelock.FileLock(str(lock_file)):
-		if not (TESTS_TEMP_DIR / ".pipeline_complete").exists():
-			_run_pipeline()
-
+	if not (TESTS_TEMP_DIR / ".pipeline_complete").exists():
+		pytest.skip("Pipeline output not found. Run 'make am-pipeline-test' first.")
 	return TESTS_TEMP_DIR
 
 
