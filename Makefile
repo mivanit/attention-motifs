@@ -466,7 +466,7 @@ cov:
 		$(MAKE) am-pipeline-test-cov; \
 		$(MAKE) test PYTEST_OPTIONS="$(PYTEST_OPTIONS) --cov=." ; \
 	fi
-	-$(PYTHON) -m coverage combine --append
+	-$(PYTHON) -m coverage combine --append  # `-` ignores exit code when no .coverage.* files exist
 	mkdir $(COVERAGE_REPORTS_DIR) -p
 	$(PYTHON) -m coverage report -m > $(COVERAGE_REPORTS_DIR)/coverage.txt
 	$(PYTHON) $(SCRIPTS_DIR)/generate_badge.py --coverage $(COVERAGE_REPORTS_DIR)/coverage.txt > $(COVERAGE_REPORTS_DIR)/coverage.svg
@@ -783,6 +783,7 @@ am-pipeline-test:
 am-pipeline-test-cov:
 	@echo "run the whole pipeline with test data (under coverage)"
 	rm -rf tests/.temp/ || true
+	# produces .coverage.* sidecar files, merged by `coverage combine` in the `cov` target
 	$(PYTHON) -m coverage run --parallel-mode --source=$(PACKAGE_NAME) \
 		-m $(PACKAGE_NAME).pipeline.full $(TEST_CONFIG)
 	touch tests/.temp/.pipeline_complete
