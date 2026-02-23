@@ -52,18 +52,24 @@ class RunningModel:
 # ---------------------------------------------------------------------------
 
 
+_DEFAULT_CUDA_CONTEXT_BYTES: int = 500_000_000
+"""Default fixed overhead (~500 MB) for the per-process CUDA context."""
+
+
 def estimate_vram_bytes(
 	n_params: int,
 	safety_factor: float = 3.0,
 	dtype_bytes: int = 4,
+	cuda_context_bytes: int = _DEFAULT_CUDA_CONTEXT_BYTES,
 ) -> int:
 	"""Estimate VRAM needed for inference with activation caching.
 
 	The estimate accounts for model weights (``n_params * dtype_bytes``)
 	multiplied by a ``safety_factor`` to cover activation cache, intermediate
-	tensors, and CUDA allocator overhead.
+	tensors, and CUDA allocator overhead, plus a fixed
+	``cuda_context_bytes`` term for the per-process CUDA context (~300-800 MB).
 	"""
-	return int(n_params * dtype_bytes * safety_factor)
+	return int(n_params * dtype_bytes * safety_factor) + cuda_context_bytes
 
 
 # ---------------------------------------------------------------------------
@@ -340,7 +346,9 @@ class ModelScheduler:
 
 		self.running: list[RunningModel] = []
 		self.completed: list[str] = []
-		self.failed: list[tuple[str, int, str]] = []  # (model_name, exit_code, log_path)
+		self.failed: list[
+			tuple[str, int, str]
+		] = []  # (model_name, exit_code, log_path)
 
 		# track VRAM committed to running (but possibly not yet loaded) models
 		self._device_committed: dict[str, int] = {d: 0 for d in devices}
@@ -494,12 +502,25 @@ class ModelScheduler:
 		)
 
 	def _cleanup_running(self) -> None:
-		"""Terminate all running subprocesses and close log files."""
+		"""Terminate all running subprocesses and close log files.
+
+		Sends SIGTERM first, then waits up to 5 s per process. Falls back to
+		SIGKILL if the process does not exit in time so that CUDA memory held
+		by the subprocess is guaranteed to be released.
+		"""
+		# send SIGTERM to all running subprocesses first
 		for rm in self.running:
 			try:
 				rm.process.terminate()
 			except OSError:
 				pass
+		# wait for each to actually exit (or force-kill)
+		for rm in self.running:
+			try:
+				rm.process.wait(timeout=5)
+			except subprocess.TimeoutExpired:
+				rm.process.kill()
+				rm.process.wait()
 			try:
 				rm.log_file.close()
 			except OSError:
@@ -547,7 +568,9 @@ class ModelScheduler:
 			else:
 				status = "(no output yet)"
 
-			self._log(f"  {rm.model.name:<35s} {rm.device:<8s} {elapsed_str:>8s}  {status}")
+			self._log(
+				f"  {rm.model.name:<35s} {rm.device:<8s} {elapsed_str:>8s}  {status}"
+			)
 
 	def run_all(self) -> None:
 		"""Schedule and run all models. Blocks until all complete."""

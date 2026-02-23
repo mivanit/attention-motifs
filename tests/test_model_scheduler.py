@@ -165,14 +165,26 @@ class TestDownloadCSV:
 
 class TestEstimateVramBytes:
 	def test_estimate_vram_default(self) -> None:
-		"""1M params → 12MB at safety_factor=3.0."""
+		"""1M params → 12MB model + 500MB CUDA context at safety_factor=3.0."""
 		result: int = estimate_vram_bytes(1_000_000)
-		assert result == 1_000_000 * 4 * 3  # 12_000_000
+		assert result == 1_000_000 * 4 * 3 + 500_000_000
 
 	def test_estimate_vram_custom_factor(self) -> None:
-		"""Custom safety factor."""
+		"""Custom safety factor still adds CUDA context overhead."""
 		result: int = estimate_vram_bytes(1_000_000, safety_factor=2.0)
-		assert result == 1_000_000 * 4 * 2  # 8_000_000
+		assert result == 1_000_000 * 4 * 2 + 500_000_000
+
+	def test_estimate_vram_zero_context(self) -> None:
+		"""cuda_context_bytes=0 gives model-only estimate (old behavior)."""
+		result: int = estimate_vram_bytes(1_000_000, cuda_context_bytes=0)
+		assert result == 1_000_000 * 4 * 3
+
+	def test_estimate_vram_custom_context(self) -> None:
+		"""Custom CUDA context overhead."""
+		result: int = estimate_vram_bytes(
+			1_000_000, safety_factor=2.0, cuda_context_bytes=800_000_000
+		)
+		assert result == 1_000_000 * 4 * 2 + 800_000_000
 
 
 class TestCorePool:
@@ -1121,7 +1133,9 @@ class TestPollRunning:
 		# committed VRAM released
 		assert scheduler._device_committed["cuda:0"] == 0
 		# model recorded as failed
-		assert scheduler.failed == [("broken-model", 1, "/tmp/broken-model_parallel.log")]
+		assert scheduler.failed == [
+			("broken-model", 1, "/tmp/broken-model_parallel.log")
+		]
 		assert scheduler.running == []
 		# log file closed
 		mock_log.close.assert_called_once()
@@ -1259,8 +1273,24 @@ class TestCleanupRunning:
 		m1: ScheduledModel = _make_scheduled_model("m1", 14_000_000)
 		m2: ScheduledModel = _make_scheduled_model("m2", 14_000_000)
 		scheduler.running = [
-			RunningModel(model=m1, process=proc1, device="cuda:0", cpu_cores=[0], log_file=log1, log_path="/tmp/m1.log", start_time=0.0),
-			RunningModel(model=m2, process=proc2, device="cuda:0", cpu_cores=[1], log_file=log2, log_path="/tmp/m2.log", start_time=0.0),
+			RunningModel(
+				model=m1,
+				process=proc1,
+				device="cuda:0",
+				cpu_cores=[0],
+				log_file=log1,
+				log_path="/tmp/m1.log",
+				start_time=0.0,
+			),
+			RunningModel(
+				model=m2,
+				process=proc2,
+				device="cuda:0",
+				cpu_cores=[1],
+				log_file=log2,
+				log_path="/tmp/m2.log",
+				start_time=0.0,
+			),
 		]
 
 		scheduler._cleanup_running()
@@ -1284,8 +1314,24 @@ class TestCleanupRunning:
 		m1: ScheduledModel = _make_scheduled_model("m1", 14_000_000)
 		m2: ScheduledModel = _make_scheduled_model("m2", 14_000_000)
 		scheduler.running = [
-			RunningModel(model=m1, process=proc1, device="cuda:0", cpu_cores=[0], log_file=log1, log_path="/tmp/m1.log", start_time=0.0),
-			RunningModel(model=m2, process=proc2, device="cuda:0", cpu_cores=[1], log_file=log2, log_path="/tmp/m2.log", start_time=0.0),
+			RunningModel(
+				model=m1,
+				process=proc1,
+				device="cuda:0",
+				cpu_cores=[0],
+				log_file=log1,
+				log_path="/tmp/m1.log",
+				start_time=0.0,
+			),
+			RunningModel(
+				model=m2,
+				process=proc2,
+				device="cuda:0",
+				cpu_cores=[1],
+				log_file=log2,
+				log_path="/tmp/m2.log",
+				start_time=0.0,
+			),
 		]
 
 		scheduler._cleanup_running()  # should not raise
@@ -1695,7 +1741,9 @@ class TestTailLog:
 class TestParseTqdm:
 	def test_valid_tqdm_line(self) -> None:
 		"""Standard tqdm output parsed correctly."""
-		line: str = "Computing activations:  45%|####5     | 461/1024 [00:12<00:14, 38.42it/s]"
+		line: str = (
+			"Computing activations:  45%|####5     | 461/1024 [00:12<00:14, 38.42it/s]"
+		)
 		result: tuple[int, int, str] | None = _parse_tqdm(line)
 		assert result is not None
 		current, total, rate = result

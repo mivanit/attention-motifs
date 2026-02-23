@@ -1,5 +1,7 @@
+import gc
 import os
 
+import torch
 from pattern_lens.activations import activations_main
 
 from attention_motifs.pipeline.cfg import (
@@ -7,6 +9,19 @@ from attention_motifs.pipeline.cfg import (
 	pipeline_step_major,
 	pipeline_model_progress,
 )
+
+
+def _flush_gpu_memory() -> None:
+	"""Force-free GPU memory between sequential model runs.
+
+	HookedTransformer has circular references that prevent refcount-based
+	deallocation, so ``gc.collect()`` is needed to trigger the cyclic GC.
+	``torch.cuda.empty_cache()`` then returns freed blocks from PyTorch's
+	caching allocator back to the CUDA driver.
+	"""
+	gc.collect()
+	if torch.cuda.is_available():
+		torch.cuda.empty_cache()
 
 
 def generate_activations(cfg: PipelineConfig) -> None:
@@ -40,6 +55,7 @@ def _generate_activations_sequential(cfg: PipelineConfig) -> None:
 			device=cfg.device,
 			batch_size=cfg.batch_size,
 		)
+		_flush_gpu_memory()
 
 
 def _generate_activations_parallel(cfg: PipelineConfig) -> None:
@@ -70,7 +86,11 @@ def _generate_activations_parallel(cfg: PipelineConfig) -> None:
 			)
 			skipped.append(model_name)
 			continue
-		estimated_vram: int = estimate_vram_bytes(n_params, cfg.vram_safety_factor)
+		estimated_vram: int = estimate_vram_bytes(
+			n_params,
+			cfg.vram_safety_factor,
+			cuda_context_bytes=cfg.cuda_context_bytes,
+		)
 		scheduled.append(
 			ScheduledModel(
 				name=model_name,
@@ -117,6 +137,7 @@ def _generate_activations_parallel(cfg: PipelineConfig) -> None:
 				device=cfg.device,
 				batch_size=cfg.batch_size,
 			)
+			_flush_gpu_memory()
 
 
 if __name__ == "__main__":

@@ -218,6 +218,7 @@ class PipelineConfig:
 	parallel_models: bool = False
 	devices: list[str] = field(default_factory=lambda: ["cuda:0"])
 	vram_safety_factor: float = 3.0
+	cuda_context_bytes: int = 500_000_000
 	batch_size: int = 32
 
 	# output paths
@@ -331,6 +332,9 @@ class PipelineConfig:
 			isinstance(self.vram_safety_factor, (int, float))
 			and self.vram_safety_factor > 0
 		), "vram_safety_factor must be a positive number"
+		assert (
+			isinstance(self.cuda_context_bytes, int) and self.cuda_context_bytes >= 0
+		), "cuda_context_bytes must be a non-negative integer"
 
 		# Basic validation for embedding parameters
 		valid_methods = {"isomap", "umap", "tsne", "pca"}
@@ -394,6 +398,7 @@ class PipelineConfig:
 			parallel_models=data.get("parallel_models", False),
 			devices=data.get("devices", [data.get("device", "cpu")]),
 			vram_safety_factor=data.get("vram_safety_factor", 3.0),
+			cuda_context_bytes=data.get("cuda_context_bytes", 500_000_000),
 			batch_size=data.get("batch_size", 32),
 			figures_dir=(
 				Path(data["figures_dir"]) if "figures_dir" in data else None
@@ -521,6 +526,12 @@ class PipelineConfig:
 			help="Safety multiplier for VRAM estimation (default: 3.0)",
 		)
 		parser.add_argument(
+			"--cuda-context-bytes",
+			type=int,
+			default=None,
+			help="Fixed CUDA context overhead in bytes for VRAM estimation (default: 500000000)",
+		)
+		parser.add_argument(
 			"--batch-size",
 			type=int,
 			default=None,
@@ -561,6 +572,8 @@ class PipelineConfig:
 			config.devices = [d.strip() for d in args.devices.split(",") if d.strip()]
 		if args.vram_safety_factor is not None:
 			config.vram_safety_factor = args.vram_safety_factor
+		if args.cuda_context_bytes is not None:
+			config.cuda_context_bytes = args.cuda_context_bytes
 		if args.batch_size is not None:
 			config.batch_size = args.batch_size
 
