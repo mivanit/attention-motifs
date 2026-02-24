@@ -1,9 +1,12 @@
 import gc
 import os
 import shutil
+from pathlib import Path
 
 import torch
 from pattern_lens.activations import activations_main
+from pattern_lens.load_activations import activations_exist, augment_prompt_with_hash
+from pattern_lens.prompts import load_text_data
 
 from attention_motifs.pipeline.cfg import (
 	PipelineConfig,
@@ -67,6 +70,46 @@ def _warn_batch_size(cfg: PipelineConfig) -> None:
 	print(f"\033[93m{border}\033[m")
 
 
+def _load_and_hash_prompts(cfg: PipelineConfig) -> list[dict]:
+	"""Load, filter, truncate, and hash prompts — identical to activations_main."""
+	prompts: list[dict] = load_text_data(
+		Path(cfg.prompts_file),
+		min_chars=cfg.prompts_min_chars,
+		max_chars=cfg.prompts_max_chars,
+	)
+	prompts = prompts[: cfg.prompts_n_samples]
+	prompt: dict
+	for prompt in prompts:
+		augment_prompt_with_hash(prompt)
+	return prompts
+
+
+def _all_activations_cached(
+	cfg: PipelineConfig,
+	model_name: str,
+	prompts: list[dict],
+) -> bool:
+	"""Check if all expected NPZ files already exist for a model.
+
+	Uses pre-loaded *prompts* (from ``_load_and_hash_prompts``) so the
+	prompts file is read only once even when checking many models.
+	Returns ``True`` when every prompt is already cached, allowing the caller
+	to skip model loading entirely.
+	"""
+	if cfg.force_overwrite:
+		return False
+	save_path: Path = Path(cfg.patterns_dir)
+	prompt: dict
+	for prompt in prompts:
+		if not activations_exist(model_name, prompt, save_path):
+			return False
+	print(
+		f"  \033[92m[cached] {model_name}: all {len(prompts)} prompts already"
+		f" on disk, skipping model load\033[m"
+	)
+	return True
+
+
 def generate_activations(cfg: PipelineConfig) -> None:
 	pipeline_step_major("pipeline step 1: generate activations")
 	_warn_batch_size(cfg)
@@ -79,11 +122,14 @@ def generate_activations(cfg: PipelineConfig) -> None:
 
 def _generate_activations_sequential(cfg: PipelineConfig) -> None:
 	"""Original sequential path — one model at a time, in-process."""
+	prompts: list[dict] = _load_and_hash_prompts(cfg)
 	n_models: int = len(cfg.models)
 	idx: int
 	model_name: str
 	for idx, model_name in enumerate(cfg.models):
 		pipeline_model_progress(idx, n_models, model_name)
+		if _all_activations_cached(cfg, model_name, prompts):
+			continue
 		activations_main(
 			model_name=model_name,
 			save_path=str(cfg.patterns_dir),
@@ -118,10 +164,13 @@ def _generate_activations_parallel(cfg: PipelineConfig) -> None:
 	)
 
 	model_table: dict[str, ModelInfo] = fetch_model_table()
+	prompts: list[dict] = _load_and_hash_prompts(cfg)
 
 	scheduled: list[ScheduledModel] = []
 	skipped: list[str] = []
 	for model_name in cfg.models:
+		if _all_activations_cached(cfg, model_name, prompts):
+			continue
 		try:
 			n_params: int = get_model_params(model_name, model_table)
 		except KeyError:
@@ -168,6 +217,8 @@ def _generate_activations_parallel(cfg: PipelineConfig) -> None:
 			f"(not in model table)\033[m"
 		)
 		for model_name in skipped:
+			if _all_activations_cached(cfg, model_name, prompts):
+				continue
 			activations_main(
 				model_name=model_name,
 				save_path=str(cfg.patterns_dir),
