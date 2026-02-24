@@ -485,7 +485,8 @@ class ModelScheduler:
 		)
 
 		# log subprocess output to a file
-		log_path: str = f"{self.save_path}/{model.name}_parallel.log"
+		safe_name: str = model.name.replace("/", "_")
+		log_path: str = f"{self.save_path}/{safe_name}_parallel.log"
 		log_file: TextIO = open(log_path, "w")  # noqa: SIM115
 		try:
 			process: subprocess.Popen[str] = subprocess.Popen(
