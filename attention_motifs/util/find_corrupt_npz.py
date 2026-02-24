@@ -59,14 +59,18 @@ def check_npz_corrupt(
 	"""Check files for corruption in parallel, return list of (path, error)."""
 	corrupt: list[tuple[Path, str]] = []
 	pbar: tqdm = tqdm(total=len(files), desc="checking npz files", unit="file")
-	with multiprocessing.Pool(processes=workers) as pool:
-		result: tuple[Path, str] | None
-		for result in pool.imap_unordered(_check_one, files, chunksize=chunksize):
-			if result is not None:
-				corrupt.append(result)
-				pbar.set_postfix(corrupt=len(corrupt))
-			pbar.update()
-	pbar.close()
+	try:
+		with multiprocessing.Pool(processes=workers) as pool:
+			result: tuple[Path, str] | None
+			for result in pool.imap_unordered(_check_one, files, chunksize=chunksize):
+				if result is not None:
+					corrupt.append(result)
+					pbar.set_postfix(corrupt=len(corrupt))
+				pbar.update()
+	except KeyboardInterrupt:
+		print("\ninterrupted, returning partial results", file=sys.stderr)
+	finally:
+		pbar.close()
 	return corrupt
 
 
@@ -216,7 +220,7 @@ def main(
 
 	if delete:
 		for path, _error in corrupt:
-			path.unlink()
+			path.unlink(missing_ok=True)
 		if corrupt:
 			print(f"deleted {len(corrupt)} corrupt file(s)")
 
