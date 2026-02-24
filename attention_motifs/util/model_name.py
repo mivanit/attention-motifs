@@ -6,8 +6,8 @@ Caches both :func:`resolve_model_name` (any variant → default alias) and
 
 CLI usage::
 
-    python -m attention_motifs.util.cached_sanitize_model_name config.toml
-    python -m attention_motifs.util.cached_sanitize_model_name --cache-path
+    python -m attention_motifs.util.model_name config.toml
+    python -m attention_motifs.util.model_name --cache-path
 """
 
 from __future__ import annotations

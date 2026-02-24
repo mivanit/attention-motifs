@@ -14,7 +14,7 @@ from typing import Iterable, cast
 
 from pattern_lens.load_model import load_model
 
-from attention_motifs.pipeline.cfg import cached_sanitize_model_name
+from attention_motifs.util.model_name import cached_sanitize_model_name
 
 import polars as pl
 from tqdm import tqdm
