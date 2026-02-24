@@ -88,6 +88,8 @@ pca_n_components = 6
 smart_mode = true
 # number of cpus to use for CPU tasks
 n_proc = 64
+# chunksize for multiprocessing pool.imap in s2 feature computation
+s2_chunksize = 4
 # whether to force an overwrite of existing attention patterns
 force_overwrite = false
 # device to use for torch tensors -- generally "cpu", "cuda", or "mps"
