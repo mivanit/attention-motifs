@@ -13,7 +13,6 @@ import pytest
 from attention_motifs.pipeline.model_table import (
 	ModelInfo,
 	_download_csv,
-	_parse_csv,
 	fetch_model_table,
 	get_model_params,
 )
@@ -46,14 +45,11 @@ pythia-14m,14000000,ignored
 pythia-2.8b,2500000000,ignored
 """
 
-SAMPLE_CSV_WITH_EMPTY: str = """\
-name.default_alias,n_params.as_int,something_else
-gpt2-small,85000000,ignored
-,,ignored
-pythia-14m,14000000,ignored
-,12345,ignored
-missing-params,,ignored
-"""
+SAMPLE_TABLE: dict[str, ModelInfo] = {
+	"gpt2-small": ModelInfo(name="gpt2-small", n_params=85_000_000),
+	"pythia-14m": ModelInfo(name="pythia-14m", n_params=14_000_000),
+	"pythia-2.8b": ModelInfo(name="pythia-2.8b", n_params=2_500_000_000),
+}
 
 
 # ===========================================================================
@@ -61,36 +57,15 @@ missing-params,,ignored
 # ===========================================================================
 
 
-class TestParseCSV:
-	def test_parse_csv(self) -> None:
-		"""Parse sample CSV content, verify ModelInfo values."""
-		table: dict[str, ModelInfo] = _parse_csv(SAMPLE_CSV)
-		assert len(table) == 3
-		assert table["gpt2-small"] == ModelInfo(name="gpt2-small", n_params=85_000_000)
-		assert table["pythia-14m"] == ModelInfo(name="pythia-14m", n_params=14_000_000)
-		assert table["pythia-2.8b"] == ModelInfo(
-			name="pythia-2.8b", n_params=2_500_000_000
-		)
-
-	def test_parse_csv_skips_empty_rows(self) -> None:
-		"""Rows with missing name or n_params are skipped."""
-		table: dict[str, ModelInfo] = _parse_csv(SAMPLE_CSV_WITH_EMPTY)
-		assert len(table) == 2
-		assert "gpt2-small" in table
-		assert "pythia-14m" in table
-
-
 class TestGetModelParams:
 	def test_get_model_params_found(self) -> None:
 		"""Lookup known model returns correct count."""
-		table: dict[str, ModelInfo] = _parse_csv(SAMPLE_CSV)
-		assert get_model_params("gpt2-small", table) == 85_000_000
+		assert get_model_params("gpt2-small", SAMPLE_TABLE) == 85_000_000
 
 	def test_get_model_params_not_found(self) -> None:
 		"""KeyError for unknown model."""
-		table: dict[str, ModelInfo] = _parse_csv(SAMPLE_CSV)
 		with pytest.raises(KeyError, match="nonexistent-model"):
-			get_model_params("nonexistent-model", table)
+			get_model_params("nonexistent-model", SAMPLE_TABLE)
 
 
 class TestFetchModelTable:

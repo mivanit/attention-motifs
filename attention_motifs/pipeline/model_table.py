@@ -2,18 +2,45 @@
 
 Used by the parallel model scheduler to estimate VRAM requirements
 based on parameter counts.
+
+CLI usage::
+
+    python -m attention_motifs.pipeline.model_table          # print table
+    python -m attention_motifs.pipeline.model_table -f       # force re-download
+    python -m attention_motifs.pipeline.model_table --cache-path  # show cache location
 """
 
-import csv
+import argparse
+import importlib.resources
 import io
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
+import polars as pl
+
 MODEL_TABLE_URL: str = "https://raw.githubusercontent.com/mivanit/transformerlens-model-table/main/docs/model_table.csv"
-MODEL_TABLE_CACHE: Path = (
-	Path.home() / ".cache" / "attention_motifs" / "model_table.csv"
-)
+
+_CACHE_FILENAME: str = "model_table.csv"
+
+
+def _resolve_cache_path() -> Path:
+	"""Resolve model table cache path.
+
+	Uses ``.meta/local/`` when running from a repo clone (detected by the
+	presence of a ``.meta/`` directory next to the package root), otherwise
+	falls back to ``~/.cache/attention_motifs/``.
+	"""
+	import attention_motifs
+
+	pkg_root: Path = Path(str(importlib.resources.files(attention_motifs)))
+	repo_root: Path = pkg_root.parent
+	if (repo_root / ".meta").is_dir():
+		return repo_root / ".meta" / "local" / _CACHE_FILENAME
+	return Path.home() / ".cache" / "attention_motifs" / _CACHE_FILENAME
+
+
+MODEL_TABLE_CACHE: Path = _resolve_cache_path()
 
 
 @dataclass(frozen=True)
@@ -36,26 +63,8 @@ def _download_csv(url: str, cache_path: Path) -> str:
 	return content
 
 
-def _parse_csv(content: str) -> dict[str, ModelInfo]:
-	"""Parse model table CSV into a dict keyed by model name."""
-	reader: csv.DictReader = csv.DictReader(io.StringIO(content))
-	table: dict[str, ModelInfo] = {}
-	for row in reader:
-		name: str = row["name.default_alias"]
-		n_params_str: str = row["n_params.as_int"]
-		if not name or not n_params_str:
-			continue
-		n_params: int = int(n_params_str)
-		table[name] = ModelInfo(name=name, n_params=n_params)
-	return table
-
-
-def fetch_model_table(force_refresh: bool = False) -> dict[str, ModelInfo]:
-	"""Fetch model table from GitHub, using local cache if available.
-
-	Downloads the CSV on first call, then reads from cache on subsequent calls.
-	Pass ``force_refresh=True`` to re-download.
-	"""
+def _fetch_csv_content(force_refresh: bool = False) -> str:
+	"""Return raw CSV content, downloading if necessary."""
 	content: str
 	if MODEL_TABLE_CACHE.exists() and not force_refresh:
 		content = MODEL_TABLE_CACHE.read_text()
@@ -64,7 +73,36 @@ def fetch_model_table(force_refresh: bool = False) -> dict[str, ModelInfo]:
 		print(f"Downloading model table from {MODEL_TABLE_URL}")
 		content = _download_csv(MODEL_TABLE_URL, MODEL_TABLE_CACHE)
 		print(f"Cached model table to {MODEL_TABLE_CACHE}")
-	return _parse_csv(content)
+	return content
+
+
+def fetch_model_table_df(force_refresh: bool = False) -> pl.DataFrame:
+	"""Fetch model table from GitHub as a polars DataFrame (cached).
+
+	Downloads the CSV on first call, then reads from cache on subsequent calls.
+	Pass ``force_refresh=True`` to re-download.
+	"""
+	content: str = _fetch_csv_content(force_refresh=force_refresh)
+	return pl.read_csv(io.StringIO(content))
+
+
+def fetch_model_table(force_refresh: bool = False) -> dict[str, ModelInfo]:
+	"""Fetch model table from GitHub, using local cache if available.
+
+	Downloads the CSV on first call, then reads from cache on subsequent calls.
+	Pass ``force_refresh=True`` to re-download.
+	"""
+	df: pl.DataFrame = fetch_model_table_df(force_refresh=force_refresh)
+	df = df.drop_nulls(subset=["name.default_alias", "n_params.as_int"]).filter(
+		pl.col("name.default_alias") != ""
+	)
+	return {
+		row["name.default_alias"]: ModelInfo(
+			name=row["name.default_alias"],
+			n_params=int(row["n_params.as_int"]),
+		)
+		for row in df.iter_rows(named=True)
+	}
 
 
 def get_model_params(model_name: str, table: dict[str, ModelInfo]) -> int:
@@ -78,3 +116,33 @@ def get_model_params(model_name: str, table: dict[str, ModelInfo]) -> int:
 		f"Model {model_name!r} not found in model table. "
 		f"Available models: {sorted(table.keys())}"
 	)
+
+
+def main() -> None:
+	"""CLI entrypoint: print the model table to stdout."""
+	parser: argparse.ArgumentParser = argparse.ArgumentParser(
+		description="Fetch and display the TransformerLens model parameter table.",
+	)
+	parser.add_argument(
+		"-f",
+		"--force-refresh",
+		action="store_true",
+		help="Re-download the CSV even if a cached copy exists.",
+	)
+	parser.add_argument(
+		"--cache-path",
+		action="store_true",
+		help="Print the resolved cache file path and exit.",
+	)
+	args: argparse.Namespace = parser.parse_args()
+
+	if args.cache_path:
+		print(MODEL_TABLE_CACHE)
+		return
+
+	df: pl.DataFrame = fetch_model_table_df(force_refresh=args.force_refresh)
+	print(df)
+
+
+if __name__ == "__main__":
+	main()
