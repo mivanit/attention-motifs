@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from attention_motifs.consts import DEFAULT_COMPRESS_LEVEL
+from attention_motifs.util.cached_sanitize_model_name import cached_sanitize_model_name
 
 PIPELINE_CFG_EXAMPLES: str = """
 # use `pipeline_cfg.toml`
@@ -439,6 +440,7 @@ class PipelineConfig:
 			plot_kwargs=data.get("plot_kwargs", {}),
 			smart_mode=data.get("smart_mode", False),
 		)
+		config.models = [cached_sanitize_model_name(m) for m in config.models]
 		config.validate_cfg()
 		return config
 
@@ -622,7 +624,10 @@ class PipelineConfig:
 		if args.s2_chunksize is not None:
 			config.s2_chunksize = args.s2_chunksize
 
-		# 3. Final sanity check
+		# 3. Sanitize model names (CLI may have provided raw aliases)
+		config.models = [cached_sanitize_model_name(m) for m in config.models]
+
+		# 4. Final sanity check
 		config.validate_cfg()
 		return config
 

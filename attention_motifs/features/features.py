@@ -25,8 +25,6 @@ from pattern_lens.consts import (
 from pattern_lens.load_activations import load_activations
 from pattern_lens.figures import HTConfigMock
 
-from pattern_lens.consts import sanitize_model_name
-
 from attention_motifs.util.util import prefix_dict
 from attention_motifs.util.bins import Bins
 from attention_motifs.features.vec_features import vec_features
@@ -63,11 +61,11 @@ def process_prompt(
 				{
 					**prefix_dict(
 						dict(
-							model=sanitize_model_name(model_name),
+							model=model_name,
 							layer=str(layer_idx),
 							cache_key=str(cache_key),
 							head=int(head_idx),
-							cls=f"{sanitize_model_name(model_name)}:L{layer_idx}:H{head_idx}",
+							cls=f"{model_name}:L{layer_idx}:H{head_idx}",
 							prompt=str(prompt["hash"]),
 							n_ctx=int(A.shape[0]),
 						),
@@ -93,7 +91,7 @@ def get_layer_depth(row: dict, model_configs: dict[str, HTConfigMock]) -> float:
 
 def _checkpoint_path(out_path: Path, model: str) -> Path:
 	"""Per-model checkpoint file path for scalar_feature_table."""
-	return out_path.parent / f"{out_path.stem}.checkpoint.{sanitize_model_name(model)}.jsonl"
+	return out_path.parent / f"{out_path.stem}.checkpoint.{model}.jsonl"
 
 
 def scalar_feature_table(
@@ -134,7 +132,7 @@ def scalar_feature_table(
 			update_interval=_SPINNER_INTERVAL,
 			**SPINNER_KWARGS,
 		):
-			model_path: Path = act_path / sanitize_model_name(model)
+			model_path: Path = act_path / model
 			with open(model_path / "model_cfg.json", "r") as f:
 				model_cfg: HTConfigMock = HTConfigMock.load(json.load(f))
 
@@ -184,9 +182,7 @@ def scalar_feature_table(
 	# --- Concatenate all checkpoints into final output ---
 	checkpoint_paths: list[Path] = [_checkpoint_path(out_path, m) for m in models]
 
-	missing: list[str] = [
-		m for m, p in zip(models, checkpoint_paths) if not p.exists()
-	]
+	missing: list[str] = [m for m, p in zip(models, checkpoint_paths) if not p.exists()]
 	if missing:
 		raise FileNotFoundError(f"Missing checkpoint files for models: {missing}")
 
