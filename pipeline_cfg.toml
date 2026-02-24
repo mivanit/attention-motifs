@@ -109,7 +109,7 @@ vram_safety_factor = 10.0
 batch_size = 8 # gpt2-xl and pythia-2.8b need this to avoid OOM on 24GB vram, but smaller models can use larger batch sizes for speed. so, run the pipeline with larger batch size first, let the models fail, then run again with this smaller batch size to finish the failed models
 # compression level for activation .npz files: 0=none (fastest), 1=fast, 6=default
 # level 1 is ~5x faster than 6 with ~2x compression ratio
-compress_level = 1
+compress_level = 0
 
 # s1b: render patterns to PNG
 # ============================================================
