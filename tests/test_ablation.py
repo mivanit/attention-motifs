@@ -359,10 +359,10 @@ class TestIntegration:
 	def model(self):
 		"""Load a small model for testing."""
 		try:
-			from transformer_lens import HookedTransformer
+			from pattern_lens.load_model import load_model
 
 			# Use smallest available model
-			return HookedTransformer.from_pretrained(
+			return load_model(
 				"pythia-14m", device="cuda" if torch.cuda.is_available() else "cpu"
 			)
 		except ImportError:
