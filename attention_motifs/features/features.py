@@ -25,6 +25,8 @@ from pattern_lens.consts import (
 from pattern_lens.load_activations import load_activations
 from pattern_lens.figures import HTConfigMock
 
+from pattern_lens.consts import sanitize_model_name
+
 from attention_motifs.util.util import prefix_dict
 from attention_motifs.util.bins import Bins
 from attention_motifs.features.vec_features import vec_features
@@ -91,7 +93,7 @@ def get_layer_depth(row: dict, model_configs: dict[str, HTConfigMock]) -> float:
 
 def _checkpoint_path(out_path: Path, model: str) -> Path:
 	"""Per-model checkpoint file path for scalar_feature_table."""
-	return out_path.parent / f"{out_path.stem}.checkpoint.{model}.jsonl"
+	return out_path.parent / f"{out_path.stem}.checkpoint.{sanitize_model_name(model)}.jsonl"
 
 
 def scalar_feature_table(
@@ -132,7 +134,7 @@ def scalar_feature_table(
 			update_interval=_SPINNER_INTERVAL,
 			**SPINNER_KWARGS,
 		):
-			model_path: Path = act_path / model
+			model_path: Path = act_path / sanitize_model_name(model)
 			with open(model_path / "model_cfg.json", "r") as f:
 				model_cfg: HTConfigMock = HTConfigMock.load(json.load(f))
 

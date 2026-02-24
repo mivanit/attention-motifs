@@ -8,6 +8,7 @@ from jaxtyping import Float
 import matplotlib.pyplot as plt
 
 from muutils.dbg import dbg
+from pattern_lens.consts import sanitize_model_name
 
 
 def prefix_dict[T_key](
@@ -28,7 +29,7 @@ def load_activations(
 	list[NpzFile],
 ]:
 	"returns (model_config, prompts, activations)"
-	model_path: Path = base_path / model_name
+	model_path: Path = base_path / sanitize_model_name(model_name)
 
 	# prompts
 	with open(model_path / "prompts.jsonl") as f:

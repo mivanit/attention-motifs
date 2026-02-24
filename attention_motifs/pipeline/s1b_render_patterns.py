@@ -20,6 +20,7 @@ from pattern_lens.figures import (
 	process_prompt,
 	select_attn_figure_funcs,
 )
+from pattern_lens.consts import sanitize_model_name
 from pattern_lens.indexes import (
 	generate_functions_jsonl,
 	generate_models_jsonl,
@@ -49,7 +50,7 @@ def _safe_process_prompt(
 	augment_prompt_with_hash(prompt)
 	prompt_hash: str = prompt["hash"]
 	npz_path: str = str(
-		save_path / model_cfg.model_name / "prompts" / prompt_hash / "activations.npz"
+		save_path / sanitize_model_name(model_cfg.model_name) / "prompts" / prompt_hash / "activations.npz"
 	)
 	try:
 		process_prompt(
@@ -176,7 +177,7 @@ def render_patterns(cfg: PipelineConfig) -> None:
 		return
 
 	# -- Load canonical prompt list from first model --
-	first_model_path: Path = cfg.patterns_dir / cfg.models[0]
+	first_model_path: Path = cfg.patterns_dir / sanitize_model_name(cfg.models[0])
 	prompts_jsonl: Path = first_model_path / "prompts.jsonl"
 	with open(prompts_jsonl, "r") as f:
 		all_prompts: list[dict] = [json.loads(line) for line in f]
@@ -217,7 +218,7 @@ def render_patterns(cfg: PipelineConfig) -> None:
 		pipeline_model_progress(idx, n_models, model)
 
 		# load model config
-		model_path: Path = cfg.patterns_dir / model
+		model_path: Path = cfg.patterns_dir / sanitize_model_name(model)
 		with open(model_path / "model_cfg.json", "r") as f:
 			model_cfg: HTConfigMock = HTConfigMock.load(json.load(f))
 

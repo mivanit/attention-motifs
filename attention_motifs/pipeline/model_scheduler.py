@@ -20,6 +20,7 @@ from typing import TextIO
 import torch
 
 from attention_motifs.consts import DEFAULT_COMPRESS_LEVEL
+from pattern_lens.consts import sanitize_model_name
 
 
 # ---------------------------------------------------------------------------
@@ -485,7 +486,7 @@ class ModelScheduler:
 		)
 
 		# log subprocess output to a file
-		log_path: str = f"{self.save_path}/{model.name.replace('/', '_')}_parallel.log"
+		log_path: str = f"{self.save_path}/{sanitize_model_name(model.name)}_parallel.log"
 		log_file: TextIO = open(log_path, "w")  # noqa: SIM115
 		try:
 			process: subprocess.Popen[str] = subprocess.Popen(

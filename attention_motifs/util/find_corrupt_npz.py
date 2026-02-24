@@ -13,6 +13,8 @@ Usage:
     python -m attention_motifs.util.find_corrupt_npz --workers 16 --chunksize 128
 """
 
+from pattern_lens.consts import sanitize_model_name
+
 import argparse
 import multiprocessing
 import os
@@ -31,7 +33,7 @@ def find_npz(patterns_dir: Path, models: list[str]) -> list[Path]:
 	all_npz: list[Path] = []
 	model: str
 	for model in models:
-		model_dir: Path = patterns_dir / model / "prompts"
+		model_dir: Path = patterns_dir / sanitize_model_name(model) / "prompts"
 		if not model_dir.is_dir():
 			print(f"skipping {model}: {model_dir} not found", file=sys.stderr)
 			continue

@@ -12,6 +12,8 @@ from pathlib import Path
 import json
 from typing import Iterable, cast
 
+from pattern_lens.consts import sanitize_model_name
+
 import polars as pl
 from tqdm import tqdm
 
@@ -391,7 +393,7 @@ def run_cross_model_experiment(
 		# Save intermediate results
 		if output_dir:
 			assert output_dir_
-			results.save(output_dir_ / f"{model_name.replace('/', '_')}_results.json")
+			results.save(output_dir_ / f"{sanitize_model_name(model_name)}_results.json")
 
 	return all_results
 
