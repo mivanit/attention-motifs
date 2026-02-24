@@ -20,6 +20,7 @@ from typing import TextIO
 import torch
 
 from attention_motifs.consts import DEFAULT_COMPRESS_LEVEL
+from attention_motifs.util.model_name import cached_sanitize_model_name
 
 
 # ---------------------------------------------------------------------------
@@ -485,7 +486,7 @@ class ModelScheduler:
 		)
 
 		# log subprocess output to a file
-		safe_name: str = model.name.replace("/", "_")
+		safe_name: str = cached_sanitize_model_name(model.name)
 		log_path: str = f"{self.save_path}/{safe_name}_parallel.log"
 		log_file: TextIO = open(log_path, "w")  # noqa: SIM115
 		try:
