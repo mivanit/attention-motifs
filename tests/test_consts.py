@@ -7,7 +7,7 @@ from attention_motifs.consts import (
 	tensor_batches,
 	tensor_batches_indexed,
 )
-from pattern_lens.consts import sanitize_model_name
+from pattern_lens.load_model import sanitize_model_name
 
 
 def test_b64encode():

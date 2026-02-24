@@ -20,13 +20,15 @@ def cached_sanitize_model_name(name: str) -> str:
 		else:
 			_model_name_cache = {}
 
-	if name in _model_name_cache:
-		return _model_name_cache[name]
+	cache: dict[str, str] = _model_name_cache
+
+	if name in cache:
+		return cache[name]
 
 	from pattern_lens.load_model import sanitize_model_name
 
 	sanitized: str = sanitize_model_name(name)
-	_model_name_cache[name] = sanitized
+	cache[name] = sanitized
 	_MODEL_NAME_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-	_MODEL_NAME_CACHE_PATH.write_text(json.dumps(_model_name_cache, indent=2))
+	_MODEL_NAME_CACHE_PATH.write_text(json.dumps(cache, indent=2))
 	return sanitized
