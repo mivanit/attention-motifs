@@ -9,6 +9,7 @@ Usage:
     python -m attention_motifs.util.find_corrupt_npz --verbose-errors
     python -m attention_motifs.util.find_corrupt_npz --delete
     python -m attention_motifs.util.find_corrupt_npz --delete-cached
+    python -m attention_motifs.util.find_corrupt_npz --cache-info
     python -m attention_motifs.util.find_corrupt_npz --workers 16 --chunksize 128
 """
 
@@ -95,6 +96,41 @@ def _model_from_path(path: Path) -> str:
 	return path.parent.parent.parent.name
 
 
+def _cache_info(patterns_dir: Path, workers: int | None, chunksize: int) -> None:
+	"""Re-check cached corrupt files and print TOML-style error details."""
+	try:
+		cached_paths: list[Path] = load_cache(patterns_dir)
+	except FileNotFoundError:
+		print(f"no cache found at {_cache_path(patterns_dir)}", file=sys.stderr)
+		sys.exit(2)
+
+	if not cached_paths:
+		print("cache is empty")
+		sys.exit(0)
+
+	# re-check only the cached files
+	corrupt: list[tuple[Path, str]] = check_npz_corrupt(
+		cached_paths, workers=workers, chunksize=chunksize
+	)
+
+	# files that were cached but no longer exist
+	missing: list[Path] = [p for p in cached_paths if not p.exists()]
+
+	for path, error in corrupt:
+		print(f"\"{path}\" = '''\n{error}'''")
+
+	for path in missing:
+		print(f"\"{path}\" = 'missing'")
+
+	n_still_corrupt: int = len(corrupt)
+	n_missing: int = len(missing)
+	n_fixed: int = len(cached_paths) - n_still_corrupt - n_missing
+	print(
+		f"\n{len(cached_paths)} cached, {n_still_corrupt} still corrupt, {n_missing} missing, {n_fixed} fixed"
+	)
+	sys.exit(1 if n_still_corrupt else 0)
+
+
 def _delete_cached(patterns_dir: Path) -> None:
 	"""Interactive deletion of previously-cached corrupt files."""
 	try:
@@ -109,7 +145,7 @@ def _delete_cached(patterns_dir: Path) -> None:
 
 	model_counts: Counter[str] = Counter(_model_from_path(p) for p in cached_paths)
 
-	print(f"{len(cached_paths)} corrupt file(s) cached:")
+	print(f"{len(cached_paths)} corrupt file(s) cached ({_cache_path(patterns_dir)}):")
 	model: str
 	count: int
 	for model, count in sorted(model_counts.items()):
@@ -139,6 +175,7 @@ def main(
 	verbose_errors: bool = False,
 	delete: bool = False,
 	delete_cached: bool = False,
+	cache_info: bool = False,
 	workers: int | None = None,
 	chunksize: int = 64,
 ) -> None:
@@ -146,6 +183,10 @@ def main(
 	if not patterns_dir.is_dir():
 		print(f"error: {patterns_dir} is not a directory", file=sys.stderr)
 		sys.exit(2)
+
+	if cache_info:
+		_cache_info(patterns_dir, workers=workers, chunksize=chunksize)
+		return
 
 	if delete_cached:
 		_delete_cached(patterns_dir)
@@ -180,7 +221,7 @@ def main(
 
 	n_corrupt: int = len(corrupt)
 	if n_corrupt:
-		print(f"{n_corrupt} corrupt file(s)")
+		print(f"{n_corrupt} corrupt file(s) (cached to {_cache_path(patterns_dir)})")
 		sys.exit(1)
 	else:
 		print("all files OK")
@@ -225,6 +266,11 @@ def cli() -> None:
 		help="Delete corrupt files from a previous scan (interactive)",
 	)
 	parser.add_argument(
+		"--cache-info",
+		action="store_true",
+		help="Re-check cached corrupt files and print TOML-style error details",
+	)
+	parser.add_argument(
 		"--workers",
 		type=int,
 		default=None,
@@ -245,6 +291,7 @@ def cli() -> None:
 		verbose_errors=args.verbose_errors,
 		delete=args.delete,
 		delete_cached=args.delete_cached,
+		cache_info=args.cache_info,
 		workers=args.workers,
 		chunksize=args.chunksize,
 	)
