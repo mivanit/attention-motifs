@@ -20,6 +20,7 @@ def cached_sanitize_model_name(name: str) -> str:
 		else:
 			_model_name_cache = {}
 
+	assert _model_name_cache is not None
 	cache: dict[str, str] = _model_name_cache
 
 	if name in cache:
