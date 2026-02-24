@@ -1,0 +1,1 @@
+currently, the model table code exists both here and in pattern lens. tbh we should export this utility and feature to be in the transformerlens model table repo, which should provide sanitized names and easy mappings we can download
