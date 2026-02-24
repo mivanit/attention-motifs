@@ -48,7 +48,7 @@ class HeadAblator:
 
 	Examples
 	--------
-	>>> model = HookedTransformer.from_pretrained("gpt2-small")
+	>>> model = load_model("gpt2-small")
 	>>> ablator = HeadAblator(model)
 	>>> # Compute mean activations from calibration data
 	>>> ablator.compute_mean_activations(calibration_prompts)

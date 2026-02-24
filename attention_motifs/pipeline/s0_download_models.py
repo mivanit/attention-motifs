@@ -2,6 +2,7 @@ import gc
 
 import torch
 from transformer_lens import HookedTransformer
+from pattern_lens.load_model import load_model
 
 # import consts to load HF_TOKEN into os.environ before downloading gated models
 from attention_motifs.consts import HF_TOKEN as _HF_TOKEN
@@ -21,7 +22,7 @@ def download_models(cfg: PipelineConfig) -> None:
 	print(f"# Will download {len(cfg.models)} models: {cfg.models}")
 	for idx, model_name in enumerate(cfg.models):
 		pipeline_model_progress(idx, len(cfg.models), model_name)
-		model: HookedTransformer = HookedTransformer.from_pretrained(model_name)
+		model: HookedTransformer = load_model(model_name)
 		del model
 		gc.collect()
 		if torch.cuda.is_available():

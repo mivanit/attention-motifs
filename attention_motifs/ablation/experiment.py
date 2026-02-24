@@ -13,6 +13,7 @@ import json
 from typing import Iterable, cast
 
 from pattern_lens.consts import sanitize_model_name
+from pattern_lens.load_model import load_model
 
 import polars as pl
 from tqdm import tqdm
@@ -216,9 +217,7 @@ def run_ablation_experiment(
 
 	# Load model
 	print(f"Loading model: {model_name}")
-	model: HookedTransformer = HookedTransformer.from_pretrained(
-		model_name, device=device
-	)
+	model: HookedTransformer = load_model(model_name, device=device)
 
 	# Create ablator
 	ablator: HeadAblator = HeadAblator(model)
