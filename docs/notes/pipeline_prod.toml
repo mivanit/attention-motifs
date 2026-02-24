@@ -1,0 +1,57 @@
+# input paths
+prompts_file = "data/text/pile_10k.jsonl"
+patterns_dir = "data/patterns"
+
+# prompts processing
+prompts_n_samples = 1024
+prompts_min_chars = 64
+prompts_max_chars = 512
+
+# models
+models = [
+	# gpt2
+	"gpt2-small", "gpt2-medium", "gpt2-large", "gpt2-xl", "distillgpt2",
+	# pythia
+	"pythia-14m", "pythia-31m", "pythia-70m", "pythia-160m",
+	"pythia-160m-deduped", "pythia-160m-v0", "pythia-160m-deduped-v0",
+	"pythia-160m-seed1", "pythia-160m-seed2", "pythia-160m-seed3",
+	"pythia-410m", "pythia-1b", "pythia-1.4b",
+	# tinystories
+	"tiny-stories-1M", "tiny-stories-3M", "tiny-stories-8M", "tiny-stories-28M", "tiny-stories-33M",
+	# gemma
+	"gemma-2b", "gemma-2-2b", "gemma-3-270m", "gemma-3-1b-pt",
+	# llama
+	"meta-llama/Llama-3.2-1B",
+]
+pca_n_components = 6
+
+# computing
+smart_mode = true
+n_proc = 64
+force_overwrite = false
+device = "cuda:0"
+parallel_models = true
+devices = ["cuda:0"]
+vram_safety_factor = 10.0
+# gpt2-xl and pythia-1.4b need batch_size=8 to avoid OOM on 24GB VRAM
+batch_size = 8
+compress_level = 1
+
+# s1b: render patterns to PNG
+render_patterns_enabled = true
+render_n_samples = 64
+render_seed = 42
+
+# output paths
+features_dir = "data/features"
+vis_dir = "data/vis"
+figures_dir = "data/figures"
+
+# plotting
+verbose = 99
+
+[plot_kwargs]
+pca_all_dpi = 150
+
+[vis_configs.embed_pattern.cfg]
+dataFile = "../../../features/pca.csv"
