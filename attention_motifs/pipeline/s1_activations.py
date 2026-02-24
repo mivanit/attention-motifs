@@ -1,5 +1,6 @@
 import gc
 import os
+import shutil
 
 import torch
 from pattern_lens.activations import activations_main
@@ -9,6 +10,7 @@ from attention_motifs.pipeline.cfg import (
 	pipeline_step_major,
 	pipeline_model_progress,
 )
+from attention_motifs.util.estimate_batch_size import main as estimate_batch_sizes
 
 
 def _flush_gpu_memory() -> None:
@@ -24,8 +26,53 @@ def _flush_gpu_memory() -> None:
 		torch.cuda.empty_cache()
 
 
+def _warn_batch_size(cfg: PipelineConfig) -> None:
+	"""Print a prominent warning if configured batch_size may cause OOM."""
+	try:
+		report: dict = estimate_batch_sizes(
+			models=cfg.models,
+			device=cfg.device,
+			max_seq_len=cfg.prompts_max_chars,
+		)
+	except Exception:
+		return  # don't block the pipeline if estimation fails
+
+	overall_max: int = report["overall_max_batch"]
+	if cfg.batch_size <= overall_max:
+		return
+
+	# find the tightest model
+	tightest_name: str = ""
+	tightest_batch: int = overall_max
+	name: str
+	info: dict
+	for name, info in report["models"].items():
+		if "max_batch" in info and info["max_batch"] <= tightest_batch:
+			tightest_name = name
+			tightest_batch = info["max_batch"]
+
+	suggested: int = report["overall_max_batch_pow2"]
+	term_width: int = shutil.get_terminal_size((80, 20)).columns
+	border: str = "!" * term_width
+	print(f"\033[93m{border}\033[m")
+	print(
+		f"\033[93m  WARNING: batch_size={cfg.batch_size} exceeds estimated"
+		f" max safe batch size={overall_max}"
+		f" (pow2={suggested})\033[m"
+	)
+	print(
+		f"\033[93m  tightest model: {tightest_name}"
+		f" (max_batch={tightest_batch})\033[m"
+	)
+	print(
+		f"\033[93m  consider: --batch-size {suggested}\033[m"
+	)
+	print(f"\033[93m{border}\033[m")
+
+
 def generate_activations(cfg: PipelineConfig) -> None:
 	pipeline_step_major("pipeline step 1: generate activations")
+	_warn_batch_size(cfg)
 
 	if cfg.parallel_models:
 		_generate_activations_parallel(cfg)

@@ -77,6 +77,11 @@ def full_pipeline(cfg: PipelineConfig) -> None:
 	step_name: StepName
 	step_func: Callable[[PipelineConfig], None]
 	for step_name, step_func in PIPELINE_STEPS:
+		# Config-based skip: s1b can be disabled entirely
+		if step_name == "s1b_render_patterns" and not cfg.render_patterns_enabled:
+			print("[skip] s1b_render_patterns disabled in config")
+			continue
+
 		# Smart mode: check if step already complete
 		if state is not None and state.is_step_complete(step_name):
 			record = state.completed_steps[step_name]

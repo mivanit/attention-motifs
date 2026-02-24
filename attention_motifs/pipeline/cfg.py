@@ -221,6 +221,11 @@ class PipelineConfig:
 	cuda_context_bytes: int = 500_000_000
 	batch_size: int = 32
 
+	# s1b: render patterns
+	render_patterns_enabled: bool = True
+	render_n_samples: int | None = None  # None = render all prompts_n_samples
+	render_seed: int = 42
+
 	# output paths
 	features_dir: Path
 	data_fnames: dict[DataFilename, str] = field(
@@ -336,6 +341,13 @@ class PipelineConfig:
 			isinstance(self.cuda_context_bytes, int) and self.cuda_context_bytes >= 0
 		), "cuda_context_bytes must be a non-negative integer"
 
+		# s1b render patterns validation
+		if self.render_n_samples is not None:
+			assert isinstance(self.render_n_samples, int) and self.render_n_samples > 0, (
+				"render_n_samples must be a positive integer or None"
+			)
+		assert isinstance(self.render_seed, int), "render_seed must be an integer"
+
 		# Basic validation for embedding parameters
 		valid_methods = {"isomap", "umap", "tsne", "pca"}
 		assert all(method in valid_methods for method in self.embedding_methods), (
@@ -400,6 +412,9 @@ class PipelineConfig:
 			vram_safety_factor=data.get("vram_safety_factor", 10.0),
 			cuda_context_bytes=data.get("cuda_context_bytes", 500_000_000),
 			batch_size=data.get("batch_size", 32),
+			render_patterns_enabled=data.get("render_patterns_enabled", True),
+			render_n_samples=data.get("render_n_samples", None),
+			render_seed=data.get("render_seed", 42),
 			figures_dir=(
 				Path(data["figures_dir"]) if "figures_dir" in data else None
 				# default to None if not specified

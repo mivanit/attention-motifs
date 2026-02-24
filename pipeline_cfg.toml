@@ -132,6 +132,17 @@ vram_safety_factor = 10.0
 # number of prompts per forward pass during activation gathering
 batch_size = 32
 
+# s1b: render patterns to PNG
+# ============================================================
+# set to false to skip PNG rendering entirely
+render_patterns_enabled = true
+# how many prompts to render PNGs for (comment out = all prompts_n_samples)
+# if less than prompts_n_samples, a deterministic random subset is selected
+# the same subset is used for ALL models
+# render_n_samples = 128
+# seed for deterministic random prompt selection
+# render_seed = 42
+
 # output paths
 # ============================================================
 # where to put the data of features extracted from the patterns
