@@ -119,6 +119,7 @@ def scalar_feature_table(
 	out_path.parent.mkdir(parents=True, exist_ok=True)
 
 	# --- Per-model processing with checkpointing ---
+	failed_models: list[tuple[str, Exception]] = []
 	for idx, model in enumerate(models):
 		ckpt_path: Path = _checkpoint_path(out_path, model)
 
@@ -126,58 +127,71 @@ def scalar_feature_table(
 			print_log(f"  # model '{model}': checkpoint exists, skipping")
 			continue
 
-		print_log(f"  # model: '{model}'")
-		with SpinnerContext(
-			message="setting up paths",
-			update_interval=_SPINNER_INTERVAL,
-			**SPINNER_KWARGS,
-		):
-			model_path: Path = act_path / model
-			with open(model_path / "model_cfg.json", "r") as f:
-				model_cfg: HTConfigMock = HTConfigMock.load(json.load(f))
+		try:
+			print_log(f"  # model: '{model}'")
+			with SpinnerContext(
+				message="setting up paths",
+				update_interval=_SPINNER_INTERVAL,
+				**SPINNER_KWARGS,
+			):
+				model_path: Path = act_path / model
+				with open(model_path / "model_cfg.json", "r") as f:
+					model_cfg: HTConfigMock = HTConfigMock.load(json.load(f))
 
-		with SpinnerContext(
-			message="loading prompts",
-			update_interval=_SPINNER_INTERVAL,
-			**SPINNER_KWARGS,
-		):
-			# load prompts
-			with open(model_path / "prompts.jsonl", "r") as f:
-				prompts: list[dict] = [json.loads(line) for line in f.readlines()]
+			with SpinnerContext(
+				message="loading prompts",
+				update_interval=_SPINNER_INTERVAL,
+				**SPINNER_KWARGS,
+			):
+				# load prompts
+				with open(model_path / "prompts.jsonl", "r") as f:
+					prompts: list[dict] = [json.loads(line) for line in f.readlines()]
 
-		print_log(f"  # {len(prompts)} prompts loaded")
+			print_log(f"  # {len(prompts)} prompts loaded")
 
-		processes = processes or mp.cpu_count()
-		print_log(f"  # using {processes} processes, chunksize={chunksize}")
-		with mp.Pool(processes=processes) as pool:
-			# process each prompt in parallel
-			prompt_func: Callable[[dict], list[dict[str, int | float | str]]] = (
-				functools.partial(
-					process_prompt,
-					model_name=model,
-					save_path=act_path,
-					features_func=features_func,
+			processes = processes or mp.cpu_count()
+			print_log(f"  # using {processes} processes, chunksize={chunksize}")
+			with mp.Pool(processes=processes) as pool:
+				# process each prompt in parallel
+				prompt_func: Callable[[dict], list[dict[str, int | float | str]]] = (
+					functools.partial(
+						process_prompt,
+						model_name=model,
+						save_path=act_path,
+						features_func=features_func,
+					)
+				)
+				model_out: list[dict] = tqdm.tqdm(  # type: ignore[assignment]
+					pool.imap(prompt_func, prompts, chunksize=chunksize),
+					total=len(prompts),
+				)
+				model_rows: list[dict[str, int | float | str]] = list(
+					itertools.chain.from_iterable(model_out)
+				)
+
+			# Build per-model DataFrame with layer_depth
+			df_model: pl.DataFrame = pl.DataFrame(model_rows)
+			n_layers: int = model_cfg.n_layers
+			df_model = df_model.with_columns(
+				(pl.col("activation.layer").cast(pl.Float64) / float(n_layers - 1)).alias(
+					"activation.layer_depth"
 				)
 			)
-			model_out: list[dict] = tqdm.tqdm(  # type: ignore[assignment]
-				pool.imap(prompt_func, prompts, chunksize=chunksize),
-				total=len(prompts),
-			)
-			model_rows: list[dict[str, int | float | str]] = list(
-				itertools.chain.from_iterable(model_out)
-			)
 
-		# Build per-model DataFrame with layer_depth
-		df_model: pl.DataFrame = pl.DataFrame(model_rows)
-		n_layers: int = model_cfg.n_layers
-		df_model = df_model.with_columns(
-			(pl.col("activation.layer").cast(pl.Float64) / float(n_layers - 1)).alias(
-				"activation.layer_depth"
-			)
+			df_model.write_ndjson(ckpt_path)
+			print_log(f"  # checkpoint saved: {ckpt_path}")
+		except Exception as e:
+			print_log(f"  # ERROR: model '{model}' failed: {e}")
+			failed_models.append((model, e))
+			continue
+
+	# --- Bail out if any models failed (don't combine partial results) ---
+	if failed_models:
+		failed_names: list[str] = [name for name, _ in failed_models]
+		raise RuntimeError(
+			f"s2 feature extraction failed for {len(failed_models)} model(s): {failed_names}. "
+			f"Checkpoints for successful models are preserved; re-run to retry only the failed models."
 		)
-
-		df_model.write_ndjson(ckpt_path)
-		print_log(f"  # checkpoint saved: {ckpt_path}")
 
 	# --- Concatenate all checkpoints into final output ---
 	checkpoint_paths: list[Path] = [_checkpoint_path(out_path, m) for m in models]
