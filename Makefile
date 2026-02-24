@@ -741,6 +741,7 @@ help:
 HF_TOKEN ?= $(shell cat .meta/local/.hf_token)
 # modify this file, or point to a different one
 PIPELINE_CFG_PATH ?= pipeline_cfg.toml
+PIPELINE_ARGS ?=
 FEAT_KWARGS ?=
 # --------------------------------------------------
 
@@ -772,7 +773,7 @@ am-help:
 .PHONY: am-pipeline
 am-pipeline:
 	@echo "run the whole attention-motifs pipeline on the config $(PIPELINE_CFG_PATH)"
-	$(PYTHON) -m attention_motifs.pipeline.full $(PIPELINE_CFG_PATH)
+	$(PYTHON) -m attention_motifs.pipeline.full $(PIPELINE_CFG_PATH) $(PIPELINE_ARGS)
 
 TEST_CONFIG ?= tests/pipeline_cfg_test.toml
 
