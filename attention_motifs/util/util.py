@@ -8,7 +8,7 @@ from jaxtyping import Float
 import matplotlib.pyplot as plt
 
 from muutils.dbg import dbg
-from attention_motifs.util.cached_sanitize_model_name import cached_sanitize_model_name
+from attention_motifs.util.model_name import cached_sanitize_model_name
 
 
 def prefix_dict[T_key](

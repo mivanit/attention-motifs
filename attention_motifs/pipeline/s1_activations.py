@@ -163,7 +163,7 @@ def _generate_activations_parallel(cfg: PipelineConfig) -> None:
 		estimate_vram_bytes,
 	)
 
-	from attention_motifs.util.cached_sanitize_model_name import (
+	from attention_motifs.util.model_name import (
 		cached_resolve_model_name,
 	)
 

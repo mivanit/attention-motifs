@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from attention_motifs.consts import DEFAULT_COMPRESS_LEVEL
-from attention_motifs.util.cached_sanitize_model_name import cached_sanitize_model_name
+from attention_motifs.util.model_name import cached_sanitize_model_name
 
 PIPELINE_CFG_EXAMPLES: str = """
 # use `pipeline_cfg.toml`

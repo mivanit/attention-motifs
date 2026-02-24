@@ -49,6 +49,7 @@ def _get_cache() -> dict[str, _CacheEntry]:
 			_cache = json.loads(path.read_text())
 		else:
 			_cache = {}
+	assert _cache is not None
 	return _cache
 
 
