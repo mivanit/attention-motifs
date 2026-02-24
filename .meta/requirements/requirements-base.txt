@@ -297,7 +297,7 @@ pandas==3.0.1 ; python_full_version < '3.14'
     #   transformer-lens
 parso==0.8.6
     # via jedi
-pattern-lens @ git+https://github.com/mivanit/pattern-lens@1f2a7d10beda704abe4f91d56c6db11d10a435e1
+pattern-lens @ git+https://github.com/mivanit/pattern-lens@923abab5729ff76c7305911e19fa29abbe75af00
     # via attention-motifs
 pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
     # via ipython

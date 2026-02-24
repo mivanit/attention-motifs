@@ -2398,7 +2398,7 @@ wheels = [
 [[package]]
 name = "pattern-lens"
 version = "0.6.1"
-source = { git = "https://github.com/mivanit/pattern-lens#1f2a7d10beda704abe4f91d56c6db11d10a435e1" }
+source = { git = "https://github.com/mivanit/pattern-lens#923abab5729ff76c7305911e19fa29abbe75af00" }
 dependencies = [
     { name = "beartype" },
     { name = "datasets" },
