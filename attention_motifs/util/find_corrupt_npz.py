@@ -108,13 +108,14 @@ def _cache_info(patterns_dir: Path, workers: int | None, chunksize: int) -> None
 		print("cache is empty")
 		sys.exit(0)
 
-	# re-check only the cached files
-	corrupt: list[tuple[Path, str]] = check_npz_corrupt(
-		cached_paths, workers=workers, chunksize=chunksize
-	)
-
-	# files that were cached but no longer exist
+	# separate missing files before re-checking so categories are disjoint
 	missing: list[Path] = [p for p in cached_paths if not p.exists()]
+	existing: list[Path] = [p for p in cached_paths if p.exists()]
+
+	# re-check only files that still exist on disk
+	corrupt: list[tuple[Path, str]] = check_npz_corrupt(
+		existing, workers=workers, chunksize=chunksize
+	)
 
 	for path, error in corrupt:
 		print(f"\"{path}\" = '''\n{error}'''")
