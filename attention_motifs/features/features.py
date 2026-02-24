@@ -173,9 +173,9 @@ def scalar_feature_table(
 			df_model: pl.DataFrame = pl.DataFrame(model_rows)
 			n_layers: int = model_cfg.n_layers
 			df_model = df_model.with_columns(
-				(pl.col("activation.layer").cast(pl.Float64) / float(n_layers - 1)).alias(
-					"activation.layer_depth"
-				)
+				(
+					pl.col("activation.layer").cast(pl.Float64) / float(n_layers - 1)
+				).alias("activation.layer_depth")
 			)
 
 			df_model.write_ndjson(ckpt_path)
