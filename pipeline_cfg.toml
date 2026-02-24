@@ -139,9 +139,9 @@ render_patterns_enabled = true
 # how many prompts to render PNGs for (comment out = all prompts_n_samples)
 # if less than prompts_n_samples, a deterministic random subset is selected
 # the same subset is used for ALL models
-# render_n_samples = 128
+render_n_samples = 64
 # seed for deterministic random prompt selection
-# render_seed = 42
+render_seed = 42
 
 # output paths
 # ============================================================
