@@ -7,6 +7,7 @@ from attention_motifs.consts import (
 	tensor_batches,
 	tensor_batches_indexed,
 )
+from pattern_lens.consts import sanitize_model_name
 
 
 def test_b64encode():
@@ -83,3 +84,24 @@ def test_tensor_batches_indexed():
 	assert s_last == 9 and e_last == 10
 	assert torch.all(d0 == torch.tensor([0.0, 1.0, 2.0]))
 	assert torch.all(d_last == torch.tensor([9.0]))
+
+
+def test_sanitize_model_name_passthrough() -> None:
+	assert sanitize_model_name("gpt2-small") == "gpt2-small"
+
+
+def test_sanitize_model_name_slash() -> None:
+	assert sanitize_model_name("meta-llama/Llama-3.2-1B") == "meta-llama-Llama-3.2-1B"
+
+
+def test_sanitize_model_name_multiple_slashes() -> None:
+	assert sanitize_model_name("org/sub/model") == "org-sub-model"
+
+
+def test_sanitize_model_name_preserves_dots_hyphens() -> None:
+	assert sanitize_model_name("model-v1.0_test") == "model-v1.0_test"
+
+
+def test_sanitize_model_name_idempotent() -> None:
+	name: str = "meta-llama/Llama-3.2-1B"
+	assert sanitize_model_name(sanitize_model_name(name)) == sanitize_model_name(name)

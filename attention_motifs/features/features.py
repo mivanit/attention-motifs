@@ -63,11 +63,11 @@ def process_prompt(
 				{
 					**prefix_dict(
 						dict(
-							model=str(model_name),
+							model=sanitize_model_name(model_name),
 							layer=str(layer_idx),
 							cache_key=str(cache_key),
 							head=int(head_idx),
-							cls=f"{model_name}:L{layer_idx}:H{head_idx}",
+							cls=f"{sanitize_model_name(model_name)}:L{layer_idx}:H{head_idx}",
 							prompt=str(prompt["hash"]),
 							n_ctx=int(A.shape[0]),
 						),
