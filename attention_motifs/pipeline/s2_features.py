@@ -14,6 +14,7 @@ def compute_features(cfg: PipelineConfig) -> None:
 		models=cfg.models,
 		out_path=cfg.data_path("raw"),
 		processes=cfg.n_proc,
+		chunksize=cfg.s2_chunksize,
 		verbose=cfg.verbose > 0,
 	)
 

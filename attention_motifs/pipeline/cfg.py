@@ -212,6 +212,7 @@ class PipelineConfig:
 
 	# computing
 	n_proc: int
+	s2_chunksize: int = 4
 	force_overwrite: bool = False
 	device: str = "cpu"
 	smart_mode: bool = False
@@ -421,6 +422,7 @@ class PipelineConfig:
 			cuda_context_bytes=data.get("cuda_context_bytes", 500_000_000),
 			batch_size=data.get("batch_size", 32),
 			compress_level=data.get("compress_level", DEFAULT_COMPRESS_LEVEL),
+			s2_chunksize=data.get("s2_chunksize", 4),
 			render_patterns_enabled=data.get("render_patterns_enabled", True),
 			render_n_samples=data.get("render_n_samples", None),
 			render_seed=data.get("render_seed", 42),
@@ -570,6 +572,12 @@ class PipelineConfig:
 			default=None,
 			help="Compression level for .npz saves: 0=none, 1=fast, 6=default (default: 6)",
 		)
+		parser.add_argument(
+			"--s2-chunksize",
+			type=int,
+			default=None,
+			help="Chunksize for multiprocessing pool.imap in s2 feature computation (default: 4)",
+		)
 
 		args: argparse.Namespace = parser.parse_args(argv)
 
@@ -611,6 +619,8 @@ class PipelineConfig:
 			config.batch_size = args.batch_size
 		if args.compress_level is not None:
 			config.compress_level = args.compress_level
+		if args.s2_chunksize is not None:
+			config.s2_chunksize = args.s2_chunksize
 
 		# 3. Final sanity check
 		config.validate_cfg()

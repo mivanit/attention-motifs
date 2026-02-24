@@ -89,6 +89,11 @@ def get_layer_depth(row: dict, model_configs: dict[str, HTConfigMock]) -> float:
 	return float(layer_idx) / float(model_n_layers - 1)
 
 
+def _checkpoint_path(out_path: Path, model: str) -> Path:
+	"""Per-model checkpoint file path for scalar_feature_table."""
+	return out_path.parent / f"{out_path.stem}.checkpoint.{model}.jsonl"
+
+
 def scalar_feature_table(
 	features_func: Callable[
 		[Float[np.ndarray, "n_ctx n_ctx"]],
@@ -98,7 +103,7 @@ def scalar_feature_table(
 	out_path: Path,
 	models: list[str] | None = None,
 	processes: int | None = None,
-	chunksize: int | None = None,
+	chunksize: int = 1,
 	verbose: bool = True,
 ) -> pl.DataFrame:
 	if models is None:
@@ -111,10 +116,16 @@ def scalar_feature_table(
 
 	print_log(f"# models: {models}")
 
-	output: list[dict[str, int | float | str]] = list()
-	model_configs: dict[str, HTConfigMock] = dict()
+	out_path.parent.mkdir(parents=True, exist_ok=True)
 
+	# --- Per-model processing with checkpointing ---
 	for idx, model in enumerate(models):
+		ckpt_path: Path = _checkpoint_path(out_path, model)
+
+		if ckpt_path.exists():
+			print_log(f"  # model '{model}': checkpoint exists, skipping")
+			continue
+
 		print_log(f"  # model: '{model}'")
 		with SpinnerContext(
 			message="setting up paths",
@@ -123,8 +134,7 @@ def scalar_feature_table(
 		):
 			model_path: Path = act_path / model
 			with open(model_path / "model_cfg.json", "r") as f:
-				model_cfg = HTConfigMock.load(json.load(f))
-			model_configs[model] = model_cfg
+				model_cfg: HTConfigMock = HTConfigMock.load(json.load(f))
 
 		with SpinnerContext(
 			message="loading prompts",
@@ -134,15 +144,11 @@ def scalar_feature_table(
 			# load prompts
 			with open(model_path / "prompts.jsonl", "r") as f:
 				prompts: list[dict] = [json.loads(line) for line in f.readlines()]
-			# truncate to n_samples
-			prompts = prompts
 
 		print_log(f"  # {len(prompts)} prompts loaded")
 
-		# for prompt in tqdm.tqdm(prompts, desc="prompts", total=len(prompts)):
 		processes = processes or mp.cpu_count()
-		print_log(f"  # using {processes} processes")
-		# chunksize = 1
+		print_log(f"  # using {processes} processes, chunksize={chunksize}")
 		with mp.Pool(processes=processes) as pool:
 			# process each prompt in parallel
 			prompt_func: Callable[[dict], list[dict[str, int | float | str]]] = (
@@ -153,37 +159,46 @@ def scalar_feature_table(
 					features_func=features_func,
 				)
 			)
-			# tqdm wraps iterator, not a list, but we iterate it immediately
 			model_out: list[dict] = tqdm.tqdm(  # type: ignore[assignment]
-				pool.imap(prompt_func, prompts),
+				pool.imap(prompt_func, prompts, chunksize=chunksize),
 				total=len(prompts),
 			)
-			output.extend(itertools.chain.from_iterable(model_out))
+			model_rows: list[dict[str, int | float | str]] = list(
+				itertools.chain.from_iterable(model_out)
+			)
 
-	# turn everything into a DataFrame
-	df: pl.DataFrame = pl.DataFrame(output)
-
-	# add a activation.layer_depth column by applying get_layer_depth to each row
-	df = df.with_columns(
-		pl.struct(
-			[
-				"activation.model",
-				"activation.layer",
-			]
+		# Build per-model DataFrame with layer_depth
+		df_model: pl.DataFrame = pl.DataFrame(model_rows)
+		n_layers: int = model_cfg.n_layers
+		df_model = df_model.with_columns(
+			(pl.col("activation.layer").cast(pl.Float64) / float(n_layers - 1)).alias(
+				"activation.layer_depth"
+			)
 		)
-		.map_elements(
-			lambda s: get_layer_depth(s, model_configs),
-			return_dtype=pl.Float64,
-		)
-		.alias("activation.layer_depth")
-	)
 
-	# n models, n prompts, n features
-	# out_fname: str = f"raw-m{len(models)}-p{len(prompts)}-c{len(df.columns)}.jsonl"
+		df_model.write_ndjson(ckpt_path)
+		print_log(f"  # checkpoint saved: {ckpt_path}")
+
+	# --- Concatenate all checkpoints into final output ---
+	checkpoint_paths: list[Path] = [_checkpoint_path(out_path, m) for m in models]
+
+	missing: list[str] = [
+		m for m, p in zip(models, checkpoint_paths) if not p.exists()
+	]
+	if missing:
+		raise FileNotFoundError(f"Missing checkpoint files for models: {missing}")
+
+	dfs: list[pl.DataFrame] = [pl.read_ndjson(p) for p in checkpoint_paths]
+	df: pl.DataFrame = pl.concat(dfs)
+
 	print_log(f"# output shape: {df.shape}")
 	print_log(f"# saving to {out_path}")
-	out_path.parent.mkdir(parents=True, exist_ok=True)
 	df.write_ndjson(out_path)
+
+	# Clean up checkpoint files
+	for p in checkpoint_paths:
+		p.unlink()
+	print_log(f"# cleaned up {len(checkpoint_paths)} checkpoint files")
 
 	return df
 
