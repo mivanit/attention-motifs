@@ -52,7 +52,8 @@ dependencies = [
 	# pattern-lens
 	# "pattern-lens>=0.5.0",
 	# pattern-lens from git
-	"pattern-lens>=0.6.0",
+	# "pattern-lens>=0.6.0",
+	"pattern-lens @ git+https://github.com/mivanit/pattern-lens",
 	"js-embedding-vis @ git+https://github.com/mivanit/js-embedding-vis",
 	# older datasets uses pa.PyExtensionType, removed in pyarrow 15
 	"datasets>=2.21.0",
