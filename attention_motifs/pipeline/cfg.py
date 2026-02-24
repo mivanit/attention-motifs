@@ -428,6 +428,7 @@ class PipelineConfig:
 				**data.get("figures_fnames", FIGURE_FNAMES),
 			},
 			plot_kwargs=data.get("plot_kwargs", {}),
+			smart_mode=data.get("smart_mode", False),
 		)
 		config.validate_cfg()
 		return config
