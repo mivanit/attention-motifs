@@ -2,8 +2,8 @@ import os
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-import itertools
 import json
+from collections import Counter
 from pathlib import Path
 from typing import Callable
 import functools
@@ -16,6 +16,7 @@ import polars as pl
 import tqdm
 
 # custom utils
+from muutils.collect_warnings import CollateWarnings
 from muutils.spinner import SpinnerContext
 
 # pattern_lens
@@ -34,6 +35,9 @@ from attention_motifs.math.math import skew_lt
 _SPINNER_INTERVAL: float = float(os.environ.get("SPINNER_UPDATE_INTERVAL", "0.1"))
 
 
+_WarningCounts = Counter[tuple[str, int, str, str]]
+
+
 def process_prompt(
 	prompt: dict,
 	model_name: str,
@@ -42,44 +46,45 @@ def process_prompt(
 		[Float[np.ndarray, "n_ctx n_ctx"]],
 		dict[str, int | float],
 	],
-) -> list[dict[str, int | float | str]]:
-	activations_path: Path
-	cache: dict[str, Float[np.ndarray, "batch n_heads d_head"]]
-	activations_path, cache = load_activations(
-		model_name=model_name,
-		prompt=prompt,
-		save_path=save_path,
-		return_fmt="numpy",
-	)
+) -> tuple[list[dict[str, int | float | str]], _WarningCounts]:
+	with CollateWarnings(print_on_exit=False) as cw:
+		activations_path: Path
+		cache: dict[str, Float[np.ndarray, "batch n_heads d_head"]]
+		activations_path, cache = load_activations(
+			model_name=model_name,
+			prompt=prompt,
+			save_path=save_path,
+			return_fmt="numpy",
+		)
 
-	output: list[dict[str, int | float | str]] = list()
+		output: list[dict[str, int | float | str]] = list()
 
-	for cache_key, head_batch in cache.items():
-		layer_idx: int = int(cache_key.split(".")[1])
-		for head_idx, A in enumerate(head_batch[0]):
-			output.append(
-				{
-					**prefix_dict(
-						dict(
-							model=model_name,
-							layer=str(layer_idx),
-							cache_key=str(cache_key),
-							head=int(head_idx),
-							cls=f"{model_name}:L{layer_idx}:H{head_idx}",
-							prompt=str(prompt["hash"]),
-							n_ctx=int(A.shape[0]),
+		for cache_key, head_batch in cache.items():
+			layer_idx: int = int(cache_key.split(".")[1])
+			for head_idx, A in enumerate(head_batch[0]):
+				output.append(
+					{
+						**prefix_dict(
+							dict(
+								model=model_name,
+								layer=str(layer_idx),
+								cache_key=str(cache_key),
+								head=int(head_idx),
+								cls=f"{model_name}:L{layer_idx}:H{head_idx}",
+								prompt=str(prompt["hash"]),
+								n_ctx=int(A.shape[0]),
+							),
+							prefix="activation",
 						),
-						prefix="activation",
-					),
-					**prefix_dict(
-						# returns dict[str, int|float], but type checker expects dict[str, int|float|str] (dict is invariant)
-						features_func(A),  # type: ignore[arg-type]
-						prefix="feat",
-					),
-				}
-			)
+						**prefix_dict(
+							# returns dict[str, int|float], but type checker expects dict[str, int|float|str] (dict is invariant)
+							features_func(A),  # type: ignore[arg-type]
+							prefix="feat",
+						),
+					}
+				)
 
-	return output
+	return output, cw.counts
 
 
 def get_layer_depth(row: dict, model_configs: dict[str, HTConfigMock]) -> float:
@@ -153,21 +158,35 @@ def scalar_feature_table(
 			print_log(f"  # using {processes} processes, chunksize={chunksize}")
 			with mp.Pool(processes=processes) as pool:
 				# process each prompt in parallel
-				prompt_func: Callable[[dict], list[dict[str, int | float | str]]] = (
-					functools.partial(
-						process_prompt,
-						model_name=model,
-						save_path=act_path,
-						features_func=features_func,
-					)
+				prompt_func: Callable[
+					[dict],
+					tuple[list[dict[str, int | float | str]], _WarningCounts],
+				] = functools.partial(
+					process_prompt,
+					model_name=model,
+					save_path=act_path,
+					features_func=features_func,
 				)
-				model_out: list[dict] = tqdm.tqdm(  # type: ignore[assignment]
+				model_out = tqdm.tqdm(
 					pool.imap(prompt_func, prompts, chunksize=chunksize),
 					total=len(prompts),
 				)
-				model_rows: list[dict[str, int | float | str]] = list(
-					itertools.chain.from_iterable(model_out)
-				)
+				model_rows: list[dict[str, int | float | str]] = []
+				model_warnings: _WarningCounts = Counter()
+				for rows, warn_counts in model_out:
+					model_rows.extend(rows)
+					model_warnings += warn_counts
+
+			if model_warnings:
+				for (
+					filename,
+					lineno,
+					category,
+					message,
+				), count in model_warnings.items():
+					print_log(
+						f"  # ({count}x) {filename}:{lineno} {category}: {message}"
+					)
 
 			# Build per-model DataFrame with layer_depth
 			df_model: pl.DataFrame = pl.DataFrame(model_rows)
