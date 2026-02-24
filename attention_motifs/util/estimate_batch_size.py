@@ -162,9 +162,7 @@ def main(
 
 	model_name: str
 	for model_name in models:
-		row_df: pl.DataFrame = df.filter(
-			pl.col("name.default_alias") == model_name
-		)
+		row_df: pl.DataFrame = df.filter(pl.col("name.default_alias") == model_name)
 		if row_df.is_empty():
 			results[model_name] = {"error": "not found in model table"}
 			continue
@@ -175,7 +173,9 @@ def main(
 		n_heads_val: int | None = row.get("cfg.n_heads")
 		d_model_val: int | None = row.get("cfg.d_model")
 
-		if any(v is None for v in (n_params_val, n_layers_val, n_heads_val, d_model_val)):
+		if any(
+			v is None for v in (n_params_val, n_layers_val, n_heads_val, d_model_val)
+		):
 			results[model_name] = {"error": "missing architecture info in model table"}
 			continue
 

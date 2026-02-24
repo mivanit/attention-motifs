@@ -343,9 +343,9 @@ class PipelineConfig:
 
 		# s1b render patterns validation
 		if self.render_n_samples is not None:
-			assert isinstance(self.render_n_samples, int) and self.render_n_samples > 0, (
-				"render_n_samples must be a positive integer or None"
-			)
+			assert (
+				isinstance(self.render_n_samples, int) and self.render_n_samples > 0
+			), "render_n_samples must be a positive integer or None"
 		assert isinstance(self.render_seed, int), "render_seed must be an integer"
 
 		# Basic validation for embedding parameters

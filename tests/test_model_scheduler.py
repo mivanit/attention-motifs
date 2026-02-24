@@ -11,8 +11,6 @@ import pytest
 
 from attention_motifs.pipeline.model_table import (
 	ModelInfo,
-	fetch_model_table,
-	get_model_params,
 )
 from attention_motifs.pipeline.model_scheduler import (
 	CorePool,

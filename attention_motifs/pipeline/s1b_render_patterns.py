@@ -49,11 +49,7 @@ def _safe_process_prompt(
 	augment_prompt_with_hash(prompt)
 	prompt_hash: str = prompt["hash"]
 	npz_path: str = str(
-		save_path
-		/ model_cfg.model_name
-		/ "prompts"
-		/ prompt_hash
-		/ "activations.npz"
+		save_path / model_cfg.model_name / "prompts" / prompt_hash / "activations.npz"
 	)
 	try:
 		process_prompt(
@@ -155,7 +151,9 @@ def _print_error_banner(
 	reset: str = "\033[0m"
 	bar: str = "=" * 80
 	print(f"{red}{bar}")
-	print(f"  ERROR: {n_failed}/{n_total} prompt renders failed across {n_models_failed} model(s)")
+	print(
+		f"  ERROR: {n_failed}/{n_total} prompt renders failed across {n_models_failed} model(s)"
+	)
 	print(f"  malformed npz list: {txt_path}")
 	print(f"  detailed errors:    {log_path}")
 	print()
@@ -211,7 +209,9 @@ def render_patterns(cfg: PipelineConfig) -> None:
 	total_prompts_across_models: int = 0
 	models_with_failures: set[str] = set()
 
-	chunksize: int = int(max(1, len(selected_prompts) // (5 * multiprocessing.cpu_count())))
+	chunksize: int = int(
+		max(1, len(selected_prompts) // (5 * multiprocessing.cpu_count()))
+	)
 
 	for idx, model in enumerate(cfg.models):
 		pipeline_model_progress(idx, n_models, model)
@@ -256,8 +256,7 @@ def render_patterns(cfg: PipelineConfig) -> None:
 					assert error is not None
 					all_failures.append((model, npz_path, error))
 			print(
-				f"\033[33m  {model}: {n_ok}/{len(results)} OK, "
-				f"{n_fail} failed\033[0m"
+				f"\033[33m  {model}: {n_ok}/{len(results)} OK, {n_fail} failed\033[0m"
 			)
 		else:
 			print(f"  {model}: {n_ok}/{len(results)} OK")

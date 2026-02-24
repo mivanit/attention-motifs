@@ -61,12 +61,9 @@ def _warn_batch_size(cfg: PipelineConfig) -> None:
 		f" (pow2={suggested})\033[m"
 	)
 	print(
-		f"\033[93m  tightest model: {tightest_name}"
-		f" (max_batch={tightest_batch})\033[m"
+		f"\033[93m  tightest model: {tightest_name} (max_batch={tightest_batch})\033[m"
 	)
-	print(
-		f"\033[93m  consider: --batch-size {suggested}\033[m"
-	)
+	print(f"\033[93m  consider: --batch-size {suggested}\033[m")
 	print(f"\033[93m{border}\033[m")
 
 
