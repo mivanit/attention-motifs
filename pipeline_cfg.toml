@@ -87,7 +87,7 @@ pca_n_components = 6
 # invalidates automatically when config changes
 smart_mode = true
 # number of cpus to use for CPU tasks
-n_proc = 64
+n_proc = 69
 # chunksize for multiprocessing pool.imap in s2 feature computation
 s2_chunksize = 4
 # whether to force an overwrite of existing attention patterns
