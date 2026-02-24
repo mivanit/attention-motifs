@@ -106,7 +106,7 @@ def _detect_vram(device: str) -> tuple[str, float]:
 	if not torch.cuda.is_available():
 		raise RuntimeError("CUDA not available; pass --vram manually")
 	dev: torch.device = torch.device(device)
-	props: torch.cuda.CudaDeviceProperties = torch.cuda.get_device_properties(dev)
+	props = torch.cuda.get_device_properties(dev)  # type inferred
 	name: str = props.name
 	vram_gb: float = props.total_memory / BYTES_PER_GB
 	return name, vram_gb
