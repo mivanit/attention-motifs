@@ -26,7 +26,6 @@ Usage::
 
 import argparse
 import json
-import math
 import sys
 import tomllib
 from dataclasses import dataclass
@@ -109,31 +108,40 @@ def _detect_vram(device: str) -> tuple[str, float]:
 	dev: torch.device = torch.device(device)
 	props: torch.cuda.CudaDeviceProperties = torch.cuda.get_device_properties(dev)
 	name: str = props.name
-	vram_gb: float = props.total_mem / BYTES_PER_GB
+	vram_gb: float = props.total_memory / BYTES_PER_GB
 	return name, vram_gb
 
 
 def main(
 	*,
 	config_path: Path = Path("pipeline_cfg.toml"),
+	models: list[str] | None = None,
 	vram_gb: float | None = None,
 	device: str = "cuda:0",
 	max_seq_len: int | None = None,
 	overhead_gb: float = 1.0,
 	dtype_bytes: int = 4,
-) -> None:
-	"""Estimate max batch sizes and print JSON report."""
-	# -- load pipeline config ------------------------------------------------
-	with config_path.open("rb") as f:
-		cfg: dict = tomllib.load(f)
+) -> dict:
+	"""Estimate max batch sizes for each model.
 
-	models: list[str] = cfg.get("models", [])
-	if not models:
-		print(f"error: no models found in {config_path}", file=sys.stderr)
-		sys.exit(2)
+	If *models* is provided, uses that list directly. Otherwise reads
+	the model list (and ``prompts_max_chars`` as default *max_seq_len*)
+	from the TOML file at *config_path*.
+
+	Returns the report dict (same structure printed as JSON by ``cli``).
+	"""
+	# -- resolve models & max_seq_len from config if needed ------------------
+	if models is None:
+		with config_path.open("rb") as f:
+			cfg: dict = tomllib.load(f)
+		models = cfg.get("models", [])
+		if not models:
+			raise ValueError(f"no models found in {config_path}")
+		if max_seq_len is None:
+			max_seq_len = int(cfg.get("prompts_max_chars", 512))
 
 	if max_seq_len is None:
-		max_seq_len = int(cfg.get("prompts_max_chars", 512))
+		max_seq_len = 512
 
 	# -- detect GPU ----------------------------------------------------------
 	gpu_name: str
@@ -199,7 +207,7 @@ def main(
 	overall: int = min(valid_batches) if valid_batches else 0
 	overall_pow2: int = _floor_pow2(overall)
 
-	report: dict = {
+	return {
 		"gpu": gpu_name,
 		"vram_gb": round(vram_gb, 2),
 		"max_seq_len": max_seq_len,
@@ -209,8 +217,6 @@ def main(
 		"overall_max_batch": overall,
 		"overall_max_batch_pow2": overall_pow2,
 	}
-
-	print(json.dumps(report, indent=2))
 
 
 def cli() -> None:
@@ -256,14 +262,19 @@ def cli() -> None:
 	)
 
 	args: argparse.Namespace = parser.parse_args()
-	main(
-		config_path=args.config,
-		vram_gb=args.vram,
-		device=args.device,
-		max_seq_len=args.max_seq_len,
-		overhead_gb=args.overhead,
-		dtype_bytes=args.dtype_bytes,
-	)
+	try:
+		report: dict = main(
+			config_path=args.config,
+			vram_gb=args.vram,
+			device=args.device,
+			max_seq_len=args.max_seq_len,
+			overhead_gb=args.overhead,
+			dtype_bytes=args.dtype_bytes,
+		)
+	except ValueError as e:
+		print(f"error: {e}", file=sys.stderr)
+		sys.exit(2)
+	print(json.dumps(report, indent=2))
 
 
 if __name__ == "__main__":
