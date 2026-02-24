@@ -11,7 +11,6 @@ CLI usage::
 """
 
 import argparse
-import importlib.resources
 import io
 import urllib.request
 from dataclasses import dataclass
@@ -19,28 +18,11 @@ from pathlib import Path
 
 import polars as pl
 
+from attention_motifs.util.cache_path import resolve_cache_path
+
 MODEL_TABLE_URL: str = "https://raw.githubusercontent.com/mivanit/transformerlens-model-table/main/docs/model_table.csv"
 
-_CACHE_FILENAME: str = "model_table.csv"
-
-
-def _resolve_cache_path() -> Path:
-	"""Resolve model table cache path.
-
-	Uses ``.meta/local/`` when running from a repo clone (detected by the
-	presence of a ``.meta/`` directory next to the package root), otherwise
-	falls back to ``~/.cache/attention_motifs/``.
-	"""
-	import attention_motifs
-
-	pkg_root: Path = Path(str(importlib.resources.files(attention_motifs)))
-	repo_root: Path = pkg_root.parent
-	if (repo_root / ".meta").is_dir():
-		return repo_root / ".meta" / "local" / _CACHE_FILENAME
-	return Path.home() / ".cache" / "attention_motifs" / _CACHE_FILENAME
-
-
-MODEL_TABLE_CACHE: Path = _resolve_cache_path()
+MODEL_TABLE_CACHE: Path = resolve_cache_path("model_table.csv")
 
 
 @dataclass(frozen=True)

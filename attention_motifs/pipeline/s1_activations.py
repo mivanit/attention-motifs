@@ -163,6 +163,10 @@ def _generate_activations_parallel(cfg: PipelineConfig) -> None:
 		estimate_vram_bytes,
 	)
 
+	from attention_motifs.util.cached_sanitize_model_name import (
+		cached_resolve_model_name,
+	)
+
 	model_table: dict[str, ModelInfo] = fetch_model_table()
 	prompts: list[dict] = _load_and_hash_prompts(cfg)
 
@@ -171,8 +175,10 @@ def _generate_activations_parallel(cfg: PipelineConfig) -> None:
 	for model_name in cfg.models:
 		if _all_activations_cached(cfg, model_name, prompts):
 			continue
+		# model_name is sanitized; resolve back to default alias for table lookup
+		resolved_name: str = cached_resolve_model_name(model_name)
 		try:
-			n_params: int = get_model_params(model_name, model_table)
+			n_params: int = get_model_params(resolved_name, model_table)
 		except KeyError:
 			print(
 				f"\033[93m[scheduler] could not find model {model_name!r} in cached model table "
