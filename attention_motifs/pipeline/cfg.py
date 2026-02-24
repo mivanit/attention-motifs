@@ -214,6 +214,7 @@ class PipelineConfig:
 	# computing
 	n_proc: int
 	s2_chunksize: int = 4
+	s4_n_proc: int | None = None
 	force_overwrite: bool = False
 	device: str = "cpu"
 	smart_mode: bool = False
@@ -424,6 +425,7 @@ class PipelineConfig:
 			batch_size=data.get("batch_size", 32),
 			compress_level=data.get("compress_level", DEFAULT_COMPRESS_LEVEL),
 			s2_chunksize=data.get("s2_chunksize", 4),
+			s4_n_proc=data.get("s4_n_proc", None),
 			render_patterns_enabled=data.get("render_patterns_enabled", True),
 			render_n_samples=data.get("render_n_samples", None),
 			render_seed=data.get("render_seed", 42),
@@ -580,6 +582,12 @@ class PipelineConfig:
 			default=None,
 			help="Chunksize for multiprocessing pool.imap in s2 feature computation (default: 4)",
 		)
+		parser.add_argument(
+			"--s4-n-proc",
+			type=int,
+			default=None,
+			help="Number of processes for s4 head distance computation (default: n_proc)",
+		)
 
 		args: argparse.Namespace = parser.parse_args(argv)
 
@@ -623,6 +631,8 @@ class PipelineConfig:
 			config.compress_level = args.compress_level
 		if args.s2_chunksize is not None:
 			config.s2_chunksize = args.s2_chunksize
+		if args.s4_n_proc is not None:
+			config.s4_n_proc = args.s4_n_proc
 
 		# 3. Sanitize model names (CLI may have provided raw aliases)
 		config.models = [cached_sanitize_model_name(m) for m in config.models]
