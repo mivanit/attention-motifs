@@ -98,6 +98,7 @@ def _generate_activations_sequential(cfg: PipelineConfig) -> None:
 			stacked_heads=False,
 			device=cfg.device,
 			batch_size=cfg.batch_size,
+			compress_level=cfg.compress_level,
 		)
 		_flush_gpu_memory()
 
@@ -156,6 +157,7 @@ def _generate_activations_parallel(cfg: PipelineConfig) -> None:
 			force=cfg.force_overwrite,
 			total_cpu_cores=os.cpu_count(),
 			batch_size=cfg.batch_size,
+			compress_level=cfg.compress_level,
 		)
 		scheduler.run_all()
 
@@ -180,6 +182,7 @@ def _generate_activations_parallel(cfg: PipelineConfig) -> None:
 				stacked_heads=False,
 				device=cfg.device,
 				batch_size=cfg.batch_size,
+				compress_level=cfg.compress_level,
 			)
 			_flush_gpu_memory()
 

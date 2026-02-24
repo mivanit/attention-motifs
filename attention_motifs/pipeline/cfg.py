@@ -220,6 +220,7 @@ class PipelineConfig:
 	vram_safety_factor: float = 10.0
 	cuda_context_bytes: int = 500_000_000
 	batch_size: int = 32
+	compress_level: int = 6  # 0=no compression, 1-9=zlib level
 
 	# s1b: render patterns
 	render_patterns_enabled: bool = True
@@ -412,6 +413,7 @@ class PipelineConfig:
 			vram_safety_factor=data.get("vram_safety_factor", 10.0),
 			cuda_context_bytes=data.get("cuda_context_bytes", 500_000_000),
 			batch_size=data.get("batch_size", 32),
+			compress_level=data.get("compress_level", 6),
 			render_patterns_enabled=data.get("render_patterns_enabled", True),
 			render_n_samples=data.get("render_n_samples", None),
 			render_seed=data.get("render_seed", 42),
@@ -554,6 +556,12 @@ class PipelineConfig:
 			default=None,
 			help="Batch size for activation generation (default: 32)",
 		)
+		parser.add_argument(
+			"--compress-level",
+			type=int,
+			default=None,
+			help="Compression level for .npz saves: 0=none, 1=fast, 6=default (default: 6)",
+		)
 
 		args: argparse.Namespace = parser.parse_args(argv)
 
@@ -593,6 +601,8 @@ class PipelineConfig:
 			config.cuda_context_bytes = args.cuda_context_bytes
 		if args.batch_size is not None:
 			config.batch_size = args.batch_size
+		if args.compress_level is not None:
+			config.compress_level = args.compress_level
 
 		# 3. Final sanity check
 		config.validate_cfg()

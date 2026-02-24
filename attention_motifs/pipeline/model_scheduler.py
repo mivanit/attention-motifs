@@ -163,6 +163,7 @@ def _build_subprocess_cmd(
 	force: bool,
 	cpu_cores: list[int],
 	batch_size: int = 32,
+	compress_level: int = 6,
 ) -> list[str]:
 	"""Build the command list to run pattern_lens.activations for one model.
 
@@ -189,6 +190,8 @@ def _build_subprocess_cmd(
 		str(n_samples),
 		"--batch-size",
 		str(batch_size),
+		"--compress-level",
+		str(compress_level),
 	]
 
 	if force:
@@ -335,6 +338,7 @@ class ModelScheduler:
 		force: bool,
 		total_cpu_cores: int | None = None,
 		batch_size: int = 32,
+		compress_level: int = 6,
 	) -> None:
 		# sort largest first for greedy bin-packing
 		self.pending: list[ScheduledModel] = sorted(
@@ -348,6 +352,7 @@ class ModelScheduler:
 		self.max_chars: int = max_chars
 		self.force: bool = force
 		self.batch_size: int = batch_size
+		self.compress_level: int = compress_level
 
 		self.running: list[RunningModel] = []
 		self.completed: list[str] = []
@@ -467,6 +472,7 @@ class ModelScheduler:
 			force=self.force,
 			cpu_cores=cpu_cores,
 			batch_size=self.batch_size,
+			compress_level=self.compress_level,
 		)
 		env: dict[str, str] = _build_subprocess_env(n_threads=len(cpu_cores))
 
