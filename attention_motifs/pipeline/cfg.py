@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
+from attention_motifs.consts import DEFAULT_COMPRESS_LEVEL
+
 PIPELINE_CFG_EXAMPLES: str = """
 # use `pipeline_cfg.toml`
 python {script_path}
@@ -220,7 +222,7 @@ class PipelineConfig:
 	vram_safety_factor: float = 10.0
 	cuda_context_bytes: int = 500_000_000
 	batch_size: int = 32
-	compress_level: int = 6  # 0=no compression, 1-9=zlib level
+	compress_level: int = DEFAULT_COMPRESS_LEVEL
 
 	# s1b: render patterns
 	render_patterns_enabled: bool = True
@@ -413,7 +415,7 @@ class PipelineConfig:
 			vram_safety_factor=data.get("vram_safety_factor", 10.0),
 			cuda_context_bytes=data.get("cuda_context_bytes", 500_000_000),
 			batch_size=data.get("batch_size", 32),
-			compress_level=data.get("compress_level", 6),
+			compress_level=data.get("compress_level", DEFAULT_COMPRESS_LEVEL),
 			render_patterns_enabled=data.get("render_patterns_enabled", True),
 			render_n_samples=data.get("render_n_samples", None),
 			render_seed=data.get("render_seed", 42),

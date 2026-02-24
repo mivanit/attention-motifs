@@ -19,6 +19,8 @@ from typing import TextIO
 
 import torch
 
+from attention_motifs.consts import DEFAULT_COMPRESS_LEVEL
+
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -163,7 +165,7 @@ def _build_subprocess_cmd(
 	force: bool,
 	cpu_cores: list[int],
 	batch_size: int = 32,
-	compress_level: int = 6,
+	compress_level: int = DEFAULT_COMPRESS_LEVEL,
 ) -> list[str]:
 	"""Build the command list to run pattern_lens.activations for one model.
 
@@ -338,7 +340,7 @@ class ModelScheduler:
 		force: bool,
 		total_cpu_cores: int | None = None,
 		batch_size: int = 32,
-		compress_level: int = 6,
+		compress_level: int = DEFAULT_COMPRESS_LEVEL,
 	) -> None:
 		# sort largest first for greedy bin-packing
 		self.pending: list[ScheduledModel] = sorted(

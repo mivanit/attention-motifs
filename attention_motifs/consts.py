@@ -36,6 +36,9 @@ PROMPT_HASH_MAX: int = 2**PROMPT_HASH_BITS
 
 PATTERN_DTYPE: torch.dtype = torch.float16
 
+DEFAULT_COMPRESS_LEVEL: int = 1
+"zlib compression level for .npz saves: 0=none, 1=fast, 6=numpy default, 9=max"
+
 
 def _load_hf_token() -> str:
 	"""Load HuggingFace token from file and set HF_TOKEN env var."""
