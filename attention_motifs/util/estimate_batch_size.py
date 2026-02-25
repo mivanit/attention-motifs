@@ -124,9 +124,7 @@ def estimate_s4_memory(
 		# cfg.models contains sanitized names; resolve back to the raw
 		# TransformerLens default alias used in the model table CSV.
 		resolved_name: str = cached_resolve_model_name(model_name)
-		row_df: pl.DataFrame = df.filter(
-			pl.col("name.default_alias") == resolved_name
-		)
+		row_df: pl.DataFrame = df.filter(pl.col("name.default_alias") == resolved_name)
 		if row_df.is_empty():
 			per_model[model_name] = {"error": "not found in model table"}
 			continue
