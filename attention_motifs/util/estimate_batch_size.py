@@ -99,6 +99,78 @@ def estimate_max_batch(
 	)
 
 
+def estimate_s4_memory(
+	*,
+	models: list[str],
+	prompts_n_samples: int,
+	pca_n_components: int,
+	n_proc: int,
+) -> dict:
+	"""Estimate CPU RAM usage for pipeline step s4 (head distance computation).
+
+	Looks up model architectures from the TransformerLens model table to
+	compute ``total_heads = sum(n_layers * n_heads)`` across all models,
+	then estimates memory for the dense ``(p, h, d)`` array and distance
+	output tensor.
+	"""
+	df: pl.DataFrame = fetch_model_table_df()
+
+	total_heads: int = 0
+	per_model: dict[str, dict] = {}
+	model_name: str
+	for model_name in models:
+		row_df: pl.DataFrame = df.filter(pl.col("name.default_alias") == model_name)
+		if row_df.is_empty():
+			per_model[model_name] = {"error": "not found in model table"}
+			continue
+
+		row: dict = row_df.row(0, named=True)
+		n_layers_val: int | None = row.get("cfg.n_layers")
+		n_heads_val: int | None = row.get("cfg.n_heads")
+
+		if n_layers_val is None or n_heads_val is None:
+			per_model[model_name] = {"error": "missing n_layers or n_heads in model table"}
+			continue
+
+		n_layers: int = int(n_layers_val)
+		n_heads: int = int(n_heads_val)
+		heads: int = n_layers * n_heads
+		total_heads += heads
+		per_model[model_name] = {
+			"n_layers": n_layers,
+			"n_heads": n_heads,
+			"heads": heads,
+		}
+
+	p: int = prompts_n_samples
+	h: int = total_heads
+	d: int = pca_n_components
+
+	dense_array_bytes: int = p * h * d * 8
+	output_reduced_bytes: int = h * h * 8
+	output_full_bytes: int = h * h * p * 8
+	parallel_overhead_bytes: int = n_proc * h * h * 8
+
+	# Peak for reduce=True (parallel): dense array + worker accumulators + output
+	peak_reduced_bytes: int = dense_array_bytes + parallel_overhead_bytes + output_reduced_bytes
+	# Peak for reduce=False (serial): dense array + full output tensor
+	peak_full_bytes: int = dense_array_bytes + output_full_bytes
+
+	return {
+		"total_heads": h,
+		"prompts": p,
+		"pca_components": d,
+		"n_proc": n_proc,
+		"per_model": per_model,
+		"dense_array_gb": round(dense_array_bytes / BYTES_PER_GB, 3),
+		"output_reduced_mb": round(output_reduced_bytes / (1 << 20), 1),
+		"output_full_gb": round(output_full_bytes / BYTES_PER_GB, 3),
+		"parallel_overhead_gb": round(parallel_overhead_bytes / BYTES_PER_GB, 3),
+		"peak_reduced_parallel_gb": round(peak_reduced_bytes / BYTES_PER_GB, 3),
+		"peak_full_serial_gb": round(peak_full_bytes / BYTES_PER_GB, 3),
+	}
+
+
 def _detect_vram(device: str) -> tuple[str, float]:
 	"""Detect GPU name and total VRAM in GB. Raises RuntimeError on failure."""
 	import torch

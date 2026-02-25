@@ -218,6 +218,7 @@ class PipelineConfig:
 	force_overwrite: bool = False
 	device: str = "cpu"
 	smart_mode: bool = False
+	estimate_memory_only: bool = False
 
 	# multi-model parallelism (s1)
 	parallel_models: bool = False
@@ -540,6 +541,11 @@ class PipelineConfig:
 			help="Enable smart mode: skip previously completed steps if config unchanged",
 		)
 		parser.add_argument(
+			"--estimate-memory-usage",
+			action="store_true",
+			help="Print estimated s4 memory usage and exit (no pipeline runs)",
+		)
+		parser.add_argument(
 			"--parallel-models",
 			action="store_true",
 			help="Enable VRAM-aware parallel model scheduling for s1",
@@ -617,6 +623,8 @@ class PipelineConfig:
 			config.figures_dir = args.figures_dir
 		if args.smart:
 			config.smart_mode = True
+		if args.estimate_memory_usage:
+			config.estimate_memory_only = True
 		if args.parallel_models:
 			config.parallel_models = True
 		if args.devices is not None:

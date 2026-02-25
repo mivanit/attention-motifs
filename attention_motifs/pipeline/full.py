@@ -68,6 +68,21 @@ def _load_or_create_state(cfg: PipelineConfig) -> PipelineState:
 
 def full_pipeline(cfg: PipelineConfig) -> None:
 	"""Run the full attention motifs pipeline."""
+	if cfg.estimate_memory_only:
+		import json
+
+		from attention_motifs.util.estimate_batch_size import estimate_s4_memory
+
+		n_proc: int = cfg.s4_n_proc if cfg.s4_n_proc is not None else cfg.n_proc
+		report: dict = estimate_s4_memory(
+			models=cfg.models,
+			prompts_n_samples=cfg.prompts_n_samples,
+			pca_n_components=cfg.pca_n_components,
+			n_proc=n_proc,
+		)
+		print(json.dumps(report, indent=2))
+		return
+
 	print(f"Running full pipeline with config:\n{cfg}")
 
 	state: PipelineState | None = None
