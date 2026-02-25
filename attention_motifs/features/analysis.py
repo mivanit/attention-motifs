@@ -2,8 +2,9 @@ from functools import cached_property
 import functools
 import json
 import multiprocessing as mp
+import warnings
 from pathlib import Path
-from typing import Callable, Iterable, Sequence
+from typing import Callable, Iterable, Literal, Sequence, overload
 import math
 from collections import defaultdict
 from statistics import median
@@ -443,7 +444,25 @@ def plot_importance_covariance(
 # core helper + multiprocessing plumbing for build_distance_tensor
 # ---------------------------------------------------------------------------
 
-# TODO: add overloads here
+
+@overload
+def _build_distance_tensor(
+	data: Float[np.ndarray, "p h d"],
+	*,
+	order: int = ...,
+	reduce: Literal[True] = ...,
+) -> Float[np.ndarray, "h h"]: ...
+
+
+@overload
+def _build_distance_tensor(
+	data: Float[np.ndarray, "p h d"],
+	*,
+	order: int = ...,
+	reduce: Literal[False],
+) -> Float[np.ndarray, "h h p"]: ...
+
+
 def _build_distance_tensor(
 	data: Float[np.ndarray, "p h d"],
 	*,
@@ -480,8 +499,8 @@ def _build_distance_tensor(
 
 # -- multiprocessing plumbing --
 
-# TODO: is global var here a problem?
-_worker_data: Float[np.ndarray, "p h d"]  # set by Pool initializer (fork CoW)
+# safe: only written by Pool initializer (one write per worker process, fork CoW)
+_worker_data: Float[np.ndarray, "p h d"]
 
 
 def _init_distance_worker(data: Float[np.ndarray, "p h d"]) -> None:
@@ -796,6 +815,21 @@ class DistanceTensorResult(SerializableDataclass):
 		p: int = data.shape[0]
 		if n_proc is None:
 			n_proc = mp.cpu_count() or 1
+
+		# warn if fork CoW is not available (spawn pickles the full array per worker)
+		start_method: str | None = mp.get_start_method(allow_none=True)
+		if n_proc > 1 and start_method is not None and start_method != "fork":
+			data_mb: float = data.nbytes / 1024 / 1024
+			warnings.warn(
+				f"\n{'=' * 60}\n"
+				f"  multiprocessing start method is {start_method!r}, not 'fork'.\n"
+				f"  The (p, h, d) data array ({data_mb:.1f} MB) will be pickled\n"
+				f"  and copied to EACH of the {n_proc} workers.\n"
+				f"  This is much slower and uses ~{data_mb * n_proc:.0f} MB total.\n"
+				f"  Consider setting n_proc=1 or switching to 'fork' start method.\n"
+				f"{'=' * 60}",
+				stacklevel=2,
+			)
 
 		chunk_indices: list[list[int]] = [
 			batch.tolist()
