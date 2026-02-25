@@ -2,7 +2,8 @@
  * ClusteringLoader - Loads hierarchical clustering data for AttentionPedia
  *
  * Loads the linkage matrix and computes cluster assignments client-side,
- * allowing dynamic adjustment of the number of clusters.
+ * allowing dynamic adjustment of the number of clusters, cut height,
+ * and minimum cluster size.
  */
 class ClusteringLoader {
   constructor() {
@@ -11,7 +12,11 @@ class ClusteringLoader {
     this._is_loaded = false;
     this._load_promise = null;
     this._assignments = {};
+    this._rawAssignments = {}; // before min-size filtering
     this._nClusters = 10;
+    this._cutHeight = null;
+    this._maxCutHeight = null;
+    this._minClusterSize = 0;
 
     // Generate distinct colors using golden angle
     this._colors = this._generateColors(50);
@@ -70,8 +75,13 @@ class ClusteringLoader {
       this._linkage = await linkageResp.json();
       this._is_loaded = true;
 
+      // Compute max cut height from linkage
+      if (this._linkage && this._linkage.length > 0) {
+        this._maxCutHeight = Math.max(...this._linkage.map((row) => row[2]));
+      }
+
       // Compute initial assignments
-      this._computeAssignments(this._nClusters);
+      this._computeAssignmentsByNClusters(this._nClusters);
     } catch (e) {
       console.warn("Failed to load clustering data:", e);
       this._is_loaded = true;
@@ -87,26 +97,15 @@ class ClusteringLoader {
   }
 
   /**
-   * Compute cluster assignments for n clusters
+   * Core: compute raw cluster assignments by cutting at a given height.
+   * Returns raw assignments before min-size filtering.
    */
-  _computeAssignments(nClusters) {
-    if (!this._linkage || !this._meta) return;
+  _computeByHeight(cutHeight) {
+    if (!this._linkage || !this._meta) return {};
 
     const linkage = this._linkage;
     const clsValues = this._meta.cls_values;
     const n = clsValues.length;
-
-    if (nClusters >= n) {
-      // Each head is its own cluster
-      clsValues.forEach((cls, i) => {
-        this._assignments[cls] = i;
-      });
-      return;
-    }
-
-    // Find cut height for desired clusters
-    const heights = linkage.map((row) => row[2]).sort((a, b) => b - a);
-    const cutHeight = heights[n - nClusters - 1] + 1e-10;
 
     // Union-find for cluster membership
     const parent = Array.from({ length: 2 * n - 1 }, (_, i) => i);
@@ -132,17 +131,95 @@ class ClusteringLoader {
     // Assign cluster IDs
     const rootToCluster = {};
     let nextCluster = 0;
+    const raw = {};
 
-    this._assignments = {};
     for (let i = 0; i < n; i++) {
       const root = find(i);
       if (!(root in rootToCluster)) {
         rootToCluster[root] = nextCluster++;
       }
-      this._assignments[clsValues[i]] = rootToCluster[root];
+      raw[clsValues[i]] = rootToCluster[root];
     }
 
+    return raw;
+  }
+
+  /**
+   * Apply min-size filtering: clusters smaller than minSize get id = -1 (misc).
+   * Renumbers remaining clusters contiguously.
+   */
+  _applyMinSizeFilter(raw) {
+    if (this._minClusterSize <= 0) return { ...raw };
+
+    // Count sizes
+    const sizes = {};
+    for (const cid of Object.values(raw)) {
+      sizes[cid] = (sizes[cid] || 0) + 1;
+    }
+
+    // Build remap: small clusters -> -1, others renumbered
+    const remap = {};
+    let nextId = 0;
+    for (const [cid, size] of Object.entries(sizes)) {
+      if (size >= this._minClusterSize) {
+        remap[cid] = nextId++;
+      } else {
+        remap[cid] = -1;
+      }
+    }
+
+    const filtered = {};
+    for (const [headId, cid] of Object.entries(raw)) {
+      filtered[headId] = remap[cid];
+    }
+    return filtered;
+  }
+
+  /**
+   * Compute assignments by target number of clusters
+   */
+  _computeAssignmentsByNClusters(nClusters) {
+    if (!this._linkage || !this._meta) return;
+
+    const clsValues = this._meta.cls_values;
+    const n = clsValues.length;
+
+    if (nClusters >= n) {
+      this._rawAssignments = {};
+      clsValues.forEach((cls, i) => {
+        this._rawAssignments[cls] = i;
+      });
+      this._cutHeight = this._maxCutHeight;
+      this._nClusters = nClusters;
+      this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+      return;
+    }
+
+    // Find cut height for desired clusters
+    const heights = this._linkage.map((row) => row[2]).sort((a, b) => b - a);
+    const cutHeight = heights[n - nClusters - 1] + 1e-10;
+
+    this._cutHeight = cutHeight;
+    this._rawAssignments = this._computeByHeight(cutHeight);
+    this._assignments = this._applyMinSizeFilter(this._rawAssignments);
     this._nClusters = nClusters;
+  }
+
+  /**
+   * Compute assignments by cut height
+   */
+  _computeAssignmentsByCutHeight(cutHeight) {
+    if (!this._linkage || !this._meta) return;
+
+    this._cutHeight = cutHeight;
+    this._rawAssignments = this._computeByHeight(cutHeight);
+    this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+
+    // Count actual clusters (excluding -1)
+    const clusterIds = new Set(
+      Object.values(this._assignments).filter((c) => c !== -1),
+    );
+    this._nClusters = clusterIds.size;
   }
 
   /**
@@ -150,7 +227,50 @@ class ClusteringLoader {
    */
   async setNClusters(n) {
     await this._ensureLoaded();
-    this._computeAssignments(n);
+    this._computeAssignmentsByNClusters(n);
+  }
+
+  /**
+   * Set cut height and recompute assignments
+   */
+  async setCutHeight(h) {
+    await this._ensureLoaded();
+    this._computeAssignmentsByCutHeight(h);
+  }
+
+  /**
+   * Set minimum cluster size and reapply filtering
+   */
+  async setMinClusterSize(n) {
+    await this._ensureLoaded();
+    this._minClusterSize = Math.max(0, n);
+    this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+    // Recount actual clusters
+    const clusterIds = new Set(
+      Object.values(this._assignments).filter((c) => c !== -1),
+    );
+    this._nClusters = clusterIds.size;
+  }
+
+  /**
+   * Get current cut height
+   */
+  getCutHeight() {
+    return this._cutHeight;
+  }
+
+  /**
+   * Get max possible cut height (max merge distance)
+   */
+  getMaxCutHeight() {
+    return this._maxCutHeight;
+  }
+
+  /**
+   * Get current min cluster size
+   */
+  getMinClusterSize() {
+    return this._minClusterSize;
   }
 
   /**
@@ -159,7 +279,15 @@ class ClusteringLoader {
   async getColor(headId) {
     await this._ensureLoaded();
     const clusterId = this._assignments[headId];
-    if (clusterId === undefined) return "transparent";
+    if (clusterId === undefined || clusterId === -1) return "transparent";
+    return this._colors[clusterId % this._colors.length];
+  }
+
+  /**
+   * Get color for a cluster ID (synchronous, for use after loading)
+   */
+  getClusterColor(clusterId) {
+    if (clusterId === undefined || clusterId === -1) return "#888888";
     return this._colors[clusterId % this._colors.length];
   }
 
@@ -182,21 +310,60 @@ class ClusteringLoader {
   }
 
   /**
-   * Get current number of clusters
+   * Get current number of clusters (excluding misc/-1)
    */
   getNClusters() {
     return this._nClusters;
   }
 
   /**
-   * Get cluster sizes
+   * Get actual cluster count (excluding -1 misc cluster)
+   */
+  getNClustersActual() {
+    const clusterIds = new Set(
+      Object.values(this._assignments).filter((c) => c !== -1),
+    );
+    return clusterIds.size;
+  }
+
+  /**
+   * Get cluster sizes (excluding -1 misc cluster)
    */
   async getClusterSizes() {
     await this._ensureLoaded();
     const sizes = {};
     for (const clusterId of Object.values(this._assignments)) {
+      if (clusterId === -1) continue;
       sizes[clusterId] = (sizes[clusterId] || 0) + 1;
     }
     return sizes;
+  }
+
+  /**
+   * Get number of unclustered heads (cluster -1, from min-size filtering)
+   */
+  getUnclusteredCount() {
+    let count = 0;
+    for (const cid of Object.values(this._assignments)) {
+      if (cid === -1) count++;
+    }
+    return count;
+  }
+
+  /**
+   * Get top N clusters sorted by size descending
+   * @param {number} n - how many to return
+   * @returns {Array<{id: number, size: number, color: string}>}
+   */
+  async getTopClusters(n) {
+    const sizes = await this.getClusterSizes();
+    const sorted = Object.entries(sizes)
+      .map(([id, size]) => ({
+        id: parseInt(id),
+        size,
+        color: this.getClusterColor(parseInt(id)),
+      }))
+      .sort((a, b) => b.size - a.size);
+    return sorted.slice(0, n);
   }
 }

@@ -64,6 +64,7 @@ function getDefaultConfig() {
       "../../patterns/single.html?prompt={prompt_hash}&head={model}.L{layer}.H{head}",
     patternlens_url_template:
       "../../patterns/index.html?models={model}&heads-{model}=L{layer}H{head}&prompts={prompt_hashes}",
+    rendered_prompts_url: "../../patterns/rendered_prompts.jsonl",
   };
 
   if (INLINE_CONFIG) {

@@ -12,6 +12,7 @@ let gridState = {
   modelConfigs: {},
   selectedHeads: [],
   prompts: {},
+  renderedHashes: null, // Set<string> or null (all rendered)
   scale: 1.0,
   patternsBaseUrl: "",
   tooltip: null,
@@ -200,6 +201,33 @@ async function initGridView(config) {
       }
     } catch (e) {
       console.warn("Failed to load model data:", e);
+    }
+
+    // Load rendered prompts filter (if available)
+    try {
+      const renderedUrl = `${config.patternsBaseUrl}/rendered_prompts.jsonl`;
+      const renderedResp = await fetch(renderedUrl);
+      if (renderedResp.ok) {
+        const text = await renderedResp.text();
+        const hashes = new Set();
+        for (const line of text.trim().split("\n")) {
+          if (!line.trim()) continue;
+          try {
+            const prompt = JSON.parse(line);
+            if (prompt.hash) hashes.add(prompt.hash);
+          } catch (e) {
+            // skip malformed lines
+          }
+        }
+        if (hashes.size > 0) {
+          gridState.renderedHashes = hashes;
+          console.log(
+            `Clustering page: filtered to ${hashes.size} rendered prompts`,
+          );
+        }
+      }
+    } catch (e) {
+      console.warn("rendered_prompts.jsonl not available for clustering page");
     }
 
     // Set up controls
@@ -1009,11 +1037,18 @@ async function updateSidePane() {
         const response = await fetch(promptsUrl);
         if (response.ok) {
           const text = await response.text();
-          gridState.prompts[modelName] = text
+          let allPrompts = text
             .trim()
             .split("\n")
             .filter((line) => line.trim())
             .map((line) => JSON.parse(line));
+          // Filter to only rendered prompts if available
+          if (gridState.renderedHashes) {
+            allPrompts = allPrompts.filter(
+              (p) => p.hash && gridState.renderedHashes.has(p.hash),
+            );
+          }
+          gridState.prompts[modelName] = allPrompts;
         } else {
           gridState.prompts[modelName] = [];
         }

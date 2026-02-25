@@ -573,8 +573,8 @@ a {
 /* Controls styling */
 .controls-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 15px;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
   align-items: center;
   border-top: 1px solid #eee;
   padding-top: 15px;
@@ -638,19 +638,136 @@ a {
   cursor: not-allowed;
 }
 
-/* Cluster statistics */
-.cluster-stats {
-  font-size: 11px;
+/* Clustering panel (left side) */
+.clustering-panel {
+  border-top: 1px solid #eee;
+  margin-top: 15px;
+  padding-top: 15px;
+}
+
+.clustering-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.clustering-panel-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.cluster-toggle-btn {
+  font-size: 12px;
+  padding: 3px 10px;
+}
+
+.cluster-control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cluster-control-group label {
+  font-size: 13px;
   color: #666;
+  min-width: 75px;
+  flex-shrink: 0;
 }
 
-.cluster-stats .stats-label {
-  font-weight: 500;
-  margin-right: 4px;
+.cluster-slider {
+  flex: 1;
+  min-width: 80px;
 }
 
-.cluster-stats .stats-value {
+.cluster-control-group .control-input {
+  width: 60px;
+  flex-shrink: 0;
+}
+
+.cluster-stats-line {
+  font-size: 12px;
+  color: #666;
   font-family: monospace;
+  margin: 8px 0;
+}
+
+.top-clusters-section {
+  margin-top: 8px;
+}
+
+.top-clusters-label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.top-clusters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.cluster-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.cluster-chip:hover {
+  opacity: 0.8;
+}
+
+.cluster-chip-inline {
+  vertical-align: middle;
+}
+
+.current-head-cluster {
+  font-size: 12px;
+  color: #666;
+  margin-top: 8px;
+}
+
+/* Cluster column in table */
+.cluster-cell {
+  text-align: center;
+  vertical-align: middle;
+  min-width: 60px;
+}
+
+.cluster-column-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.cluster-column-chip:hover {
+  opacity: 0.8;
+}
+
+.cluster-cell-size {
+  font-size: 10px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.cluster-cell-misc {
+  font-size: 11px;
+  color: #999;
+  font-style: italic;
 }
 
 /* Help menu corner styling */

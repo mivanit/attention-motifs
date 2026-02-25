@@ -591,8 +591,8 @@
     /* Controls styling */
     .controls-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 15px;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
       align-items: center;
       border-top: 1px solid #eee;
       padding-top: 15px;
@@ -656,19 +656,136 @@
       cursor: not-allowed;
     }
     
-    /* Cluster statistics */
-    .cluster-stats {
-      font-size: 11px;
+    /* Clustering panel (left side) */
+    .clustering-panel {
+      border-top: 1px solid #eee;
+      margin-top: 15px;
+      padding-top: 15px;
+    }
+    
+    .clustering-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    
+    .clustering-panel-header h3 {
+      margin: 0;
+      font-size: 16px;
+      color: #333;
+    }
+    
+    .cluster-toggle-btn {
+      font-size: 12px;
+      padding: 3px 10px;
+    }
+    
+    .cluster-control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    
+    .cluster-control-group label {
+      font-size: 13px;
       color: #666;
+      min-width: 75px;
+      flex-shrink: 0;
     }
     
-    .cluster-stats .stats-label {
-      font-weight: 500;
-      margin-right: 4px;
+    .cluster-slider {
+      flex: 1;
+      min-width: 80px;
     }
     
-    .cluster-stats .stats-value {
+    .cluster-control-group .control-input {
+      width: 60px;
+      flex-shrink: 0;
+    }
+    
+    .cluster-stats-line {
+      font-size: 12px;
+      color: #666;
       font-family: monospace;
+      margin: 8px 0;
+    }
+    
+    .top-clusters-section {
+      margin-top: 8px;
+    }
+    
+    .top-clusters-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    
+    .top-clusters-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    
+    .cluster-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 500;
+      color: white;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+    
+    .cluster-chip:hover {
+      opacity: 0.8;
+    }
+    
+    .cluster-chip-inline {
+      vertical-align: middle;
+    }
+    
+    .current-head-cluster {
+      font-size: 12px;
+      color: #666;
+      margin-top: 8px;
+    }
+    
+    /* Cluster column in table */
+    .cluster-cell {
+      text-align: center;
+      vertical-align: middle;
+      min-width: 60px;
+    }
+    
+    .cluster-column-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 500;
+      color: white;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    
+    .cluster-column-chip:hover {
+      opacity: 0.8;
+    }
+    
+    .cluster-cell-size {
+      font-size: 10px;
+      color: #888;
+      margin-top: 2px;
+    }
+    
+    .cluster-cell-misc {
+      font-size: 11px;
+      color: #999;
+      font-style: italic;
     }
     
     /* Help menu corner styling */
@@ -870,115 +987,115 @@
     
     </style>
     <!-- end 'style/style.css' -->
-        <!-- begin 'style/notif.css' -->
+        <!-- begin '../../libs/notif.css' -->
     <style>
     /* Notification system styling */
     .notification-container {
-      position: fixed;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1001;
-      pointer-events: none;
+    	position: fixed;
+    	top: 0;
+    	left: 50%;
+    	transform: translateX(-50%);
+    	z-index: 1001;
+    	pointer-events: none;
     }
     
     .notification-indicator {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 34, 68, 0.95);
-      color: #00ff00;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-family: "Courier New", monospace;
-      font-size: 12px;
-      font-weight: bold;
-      display: block;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      border: 1px solid #00ff00;
-      min-width: 200px;
-      text-align: center;
-      transition: all 0.3s ease;
-      opacity: 1;
-      margin-bottom: 10px;
+    	position: absolute;
+    	left: 50%;
+    	transform: translateX(-50%);
+    	background: rgba(0, 34, 68, 0.95);
+    	color: #00ff00;
+    	padding: 12px 24px;
+    	border-radius: 8px;
+    	font-family: "Courier New", monospace;
+    	font-size: 12px;
+    	font-weight: bold;
+    	display: block;
+    	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    	border: 1px solid #00ff00;
+    	min-width: 200px;
+    	text-align: center;
+    	transition: all 0.3s ease;
+    	opacity: 1;
+    	margin-bottom: 10px;
     }
     
     /* Success styling */
     .notification-indicator.success {
-      background: rgba(0, 68, 34, 0.95);
-      border-color: #00ff88;
-      color: #00ff88;
+    	background: rgba(0, 68, 34, 0.95);
+    	border-color: #00ff88;
+    	color: #00ff88;
     }
     
     /* Error styling */
     .notification-indicator.error {
-      background: rgba(68, 0, 0, 0.95);
-      border-color: #ff4444;
-      color: #ff4444;
+    	background: rgba(68, 0, 0, 0.95);
+    	border-color: #ff4444;
+    	color: #ff4444;
     }
     
     /* Loading spinner */
     .notification-spinner {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      border: 2px solid #004400;
-      border-radius: 50%;
-      border-top-color: #00ff00;
-      animation: spin 1s ease-in-out infinite;
-      margin-right: 8px;
-      vertical-align: middle;
+    	display: inline-block;
+    	width: 12px;
+    	height: 12px;
+    	border: 2px solid #004400;
+    	border-radius: 50%;
+    	border-top-color: #00ff00;
+    	animation: spin 1s ease-in-out infinite;
+    	margin-right: 8px;
+    	vertical-align: middle;
     }
     
     .notification-indicator.success .notification-spinner {
-      border-color: #004400;
-      border-top-color: #00ff88;
+    	border-color: #004400;
+    	border-top-color: #00ff88;
     }
     
     .notification-indicator.error .notification-spinner {
-      display: none;
-      /* No spinner for errors */
+    	display: none;
+    	/* No spinner for errors */
     }
     
     /* Progress bar components */
     .notification-progress-container {
-      width: 100%;
-      height: 6px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 3px;
-      margin-top: 8px;
-      overflow: hidden;
+    	width: 100%;
+    	height: 6px;
+    	background: rgba(255, 255, 255, 0.1);
+    	border-radius: 3px;
+    	margin-top: 8px;
+    	overflow: hidden;
     }
     
     .notification-progress-bar {
-      height: 100%;
-      background: #00ff00;
-      border-radius: 3px;
-      transition: width 0.3s ease;
-      width: 0%;
+    	height: 100%;
+    	background: #00ff00;
+    	border-radius: 3px;
+    	transition: width 0.3s ease;
+    	width: 0%;
     }
     
     .notification-indicator.success .notification-progress-bar {
-      background: #00ff88;
+    	background: #00ff88;
     }
     
     .notification-indicator.error .notification-progress-bar {
-      background: #ff4444;
+    	background: #ff4444;
     }
     
     @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
+    	to {
+    		transform: rotate(360deg);
+    	}
     }
     
     /* Hide spinner when not in spinner mode */
     .notification-indicator:not(.spinner) .notification-spinner {
-      display: none;
+    	display: none;
     }
     
     </style>
-    <!-- end 'style/notif.css' -->
+    <!-- end '../../libs/notif.css' -->
         <!-- begin 'util/config.js' -->
     <script>
     /**
@@ -1047,6 +1164,7 @@
           "../../patterns/single.html?prompt={prompt_hash}&head={model}.L{layer}.H{head}",
         patternlens_url_template:
           "../../patterns/index.html?models={model}&heads-{model}=L{layer}H{head}&prompts={prompt_hashes}",
+        rendered_prompts_url: "../../patterns/rendered_prompts.jsonl",
       };
     
       if (INLINE_CONFIG) {
@@ -1542,261 +1660,270 @@
     <script>
       console.log(CONFIG);
     </script>
-        <!-- begin 'util/notif.js' -->
+        <!-- begin '../../libs/notif.js' -->
     <script>
-    /* notif.js - Standalone notification system */
+    /**
+     * @fileoverview Notification system
+     * @module notif
+     * @license GPLv3
+     * @see {@link https://github.com/mivanit/js-dev-toolkit}
+     */
     class NotificationManager {
-      constructor(options = {}) {
-        // Timeout settings
-        this.defaultTimeout = options.defaultTimeout || 4000;
-        this.successTimeout = options.successTimeout || 2000;
-        this.fadeTimeout = options.fadeTimeout || 300;
+    	constructor(options = {}) {
+    		// Timeout settings
+    		this.defaultTimeout = options.defaultTimeout || 4000;
+    		this.successTimeout = options.successTimeout || 2000;
+    		this.fadeTimeout = options.fadeTimeout || 300;
     
-        // Layout settings
-        this.topOffset = options.topOffset || 20;
-        this.spacing = options.spacing || 60;
-        this.slideOffset = options.slideOffset || -20;
+    		// Layout settings
+    		this.topOffset = options.topOffset || 20;
+    		this.spacing = options.spacing || 60;
+    		this.slideOffset = options.slideOffset || -20;
     
-        this.notifications = new Map(); // Map of id -> notification data
-        this.nextId = 0;
-        this.container = null;
-        this.isReady = false;
+    		this.notifications = new Map(); // Map of id -> notification data
+    		this.nextId = 0;
+    		this.container = null;
+    		this.isReady = false;
     
-        // Initialize when DOM is ready
-        this._initWhenReady();
-      }
+    		// Initialize when DOM is ready
+    		this._initWhenReady();
+    	}
     
-      _initWhenReady() {
-        if (document.body) {
-          this._createContainer();
-          this.isReady = true;
-        } else if (document.readyState === "loading") {
-          document.addEventListener("DOMContentLoaded", () => {
-            this._createContainer();
-            this.isReady = true;
-          });
-        } else {
-          // DOM is ready but body might not be parsed yet
-          setTimeout(() => this._initWhenReady(), 10);
-        }
-      }
+    	_initWhenReady() {
+    		if (document.body) {
+    			this._createContainer();
+    			this.isReady = true;
+    		} else if (document.readyState === "loading") {
+    			document.addEventListener("DOMContentLoaded", () => {
+    				this._createContainer();
+    				this.isReady = true;
+    			});
+    		} else {
+    			// DOM is ready but body might not be parsed yet
+    			setTimeout(() => this._initWhenReady(), 10);
+    		}
+    	}
     
-      _createContainer() {
-        if (this.container) return; // Already created
+    	_createContainer() {
+    		if (this.container) return; // Already created
     
-        this.container = document.createElement("div");
-        this.container.className = "notification-container";
-        document.body.appendChild(this.container);
-      }
+    		this.container = document.createElement("div");
+    		this.container.className = "notification-container";
+    		document.body.appendChild(this.container);
+    	}
     
-      _ensureReady() {
-        if (!this.isReady) {
-          console.warn(
-            "NotificationManager not ready yet, initializing synchronously",
-          );
-          this._createContainer();
-          this.isReady = true;
-        }
-      }
+    	_ensureReady() {
+    		if (!this.isReady) {
+    			console.warn(
+    				"NotificationManager not ready yet, initializing synchronously",
+    			);
+    			this._createContainer();
+    			this.isReady = true;
+    		}
+    	}
     
-      _createNotificationElement(id, type, message) {
-        this._ensureReady();
+    	_createNotificationElement(id, type, message) {
+    		this._ensureReady();
     
-        const element = document.createElement("div");
-        element.className = `notification-indicator visible ${type}`;
-        element.dataset.id = id;
+    		const element = document.createElement("div");
+    		element.className = `notification-indicator visible ${type}`;
+    		element.dataset.id = id;
     
-        if (type === "spinner") {
-          element.innerHTML = `
+    		if (type === "spinner") {
+    			element.innerHTML = `
                     <span class="notification-spinner"></span>
                     <span class="notification-text">${message}</span>
                 `;
-        } else if (type === "pbar") {
-          element.innerHTML = `
+    		} else if (type === "pbar") {
+    			element.innerHTML = `
                     <div class="notification-text">${message}</div>
                     <div class="notification-progress-container">
                         <div class="notification-progress-bar" style="width: 0%"></div>
                     </div>
                 `;
-        } else {
-          element.innerHTML = `
+    		} else {
+    			element.innerHTML = `
                     <span class="notification-text">${message}</span>
                 `;
-        }
+    		}
     
-        this.container.appendChild(element);
-        this._updatePositions();
-        return element;
-      }
+    		this.container.appendChild(element);
+    		this._updatePositions();
+    		return element;
+    	}
     
-      _updatePositions() {
-        if (!this.container) return;
+    	_updatePositions() {
+    		if (!this.container) return;
     
-        const notifications = Array.from(this.container.children);
-        notifications.forEach((el, index) => {
-          el.style.top = `${this.topOffset + index * this.spacing}px`;
-        });
-      }
+    		const notifications = Array.from(this.container.children);
+    		notifications.forEach((el, index) => {
+    			el.style.top = `${this.topOffset + index * this.spacing}px`;
+    		});
+    	}
     
-      _removeNotification(id) {
-        const notifData = this.notifications.get(id);
-        if (!notifData) return;
+    	_removeNotification(id) {
+    		const notifData = this.notifications.get(id);
+    		if (!notifData) return;
     
-        // Clear timeout if exists
-        if (notifData.timeout) {
-          clearTimeout(notifData.timeout);
-        }
+    		// Clear timeout if exists
+    		if (notifData.timeout) {
+    			clearTimeout(notifData.timeout);
+    		}
     
-        // Remove element with fade animation
-        notifData.element.style.opacity = "0";
-        notifData.element.style.transform = `translateX(-50%) translateY(${this.slideOffset}px)`;
+    		// Remove element with fade animation
+    		notifData.element.style.opacity = "0";
+    		notifData.element.style.transform = `translateX(-50%) translateY(${this.slideOffset}px)`;
     
-        setTimeout(() => {
-          if (notifData.element.parentNode) {
-            notifData.element.parentNode.removeChild(notifData.element);
-          }
-          this.notifications.delete(id);
-          this._updatePositions();
-        }, this.fadeTimeout);
-      }
+    		setTimeout(() => {
+    			if (notifData.element.parentNode) {
+    				notifData.element.parentNode.removeChild(notifData.element);
+    			}
+    			this.notifications.delete(id);
+    			this._updatePositions();
+    		}, this.fadeTimeout);
+    	}
     
-      /**
-       * Show a regular notification message
-       * @param {string} message - Message to display
-       * @param {number} timeout - Auto-hide timeout in ms (default from constructor)
-       */
-      show(message, timeout = null) {
-        console.log(message);
+    	/**
+    	 * Show a regular notification message
+    	 * @param {string} message - Message to display
+    	 * @param {number} timeout - Auto-hide timeout in ms (default from constructor)
+    	 */
+    	show(message, timeout = null) {
+    		console.log(message);
     
-        const id = this.nextId++;
-        const element = this._createNotificationElement(id, "show", message);
+    		const id = this.nextId++;
+    		const element = this._createNotificationElement(id, "show", message);
     
-        const hideTimeout = timeout || this.defaultTimeout;
-        const timeoutId = setTimeout(() => {
-          this._removeNotification(id);
-        }, hideTimeout);
+    		const hideTimeout = timeout || this.defaultTimeout;
+    		const timeoutId = setTimeout(() => {
+    			this._removeNotification(id);
+    		}, hideTimeout);
     
-        this.notifications.set(id, {
-          element,
-          type: "show",
-          timeout: timeoutId,
-        });
-      }
+    		this.notifications.set(id, {
+    			element,
+    			type: "show",
+    			timeout: timeoutId,
+    		});
+    	}
     
-      /**
-       * Show a persistent spinner with message
-       * @param {string} message - Loading message to display
-       * @returns {object} Spinner control object with .complete() method
-       */
-      spinner(message) {
-        console.log(message);
+    	/**
+    	 * Show a persistent spinner with message
+    	 * @param {string} message - Loading message to display
+    	 * @returns {object} Spinner control object with .complete() method
+    	 */
+    	spinner(message) {
+    		console.log(message);
     
-        const id = this.nextId++;
-        const element = this._createNotificationElement(id, "spinner", message);
+    		const id = this.nextId++;
+    		const element = this._createNotificationElement(id, "spinner", message);
     
-        this.notifications.set(id, {
-          element,
-          type: "spinner",
-          timeout: null,
-        });
+    		this.notifications.set(id, {
+    			element,
+    			type: "spinner",
+    			timeout: null,
+    		});
     
-        return {
-          complete: () => {
-            this._removeNotification(id);
-          },
-        };
-      }
+    		return {
+    			complete: () => {
+    				this._removeNotification(id);
+    			},
+    		};
+    	}
     
-      /**
-       * Show a persistent progress bar with message
-       * @param {string} message - Loading message to display
-       * @returns {object} Progress bar control object with .progress(value) method
-       */
-      pbar(message) {
-        console.log(message);
+    	/**
+    	 * Show a persistent progress bar with message
+    	 * @param {string} message - Loading message to display
+    	 * @returns {object} Progress bar control object with .progress(value) method
+    	 */
+    	pbar(message) {
+    		console.log(message);
     
-        const id = this.nextId++;
-        const element = this._createNotificationElement(id, "pbar", message);
+    		const id = this.nextId++;
+    		const element = this._createNotificationElement(id, "pbar", message);
     
-        this.notifications.set(id, {
-          element,
-          type: "pbar",
-          timeout: null,
-        });
+    		this.notifications.set(id, {
+    			element,
+    			type: "pbar",
+    			timeout: null,
+    		});
     
-        return {
-          progress: (value) => {
-            const progressBar = element.querySelector(".notification-progress-bar");
-            if (progressBar) {
-              const percentage = Math.max(0, Math.min(100, value * 100));
-              progressBar.style.width = `${percentage}%`;
-            }
-          },
-          complete: () => {
-            this._removeNotification(id);
-          },
-        };
-      }
+    		return {
+    			progress: (value) => {
+    				const progressBar = element.querySelector(
+    					".notification-progress-bar",
+    				);
+    				if (progressBar) {
+    					const percentage = Math.max(0, Math.min(100, value * 100));
+    					progressBar.style.width = `${percentage}%`;
+    				}
+    			},
+    			complete: () => {
+    				this._removeNotification(id);
+    			},
+    		};
+    	}
     
-      /**
-       * Show success message
-       * @param {string} message - Success message
-       * @param {number} timeout - Auto-hide timeout in ms (default from constructor)
-       */
-      success(message, timeout = null) {
-        console.log(message);
+    	/**
+    	 * Show success message
+    	 * @param {string} message - Success message
+    	 * @param {number} timeout - Auto-hide timeout in ms (default from constructor)
+    	 */
+    	success(message, timeout = null) {
+    		console.log(message);
     
-        const id = this.nextId++;
-        const element = this._createNotificationElement(id, "success", message);
+    		const id = this.nextId++;
+    		const element = this._createNotificationElement(id, "success", message);
     
-        const hideTimeout = timeout || this.successTimeout;
-        const timeoutId = setTimeout(() => {
-          this._removeNotification(id);
-        }, hideTimeout);
+    		const hideTimeout = timeout || this.successTimeout;
+    		const timeoutId = setTimeout(() => {
+    			this._removeNotification(id);
+    		}, hideTimeout);
     
-        this.notifications.set(id, {
-          element,
-          type: "success",
-          timeout: timeoutId,
-        });
-      }
+    		this.notifications.set(id, {
+    			element,
+    			type: "success",
+    			timeout: timeoutId,
+    		});
+    	}
     
-      /**
-       * Show error message
-       * @param {string} message - Error message
-       * @param {Error} err - Error object to log
-       * @param {number} timeout - Auto-hide timeout in ms (default from constructor)
-       */
-      error(message, err = null, timeout = null) {
-        if (err) {
-          console.error(err);
-        } else {
-          console.error(message);
-        }
+    	/**
+    	 * Show error message
+    	 * @param {string} message - Error message
+    	 * @param {Error} err - Error object to log
+    	 * @param {number} timeout - Auto-hide timeout in ms (null for persistent, default 10s)
+    	 */
+    	error(message, err = null, timeout = 10000) {
+    		if (err) {
+    			console.error(err);
+    		} else {
+    			console.error(message);
+    		}
     
-        const id = this.nextId++;
-        const element = this._createNotificationElement(id, "error", message);
+    		const id = this.nextId++;
+    		const element = this._createNotificationElement(id, "error", message);
     
-        const hideTimeout = timeout || this.defaultTimeout;
-        const timeoutId = setTimeout(() => {
-          this._removeNotification(id);
-        }, hideTimeout);
+    		let timeoutId = null;
+    		if (timeout !== null) {
+    			timeoutId = setTimeout(() => {
+    				this._removeNotification(id);
+    			}, timeout);
+    		}
     
-        this.notifications.set(id, {
-          element,
-          type: "error",
-          timeout: timeoutId,
-        });
-      }
+    		this.notifications.set(id, {
+    			element,
+    			type: "error",
+    			timeout: timeoutId,
+    		});
+    	}
     
-      /**
-       * Hide all notifications
-       */
-      clear() {
-        for (const [id] of this.notifications) {
-          this._removeNotification(id);
-        }
-      }
+    	/**
+    	 * Hide all notifications
+    	 */
+    	clear() {
+    		for (const [id] of this.notifications) {
+    			this._removeNotification(id);
+    		}
+    	}
     }
     
     // Initialize global instance when DOM is ready
@@ -1804,16 +1931,16 @@
     
     // Initialize immediately if DOM is already ready, otherwise wait
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", () => {
-        NOTIF = new NotificationManager();
-      });
+    	document.addEventListener("DOMContentLoaded", () => {
+    		NOTIF = new NotificationManager();
+    	});
     } else {
-      // DOM already loaded
-      NOTIF = new NotificationManager();
+    	// DOM already loaded
+    	NOTIF = new NotificationManager();
     }
     
     </script>
-    <!-- end 'util/notif.js' -->
+    <!-- end '../../libs/notif.js' -->
         <!-- begin '../../libs/array.js' -->
     <script>
     /**
@@ -3318,6 +3445,35 @@
         await this._ensureLoaded();
         return this._hashToIndex ? Object.keys(this._hashToIndex) : [];
       }
+    
+      /**
+       * Load the set of prompt hashes that were actually rendered as PNGs.
+       * Returns null if rendered_prompts.jsonl doesn't exist (all prompts rendered).
+       * @returns {Promise<Set<string>|null>}
+       */
+      async loadRenderedHashes() {
+        try {
+          const url = CONFIG.rendered_prompts_url;
+          if (!url) return null;
+          const resp = await fetch(url);
+          if (!resp.ok) return null;
+          const text = await resp.text();
+          const hashes = new Set();
+          for (const line of text.trim().split("\n")) {
+            if (!line.trim()) continue;
+            try {
+              const prompt = JSON.parse(line);
+              if (prompt.hash) hashes.add(prompt.hash);
+            } catch (e) {
+              console.warn("Failed to parse rendered_prompts line:", line, e);
+            }
+          }
+          return hashes.size > 0 ? hashes : null;
+        } catch (e) {
+          console.warn("rendered_prompts.jsonl not available, using all prompts");
+          return null;
+        }
+      }
     }
     
     </script>
@@ -3578,7 +3734,8 @@
      * ClusteringLoader - Loads hierarchical clustering data for AttentionPedia
      *
      * Loads the linkage matrix and computes cluster assignments client-side,
-     * allowing dynamic adjustment of the number of clusters.
+     * allowing dynamic adjustment of the number of clusters, cut height,
+     * and minimum cluster size.
      */
     class ClusteringLoader {
       constructor() {
@@ -3587,7 +3744,11 @@
         this._is_loaded = false;
         this._load_promise = null;
         this._assignments = {};
+        this._rawAssignments = {}; // before min-size filtering
         this._nClusters = 10;
+        this._cutHeight = null;
+        this._maxCutHeight = null;
+        this._minClusterSize = 0;
     
         // Generate distinct colors using golden angle
         this._colors = this._generateColors(50);
@@ -3646,8 +3807,13 @@
           this._linkage = await linkageResp.json();
           this._is_loaded = true;
     
+          // Compute max cut height from linkage
+          if (this._linkage && this._linkage.length > 0) {
+            this._maxCutHeight = Math.max(...this._linkage.map((row) => row[2]));
+          }
+    
           // Compute initial assignments
-          this._computeAssignments(this._nClusters);
+          this._computeAssignmentsByNClusters(this._nClusters);
         } catch (e) {
           console.warn("Failed to load clustering data:", e);
           this._is_loaded = true;
@@ -3663,26 +3829,15 @@
       }
     
       /**
-       * Compute cluster assignments for n clusters
+       * Core: compute raw cluster assignments by cutting at a given height.
+       * Returns raw assignments before min-size filtering.
        */
-      _computeAssignments(nClusters) {
-        if (!this._linkage || !this._meta) return;
+      _computeByHeight(cutHeight) {
+        if (!this._linkage || !this._meta) return {};
     
         const linkage = this._linkage;
         const clsValues = this._meta.cls_values;
         const n = clsValues.length;
-    
-        if (nClusters >= n) {
-          // Each head is its own cluster
-          clsValues.forEach((cls, i) => {
-            this._assignments[cls] = i;
-          });
-          return;
-        }
-    
-        // Find cut height for desired clusters
-        const heights = linkage.map((row) => row[2]).sort((a, b) => b - a);
-        const cutHeight = heights[n - nClusters - 1] + 1e-10;
     
         // Union-find for cluster membership
         const parent = Array.from({ length: 2 * n - 1 }, (_, i) => i);
@@ -3708,17 +3863,95 @@
         // Assign cluster IDs
         const rootToCluster = {};
         let nextCluster = 0;
+        const raw = {};
     
-        this._assignments = {};
         for (let i = 0; i < n; i++) {
           const root = find(i);
           if (!(root in rootToCluster)) {
             rootToCluster[root] = nextCluster++;
           }
-          this._assignments[clsValues[i]] = rootToCluster[root];
+          raw[clsValues[i]] = rootToCluster[root];
         }
     
+        return raw;
+      }
+    
+      /**
+       * Apply min-size filtering: clusters smaller than minSize get id = -1 (misc).
+       * Renumbers remaining clusters contiguously.
+       */
+      _applyMinSizeFilter(raw) {
+        if (this._minClusterSize <= 0) return { ...raw };
+    
+        // Count sizes
+        const sizes = {};
+        for (const cid of Object.values(raw)) {
+          sizes[cid] = (sizes[cid] || 0) + 1;
+        }
+    
+        // Build remap: small clusters -> -1, others renumbered
+        const remap = {};
+        let nextId = 0;
+        for (const [cid, size] of Object.entries(sizes)) {
+          if (size >= this._minClusterSize) {
+            remap[cid] = nextId++;
+          } else {
+            remap[cid] = -1;
+          }
+        }
+    
+        const filtered = {};
+        for (const [headId, cid] of Object.entries(raw)) {
+          filtered[headId] = remap[cid];
+        }
+        return filtered;
+      }
+    
+      /**
+       * Compute assignments by target number of clusters
+       */
+      _computeAssignmentsByNClusters(nClusters) {
+        if (!this._linkage || !this._meta) return;
+    
+        const clsValues = this._meta.cls_values;
+        const n = clsValues.length;
+    
+        if (nClusters >= n) {
+          this._rawAssignments = {};
+          clsValues.forEach((cls, i) => {
+            this._rawAssignments[cls] = i;
+          });
+          this._cutHeight = this._maxCutHeight;
+          this._nClusters = nClusters;
+          this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+          return;
+        }
+    
+        // Find cut height for desired clusters
+        const heights = this._linkage.map((row) => row[2]).sort((a, b) => b - a);
+        const cutHeight = heights[n - nClusters - 1] + 1e-10;
+    
+        this._cutHeight = cutHeight;
+        this._rawAssignments = this._computeByHeight(cutHeight);
+        this._assignments = this._applyMinSizeFilter(this._rawAssignments);
         this._nClusters = nClusters;
+      }
+    
+      /**
+       * Compute assignments by cut height
+       */
+      _computeAssignmentsByCutHeight(cutHeight) {
+        if (!this._linkage || !this._meta) return;
+    
+        this._cutHeight = cutHeight;
+        this._rawAssignments = this._computeByHeight(cutHeight);
+        this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+    
+        // Count actual clusters (excluding -1)
+        const clusterIds = new Set(
+          Object.values(this._assignments).filter((c) => c !== -1),
+        );
+        this._nClusters = clusterIds.size;
       }
     
       /**
@@ -3726,7 +3959,50 @@
        */
       async setNClusters(n) {
         await this._ensureLoaded();
-        this._computeAssignments(n);
+        this._computeAssignmentsByNClusters(n);
+      }
+    
+      /**
+       * Set cut height and recompute assignments
+       */
+      async setCutHeight(h) {
+        await this._ensureLoaded();
+        this._computeAssignmentsByCutHeight(h);
+      }
+    
+      /**
+       * Set minimum cluster size and reapply filtering
+       */
+      async setMinClusterSize(n) {
+        await this._ensureLoaded();
+        this._minClusterSize = Math.max(0, n);
+        this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+        // Recount actual clusters
+        const clusterIds = new Set(
+          Object.values(this._assignments).filter((c) => c !== -1),
+        );
+        this._nClusters = clusterIds.size;
+      }
+    
+      /**
+       * Get current cut height
+       */
+      getCutHeight() {
+        return this._cutHeight;
+      }
+    
+      /**
+       * Get max possible cut height (max merge distance)
+       */
+      getMaxCutHeight() {
+        return this._maxCutHeight;
+      }
+    
+      /**
+       * Get current min cluster size
+       */
+      getMinClusterSize() {
+        return this._minClusterSize;
       }
     
       /**
@@ -3735,7 +4011,15 @@
       async getColor(headId) {
         await this._ensureLoaded();
         const clusterId = this._assignments[headId];
-        if (clusterId === undefined) return "transparent";
+        if (clusterId === undefined || clusterId === -1) return "transparent";
+        return this._colors[clusterId % this._colors.length];
+      }
+    
+      /**
+       * Get color for a cluster ID (synchronous, for use after loading)
+       */
+      getClusterColor(clusterId) {
+        if (clusterId === undefined || clusterId === -1) return "#888888";
         return this._colors[clusterId % this._colors.length];
       }
     
@@ -3758,22 +4042,61 @@
       }
     
       /**
-       * Get current number of clusters
+       * Get current number of clusters (excluding misc/-1)
        */
       getNClusters() {
         return this._nClusters;
       }
     
       /**
-       * Get cluster sizes
+       * Get actual cluster count (excluding -1 misc cluster)
+       */
+      getNClustersActual() {
+        const clusterIds = new Set(
+          Object.values(this._assignments).filter((c) => c !== -1),
+        );
+        return clusterIds.size;
+      }
+    
+      /**
+       * Get cluster sizes (excluding -1 misc cluster)
        */
       async getClusterSizes() {
         await this._ensureLoaded();
         const sizes = {};
         for (const clusterId of Object.values(this._assignments)) {
+          if (clusterId === -1) continue;
           sizes[clusterId] = (sizes[clusterId] || 0) + 1;
         }
         return sizes;
+      }
+    
+      /**
+       * Get number of unclustered heads (cluster -1, from min-size filtering)
+       */
+      getUnclusteredCount() {
+        let count = 0;
+        for (const cid of Object.values(this._assignments)) {
+          if (cid === -1) count++;
+        }
+        return count;
+      }
+    
+      /**
+       * Get top N clusters sorted by size descending
+       * @param {number} n - how many to return
+       * @returns {Array<{id: number, size: number, color: string}>}
+       */
+      async getTopClusters(n) {
+        const sizes = await this.getClusterSizes();
+        const sorted = Object.entries(sizes)
+          .map(([id, size]) => ({
+            id: parseInt(id),
+            size,
+            color: this.getClusterColor(parseInt(id)),
+          }))
+          .sort((a, b) => b.size - a.size);
+        return sorted.slice(0, n);
       }
     }
     
@@ -3789,6 +4112,7 @@
         prompts: [],
         allPrompts: [],
         allPromptsCount: 0,
+        renderedPromptsCount: null, // null = all rendered, number = subset
         heads_display: [],
         heads_display_with_distances: [],
         current_head: null,
@@ -3831,6 +4155,12 @@
         n_clusters: 10,
         show_cluster_colors: true,
         cluster_stats: null,
+        cluster_cut_height: null,
+        cluster_max_height: null,
+        cluster_min_size: 0,
+        top_clusters: [],
+        current_head_cluster: null, // {id, size, color}
+        _updateGeneration: 0, // guards against stale async updates
     
         async init() {
           await getConfig();
@@ -3841,6 +4171,19 @@
             this.prompts_loader = new PromptsLoader();
             this.allPrompts = await this.prompts_loader.get_all();
             this.allPromptsCount = this.allPrompts.length;
+    
+            // Filter to only rendered prompts if rendered_prompts.jsonl exists
+            const renderedHashes = await this.prompts_loader.loadRenderedHashes();
+            if (renderedHashes) {
+              this.allPrompts = this.allPrompts.filter((p) =>
+                renderedHashes.has(p.hash),
+              );
+              this.renderedPromptsCount = this.allPrompts.length;
+              console.log(
+                `Filtered to ${this.renderedPromptsCount}/${this.allPromptsCount} rendered prompts`,
+              );
+            }
+    
             this.n_prompts = CONFIG.n_prompts || 5;
     
             // Load model data for filtering
@@ -3915,7 +4258,9 @@
             if (this.clustering_available) {
               this.n_clusters = CONFIG.default_n_clusters || 10;
               await this.clustering.setNClusters(this.n_clusters);
-              await this.updateClusterStats();
+              this.cluster_cut_height = this.clustering.getCutHeight();
+              this.cluster_max_height = this.clustering.getMaxCutHeight();
+              await this.updateClusterInfo();
             }
     
             await this.updateHeadsWithDistances();
@@ -3973,6 +4318,8 @@
         },
     
         async updateHeadsWithDistances() {
+          const generation = ++this._updateGeneration;
+    
           if (!this.current_head) {
             this.heads_display_with_distances = [];
             return;
@@ -3989,6 +4336,7 @@
               rank: 1,
               totalHeads: 1,
               isLoadingOthers: true,
+              clusterInfo: await this.getClusterInfo(this.current_head),
             },
           ];
     
@@ -4059,9 +4407,12 @@
                 hasMatchingClassification: shouldHighlight,
                 rank: headRankMap.get(item.head_name) || 0,
                 totalHeads: totalHeads,
+                clusterInfo: await this.getClusterInfo(item.head_name),
               });
             }
     
+            // Discard if a newer update was started while we were computing
+            if (generation !== this._updateGeneration) return;
             // Assign the complete array at once to trigger Alpine.js reactivity
             this.heads_display_with_distances = newHeadsArray;
             return;
@@ -4208,9 +4559,12 @@
               hasMatchingClassification: shouldHighlight,
               rank: headRankMap.get(item.head_name) || 0,
               totalHeads: totalHeads,
+              clusterInfo: await this.getClusterInfo(item.head_name),
             });
           }
     
+          // Discard if a newer update was started while we were computing
+          if (generation !== this._updateGeneration) return;
           // Assign the complete array at once to trigger Alpine.js reactivity
           this.heads_display_with_distances = newHeadsArray;
         },
@@ -4947,14 +5301,60 @@
           return await this.clustering.getColor(headId);
         },
     
+        async getClusterInfo(headId) {
+          if (!this.clustering_available) return null;
+          const clusterId = await this.clustering.getClusterId(headId);
+          if (clusterId === undefined || clusterId === -1) return null;
+          const sizes = await this.clustering.getClusterSizes();
+          return {
+            id: clusterId,
+            size: sizes[clusterId] || 0,
+            color: this.clustering.getClusterColor(clusterId),
+          };
+        },
+    
         async updateNClusters() {
           if (!this.clustering_available) return;
-          this.n_clusters = Math.max(2, Math.min(100, this.n_clusters));
+          this.n_clusters = Math.max(2, Math.min(200, this.n_clusters));
           await this.clustering.setNClusters(this.n_clusters);
-          // Update cluster statistics
-          await this.updateClusterStats();
-          // Force re-render of cluster colors
+          this.cluster_cut_height = this.clustering.getCutHeight();
+          await this.updateClusterInfo();
           await this.updateHeadsWithDistances();
+        },
+    
+        async updateCutHeight() {
+          if (!this.clustering_available) return;
+          this.cluster_cut_height = Math.max(
+            0,
+            Math.min(this.cluster_max_height, this.cluster_cut_height),
+          );
+          await this.clustering.setCutHeight(this.cluster_cut_height);
+          this.n_clusters = this.clustering.getNClusters();
+          await this.updateClusterInfo();
+          await this.updateHeadsWithDistances();
+        },
+    
+        async updateMinClusterSize() {
+          if (!this.clustering_available) return;
+          this.cluster_min_size = Math.max(0, this.cluster_min_size);
+          await this.clustering.setMinClusterSize(this.cluster_min_size);
+          this.n_clusters = this.clustering.getNClustersActual();
+          await this.updateClusterInfo();
+          await this.updateHeadsWithDistances();
+        },
+    
+        async updateClusterInfo() {
+          await this.updateClusterStats();
+          this.top_clusters = await this.clustering.getTopClusters(10);
+          await this.updateCurrentHeadCluster();
+        },
+    
+        async updateCurrentHeadCluster() {
+          if (!this.clustering_available || !this.current_head) {
+            this.current_head_cluster = null;
+            return;
+          }
+          this.current_head_cluster = await this.getClusterInfo(this.current_head);
         },
     
         async updateClusterStats() {
@@ -4963,7 +5363,6 @@
             return;
           }
           const sizesObj = await this.clustering.getClusterSizes();
-          // getClusterSizes returns an object {clusterId: count}, convert to array
           const sizes = Object.values(sizesObj);
           if (!sizes || sizes.length === 0) {
             this.cluster_stats = null;
@@ -4974,11 +5373,22 @@
           const avgSize = (sizes.reduce((a, b) => a + b, 0) / sizes.length).toFixed(
             1,
           );
-          this.cluster_stats = `${sizes.length} clusters (min: ${minSize}, max: ${maxSize}, avg: ${avgSize})`;
+          const unclustered = this.clustering.getUnclusteredCount();
+          let statsText = `${sizes.length} clusters (min: ${minSize}, max: ${maxSize}, avg: ${avgSize})`;
+          if (unclustered > 0) {
+            statsText += ` · ${unclustered} unclustered`;
+          }
+          this.cluster_stats = statsText;
         },
     
         toggleClusterColors() {
           this.show_cluster_colors = !this.show_cluster_colors;
+        },
+    
+        getClusterPageUrl() {
+          const url = new URL("../clustering/index.html", window.location.href);
+          url.searchParams.set("n_clusters", this.n_clusters);
+          return url.toString();
         },
       }));
     });
@@ -5115,6 +5525,118 @@
               >
             </div>
           </template>
+
+          <!-- Clustering Panel -->
+          <template x-if="clustering_available">
+            <div class="clustering-panel">
+              <div class="clustering-panel-header">
+                <h3>Clustering</h3>
+                <button
+                  class="control-button cluster-toggle-btn"
+                  @click="toggleClusterColors()"
+                  x-text="show_cluster_colors ? 'Hide Colors' : 'Show Colors'"
+                ></button>
+              </div>
+
+              <div class="cluster-control-group">
+                <label>Clusters:</label>
+                <input
+                  type="range"
+                  x-model.number="n_clusters"
+                  @input="updateNClusters()"
+                  min="2"
+                  max="200"
+                  class="cluster-slider"
+                />
+                <input
+                  type="number"
+                  x-model.number="n_clusters"
+                  @change="updateNClusters()"
+                  min="2"
+                  max="200"
+                  class="control-input"
+                />
+              </div>
+
+              <template x-if="cluster_max_height !== null">
+                <div class="cluster-control-group">
+                  <label>Cut height:</label>
+                  <input
+                    type="range"
+                    x-model.number="cluster_cut_height"
+                    @input="updateCutHeight()"
+                    min="0"
+                    :max="cluster_max_height"
+                    :step="cluster_max_height / 1000"
+                    class="cluster-slider"
+                  />
+                  <input
+                    type="number"
+                    x-model.number="cluster_cut_height"
+                    @change="updateCutHeight()"
+                    min="0"
+                    :max="cluster_max_height"
+                    :step="cluster_max_height / 1000"
+                    class="control-input"
+                  />
+                </div>
+              </template>
+
+              <div class="cluster-control-group">
+                <label>Min size:</label>
+                <input
+                  type="range"
+                  x-model.number="cluster_min_size"
+                  @input="updateMinClusterSize()"
+                  min="0"
+                  max="100"
+                  class="cluster-slider"
+                />
+                <input
+                  type="number"
+                  x-model.number="cluster_min_size"
+                  @change="updateMinClusterSize()"
+                  min="0"
+                  class="control-input"
+                />
+              </div>
+
+              <!-- Cluster statistics -->
+              <template x-if="cluster_stats">
+                <div class="cluster-stats-line" x-text="cluster_stats"></div>
+              </template>
+
+              <!-- Top clusters -->
+              <template x-if="top_clusters.length > 0">
+                <div class="top-clusters-section">
+                  <div class="top-clusters-label">Top clusters:</div>
+                  <div class="top-clusters-row">
+                    <template x-for="cluster in top_clusters" :key="cluster.id">
+                      <span
+                        class="cluster-chip"
+                        :style="`background-color: ${cluster.color}`"
+                        @click="window.open(getClusterPageUrl(), '_blank')"
+                        x-text="`#${cluster.id} (${cluster.size})`"
+                      ></span>
+                    </template>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Current head cluster info -->
+              <template x-if="current_head_cluster && !classification_mode">
+                <div class="current-head-cluster">
+                  This head: cluster
+                  <span
+                    class="cluster-chip cluster-chip-inline"
+                    :style="`background-color: ${current_head_cluster.color}`"
+                    @click="window.open(getClusterPageUrl(), '_blank')"
+                    x-text="`#${current_head_cluster.id} (${current_head_cluster.size} heads)`"
+                  ></span>
+                </div>
+              </template>
+            </div>
+          </template>
         </div>
 
         <div class="controls-section">
@@ -5164,7 +5686,7 @@
               >
                 <div
                   class="autocomplete-suggestion"
-                  :class="{ 
+                  :class="{
                                      'selected': index === selected_suggestion_index,
                                      'error': !suggestion.valid
                                  }"
@@ -5305,6 +5827,7 @@
             </div>
           </div>
 
+          <!-- Head Selection Controls -->
           <div class="controls-grid">
             <div class="control-item">
               <label>Prompts:</label>
@@ -5315,6 +5838,14 @@
                 min="1"
                 class="control-input"
               />
+            </div>
+            <div class="control-item">
+              <button
+                @click="randomizePrompts()"
+                class="control-button full-width"
+              >
+                Randomize prompts
+              </button>
             </div>
             <template x-if="!classification_mode">
               <div
@@ -5348,14 +5879,6 @@
                 />
               </div>
             </template>
-            <div class="control-item">
-              <button
-                @click="randomizePrompts()"
-                class="control-button full-width"
-              >
-                Randomize prompts
-              </button>
-            </div>
             <template x-if="!classification_mode">
               <div
                 class="control-item"
@@ -5405,36 +5928,6 @@
                 />
               </div>
             </template>
-            <!-- Clustering controls -->
-            <template x-if="clustering_available">
-              <div class="control-item">
-                <label>Clusters:</label>
-                <input
-                  type="number"
-                  x-model.number="n_clusters"
-                  @change="updateNClusters()"
-                  min="2"
-                  max="100"
-                  class="control-input"
-                />
-              </div>
-            </template>
-            <template x-if="clustering_available">
-              <div class="control-item">
-                <button
-                  class="control-button"
-                  @click="toggleClusterColors()"
-                  x-text="show_cluster_colors ? 'Hide Clusters' : 'Show Clusters'"
-                ></button>
-              </div>
-            </template>
-            <!-- Cluster statistics -->
-            <template x-if="clustering_available && cluster_stats">
-              <div class="control-item cluster-stats">
-                <span class="stats-label">Cluster sizes:</span>
-                <span class="stats-value" x-text="cluster_stats"></span>
-              </div>
-            </template>
           </div>
         </div>
       </div>
@@ -5450,6 +5943,9 @@
                 >
               </th>
               <th>Classifications</th>
+              <template x-if="clustering_available">
+                <th>Cluster</th>
+              </template>
               <template x-for="prompt in prompts" :key="prompt.hash">
                 <th
                   class="prompt-header"
@@ -5469,7 +5965,7 @@
             <!-- Loading state -->
             <tr x-show="loading">
               <td
-                :colspan="3 + prompts.length"
+                :colspan="(clustering_available ? 4 : 3) + prompts.length"
                 style="text-align: center; padding: 20px; color: #666"
               >
                 Loading attention heads data...
@@ -5478,7 +5974,7 @@
             <!-- Classification error state -->
             <tr x-show="!loading && classificationError">
               <td
-                :colspan="3 + prompts.length"
+                :colspan="(clustering_available ? 4 : 3) + prompts.length"
                 style="text-align: center; padding: 40px"
               >
                 <div
@@ -5511,7 +6007,7 @@
               x-show="!loading && !classificationError && heads_display_with_distances.length === 0"
             >
               <td
-                :colspan="3 + prompts.length"
+                :colspan="(clustering_available ? 4 : 3) + prompts.length"
                 style="text-align: center; padding: 20px; color: #666"
               >
                 No heads data available
@@ -5524,9 +6020,7 @@
               <tr x-show="!classificationError">
                 <td
                   class="head-info"
-                  x-data="{ clusterColor: 'transparent' }"
-                  x-init="clusterColor = await getClusterColor(headRow.headId)"
-                  :style="`border-left: 4px solid ${clusterColor}`"
+                  :style="`border-left: 4px solid ${(show_cluster_colors && headRow.clusterInfo) ? headRow.clusterInfo.color : 'transparent'}`"
                 >
                   <a
                     :href="getHeadLink(headRow.headId)"
@@ -5573,6 +6067,27 @@
                     <span class="no-classifications">No classifications</span>
                   </template>
                 </td>
+                <template x-if="clustering_available">
+                  <td class="cluster-cell">
+                    <template x-if="headRow.clusterInfo">
+                      <span
+                        class="cluster-column-chip"
+                        :style="`background-color: ${headRow.clusterInfo.color}`"
+                        @click="window.open(getClusterPageUrl(), '_blank')"
+                        x-text="`#${headRow.clusterInfo.id}`"
+                      ></span>
+                    </template>
+                    <template x-if="headRow.clusterInfo">
+                      <div
+                        class="cluster-cell-size"
+                        x-text="`(${headRow.clusterInfo.size} heads)`"
+                      ></div>
+                    </template>
+                    <template x-if="!headRow.clusterInfo">
+                      <span class="cluster-cell-misc">misc</span>
+                    </template>
+                  </td>
+                </template>
                 <template x-for="prompt in prompts" :key="prompt.hash">
                   <td
                     x-data="patternComponent(headRow.headId, prompt.hash)"

@@ -6,6 +6,7 @@ document.addEventListener("alpine:init", () => {
     prompts: [],
     allPrompts: [],
     allPromptsCount: 0,
+    renderedPromptsCount: null, // null = all rendered, number = subset
     heads_display: [],
     heads_display_with_distances: [],
     current_head: null,
@@ -48,6 +49,12 @@ document.addEventListener("alpine:init", () => {
     n_clusters: 10,
     show_cluster_colors: true,
     cluster_stats: null,
+    cluster_cut_height: null,
+    cluster_max_height: null,
+    cluster_min_size: 0,
+    top_clusters: [],
+    current_head_cluster: null, // {id, size, color}
+    _updateGeneration: 0, // guards against stale async updates
 
     async init() {
       await getConfig();
@@ -58,6 +65,19 @@ document.addEventListener("alpine:init", () => {
         this.prompts_loader = new PromptsLoader();
         this.allPrompts = await this.prompts_loader.get_all();
         this.allPromptsCount = this.allPrompts.length;
+
+        // Filter to only rendered prompts if rendered_prompts.jsonl exists
+        const renderedHashes = await this.prompts_loader.loadRenderedHashes();
+        if (renderedHashes) {
+          this.allPrompts = this.allPrompts.filter((p) =>
+            renderedHashes.has(p.hash),
+          );
+          this.renderedPromptsCount = this.allPrompts.length;
+          console.log(
+            `Filtered to ${this.renderedPromptsCount}/${this.allPromptsCount} rendered prompts`,
+          );
+        }
+
         this.n_prompts = CONFIG.n_prompts || 5;
 
         // Load model data for filtering
@@ -132,7 +152,9 @@ document.addEventListener("alpine:init", () => {
         if (this.clustering_available) {
           this.n_clusters = CONFIG.default_n_clusters || 10;
           await this.clustering.setNClusters(this.n_clusters);
-          await this.updateClusterStats();
+          this.cluster_cut_height = this.clustering.getCutHeight();
+          this.cluster_max_height = this.clustering.getMaxCutHeight();
+          await this.updateClusterInfo();
         }
 
         await this.updateHeadsWithDistances();
@@ -190,6 +212,8 @@ document.addEventListener("alpine:init", () => {
     },
 
     async updateHeadsWithDistances() {
+      const generation = ++this._updateGeneration;
+
       if (!this.current_head) {
         this.heads_display_with_distances = [];
         return;
@@ -206,6 +230,7 @@ document.addEventListener("alpine:init", () => {
           rank: 1,
           totalHeads: 1,
           isLoadingOthers: true,
+          clusterInfo: await this.getClusterInfo(this.current_head),
         },
       ];
 
@@ -276,9 +301,12 @@ document.addEventListener("alpine:init", () => {
             hasMatchingClassification: shouldHighlight,
             rank: headRankMap.get(item.head_name) || 0,
             totalHeads: totalHeads,
+            clusterInfo: await this.getClusterInfo(item.head_name),
           });
         }
 
+        // Discard if a newer update was started while we were computing
+        if (generation !== this._updateGeneration) return;
         // Assign the complete array at once to trigger Alpine.js reactivity
         this.heads_display_with_distances = newHeadsArray;
         return;
@@ -425,9 +453,12 @@ document.addEventListener("alpine:init", () => {
           hasMatchingClassification: shouldHighlight,
           rank: headRankMap.get(item.head_name) || 0,
           totalHeads: totalHeads,
+          clusterInfo: await this.getClusterInfo(item.head_name),
         });
       }
 
+      // Discard if a newer update was started while we were computing
+      if (generation !== this._updateGeneration) return;
       // Assign the complete array at once to trigger Alpine.js reactivity
       this.heads_display_with_distances = newHeadsArray;
     },
@@ -1164,14 +1195,60 @@ document.addEventListener("alpine:init", () => {
       return await this.clustering.getColor(headId);
     },
 
+    async getClusterInfo(headId) {
+      if (!this.clustering_available) return null;
+      const clusterId = await this.clustering.getClusterId(headId);
+      if (clusterId === undefined || clusterId === -1) return null;
+      const sizes = await this.clustering.getClusterSizes();
+      return {
+        id: clusterId,
+        size: sizes[clusterId] || 0,
+        color: this.clustering.getClusterColor(clusterId),
+      };
+    },
+
     async updateNClusters() {
       if (!this.clustering_available) return;
-      this.n_clusters = Math.max(2, Math.min(100, this.n_clusters));
+      this.n_clusters = Math.max(2, Math.min(200, this.n_clusters));
       await this.clustering.setNClusters(this.n_clusters);
-      // Update cluster statistics
-      await this.updateClusterStats();
-      // Force re-render of cluster colors
+      this.cluster_cut_height = this.clustering.getCutHeight();
+      await this.updateClusterInfo();
       await this.updateHeadsWithDistances();
+    },
+
+    async updateCutHeight() {
+      if (!this.clustering_available) return;
+      this.cluster_cut_height = Math.max(
+        0,
+        Math.min(this.cluster_max_height, this.cluster_cut_height),
+      );
+      await this.clustering.setCutHeight(this.cluster_cut_height);
+      this.n_clusters = this.clustering.getNClusters();
+      await this.updateClusterInfo();
+      await this.updateHeadsWithDistances();
+    },
+
+    async updateMinClusterSize() {
+      if (!this.clustering_available) return;
+      this.cluster_min_size = Math.max(0, this.cluster_min_size);
+      await this.clustering.setMinClusterSize(this.cluster_min_size);
+      this.n_clusters = this.clustering.getNClustersActual();
+      await this.updateClusterInfo();
+      await this.updateHeadsWithDistances();
+    },
+
+    async updateClusterInfo() {
+      await this.updateClusterStats();
+      this.top_clusters = await this.clustering.getTopClusters(10);
+      await this.updateCurrentHeadCluster();
+    },
+
+    async updateCurrentHeadCluster() {
+      if (!this.clustering_available || !this.current_head) {
+        this.current_head_cluster = null;
+        return;
+      }
+      this.current_head_cluster = await this.getClusterInfo(this.current_head);
     },
 
     async updateClusterStats() {
@@ -1180,7 +1257,6 @@ document.addEventListener("alpine:init", () => {
         return;
       }
       const sizesObj = await this.clustering.getClusterSizes();
-      // getClusterSizes returns an object {clusterId: count}, convert to array
       const sizes = Object.values(sizesObj);
       if (!sizes || sizes.length === 0) {
         this.cluster_stats = null;
@@ -1191,11 +1267,22 @@ document.addEventListener("alpine:init", () => {
       const avgSize = (sizes.reduce((a, b) => a + b, 0) / sizes.length).toFixed(
         1,
       );
-      this.cluster_stats = `${sizes.length} clusters (min: ${minSize}, max: ${maxSize}, avg: ${avgSize})`;
+      const unclustered = this.clustering.getUnclusteredCount();
+      let statsText = `${sizes.length} clusters (min: ${minSize}, max: ${maxSize}, avg: ${avgSize})`;
+      if (unclustered > 0) {
+        statsText += ` · ${unclustered} unclustered`;
+      }
+      this.cluster_stats = statsText;
     },
 
     toggleClusterColors() {
       this.show_cluster_colors = !this.show_cluster_colors;
+    },
+
+    getClusterPageUrl() {
+      const url = new URL("../clustering/index.html", window.location.href);
+      url.searchParams.set("n_clusters", this.n_clusters);
+      return url.toString();
     },
   }));
 });
