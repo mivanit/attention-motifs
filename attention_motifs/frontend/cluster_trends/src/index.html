@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cluster Trends - Attention Heads</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <nav class="nav-bar">
+      <div class="nav-bar-content">
+        <a href="../attnpedia/index.html">AttentionPedia</a>
+        <a href="../embeds/heads/index.html">3D Embeddings</a>
+        <a href="../classes/index.html">Classifications</a>
+        <a href="../clustering/index.html">Clustering</a>
+        <span class="nav-current">Cluster Trends</span>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h1>Cluster Trends</h1>
+
+      <div class="global-controls">
+        <div class="control-group">
+          <label for="k-select">Number of clusters (K):</label>
+          <select id="k-select"></select>
+        </div>
+        <div class="control-group">
+          <label for="show-lines">Lines:</label>
+          <input type="checkbox" id="show-lines" checked />
+        </div>
+      </div>
+
+      <div id="loading">Loading cluster trends data...</div>
+
+      <div id="charts-container" style="display: none">
+        <!-- Chart 1: Layer depth x cluster fraction -->
+        <div class="chart-section">
+          <h2>Cluster Fraction by Layer Depth</h2>
+          <p class="chart-desc">
+            Each point is a (model, layer, cluster). Y-axis shows fraction of
+            heads at that layer belonging to each cluster.
+          </p>
+          <div class="chart-controls">
+            <label style="font-size: 12px; color: #808090">Models:</label>
+            <div class="model-toggles" id="layer-model-toggles"></div>
+          </div>
+          <div class="chart-canvas-container">
+            <canvas id="layer-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Model size x cluster fraction -->
+        <div class="chart-section">
+          <h2>Cluster Fraction by Model Size</h2>
+          <p class="chart-desc">
+            Each point is a (model, cluster). X-axis is parameter count (log
+            scale).
+          </p>
+          <div class="chart-controls">
+            <label style="font-size: 12px; color: #808090">Families:</label>
+            <div class="family-toggles" id="size-family-toggles"></div>
+          </div>
+          <div class="chart-canvas-container">
+            <canvas id="size-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 3: Cluster entropy by layer -->
+        <div class="chart-section">
+          <h2>Cluster Entropy by Layer Depth</h2>
+          <p class="chart-desc">
+            Shannon entropy of cluster distribution at each layer. Higher = more
+            diverse clusters, lower = dominated by one cluster.
+          </p>
+          <div class="chart-controls">
+            <label style="font-size: 12px; color: #808090">Models:</label>
+            <div class="model-toggles" id="entropy-model-toggles"></div>
+          </div>
+          <div class="chart-canvas-container">
+            <canvas id="entropy-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../libs/chart.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

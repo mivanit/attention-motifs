@@ -838,6 +838,7 @@ am-frontend-fetch-libs:
 	curl -sL $(JS_DEV_TOOLKIT_URL)/array.js -o $(FRONTEND_DIR)/libs/array.js
 	curl -sL $(JS_DEV_TOOLKIT_URL)/notif.js -o $(FRONTEND_DIR)/libs/notif.js
 	curl -sL $(JS_DEV_TOOLKIT_URL)/notif.css -o $(FRONTEND_DIR)/libs/notif.css
+	curl -sL https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js -o $(FRONTEND_DIR)/libs/chart.min.js
 
 .PHONY: am-frontend-bundle
 am-frontend-bundle: am-frontend-format am-frontend-ap-build am-frontend-fetch-libs
@@ -846,6 +847,7 @@ am-frontend-bundle: am-frontend-format am-frontend-ap-build am-frontend-fetch-li
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/head_embed_table/src/index.html --output $(FRONTEND_DIR)/head_embed_table/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/classes/src/index.html --output $(FRONTEND_DIR)/classes/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/clustering/src/index.html --output $(FRONTEND_DIR)/clustering/index.html
+	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/cluster_trends/src/index.html --output $(FRONTEND_DIR)/cluster_trends/index.html
 
 
 

@@ -31,6 +31,7 @@ DataFilename = Literal[
 	"head_embed",
 	"head_embed_clustered",
 	"clustering",
+	"cluster_trends",
 	"importance",
 ]
 FigureFilename = Literal[
@@ -53,6 +54,7 @@ DATA_FNAMES: dict[DataFilename, str] = {
 	"head_embed": "head_embed.jsonl",
 	"head_embed_clustered": "head_embed_clustered.jsonl",
 	"clustering": "clustering",
+	"cluster_trends": "cluster_trends.json",
 }
 
 FIGURE_FNAMES: dict[FigureFilename, str] = {

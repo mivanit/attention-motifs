@@ -20,6 +20,7 @@ StepName = Literal[
 	"s5_head_embed",
 	"s5b_head_embed_plots",
 	"s6_clustered_embed",
+	"s6b_cluster_trends",
 ]
 
 

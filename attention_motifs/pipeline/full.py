@@ -17,6 +17,7 @@ from attention_motifs.pipeline.s4c_clustering import head_clustering
 from attention_motifs.pipeline.s5_head_embed import head_embed
 from attention_motifs.pipeline.s5b_head_embed_plots import head_embed_plots
 from attention_motifs.pipeline.s6_clustered_embed import clustered_embed
+from attention_motifs.pipeline.s6b_cluster_trends import cluster_trends
 from attention_motifs.pipeline.cfg import PipelineConfig
 from attention_motifs.pipeline.s3_feat_proc import feat_proc
 from attention_motifs.pipeline.state import PipelineState, StepName
@@ -35,6 +36,7 @@ PIPELINE_STEPS: list[tuple[StepName, Callable[[PipelineConfig], None]]] = [
 	("s5_head_embed", head_embed),
 	("s5b_head_embed_plots", head_embed_plots),
 	("s6_clustered_embed", clustered_embed),
+	("s6b_cluster_trends", cluster_trends),
 ]
 
 

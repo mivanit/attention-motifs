@@ -1,0 +1,181 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  min-height: 100vh;
+}
+
+.nav-bar {
+  background: #16213e;
+  padding: 8px 16px;
+  border-bottom: 1px solid #0f3460;
+}
+
+.nav-bar-content {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.nav-bar a {
+  color: #a0c4ff;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.nav-bar a:hover {
+  color: #fff;
+}
+
+.nav-current {
+  color: #fff;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+h1 {
+  margin-bottom: 16px;
+  font-size: 1.5em;
+}
+
+.global-controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: #16213e;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-group label {
+  font-size: 13px;
+  color: #a0a0b0;
+  white-space: nowrap;
+}
+
+select,
+input[type="checkbox"] {
+  background: #0f3460;
+  color: #e0e0e0;
+  border: 1px solid #1a4080;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+select:focus {
+  outline: 1px solid #a0c4ff;
+}
+
+.chart-section {
+  background: #16213e;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.chart-section h2 {
+  font-size: 1.1em;
+  margin-bottom: 4px;
+  color: #c0d0e0;
+}
+
+.chart-section .chart-desc {
+  font-size: 12px;
+  color: #808090;
+  margin-bottom: 12px;
+}
+
+.chart-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.chart-canvas-container {
+  position: relative;
+  width: 100%;
+  height: 400px;
+}
+
+.chart-canvas-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.toggle-btn {
+  background: #0f3460;
+  color: #a0c4ff;
+  border: 1px solid #1a4080;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.toggle-btn:hover {
+  background: #1a4080;
+}
+
+.toggle-btn.active {
+  background: #1a4080;
+  border-color: #a0c4ff;
+  color: #fff;
+}
+
+.model-toggles,
+.family-toggles {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.model-toggle,
+.family-toggle {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid #1a4080;
+  background: #0f3460;
+  color: #a0c4ff;
+  user-select: none;
+}
+
+.model-toggle.disabled,
+.family-toggle.disabled {
+  opacity: 0.35;
+  background: #0a1a30;
+}
+
+#loading {
+  text-align: center;
+  padding: 60px;
+  color: #808090;
+  font-size: 16px;
+}
