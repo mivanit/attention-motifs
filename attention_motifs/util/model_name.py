@@ -40,13 +40,32 @@ def _get_cache_path() -> Path:
 	return _cache_path
 
 
+_CACHE_ENTRY_KEYS: frozenset[str] = frozenset(_CacheEntry.__required_keys__)
+
+
 def _get_cache() -> dict[str, _CacheEntry]:
-	"""Lazy-load the disk cache into memory."""
+	"""Lazy-load the disk cache into memory.
+
+	Raises
+	------
+	ValueError
+		If the cache file exists but contains malformed entries.
+	"""
 	global _cache  # noqa: PLW0603
 	if _cache is None:
 		path: Path = _get_cache_path()
 		if path.exists():
-			_cache = json.loads(path.read_text())
+			raw: dict[str, object] = json.loads(path.read_text())
+			for key, entry in raw.items():
+				if not isinstance(entry, dict) or set(entry.keys()) != _CACHE_ENTRY_KEYS:
+					msg: str = (
+						f"Corrupt model name cache at {path}: "
+						f"entry {key!r} has keys {set(entry.keys()) if isinstance(entry, dict) else type(entry).__name__}, "
+						f"expected {_CACHE_ENTRY_KEYS}. "
+						f"Delete the file or re-run with --refresh."
+					)
+					raise ValueError(msg)
+			_cache = raw  # type: ignore[assignment]
 		else:
 			_cache = {}
 	assert _cache is not None
@@ -67,13 +86,11 @@ def _ensure_entry(name: str) -> _CacheEntry:
 	if name in cache:
 		return cache[name]
 
-	from pattern_lens.load_model import (  # noqa: PLC0415
-		resolve_model_name,
-		sanitize_model_name,
-	)
+	from pattern_lens.consts import sanitize_name_str  # noqa: PLC0415
+	from pattern_lens.load_model import resolve_model_name  # noqa: PLC0415
 
 	resolved: str = resolve_model_name(name)
-	sanitized: str = sanitize_model_name(name)
+	sanitized: str = sanitize_name_str(resolved)
 	entry: _CacheEntry = _CacheEntry(
 		original=name,
 		resolved=resolved,
