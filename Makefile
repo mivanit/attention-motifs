@@ -858,10 +858,10 @@ am-rebuild-interfaces: am-frontend-bundle
 	$(PYTHON) attention_motifs/pipeline/s4b_write_frontend.py pipeline_cfg.toml
 
 
-.PHONY: am-server-embed
-am-server-embed: am-frontend-bundle
-	@echo "start the attention head embedding server"
-	$(PYTHON) -m http.server --directory data/features/
+.PHONY: am-server
+am-server: am-frontend-bundle
+	@echo "start the attention-motifs server (serving from data/)"
+	$(PYTHON) -m http.server --directory data/
 
 .PHONY: am-server-patternlens
 am-server-patternlens:
