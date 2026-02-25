@@ -895,7 +895,7 @@ class TestSpawnModel:
 		mock_popen: MagicMock,
 		tmp_path: Path,
 	) -> None:
-		"""Model name with '/' → log file uses '_' instead (no nested dirs)."""
+		"""Model name with '/' → log file uses '-' instead (no nested dirs)."""
 		mock_proc: MagicMock = MagicMock()
 		mock_proc.poll.return_value = None
 		mock_popen.return_value = mock_proc
@@ -907,7 +907,7 @@ class TestSpawnModel:
 		scheduler.save_path = str(tmp_path)
 		scheduler._spawn_model(model, "cuda:0")
 
-		expected_log: Path = tmp_path / "meta-llama_Llama-3.2-1B_parallel.log"
+		expected_log: Path = tmp_path / "meta-llama-Llama-3.2-1B_parallel.log"
 		assert expected_log.exists()
 		# no nested directory created
 		assert not (tmp_path / "meta-llama").exists()
