@@ -835,6 +835,7 @@ am-frontend-fetch-libs:
 	curl -sL $(JS_DEV_TOOLKIT_URL)/DataFrame.js -o $(FRONTEND_DIR)/libs/DataFrame.js
 	curl -sL $(JS_DEV_TOOLKIT_URL)/yaml.js -o $(FRONTEND_DIR)/libs/yaml.js
 	curl -sL $(JS_DEV_TOOLKIT_URL)/sparklines.js -o $(FRONTEND_DIR)/libs/sparklines.js
+	curl -sL $(JS_DEV_TOOLKIT_URL)/array.js -o $(FRONTEND_DIR)/libs/array.js
 
 .PHONY: am-frontend-bundle
 am-frontend-bundle: am-frontend-format am-frontend-ap-build am-frontend-fetch-libs
