@@ -457,7 +457,7 @@ def _build_distance_tensor(
 	data
 		Feature vectors arranged as *(prompts, heads, features)*.
 	order
-		L‑p norm order passed to :func:`scipy.spatial.distance.cdist`.
+		L-p norm order passed to :func:`scipy.spatial.distance.cdist`.
 	reduce
 		If ``True`` return the ``(h, h)`` mean distance matrix.
 		If ``False`` return the full ``(h, h, p)`` tensor.
@@ -712,7 +712,7 @@ class DistanceTensorResult(SerializableDataclass):
 		feature_prefix
 			Prefix that marks feature columns.
 		order
-			L‑p norm order (1 → Manhattan, 2 → Euclidean).
+			L-p norm order (1 → Manhattan, 2 → Euclidean).
 		include_missing_prompts
 			If ``False`` (default), drop any prompt missing a row for at
 			least one class.
@@ -811,7 +811,7 @@ class DistanceTensorResult(SerializableDataclass):
 		)
 
 		if n_proc <= 1 or p <= 1:
-			# single‑process fast path (useful in tests)
+			# single-process fast path (useful in tests)
 			_init_distance_worker(data)
 			for chunk in tqdm(chunk_indices, desc="head distances"):
 				n_chunk: int = len(chunk)
