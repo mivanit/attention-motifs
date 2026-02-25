@@ -26,6 +26,7 @@ from pattern_lens.consts import (
 from pattern_lens.load_activations import load_activations
 from pattern_lens.figures import HTConfigMock
 
+from attention_motifs.util.model_name import cached_sanitize_model_name
 from attention_motifs.util.util import prefix_dict
 from attention_motifs.util.bins import Bins
 from attention_motifs.features.vec_features import vec_features
@@ -116,6 +117,13 @@ def scalar_feature_table(
 			json.loads(cfg)["model_name"]
 			for cfg in (act_path / "models.jsonl").read_text().splitlines()
 		]
+		for m in models:
+			sanitized: str = cached_sanitize_model_name(m)
+			if sanitized != m:
+				print(
+					f"\033[93m  WARNING: model name {m!r} from models.jsonl"
+					f" is not sanitized (expected {sanitized!r})\033[m"
+				)
 
 	print_log = print if verbose else lambda *args, **kwargs: None
 
