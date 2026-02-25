@@ -21,13 +21,12 @@ def head_clustering(cfg: PipelineConfig) -> None:
 		cfg.data_path("head_dists_raw")
 	)
 
-	# Compute clustering using average linkage by default
-	# TODO: could make method configurable via cfg
+	# Compute clustering
 	clustering: HierarchicalClusteringResult = (
 		HierarchicalClusteringResult.from_distance_matrix(
 			distances=head_dists.mean_dists,
 			cls_values=head_dists.cls_values,
-			method="average",
+			method=cfg.clustering_linkage_method,
 		)
 	)
 

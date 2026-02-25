@@ -50,13 +50,7 @@ def write_frontend(cfg: PipelineConfig) -> None:
 		json.dumps(embed_head_vis_cfg["cfg"], indent="\t")
 	)
 
-	# write clustering dendrogram
-	clustering_html: str = (
-		frontend_resources_path / "clustering/index.html"
-	).read_text()
-	clustering_dir: Path = cfg.vis_dir / "clustering"
-	clustering_dir.mkdir(parents=True, exist_ok=True)
-	(clustering_dir / "index.html").write_text(clustering_html)
+	# NOTE: clustering frontend is written by s6_clustered_embed (after clustering data exists)
 
 	# write head embedding table, classifications page, and main index (only if figures enabled)
 	if cfg.do_figures:

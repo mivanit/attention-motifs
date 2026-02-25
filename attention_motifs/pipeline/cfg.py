@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from attention_motifs.consts import DEFAULT_COMPRESS_LEVEL
+from attention_motifs.features.clustering import LinkageMethod
 from attention_motifs.util.model_name import cached_sanitize_model_name
 
 PIPELINE_CFG_EXAMPLES: str = """
@@ -28,6 +29,7 @@ DataFilename = Literal[
 	"head_dists_zanj",
 	"head_dists_raw",
 	"head_embed",
+	"head_embed_clustered",
 	"clustering",
 	"importance",
 ]
@@ -49,6 +51,7 @@ DATA_FNAMES: dict[DataFilename, str] = {
 	"head_dists_zanj": "head_dists.zanj",
 	"head_dists_raw": "head_dists_raw",
 	"head_embed": "head_embed.jsonl",
+	"head_embed_clustered": "head_embed_clustered.jsonl",
 	"clustering": "clustering",
 }
 
@@ -211,6 +214,12 @@ class PipelineConfig:
 		default_factory=lambda: [2, 4, 8, 16, 32, 64]
 	)
 
+	# clustering configuration
+	clustering_linkage_method: LinkageMethod = "average"
+	clustering_n_clusters_list: list[int] = field(
+		default_factory=lambda: [5, 10, 20, 50]
+	)
+
 	# computing
 	n_proc: int
 	s2_chunksize: int = 4
@@ -295,6 +304,8 @@ class PipelineConfig:
 			embedding_methods=sorted(self.embedding_methods),
 			embedding_n_components_list=sorted(self.embedding_n_components_list),
 			embedding_n_neighbors_list=sorted(self.embedding_n_neighbors_list),
+			clustering_linkage_method=self.clustering_linkage_method,
+			clustering_n_clusters_list=sorted(self.clustering_n_clusters_list),
 			render_patterns_enabled=self.render_patterns_enabled,
 			render_n_samples=self.render_n_samples,
 			render_seed=self.render_seed,
@@ -366,6 +377,17 @@ class PipelineConfig:
 			f"embedding_methods must be subset of {valid_methods}"
 		)
 
+		# Clustering validation
+		valid_linkage: set[str] = {"ward", "average", "complete", "single"}
+		assert self.clustering_linkage_method in valid_linkage, (
+			f"clustering_linkage_method must be one of {valid_linkage}"
+		)
+		assert (
+			isinstance(self.clustering_n_clusters_list, list)
+			and len(self.clustering_n_clusters_list) > 0
+			and all(k >= 2 for k in self.clustering_n_clusters_list)
+		), "clustering_n_clusters_list must be a non-empty list of integers >= 2"
+
 	def as_str(self) -> str:
 		"""Return a string representation of the configuration"""
 		return "\n".join(
@@ -414,6 +436,10 @@ class PipelineConfig:
 			embedding_n_components_list=data.get("embedding_n_components_list", [2, 3]),
 			embedding_n_neighbors_list=data.get(
 				"embedding_n_neighbors_list", [2, 4, 8, 16, 32, 64]
+			),
+			clustering_linkage_method=data.get("clustering_linkage_method", "average"),
+			clustering_n_clusters_list=data.get(
+				"clustering_n_clusters_list", [5, 10, 20, 50]
 			),
 			prompts_min_chars=data["prompts_min_chars"],
 			prompts_max_chars=data["prompts_max_chars"],

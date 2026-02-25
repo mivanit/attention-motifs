@@ -19,6 +19,7 @@ StepName = Literal[
 	"s4c_clustering",
 	"s5_head_embed",
 	"s5b_head_embed_plots",
+	"s6_clustered_embed",
 ]
 
 

@@ -17,6 +17,7 @@ prompts_min_chars = 10
 prompts_max_chars = 100
 
 embedding_n_neighbors_list = [2, 4]
+clustering_n_clusters_list = [2, 3]
 
 # computing -- no effect on the results
 n_proc = 4
