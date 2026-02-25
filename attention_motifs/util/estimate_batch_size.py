@@ -113,13 +113,20 @@ def estimate_s4_memory(
 	then estimates memory for the dense ``(p, h, d)`` array and distance
 	output tensor.
 	"""
+	from attention_motifs.util.model_name import cached_resolve_model_name
+
 	df: pl.DataFrame = fetch_model_table_df()
 
 	total_heads: int = 0
 	per_model: dict[str, dict] = {}
 	model_name: str
 	for model_name in models:
-		row_df: pl.DataFrame = df.filter(pl.col("name.default_alias") == model_name)
+		# cfg.models contains sanitized names; resolve back to the raw
+		# TransformerLens default alias used in the model table CSV.
+		resolved_name: str = cached_resolve_model_name(model_name)
+		row_df: pl.DataFrame = df.filter(
+			pl.col("name.default_alias") == resolved_name
+		)
 		if row_df.is_empty():
 			per_model[model_name] = {"error": "not found in model table"}
 			continue
@@ -139,6 +146,7 @@ def estimate_s4_memory(
 		heads: int = n_layers * n_heads
 		total_heads += heads
 		per_model[model_name] = {
+			"resolved_alias": resolved_name,
 			"n_layers": n_layers,
 			"n_heads": n_heads,
 			"heads": heads,
