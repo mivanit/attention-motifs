@@ -129,7 +129,9 @@ def estimate_s4_memory(
 		n_heads_val: int | None = row.get("cfg.n_heads")
 
 		if n_layers_val is None or n_heads_val is None:
-			per_model[model_name] = {"error": "missing n_layers or n_heads in model table"}
+			per_model[model_name] = {
+				"error": "missing n_layers or n_heads in model table"
+			}
 			continue
 
 		n_layers: int = int(n_layers_val)
@@ -152,7 +154,9 @@ def estimate_s4_memory(
 	parallel_overhead_bytes: int = n_proc * h * h * 8
 
 	# Peak for reduce=True (parallel): dense array + worker accumulators + output
-	peak_reduced_bytes: int = dense_array_bytes + parallel_overhead_bytes + output_reduced_bytes
+	peak_reduced_bytes: int = (
+		dense_array_bytes + parallel_overhead_bytes + output_reduced_bytes
+	)
 	# Peak for reduce=False (serial): dense array + full output tensor
 	peak_full_bytes: int = dense_array_bytes + output_full_bytes
 

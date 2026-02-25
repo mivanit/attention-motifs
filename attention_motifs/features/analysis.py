@@ -11,7 +11,7 @@ from typing import Self, Any
 
 import numpy as np
 import polars as pl
-from jaxtyping import Float, Int
+from jaxtyping import Float
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -735,14 +735,9 @@ class DistanceTensorResult(SerializableDataclass):
 			assert reduce, "parallel mode requires reduce=True"
 
 		# -- shared setup: DataFrame → dense (p, h, d) array ---------------
-		feat_cols: list[str] = [
-			c for c in df.columns if c.startswith(feature_prefix)
-		]
+		feat_cols: list[str] = [c for c in df.columns if c.startswith(feature_prefix)]
 		cls_values: list[str] = (
-			df.select(cls_col)
-			.get_column(cls_col)
-			.unique(maintain_order=True)
-			.to_list()
+			df.select(cls_col).get_column(cls_col).unique(maintain_order=True).to_list()
 		)
 		prompt_values: list[str] = (
 			df.select(prompt_col)
@@ -753,18 +748,14 @@ class DistanceTensorResult(SerializableDataclass):
 
 		# cache vectors keyed by (cls, prompt)
 		vectors: dict[tuple[str, str], np.ndarray] = {}
-		for row in df.select(feat_cols + [cls_col, prompt_col]).iter_rows(
-			named=True
-		):
+		for row in df.select(feat_cols + [cls_col, prompt_col]).iter_rows(named=True):
 			key: tuple[str, str] = (row[cls_col], row[prompt_col])
 			vectors[key] = np.array([row[c] for c in feat_cols], dtype=float)
 
 		# optionally drop prompts with missing class rows
 		if not include_missing_prompts:
 			prompt_values = [
-				p
-				for p in prompt_values
-				if all((c, p) in vectors for c in cls_values)
+				p for p in prompt_values if all((c, p) in vectors for c in cls_values)
 			]
 
 		h: int = len(cls_values)
@@ -773,22 +764,18 @@ class DistanceTensorResult(SerializableDataclass):
 		cls_to_i: dict[str, int] = {c: i for i, c in enumerate(cls_values)}
 
 		# pack into dense (p, h, d) array
-		data: Float[np.ndarray, "p h d"] = np.empty(
-			(p, h, d), dtype=np.float64
-		)
+		data: Float[np.ndarray, "p h d"] = np.empty((p, h, d), dtype=np.float64)
 		for k, prompt in enumerate(prompt_values):
 			for c_name in cls_values:
 				data[k, cls_to_i[c_name]] = vectors[(c_name, prompt)]
 
 		# -- dispatch -------------------------------------------------------
 		if parallel:
-			distances: Float[np.ndarray, "h h"] = (
-				cls._build_parallel(data, order=order, n_proc=n_proc)
+			distances: Float[np.ndarray, "h h"] = cls._build_parallel(
+				data, order=order, n_proc=n_proc
 			)
 		else:
-			distances = _build_distance_tensor(
-				data, order=order, reduce=reduce
-			)
+			distances = _build_distance_tensor(data, order=order, reduce=reduce)
 
 		return DistanceTensorResult(
 			cls_values=cls_values,
@@ -814,8 +801,8 @@ class DistanceTensorResult(SerializableDataclass):
 			for batch in np.array_split(range(p), min(n_proc, p))
 			if len(batch) > 0
 		]
-		worker_func: functools.partial[Float[np.ndarray, "h h"]] = (
-			functools.partial(_distance_worker, order=order)
+		worker_func: functools.partial[Float[np.ndarray, "h h"]] = functools.partial(
+			_distance_worker, order=order
 		)
 
 		# accumulate weighted sum of chunk means

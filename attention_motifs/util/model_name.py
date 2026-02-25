@@ -57,7 +57,10 @@ def _get_cache() -> dict[str, _CacheEntry]:
 		if path.exists():
 			raw: dict[str, object] = json.loads(path.read_text())
 			for key, entry in raw.items():
-				if not isinstance(entry, dict) or set(entry.keys()) != _CACHE_ENTRY_KEYS:
+				if (
+					not isinstance(entry, dict)
+					or set(entry.keys()) != _CACHE_ENTRY_KEYS
+				):
 					msg: str = (
 						f"Corrupt model name cache at {path}: "
 						f"entry {key!r} has keys {set(entry.keys()) if isinstance(entry, dict) else type(entry).__name__}, "
