@@ -443,7 +443,7 @@ def plot_importance_covariance(
 # core helper + multiprocessing plumbing for build_distance_tensor
 # ---------------------------------------------------------------------------
 
-
+# TODO: add overloads here
 def _build_distance_tensor(
 	data: Float[np.ndarray, "p h d"],
 	*,
@@ -480,6 +480,7 @@ def _build_distance_tensor(
 
 # -- multiprocessing plumbing --
 
+# TODO: is global var here a problem?
 _worker_data: Float[np.ndarray, "p h d"]  # set by Pool initializer (fork CoW)
 
 
