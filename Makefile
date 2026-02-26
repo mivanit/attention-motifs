@@ -773,12 +773,17 @@ am-setup: am-data-download-pile am-setup-playwright _am-frontend-fetch-libs am-p
 
 .PHONY: am-pipeline-download-models
 am-pipeline-download-models:
-	@echo "download models specified in $(PIPELINE_CFG_PATH)"
+	@echo "download models specified in $(PIPELINE_CFG_PATH) (HF Hub cache, no GPU needed)"
 	$(PYTHON) -m attention_motifs.pipeline.s0_download_models $(PIPELINE_CFG_PATH)
+
+.PHONY: am-test-model-load
+am-test-model-load:
+	@echo "load all models into memory to verify weights (requires GPU)"
+	$(PYTHON) -m attention_motifs.pipeline.s0_test_model_load $(PIPELINE_CFG_PATH)
 
 .PHONY: am-data-download-pile
 am-data-download-pile:
-	@echo "download Pile-10k and convert to JSONL"
+	@echo "download Pile-10k and convert to JSONL (skips if hash matches)"
 	$(PYTHON) -m attention_motifs.download_pile_10k data/text/pile_10k.jsonl
 
 .PHONY: am-setup-playwright
