@@ -87,7 +87,7 @@ DEFAULT_VIS_CONFIGS: dict[str, dict[str, Any]] = dict(
 		path="embeds/patterns/",
 		cfg_path="config.json",
 		cfg={
-			"dataFile": "../../../features/pca.jsonl",
+			"dataFile": "../../../features/pca.csv",
 			"numericalPrefix": "pc.",
 			"defaultColorColumn": "activation.model",
 			"defaultSelectionColumn": "activation.model",

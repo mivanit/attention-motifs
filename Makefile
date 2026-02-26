@@ -739,7 +739,7 @@ help:
 
 # CONFIGURE DEMO
 # --------------------------------------------------
-HF_TOKEN ?= $(shell cat .meta/local/.hf_token)
+HF_TOKEN ?= $(shell cat .meta/local/.hf-token)
 # modify this file, or point to a different one
 PIPELINE_CFG_PATH ?= pipeline_cfg.toml
 PIPELINE_ARGS ?=
@@ -752,7 +752,7 @@ FEAT_KWARGS ?=
 .PHONY: am-clean
 am-clean:
 	@echo "clean up ALL attention-motifs generated files (be careful!)"
-	rm -rf $(DEMO_DATA)
+	rm -rf data/
 
 # help for attention-motifs
 # --------------------------------------------------
@@ -871,7 +871,7 @@ am-server: am-frontend-bundle
 .PHONY: am-server-patternlens
 am-server-patternlens:
 	@echo "start the pattern lens server"
-	$(PYTHON) -m pattern_lens.server --rewrite-index --path $(DEMO_DATA)
+	$(PYTHON) -m pattern_lens.server --rewrite-index --path data/patterns
 
 # for frontend integration tests
 .PHONY: am-test-frontend
