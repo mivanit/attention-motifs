@@ -1,6 +1,6 @@
 # ty: All checks passed!
 # basedpyright: 0 errors, 0 warnings, 0 notes
-# mypy: Success: no issues found in 69 source files
+# mypy: Found 1 error in 1 file (checked 77 source files)
 
 [type_errors.ty]
 total_errors = 0
@@ -17,8 +17,10 @@ total_errors = 0
 [type_errors.basedpyright.by_file]
 
 [type_errors.mypy]
-total_errors = 0
+total_errors = 1
 
 [type_errors.mypy.by_type]
+"call-overload" = 1
 
 [type_errors.mypy.by_file]
+"attention_motifs/features/analysis.py" = 1

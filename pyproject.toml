@@ -111,7 +111,7 @@ dependencies = [
 
 # ruff config
 [tool.ruff]
-exclude = ["__pycache__"]
+exclude = ["__pycache__", ".meta/scripts/"]
 
 	[tool.ruff.lint]
 		ignore = ["F722", "F841", "F702"]

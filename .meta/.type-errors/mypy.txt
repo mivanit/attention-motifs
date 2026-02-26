@@ -1,1 +1,5 @@
-Success: no issues found in 69 source files
+attention_motifs/features/analysis.py:798: error: No overload variant of "_build_distance_tensor" matches argument types "ndarray[Any, Any]", "int", "bool"  [call-overload]
+attention_motifs/features/analysis.py:798: note: Possible overload variants:
+attention_motifs/features/analysis.py:798: note:     def _build_distance_tensor(data: ndarray[Any, Any], *, order: int = ..., reduce: Literal[True] = ...) -> ndarray[Any, Any]
+attention_motifs/features/analysis.py:798: note:     def _build_distance_tensor(data: ndarray[Any, Any], *, order: int = ..., reduce: Literal[False]) -> ndarray[Any, Any]
+Found 1 error in 1 file (checked 77 source files)
