@@ -1297,7 +1297,7 @@ class TestConfigParallelFields:
 	def test_config_loads_parallel_fields(self, tmp_path: Path) -> None:
 		"""TOML with new fields parsed correctly."""
 		toml_content: str = """\
-prompts_file = "data/text/pile_demo.jsonl"
+prompts_file = "tests/data/pile_demo.jsonl"
 patterns_dir = "data/patterns"
 features_dir = "data/features"
 prompts_n_samples = 10
@@ -1322,7 +1322,7 @@ vram_safety_factor = 2.5
 	def test_config_defaults_without_parallel_fields(self, tmp_path: Path) -> None:
 		"""Missing parallel fields → sensible defaults."""
 		toml_content: str = """\
-prompts_file = "data/text/pile_demo.jsonl"
+prompts_file = "tests/data/pile_demo.jsonl"
 patterns_dir = "data/patterns"
 features_dir = "data/features"
 prompts_n_samples = 10
@@ -1343,7 +1343,7 @@ device = "cpu"
 	def test_config_devices_fallback_to_device(self, tmp_path: Path) -> None:
 		"""No `devices` key → [device] used."""
 		toml_content: str = """\
-prompts_file = "data/text/pile_demo.jsonl"
+prompts_file = "tests/data/pile_demo.jsonl"
 patterns_dir = "data/patterns"
 features_dir = "data/features"
 prompts_n_samples = 10
@@ -1384,7 +1384,7 @@ device = "cuda:1"
 	def test_config_loads_batch_size(self, tmp_path: Path) -> None:
 		"""TOML with explicit batch_size → parsed correctly."""
 		toml_content: str = """\
-prompts_file = "data/text/pile_demo.jsonl"
+prompts_file = "tests/data/pile_demo.jsonl"
 patterns_dir = "data/patterns"
 features_dir = "data/features"
 prompts_n_samples = 10
@@ -1410,7 +1410,7 @@ batch_size = 64
 	def test_config_validates_devices_nonempty(self, tmp_path: Path) -> None:
 		"""Empty devices list fails validation."""
 		toml_content: str = """\
-prompts_file = "data/text/pile_demo.jsonl"
+prompts_file = "tests/data/pile_demo.jsonl"
 patterns_dir = "data/patterns"
 features_dir = "data/features"
 prompts_n_samples = 10
@@ -1429,7 +1429,7 @@ devices = []
 	def test_config_validates_vram_safety_positive(self, tmp_path: Path) -> None:
 		"""Negative safety factor fails validation."""
 		toml_content: str = """\
-prompts_file = "data/text/pile_demo.jsonl"
+prompts_file = "tests/data/pile_demo.jsonl"
 patterns_dir = "data/patterns"
 features_dir = "data/features"
 prompts_n_samples = 10

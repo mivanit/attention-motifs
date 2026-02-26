@@ -6,7 +6,7 @@ models = [
 ]
 
 # paths -- where to find stuff and where to save it
-prompts_file = "data/text/pile_demo.jsonl"
+prompts_file = "tests/data/pile_demo.jsonl"
 patterns_dir = "tests/.temp/patterns"
 features_dir = "tests/.temp/features"
 vis_dir = "tests/.temp/vis"
