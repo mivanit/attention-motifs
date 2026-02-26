@@ -894,7 +894,6 @@ function renderModelBox(container, modelName) {
         if (e.ctrlKey || e.metaKey) {
           const clusterId = window.CLUSTER_STATE.getClusterId(headId);
           if (clusterId !== undefined) {
-            const modelName = headId.split(":")[0];
             selectClusterForModel(clusterId, modelName);
           }
         } else if (e.shiftKey) {

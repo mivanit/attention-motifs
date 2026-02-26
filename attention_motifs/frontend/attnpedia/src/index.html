@@ -655,10 +655,7 @@
               :key="headRow.headId || `gap-${index}`"
             >
               <tr x-show="!classificationError">
-                <td
-                  class="head-info"
-                  :style="`border-left: 4px solid ${(show_cluster_colors && headRow.clusterInfo) ? headRow.clusterInfo.color : 'transparent'}`"
-                >
+                <td class="head-info">
                   <a
                     :href="getHeadLink(headRow.headId)"
                     x-text="headRow.headId"

@@ -2855,9 +2855,15 @@
             cell.classList.add("selected");
           }
     
-          // Click handler - shift-click selects all heads in cluster
+          // Click handler - shift-click selects cluster across all models,
+          // ctrl-click selects cluster in current model only
           cell.addEventListener("click", (e) => {
-            if (e.shiftKey) {
+            if (e.ctrlKey || e.metaKey) {
+              const clusterId = window.CLUSTER_STATE.getClusterId(headId);
+              if (clusterId !== undefined) {
+                selectClusterForModel(clusterId, modelName);
+              }
+            } else if (e.shiftKey) {
               const clusterId = window.CLUSTER_STATE.getClusterId(headId);
               if (clusterId !== undefined) {
                 selectCluster(clusterId);
@@ -3444,6 +3450,35 @@
         );
       } else {
         // Add all from this cluster
+        for (const h of heads) {
+          if (!gridState.selectedHeads.includes(h)) {
+            gridState.selectedHeads.push(h);
+          }
+        }
+      }
+    
+      updateSelectedCells();
+      updateSidePane();
+    }
+    
+    /**
+     * Select heads in a cluster belonging to a specific model only
+     * @param {number} clusterId - Cluster ID to select
+     * @param {string} modelName - Model name to filter by
+     */
+    function selectClusterForModel(clusterId, modelName) {
+      const allHeads = window.CLUSTER_STATE.getHeadsInCluster(clusterId);
+      const heads = allHeads.filter((h) => h.split(":")[0] === modelName);
+      if (heads.length === 0) return;
+    
+      // Toggle: if all are selected, deselect; otherwise select all
+      const allSelected = heads.every((h) => gridState.selectedHeads.includes(h));
+    
+      if (allSelected) {
+        gridState.selectedHeads = gridState.selectedHeads.filter(
+          (h) => !heads.includes(h),
+        );
+      } else {
         for (const h of heads) {
           if (!gridState.selectedHeads.includes(h)) {
             gridState.selectedHeads.push(h);
