@@ -21,6 +21,7 @@ StepName = Literal[
 	"s5b_head_embed_plots",
 	"s6_clustered_embed",
 	"s6b_cluster_trends",
+	"s6c_write_cluster_frontend",
 ]
 
 

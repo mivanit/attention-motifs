@@ -868,6 +868,7 @@ am-frontend-deploy: am-frontend-bundle
 	@echo "bundle frontend and deploy to data/ using $(PIPELINE_CFG_PATH)"
 	$(PYTHON) attention_motifs/pipeline/s1c_write_idxs.py $(PIPELINE_CFG_PATH)
 	$(PYTHON) attention_motifs/pipeline/s4b_write_frontend.py $(PIPELINE_CFG_PATH)
+	$(PYTHON) attention_motifs/pipeline/s6c_write_cluster_frontend.py $(PIPELINE_CFG_PATH)
 
 
 # --- Deploy ---

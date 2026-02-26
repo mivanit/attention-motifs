@@ -63,7 +63,7 @@ def write_frontend(cfg: PipelineConfig) -> None:
 		json.dumps(embed_head_vis_cfg["cfg"], indent="\t")
 	)
 
-	# NOTE: clustering frontend is written by s6_clustered_embed (after clustering data exists)
+	# NOTE: clustering + cluster_trends frontends are written by s6c_write_cluster_frontend
 
 	# write head embedding table, classifications page, and main index (only if figures enabled)
 	if cfg.do_figures:

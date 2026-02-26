@@ -1,12 +1,9 @@
 """Pipeline step 6: Create clustered head embeddings and write clustering frontend."""
 
-import importlib.resources
 import sys
-from pathlib import Path
 
 import polars as pl
 
-import attention_motifs
 from attention_motifs.features.clustering import HierarchicalClusteringResult
 from attention_motifs.pipeline.cfg import PipelineConfig, pipeline_step_major
 
@@ -63,20 +60,6 @@ def clustered_embed(cfg: PipelineConfig) -> None:
 			f"Saved clustered embeddings: {head_embed_df.shape} "
 			f"({len(cluster_cols)} cluster columns)"
 		)
-
-	# Write clustering frontend
-	frontend_resources_path: Path = Path(
-		importlib.resources.files(attention_motifs).joinpath("frontend"),  # type: ignore[arg-type]
-	)
-	clustering_html: str = (
-		frontend_resources_path / "clustering/index.html"
-	).read_text()
-	clustering_dir: Path = cfg.vis_dir / "clustering"
-	clustering_dir.mkdir(parents=True, exist_ok=True)
-	(clustering_dir / "index.html").write_text(clustering_html)
-
-	if cfg.verbose > 0:
-		print(f"Wrote clustering frontend to {clustering_dir}")
 
 
 if __name__ == "__main__":

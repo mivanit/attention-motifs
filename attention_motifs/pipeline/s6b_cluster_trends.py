@@ -7,7 +7,6 @@ Reads clustered head embeddings and model metadata, then computes:
 Outputs a compact JSON file for the cluster_trends frontend.
 """
 
-import importlib.resources
 import json
 import math
 import sys
@@ -16,7 +15,6 @@ from typing import Any
 
 import polars as pl
 
-import attention_motifs
 from attention_motifs.pipeline.cfg import PipelineConfig, pipeline_step_major
 
 
@@ -215,26 +213,6 @@ def cluster_trends(cfg: PipelineConfig) -> None:
 
 	if cfg.verbose > 0:
 		print(f"Wrote cluster trends to {output_path}")
-
-	# Write cluster_trends frontend
-	frontend_resources_path: Path = Path(
-		importlib.resources.files(attention_motifs).joinpath("frontend"),  # type: ignore[arg-type]
-	)
-	trends_html: str = (
-		frontend_resources_path / "cluster_trends/index.html"
-	).read_text()
-	trends_dir: Path = cfg.vis_dir / "cluster_trends"
-	trends_dir.mkdir(parents=True, exist_ok=True)
-	(trends_dir / "index.html").write_text(trends_html)
-
-	# Copy chart.min.js (too large for bundler to inline)
-	libs_src: Path = frontend_resources_path / "libs" / "chart.min.js"
-	libs_dst: Path = cfg.vis_dir.parent / "libs" / "chart.min.js"
-	libs_dst.parent.mkdir(parents=True, exist_ok=True)
-	libs_dst.write_bytes(libs_src.read_bytes())
-
-	if cfg.verbose > 0:
-		print(f"Wrote cluster_trends frontend to {trends_dir}")
 
 
 if __name__ == "__main__":
