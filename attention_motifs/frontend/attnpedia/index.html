@@ -4024,6 +4024,27 @@
       }
     
       /**
+       * Get cluster color as {r, g, b} in 0-1 range (for use with js-embedding-vis color override)
+       */
+      getClusterColorRGB(clusterId) {
+        if (clusterId === undefined || clusterId === -1) return null;
+        const hslStr = this._colors[clusterId % this._colors.length];
+        // Parse "hsl(H, S%, L%)"
+        const m = hslStr.match(/hsl\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/);
+        if (!m) return null;
+        const h = parseFloat(m[1]) / 360,
+          s = parseFloat(m[2]) / 100,
+          l = parseFloat(m[3]) / 100;
+        // HSL to RGB conversion
+        const a = s * Math.min(l, 1 - l);
+        const f = (n) => {
+          const k = (n + h * 12) % 12;
+          return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+        };
+        return { r: f(0), g: f(8), b: f(4) };
+      }
+    
+      /**
        * Get cluster ID for a head
        */
       async getClusterId(headId) {

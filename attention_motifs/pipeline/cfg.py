@@ -135,6 +135,8 @@ DEFAULT_VIS_CONFIGS: dict[str, dict[str, Any]] = dict(
 			"defaultColorColumn": "type.group",
 			"defaultSelectionColumn": "type.group",
 			"hoverColumns": ["cls", "type.primary", "type.group"],
+			"clustering_meta_url": "../../../features/clustering/clustering_meta.json",
+			"clustering_linkage_url": "../../../features/clustering/linkage.json",
 			"selectedPoints": {
 				"size": 20,
 				"sizeMin": 0.1,
@@ -161,6 +163,30 @@ DEFAULT_VIS_CONFIGS: dict[str, dict[str, Any]] = dict(
 				"mode": "url",
 				"url": {"template": "../../attnpedia/index.html?head_viewing={cls}"},
 			},
+			"customPanels": [
+				{
+					"id": "clustering",
+					"title": "Clustering",
+					"key": "Digit1",
+					"shortcutText": "1 \u2013 clustering",
+					"visible": False,
+					"position": {"top": "20px", "right": "20px"},
+					"html": (
+						'<div style="margin-bottom:8px;">'
+						'<label><input type="checkbox" id="clusterEnabled" checked> Enable cluster coloring</label>'
+						"</div>"
+						'<div style="margin-bottom:6px;">'
+						'<label>Cut Height: <span id="clusterCutHeightValue" style="color:#0f0">0</span></label>'
+						'<input type="range" id="clusterCutHeight" min="0" max="100" step="0.1" value="50" style="width:100%">'
+						"</div>"
+						'<div style="margin-bottom:6px;">'
+						'<label>Min Cluster Size: <span id="clusterMinSizeValue" style="color:#0f0">0</span></label>'
+						'<input type="range" id="clusterMinSize" min="0" max="50" step="1" value="0" style="width:100%">'
+						"</div>"
+						'<div id="clusterStats" style="font-size:11px;color:#888;margin-top:8px;"></div>'
+					),
+				}
+			],
 		},
 	),
 )

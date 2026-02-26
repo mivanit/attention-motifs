@@ -4,6 +4,7 @@ import importlib.resources
 from typing import Any
 
 from js_embedding_vis import fetch_jev
+from js_embedding_vis.inline_cfg import inline_hooks
 
 import attention_motifs
 from attention_motifs.pipeline.cfg import PipelineConfig
@@ -41,11 +42,23 @@ def write_frontend(cfg: PipelineConfig) -> None:
 		json.dumps(embed_pattern_vis_cfg["cfg"], indent="\t")
 	)
 
-	# write head embedding
+	# write head embedding (with clustering hooks injected)
 	embed_head_vis_cfg: dict[str, Any] = cfg.vis_configs["embed_head"]
 	embed_head_dir: Path = vis_output_path / embed_head_vis_cfg["path"]
 	embed_head_dir.mkdir(parents=True, exist_ok=True)
-	(embed_head_dir / "index.html").write_text(embed_html)
+
+	# Build hooks JS: ClusteringLoader class + setup script
+	clustering_js: str = (
+		frontend_resources_path / "attnpedia/src/clustering.js"
+	).read_text()
+	setup_js: str = (
+		frontend_resources_path / "shared/embed_clustering_setup.js"
+	).read_text()
+	hooks_js: str = clustering_js + "\n" + setup_js
+
+	# Inject hooks into jev HTML
+	embed_head_html: str = inline_hooks(hooks_js, embed_html)
+	(embed_head_dir / "index.html").write_text(embed_head_html)
 	(embed_head_dir / embed_head_vis_cfg["cfg_path"]).write_text(
 		json.dumps(embed_head_vis_cfg["cfg"], indent="\t")
 	)
