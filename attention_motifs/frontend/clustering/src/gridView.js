@@ -171,7 +171,7 @@ async function initGridView(config) {
     for (const line of modelsText.trim().split("\n")) {
       if (line.trim()) {
         const cfg = JSON.parse(line);
-        gridState.modelConfigs[cfg.model_name] = {
+        gridState.modelConfigs[cfg.sanitized_name || cfg.model_name] = {
           n_layers: cfg.n_layers,
           n_heads: cfg.n_heads,
         };
