@@ -227,6 +227,12 @@ def cluster_trends(cfg: PipelineConfig) -> None:
 	trends_dir.mkdir(parents=True, exist_ok=True)
 	(trends_dir / "index.html").write_text(trends_html)
 
+	# Copy chart.min.js (too large for bundler to inline)
+	libs_src: Path = frontend_resources_path / "libs" / "chart.min.js"
+	libs_dst: Path = cfg.vis_dir.parent / "libs" / "chart.min.js"
+	libs_dst.parent.mkdir(parents=True, exist_ok=True)
+	libs_dst.write_bytes(libs_src.read_bytes())
+
 	if cfg.verbose > 0:
 		print(f"Wrote cluster_trends frontend to {trends_dir}")
 
