@@ -768,7 +768,7 @@ am-clean:
 # --------------------------------------------------
 
 .PHONY: am-setup
-am-setup: am-data-download-pile am-setup-playwright _am-frontend-fetch-libs am-pipeline-download-models
+am-setup: am-data-download-pile am-setup-playwright _am-frontend-fetch-libs am-pipeline-download-models am-dep-reinstall-git
 	@echo "setup complete: models, data, libs, and playwright installed"
 
 .PHONY: am-pipeline-download-models
@@ -785,6 +785,15 @@ am-data-download-pile:
 am-setup-playwright:
 	@echo "install Playwright browsers"
 	uv run --with playwright playwright install chromium
+
+.PHONY: am-dep-reinstall-git
+am-dep-reinstall-git:
+	@echo "reinstall all git dependencies"
+	uv pip install \
+		--reinstall-package transformer-lens \
+		--reinstall-package pattern-lens \
+		--reinstall-package js-embedding-vis \
+		-e .
 
 
 # --- Pipeline ---
