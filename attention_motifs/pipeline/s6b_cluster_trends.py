@@ -93,9 +93,7 @@ def cluster_trends(cfg: PipelineConfig) -> None:
 
 	# Identify cluster columns and K values
 	cluster_cols: list[str] = [c for c in df.columns if c.startswith("cluster.k")]
-	k_values: list[int] = sorted(
-		int(c.removeprefix("cluster.k")) for c in cluster_cols
-	)
+	k_values: list[int] = sorted(int(c.removeprefix("cluster.k")) for c in cluster_cols)
 
 	if cfg.verbose > 0:
 		print(f"K values: {k_values}")
@@ -140,24 +138,28 @@ def cluster_trends(cfg: PipelineConfig) -> None:
 
 				for cluster_id, count in cluster_counts.items():
 					frac: float = count / n_heads_per_layer
-					layer_records.append({
-						"model": model_name,
-						"layer": layer_idx,
-						"depth": round(depth, 4),
-						"cluster": cluster_id,
-						"count": count,
-						"frac": round(frac, 4),
-					})
+					layer_records.append(
+						{
+							"model": model_name,
+							"layer": layer_idx,
+							"depth": round(depth, 4),
+							"cluster": cluster_id,
+							"count": count,
+							"frac": round(frac, 4),
+						}
+					)
 
 				# Shannon entropy at this layer
 				counts_list: list[int] = list(cluster_counts.values())
 				ent: float = _shannon_entropy(counts_list)
-				entropy_records.append({
-					"model": model_name,
-					"layer": layer_idx,
-					"depth": round(depth, 4),
-					"entropy": round(ent, 4),
-				})
+				entropy_records.append(
+					{
+						"model": model_name,
+						"layer": layer_idx,
+						"depth": round(depth, 4),
+						"entropy": round(ent, 4),
+					}
+				)
 
 		by_layer[key] = layer_records
 		entropy_by_layer[key] = entropy_records
@@ -178,12 +180,14 @@ def cluster_trends(cfg: PipelineConfig) -> None:
 
 			for cluster_id, count in cluster_counts.items():
 				frac = count / total_heads
-				model_records.append({
-					"model": model_name,
-					"cluster": cluster_id,
-					"count": count,
-					"frac": round(frac, 4),
-				})
+				model_records.append(
+					{
+						"model": model_name,
+						"cluster": cluster_id,
+						"count": count,
+						"frac": round(frac, 4),
+					}
+				)
 
 		by_model[key] = model_records
 
