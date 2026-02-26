@@ -737,46 +737,63 @@ help:
 # (put them down here, or delimit with ~~~~~)
 
 
-# CONFIGURE DEMO
+# --- Config ---
 # --------------------------------------------------
 HF_TOKEN ?= $(shell cat .meta/local/.hf-token)
-# modify this file, or point to a different one
 PIPELINE_CFG_PATH ?= pipeline_cfg.toml
 PIPELINE_ARGS ?=
 FEAT_KWARGS ?=
-# --------------------------------------------------
+TEST_CONFIG ?= tests/pipeline_cfg_test.toml
+FRONTEND_DIR = attention_motifs/frontend
+FRONTEND_ATTNPEDIA_DIR = $(FRONTEND_DIR)/attnpedia
+JS_DEV_TOOLKIT_URL = https://raw.githubusercontent.com/mivanit/js-dev-toolkit/main/src
 
 
-# cleaning things up (this will remove all generated files!)
+# --- Help & Clean ---
 # --------------------------------------------------
-.PHONY: am-clean
-am-clean:
-	@echo "clean up ALL attention-motifs generated files (be careful!)"
-	rm -rf data/
 
-# help for attention-motifs
-# --------------------------------------------------
+.PHONY: am-help
 am-help:
 	@echo -n "# attention-motifs make targets"
 	@echo ":"
-	@cat $(MAKEFILE_NAME) | sed -n '/^\.PHONY: / h; /\(^\t@*echo\|^\t:\)/ {H; x; /PHONY/ s/.PHONY: \(.*\)\n.*"\(.*\)"/    make \1\t\2/p; d; x}' | grep "am-*" | sort -k2,2 | expand -t 35
+	@cat $(MAKEFILE_NAME) | sed -n '/^\.PHONY: / h; /^\t@*echo/ {H; x; /PHONY/ s/.PHONY: \(.*\)\n.*"\(.*\)"/    make \1\t\2/p; d; x}' | grep "am-*" | sort -k2,2 | expand -t 40
+
+.PHONY: am-clean
+am-clean:
+	@echo "delete ALL generated files in data/ (be careful!)"
+	rm -rf data/
 
 
-# the main pipeline
+# --- Setup ---
 # --------------------------------------------------
-# 0. download models (optional, will happen automatically if you run the activations step)
-# 1. generate activations
-# 	1.b (optional) generate attention matrix figures
-# 2. generate features for attention patterns
-# 3. process features, distances between heads, the actual analysis
-# 4. display stuff
+
+.PHONY: am-setup
+am-setup: am-data-download-pile am-setup-playwright _am-frontend-fetch-libs am-pipeline-download-models
+	@echo "setup complete: models, data, libs, and playwright installed"
+
+.PHONY: am-pipeline-download-models
+am-pipeline-download-models:
+	@echo "download models specified in $(PIPELINE_CFG_PATH)"
+	$(PYTHON) -m attention_motifs.pipeline.s0_download_models $(PIPELINE_CFG_PATH)
+
+.PHONY: am-data-download-pile
+am-data-download-pile:
+	@echo "download Pile-10k and convert to JSONL"
+	$(PYTHON) -m attention_motifs.download_pile_10k data/text/pile_10k.jsonl
+
+.PHONY: am-setup-playwright
+am-setup-playwright:
+	@echo "install Playwright browsers"
+	uv run --with playwright playwright install chromium
+
+
+# --- Pipeline ---
+# --------------------------------------------------
 
 .PHONY: am-pipeline
 am-pipeline:
-	@echo "run the whole attention-motifs pipeline on the config $(PIPELINE_CFG_PATH)"
+	@echo "run the whole attention-motifs pipeline on $(PIPELINE_CFG_PATH)"
 	$(PYTHON) -m attention_motifs.pipeline.full $(PIPELINE_CFG_PATH) $(PIPELINE_ARGS)
-
-TEST_CONFIG ?= tests/pipeline_cfg_test.toml
 
 .PHONY: am-pipeline-test
 am-pipeline-test:
@@ -798,39 +815,23 @@ am-pipeline-test-cov:
 tests/.temp/.pipeline_complete:
 	$(MAKE) am-pipeline-test
 
-.PHONY: am-download-models
-am-download-models:
-	@echo "download models specified in $(PIPELINE_CFG_PATH)"
-	$(PYTHON) -m attention_motifs.pipeline.s0_download_models $(PIPELINE_CFG_PATH)
 
-
-# display stuff
+# --- Frontend (internal helpers) ---
 # --------------------------------------------------
-FRONTEND_DIR = attention_motifs/frontend
-FRONTEND_ATTNPEDIA_DIR = $(FRONTEND_DIR)/attnpedia
-FRONTEND_ATTNPEDIA_BUILD_DIR = $(FRONTEND_ATTNPEDIA_DIR)/build
 
-# cd $(FRONTEND_ATTNPEDIA_DIR) && tsc || true
-# cp $(FRONTEND_ATTNPEDIA_DIR)/src/*.js $(FRONTEND_ATTNPEDIA_DIR)/src/*.html $(FRONTEND_ATTNPEDIA_DIR)/src/*.css $(FRONTEND_ATTNPEDIA_BUILD_DIR)/ || true
-# mkdir -p $(FRONTEND_ATTNPEDIA_BUILD_DIR) || true
-.PHONY: am-frontend-ap-build
-am-frontend-ap-build:
+.PHONY: _am-frontend-gen-ap
+_am-frontend-gen-ap:
+	: "generate attnpedia ap.json"
 	$(PYTHON) -m attention_motifs.attnpedia all > $(FRONTEND_ATTNPEDIA_DIR)/ap.json
 
-# .PHONY: am-frontend-ap-clean
-# am-frontend-ap-clean:
-# 	rm -rf $(FRONTEND_ATTNPEDIA_BUILD_DIR)
-
-.PHONY: am-frontend-format
-am-frontend-format:
-	@echo "format the frontend files"
+.PHONY: _am-frontend-format
+_am-frontend-format:
+	: "format frontend source files with prettier"
 	npx prettier --write "attention_motifs/frontend/**/*.{html,js,css}" --log-level warn || true
 
-JS_DEV_TOOLKIT_URL = https://raw.githubusercontent.com/mivanit/js-dev-toolkit/main/src
-
-.PHONY: am-frontend-fetch-libs
-am-frontend-fetch-libs:
-	@echo "fetch js-dev-toolkit libs"
+.PHONY: _am-frontend-fetch-libs
+_am-frontend-fetch-libs:
+	: "fetch js-dev-toolkit libs"
 	mkdir -p $(FRONTEND_DIR)/libs
 	curl -sL $(JS_DEV_TOOLKIT_URL)/DataFrame.js -o $(FRONTEND_DIR)/libs/DataFrame.js
 	curl -sL $(JS_DEV_TOOLKIT_URL)/yaml.js -o $(FRONTEND_DIR)/libs/yaml.js
@@ -840,51 +841,52 @@ am-frontend-fetch-libs:
 	curl -sL $(JS_DEV_TOOLKIT_URL)/notif.css -o $(FRONTEND_DIR)/libs/notif.css
 	curl -sL https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js -o $(FRONTEND_DIR)/libs/chart.min.js
 
+
+# --- Frontend (user-facing) ---
+# --------------------------------------------------
+
 .PHONY: am-frontend-bundle
-am-frontend-bundle: am-frontend-format am-frontend-ap-build am-frontend-fetch-libs
-	@echo "bundle frontend files"
+am-frontend-bundle: _am-frontend-format _am-frontend-gen-ap _am-frontend-fetch-libs
+	@echo "bundle all frontend HTML files"
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_ATTNPEDIA_DIR)/src/index.html --output $(FRONTEND_ATTNPEDIA_DIR)/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/head_embed_table/src/index.html --output $(FRONTEND_DIR)/head_embed_table/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/classes/src/index.html --output $(FRONTEND_DIR)/classes/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/clustering/src/index.html --output $(FRONTEND_DIR)/clustering/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/cluster_trends/src/index.html --output $(FRONTEND_DIR)/cluster_trends/index.html
 
+.PHONY: am-frontend-deploy
+am-frontend-deploy: am-frontend-bundle
+	@echo "bundle frontend and deploy to data/ using $(PIPELINE_CFG_PATH)"
+	$(PYTHON) attention_motifs/pipeline/s1c_write_idxs.py $(PIPELINE_CFG_PATH)
+	$(PYTHON) attention_motifs/pipeline/s4b_write_frontend.py $(PIPELINE_CFG_PATH)
 
 
-# $(PYTHON) -m muutils.web.bundle_html attention_motifs/frontend/pattern-view/src/index.html --output attention_motifs/frontend/pattern-view/index.html
-# cp $(FRONTEND_DIR)/embeds-old/embeddings.html data/features/index.html
-# $(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/embeds-old/src/embeddings.html --output $(FRONTEND_DIR)/embeds-old/embeddings.html
-# cp $(FRONTEND_DIR)/embeds-old/embeddings.html data/head_embed/index.html
+# --- Deploy ---
+# --------------------------------------------------
 
-.PHONY: am-rebuild-interfaces
-am-rebuild-interfaces: am-frontend-bundle
-	@echo "rebuild the interfaces"
-	$(PYTHON) attention_motifs/pipeline/s1c_write_idxs.py pipeline_cfg.toml
-	$(PYTHON) attention_motifs/pipeline/s4b_write_frontend.py pipeline_cfg.toml
+.PHONY: am-deploy
+am-deploy: am-frontend-deploy
+	@echo "deploy complete: frontend bundled and copied to data/"
 
 
-.PHONY: am-server
-am-server: am-frontend-bundle
-	@echo "start the attention-motifs server (serving from data/)"
+# --- Serve ---
+# --------------------------------------------------
+
+.PHONY: am-serve
+am-serve:
+	@echo "serve data/ on localhost"
 	$(PYTHON) -m http.server --directory data/
 
-.PHONY: am-server-patternlens
-am-server-patternlens:
-	@echo "start the pattern lens server"
+.PHONY: am-serve-patterns
+am-serve-patterns:
+	@echo "serve pattern lens on data/patterns/"
 	$(PYTHON) -m pattern_lens.server --rewrite-index --path data/patterns
 
-# for frontend integration tests
+
+# --- Test ---
+# --------------------------------------------------
+
 .PHONY: am-test-frontend
 am-test-frontend: tests/.temp/.pipeline_complete
 	@echo "run frontend integration tests with Playwright"
 	$(PYTHON) -m pytest $(TESTS_DIR)/test_frontend.py -v --browser chromium $(PYTEST_OPTIONS)
-
-.PHONY: am-download-pile-10k
-am-download-pile-10k:
-	@echo "Download Pile-10k and convert to JSONL"
-	$(PYTHON) -m attention_motifs.download_pile_10k data/text/pile_10k.jsonl
-
-.PHONY: install-playwright
-install-playwright:
-	@echo "Install Playwright browsers"
-	uv run --with playwright playwright install chromium

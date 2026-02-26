@@ -261,17 +261,18 @@ Output: data/vis/*/index.html  ← DON'T EDIT (generated)
 
 | Command | Description |
 |---------|-------------|
+| `make am-setup` | Run all setup steps (download models, data, install playwright) |
 | `make am-pipeline` | Run full pipeline (uses `$(PIPELINE_CFG_PATH)`, default: `pipeline_cfg.toml`) |
 | `make am-pipeline-test` | Run pipeline with test config (`tests/pipeline_cfg_test.toml`) |
 | `make am-frontend-bundle` | Format + build ap.json + bundle all frontend HTML |
-| `make am-frontend-format` | Format frontend with prettier |
-| `make am-rebuild-interfaces` | Bundle frontend + run s1c + s4b (copy to data/) |
-| `make am-server-embed` | Serve `data/features/` on localhost (head embeddings) |
-| `make am-server-patternlens` | Serve pattern lens on localhost |
+| `make am-frontend-deploy` | Bundle frontend + run s1c + s4b (copy to data/) |
+| `make am-deploy` | Build and deploy frontend to data/ |
+| `make am-serve` | Serve `data/` on localhost |
+| `make am-serve-patterns` | Serve pattern lens on localhost |
 | `make am-clean` | Delete ALL generated files in data/ (careful!) |
 
 **Typical workflows:**
 
-- Edit frontend source → `make am-frontend-bundle` → `make am-rebuild-interfaces`
+- Edit frontend source → `make am-frontend-bundle` → `make am-frontend-deploy`
 - Run full analysis → `make am-pipeline PIPELINE_CFG_PATH=my_config.toml`
-- View results locally → `make am-server-embed` or `make am-server-patternlens`
+- View results locally → `make am-serve` or `make am-serve-patterns`
