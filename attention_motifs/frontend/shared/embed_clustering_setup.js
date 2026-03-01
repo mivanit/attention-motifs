@@ -25,12 +25,13 @@ HOOKS.onReady = async (pointCloud, uiManager) => {
   const statsEl = document.getElementById("clusterStats");
   const enabledCheckbox = document.getElementById("clusterEnabled");
 
-  // Configure cut height slider with actual data range
-  const maxHeight = clustering.getMaxCutHeight();
+  // Configure cut height slider (capped at 10, default 5)
+  const maxHeight = Math.min(clustering.getMaxCutHeight(), 10);
   cutSlider.max = maxHeight;
   cutSlider.step = maxHeight / 1000;
-  cutSlider.value = clustering.getCutHeight();
-  cutValue.textContent = parseFloat(cutSlider.value).toFixed(2);
+  cutSlider.value = 5;
+  cutValue.textContent = "5.00";
+  clustering._computeAssignmentsByCutHeight(5);
 
   // Update stats display
   function updateStats() {

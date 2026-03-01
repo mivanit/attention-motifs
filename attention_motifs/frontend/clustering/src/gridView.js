@@ -246,7 +246,7 @@ async function initGridView(config) {
     setupHelpTooltip();
 
     // Initial render with cut height and min cluster size
-    const initialCutHeight = 5.48;
+    const initialCutHeight = 5;
     const initialMinClusterSize = gridState.minClusterSize;
     document.getElementById("cut-height").value = initialCutHeight;
     document.getElementById("cut-height-input").value =
@@ -286,7 +286,7 @@ function setupControls(defaultNClusters) {
   // Get max height from linkage, capped at 20
   const maxHeight = Math.min(
     Math.max(...gridState.linkage.map((row) => row[2])),
-    20,
+    10,
   );
   cutHeightSlider.max = maxHeight;
   cutHeightSlider.step = maxHeight / 1000;

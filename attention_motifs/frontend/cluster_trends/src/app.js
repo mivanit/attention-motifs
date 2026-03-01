@@ -6,6 +6,8 @@
  * 1. Layer depth x cluster fraction (scatter/line)
  * 2. Model size x cluster fraction (scatter)
  * 3. Cluster entropy by layer depth (line)
+ *
+ * Supports both precomputed K-based data and dynamic cut-height clustering.
  */
 
 // ── Config ──────────────────────────────────────────────────────
@@ -13,6 +15,10 @@ const urlParams = new URLSearchParams(window.location.search);
 const CONFIG = {
   dataUrl: urlParams.get("data") || "../../features/cluster_trends.json",
   defaultK: urlParams.get("k") || null,
+  clusteringMetaUrl:
+    urlParams.get("meta") || "../../features/clustering/clustering_meta.json",
+  linkageUrl:
+    urlParams.get("linkage") || "../../features/clustering/linkage.json",
 };
 
 // ── State ───────────────────────────────────────────────────────
@@ -26,6 +32,14 @@ let currentK = null;
 // Which models/families are enabled (true = visible)
 /** @type {Object<string, boolean>} */ let modelEnabled = {};
 /** @type {Object<string, boolean>} */ let familyEnabled = {};
+
+// Cut-height clustering state
+/** @type {number[][]|null} */ let linkageData = null;
+/** @type {string[]|null} */ let clsValues = null;
+/** @type {boolean} */ let usingCutHeight = true;
+
+// Current records used by chart builders (either precomputed or dynamic)
+let currentRecords = { by_layer: [], by_model: [], entropy_by_layer: [] };
 
 // ── Colors ──────────────────────────────────────────────────────
 
@@ -62,6 +76,209 @@ async function loadData() {
     throw new Error(`Failed to fetch ${CONFIG.dataUrl}: ${resp.status}`);
   }
   DATA = await resp.json();
+}
+
+async function loadClusteringData() {
+  const [metaResp, linkageResp] = await Promise.all([
+    fetch(CONFIG.clusteringMetaUrl),
+    fetch(CONFIG.linkageUrl),
+  ]);
+  if (!metaResp.ok || !linkageResp.ok) {
+    console.warn("Clustering data not available for cut-height mode");
+    return false;
+  }
+  const meta = await metaResp.json();
+  clsValues = meta.cls_values;
+  linkageData = await linkageResp.json();
+  return true;
+}
+
+// ── Cut-height clustering ───────────────────────────────────────
+
+/**
+ * Compute cluster assignments by cutting the dendrogram at a given height.
+ * Same union-find algorithm as ClusteringLoader / gridView.
+ * @param {number} cutHeight
+ * @returns {Object<string, number>} head ID -> cluster ID
+ */
+function computeAssignmentsByCutHeight(cutHeight) {
+  if (!linkageData || !clsValues) return {};
+
+  const n = clsValues.length;
+  const parent = Array.from({ length: 2 * n - 1 }, (_, i) => i);
+
+  function find(x) {
+    if (parent[x] !== x) parent[x] = find(parent[x]);
+    return parent[x];
+  }
+
+  function union(x, y, newParent) {
+    parent[find(x)] = newParent;
+    parent[find(y)] = newParent;
+  }
+
+  for (let i = 0; i < linkageData.length; i++) {
+    const [idx1, idx2, distance] = linkageData[i];
+    if (distance <= cutHeight) {
+      union(Math.floor(idx1), Math.floor(idx2), n + i);
+    }
+  }
+
+  const rootToCluster = {};
+  let nextCluster = 0;
+  const assignments = {};
+
+  for (let i = 0; i < n; i++) {
+    const root = find(i);
+    if (!(root in rootToCluster)) {
+      rootToCluster[root] = nextCluster++;
+    }
+    assignments[clsValues[i]] = rootToCluster[root];
+  }
+
+  return assignments;
+}
+
+/**
+ * Shannon entropy from a list of counts.
+ * @param {number[]} counts
+ * @returns {number}
+ */
+function shannonEntropy(counts) {
+  const total = counts.reduce((a, b) => a + b, 0);
+  if (total === 0) return 0;
+  let entropy = 0;
+  for (const c of counts) {
+    if (c > 0) {
+      const p = c / total;
+      entropy -= p * Math.log2(p);
+    }
+  }
+  return entropy;
+}
+
+/**
+ * From head assignments, compute trend records in the same format
+ * as the precomputed DATA (by_layer, by_model, entropy_by_layer).
+ * @param {Object<string, number>} assignments - head ID -> cluster ID
+ * @returns {{by_layer: Array, by_model: Array, entropy_by_layer: Array}}
+ */
+function computeTrendRecords(assignments) {
+  // Parse cls_values "model:Llayer:Hhead" into per-head metadata
+  const heads = [];
+  for (const cls of clsValues) {
+    const parts = cls.split(":");
+    const model = parts[0];
+    const layer = parseInt(parts[1].substring(1));
+    const cluster = assignments[cls];
+    if (cluster !== undefined) {
+      heads.push({ model, layer, cluster });
+    }
+  }
+
+  const byLayerRecords = [];
+  const entropyRecords = [];
+  const byModelRecords = [];
+
+  // Group heads by model
+  const headsByModel = {};
+  for (const h of heads) {
+    if (!headsByModel[h.model]) headsByModel[h.model] = [];
+    headsByModel[h.model].push(h);
+  }
+
+  for (const [modelName, modelHeads] of Object.entries(headsByModel)) {
+    const meta = DATA.models[modelName];
+    if (!meta) continue;
+
+    const nLayers = meta.n_layers;
+    const nHeadsPerLayer = meta.n_heads;
+
+    // --- by_layer: per (model, layer, cluster) ---
+    const layerGroups = {};
+    for (const h of modelHeads) {
+      if (!layerGroups[h.layer]) layerGroups[h.layer] = {};
+      const lg = layerGroups[h.layer];
+      lg[h.cluster] = (lg[h.cluster] || 0) + 1;
+    }
+
+    for (const [layerStr, clusterCounts] of Object.entries(layerGroups)) {
+      const layerIdx = parseInt(layerStr);
+      const depth = layerIdx / Math.max(nLayers - 1, 1);
+
+      for (const [clusterStr, count] of Object.entries(clusterCounts)) {
+        const frac = count / nHeadsPerLayer;
+        byLayerRecords.push({
+          model: modelName,
+          layer: layerIdx,
+          depth: Math.round(depth * 10000) / 10000,
+          cluster: parseInt(clusterStr),
+          count: count,
+          frac: Math.round(frac * 10000) / 10000,
+        });
+      }
+
+      // Shannon entropy at this layer
+      const counts = Object.values(clusterCounts);
+      const ent = shannonEntropy(counts);
+      entropyRecords.push({
+        model: modelName,
+        layer: layerIdx,
+        depth: Math.round(depth * 10000) / 10000,
+        entropy: Math.round(ent * 10000) / 10000,
+      });
+    }
+
+    // --- by_model: per (model, cluster) ---
+    const totalHeads = modelHeads.length;
+    const modelClusterCounts = {};
+    for (const h of modelHeads) {
+      modelClusterCounts[h.cluster] = (modelClusterCounts[h.cluster] || 0) + 1;
+    }
+
+    for (const [clusterStr, count] of Object.entries(modelClusterCounts)) {
+      const frac = count / totalHeads;
+      byModelRecords.push({
+        model: modelName,
+        cluster: parseInt(clusterStr),
+        count: count,
+        frac: Math.round(frac * 10000) / 10000,
+      });
+    }
+  }
+
+  return {
+    by_layer: byLayerRecords,
+    by_model: byModelRecords,
+    entropy_by_layer: entropyRecords,
+  };
+}
+
+/**
+ * Update currentRecords from a cut height and rebuild charts.
+ * @param {number} cutHeight
+ */
+function updateFromCutHeight(cutHeight) {
+  usingCutHeight = true;
+  const assignments = computeAssignmentsByCutHeight(cutHeight);
+  currentRecords = computeTrendRecords(assignments);
+  rebuildAll();
+}
+
+/**
+ * Update currentRecords from a precomputed K value and rebuild charts.
+ * @param {number} k
+ */
+function updateFromK(k) {
+  usingCutHeight = false;
+  currentK = k;
+  const key = `k${k}`;
+  currentRecords = {
+    by_layer: DATA.by_layer[key] || [],
+    by_model: DATA.by_model[key] || [],
+    entropy_by_layer: DATA.entropy_by_layer[key] || [],
+  };
+  rebuildAll();
 }
 
 // ── Toggle helpers ──────────────────────────────────────────────
@@ -119,8 +336,7 @@ function buildFamilyToggles(containerId, onChange) {
 // ── Chart 1: Layer depth x cluster fraction ─────────────────────
 
 function buildLayerChart() {
-  const key = `k${currentK}`;
-  const records = DATA.by_layer[key] || [];
+  const records = currentRecords.by_layer;
   const showLines = document.getElementById("show-lines").checked;
 
   // Group by cluster -> array of {x: depth, y: frac, model}
@@ -242,8 +458,7 @@ function buildLayerChart() {
 // ── Chart 2: Model size x cluster fraction ──────────────────────
 
 function buildSizeChart() {
-  const key = `k${currentK}`;
-  const records = DATA.by_model[key] || [];
+  const records = currentRecords.by_model;
 
   // Group by cluster
   /** @type {Object<number, Array<{x:number, y:number, model:string}>>} */
@@ -338,8 +553,7 @@ function buildSizeChart() {
 // ── Chart 3: Cluster entropy by layer ───────────────────────────
 
 function buildEntropyChart() {
-  const key = `k${currentK}`;
-  const records = DATA.entropy_by_layer[key] || [];
+  const records = currentRecords.entropy_by_layer;
 
   // Group by model
   /** @type {Object<string, Array<{x:number, y:number}>>} */
@@ -462,19 +676,41 @@ async function init() {
     kSelect.appendChild(opt);
   }
 
-  // Set default K
+  // Set default K (used when switching to K mode)
   if (CONFIG.defaultK && DATA.k_values.includes(Number(CONFIG.defaultK))) {
     currentK = Number(CONFIG.defaultK);
   } else {
-    // pick a sensible default: prefer 10 if available
     currentK = DATA.k_values.includes(10) ? 10 : DATA.k_values[0];
   }
   kSelect.value = currentK;
 
-  // Event listeners
+  // Load clustering data for cut-height mode
+  const clusteringAvailable = await loadClusteringData();
+
+  // Cut height slider (bidirectional range + number input)
+  const cutSlider = document.getElementById("cut-height");
+  const cutInput = document.getElementById("cut-height-input");
+
+  if (clusteringAvailable) {
+    cutSlider.addEventListener("input", (e) => {
+      const h = parseFloat(e.target.value);
+      cutInput.value = h.toFixed(2);
+      updateFromCutHeight(h);
+    });
+    cutInput.addEventListener("change", (e) => {
+      const h = Math.max(0, Math.min(10, parseFloat(e.target.value) || 0));
+      cutInput.value = h.toFixed(2);
+      cutSlider.value = h;
+      updateFromCutHeight(h);
+    });
+  } else {
+    cutSlider.disabled = true;
+    cutInput.disabled = true;
+  }
+
+  // K selector: switch to precomputed mode
   kSelect.addEventListener("change", () => {
-    currentK = Number(kSelect.value);
-    rebuildAll();
+    updateFromK(Number(kSelect.value));
   });
 
   document.getElementById("show-lines").addEventListener("change", () => {
@@ -498,8 +734,12 @@ async function init() {
   document.getElementById("loading").style.display = "none";
   document.getElementById("charts-container").style.display = "block";
 
-  // Draw
-  rebuildAll();
+  // Initial draw: use cut height = 5 if clustering available, else K
+  if (clusteringAvailable) {
+    updateFromCutHeight(5);
+  } else {
+    updateFromK(currentK);
+  }
 }
 
 init();

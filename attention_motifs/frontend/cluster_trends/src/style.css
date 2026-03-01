@@ -77,7 +77,8 @@ h1 {
 }
 
 select,
-input[type="checkbox"] {
+input[type="checkbox"],
+input[type="number"] {
   background: #0f3460;
   color: #e0e0e0;
   border: 1px solid #1a4080;
