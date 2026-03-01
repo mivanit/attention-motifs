@@ -207,7 +207,7 @@ DataFilename = Literal["raw", "norms", "scaled", "pca", "pca_npy"]
 embedding_methods: list[EmbeddingMethod] = field(...)
 ```
 
-## Project Structure
+# Project Structure
 
 | Directory | Purpose | Editable? |
 |-----------|---------|-----------|
