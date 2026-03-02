@@ -283,7 +283,7 @@ function setupControls(defaultNClusters) {
   nClustersInput.value = defaultNClusters;
   nClustersInput.max = maxClusters;
 
-  // Get max height from linkage, capped at 20
+  // Get max height from linkage, capped at 10
   const maxHeight = Math.min(
     Math.max(...gridState.linkage.map((row) => row[2])),
     10,

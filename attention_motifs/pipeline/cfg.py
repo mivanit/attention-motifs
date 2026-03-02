@@ -176,8 +176,8 @@ DEFAULT_VIS_CONFIGS: dict[str, dict[str, Any]] = dict(
 						'<label><input type="checkbox" id="clusterEnabled" checked> Enable cluster coloring</label>'
 						"</div>"
 						'<div style="margin-bottom:6px;">'
-						'<label>Cut Height: <span id="clusterCutHeightValue" style="color:#0f0">0</span></label>'
-						'<input type="range" id="clusterCutHeight" min="0" max="100" step="0.1" value="50" style="width:100%">'
+						'<label>Cut Height: <span id="clusterCutHeightValue" style="color:#0f0">5.00</span></label>'
+						'<input type="range" id="clusterCutHeight" min="0" max="10" step="0.01" value="5" style="width:100%">'
 						"</div>"
 						'<div style="margin-bottom:6px;">'
 						'<label>Min Cluster Size: <span id="clusterMinSizeValue" style="color:#0f0">0</span></label>'

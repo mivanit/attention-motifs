@@ -36,7 +36,6 @@ let currentK = null;
 // Cut-height clustering state
 /** @type {number[][]|null} */ let linkageData = null;
 /** @type {string[]|null} */ let clsValues = null;
-/** @type {boolean} */ let usingCutHeight = true;
 
 // Current records used by chart builders (either precomputed or dynamic)
 let currentRecords = { by_layer: [], by_model: [], entropy_by_layer: [] };
@@ -259,7 +258,6 @@ function computeTrendRecords(assignments) {
  * @param {number} cutHeight
  */
 function updateFromCutHeight(cutHeight) {
-  usingCutHeight = true;
   const assignments = computeAssignmentsByCutHeight(cutHeight);
   currentRecords = computeTrendRecords(assignments);
   rebuildAll();
@@ -270,7 +268,6 @@ function updateFromCutHeight(cutHeight) {
  * @param {number} k
  */
 function updateFromK(k) {
-  usingCutHeight = false;
   currentK = k;
   const key = `k${k}`;
   currentRecords = {
