@@ -23,11 +23,12 @@ from attention_motifs.ablation.ablate import (
 	AblationMethod,
 	HeadAblator,
 )
-from attention_motifs.attnpedia import heads_from_strings
+from attention_motifs.attnpedia import parse_cls, heads_from_strings
 from attention_motifs.ablation.candidates import (
 	get_control_heads,
 	find_candidate_induction_heads,
 )
+from attention_motifs.features.clustering import HierarchicalClusteringResult
 from attention_motifs.ablation.data import (
 	RepeatedSequence,
 	generate_repeated_sequences,
@@ -430,6 +431,162 @@ def analyze_results(results: ExperimentResults) -> pl.DataFrame:
 	)
 
 	return summary
+
+
+def get_cluster_heads_by_model(
+	clustering: HierarchicalClusteringResult,
+	cluster_id: int,
+	cut_height: float | None = None,
+	n_clusters: int | None = None,
+) -> dict[str, list[tuple[int, int]]]:
+	"""Get heads in a cluster grouped by model.
+
+	Parameters
+	----------
+	clustering
+	    Hierarchical clustering result.
+	cluster_id
+	    Cluster index (0-indexed) to extract.
+	cut_height
+	    Height at which to cut the dendrogram.
+	n_clusters
+	    Number of clusters (alternative to cut_height).
+
+	Returns
+	-------
+	dict[str, list[tuple[int, int]]]
+	    Mapping from model name to list of (layer, head) tuples in that cluster.
+	"""
+	assignments: dict[str, int] = clustering.get_clusters(
+		n_clusters=n_clusters,
+		cut_height=cut_height,
+	)
+
+	# Filter to target cluster and group by model
+	heads_by_model: dict[str, list[tuple[int, int]]] = {}
+	for head_id, cid in assignments.items():
+		if cid != cluster_id:
+			continue
+		model_name: str
+		layer: int
+		head: int
+		model_name, layer, head = parse_cls(head_id)
+		if model_name not in heads_by_model:
+			heads_by_model[model_name] = []
+		heads_by_model[model_name].append((layer, head))
+
+	return heads_by_model
+
+
+def run_cluster_ablation(
+	clustering_path: Path | str,
+	cluster_id: int,
+	cut_height: float | None = None,
+	n_clusters: int | None = None,
+	config: ExperimentConfig | None = None,
+	models: list[str] | None = None,
+	device: str = "cuda",
+	output_dir: Path | str | None = None,
+	show_progress: bool = True,
+) -> dict[str, ExperimentResults]:
+	"""Run ablation experiments on all heads in a specific cluster.
+
+	Loads the clustering, cuts at the specified height, extracts heads
+	belonging to the target cluster, and runs individual ablation on
+	each head (grouped by model).
+
+	Parameters
+	----------
+	clustering_path
+	    Path to clustering directory (contains linkage.npy, clustering_meta.json).
+	cluster_id
+	    Cluster index (0-indexed) to ablate.
+	cut_height
+	    Height at which to cut the dendrogram.
+	n_clusters
+	    Number of clusters (alternative to cut_height).
+	config
+	    Experiment configuration. Uses defaults if None.
+	models
+	    Filter to specific models. If None, runs on all models in the cluster.
+	device
+	    Device to run on.
+	output_dir
+	    Directory to save results. If None, results not saved.
+	show_progress
+	    Show progress bars.
+
+	Returns
+	-------
+	dict[str, ExperimentResults]
+	    Results for each model.
+	"""
+	# Load clustering
+	clustering: HierarchicalClusteringResult = HierarchicalClusteringResult.read(
+		clustering_path
+	)
+
+	# Get heads grouped by model
+	heads_by_model: dict[str, list[tuple[int, int]]] = get_cluster_heads_by_model(
+		clustering,
+		cluster_id=cluster_id,
+		cut_height=cut_height,
+		n_clusters=n_clusters,
+	)
+
+	if not heads_by_model:
+		print(f"No heads found in cluster {cluster_id}")
+		return {}
+
+	# Filter to requested models
+	if models is not None:
+		models_set: set[str] = {cached_sanitize_model_name(m) for m in models}
+		heads_by_model = {m: h for m, h in heads_by_model.items() if m in models_set}
+
+	# Print summary
+	cut_desc: str = (
+		f"cut_height={cut_height}"
+		if cut_height is not None
+		else f"n_clusters={n_clusters}"
+	)
+	print(f"Cluster {cluster_id} ({cut_desc}):")
+	total_heads: int = 0
+	for model_name, heads in sorted(heads_by_model.items()):
+		head_strs: list[str] = [f"L{layer}:H{head}" for layer, head in heads]
+		print(f"  {model_name}: {len(heads)} heads — {', '.join(head_strs)}")
+		total_heads += len(heads)
+	print(f"  Total: {total_heads} heads across {len(heads_by_model)} models")
+
+	# Set up output directory
+	output_dir_: Path | None = None
+	if output_dir is not None:
+		output_dir_ = Path(output_dir)
+		output_dir_.mkdir(parents=True, exist_ok=True)
+
+	# Run ablation per model
+	all_results: dict[str, ExperimentResults] = {}
+	for model_name, heads in sorted(heads_by_model.items()):
+		print(f"\n{'=' * 60}")
+		print(f"Running cluster ablation for: {model_name} ({len(heads)} heads)")
+		print(f"{'=' * 60}")
+
+		results: ExperimentResults = run_ablation_experiment(
+			model_name=model_name,
+			candidate_heads=heads,
+			config=config,
+			device=device,
+			show_progress=show_progress,
+		)
+
+		all_results[model_name] = results
+
+		# Save intermediate results
+		if output_dir_ is not None:
+			results.save(
+				output_dir_ / f"{cached_sanitize_model_name(model_name)}_results.json"
+			)
+
+	return all_results
 
 
 def identify_induction_heads(

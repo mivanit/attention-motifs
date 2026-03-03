@@ -28,6 +28,8 @@ from attention_motifs.ablation.data import (
 )
 from attention_motifs.ablation.experiment import (
 	run_ablation_experiment,
+	get_cluster_heads_by_model,
+	run_cluster_ablation,
 )
 
 __all__ = [
@@ -48,4 +50,6 @@ __all__ = [
 	"generate_repeated_sequences",
 	# experiment
 	"run_ablation_experiment",
+	"get_cluster_heads_by_model",
+	"run_cluster_ablation",
 ]
