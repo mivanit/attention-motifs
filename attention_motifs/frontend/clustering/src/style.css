@@ -742,3 +742,123 @@ h1 {
   color: #888;
   font-style: italic;
 }
+
+.cluster-chip-label {
+  font-size: 11px;
+  color: #666;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Cluster labels editor */
+.cluster-labels {
+  background: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.cluster-labels-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.cluster-labels-title {
+  font-size: 12px;
+  color: #888;
+}
+
+.cluster-labels-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cluster-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cluster-label-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.cluster-label-id {
+  font-size: 12px;
+  color: #555;
+  font-weight: 600;
+  min-width: 30px;
+}
+
+.cluster-label-size {
+  font-size: 12px;
+  color: #888;
+  min-width: 40px;
+}
+
+.cluster-label-input {
+  flex: 1;
+  padding: 3px 8px;
+  font-size: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  max-width: 300px;
+}
+
+.cluster-label-input:focus {
+  outline: none;
+  border-color: #1565c0;
+}
+
+.cluster-label-input:not(:placeholder-shown) {
+  border-color: #90caf9;
+  background: #f0f7ff;
+}
+
+/* Slider with tick marks */
+.slider-with-ticks {
+  position: relative;
+  display: inline-block;
+}
+
+.clustering-controls .slider-with-ticks input[type="range"] {
+  width: 250px;
+}
+
+.slider-ticks {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 0;
+  pointer-events: none;
+}
+
+.slider-tick {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #1565c0;
+  border: 2px solid white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.slider-tick:hover {
+  background: #0d47a1;
+  transform: translate(-50%, -50%) scale(1.3);
+}

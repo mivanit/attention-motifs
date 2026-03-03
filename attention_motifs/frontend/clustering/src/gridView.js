@@ -30,7 +30,230 @@ let gridState = {
   originalModelOrder: [],
   modelDataFrame: null,
   selectionNote: "",
+  clusterLabels: {}, // merged labels: cutHeightKey -> { clusterIdx: { desc, heads } }
+  serverLabels: {}, // server-loaded baseline labels (same structure)
+  resolvedLabels: {}, // current cut height resolved: clusterId -> desc
 };
+
+// =====================================================================
+// Cluster Labels: persistence, matching, and resolution
+// =====================================================================
+
+const LABELS_STORAGE_KEY = "clustering_labels";
+
+/**
+ * Get localStorage key suffix for cut height
+ * @param {number} cutHeight
+ * @returns {string} e.g. "5.000"
+ */
+function getCutHeightKey(cutHeight) {
+  return cutHeight.toFixed(3);
+}
+
+/**
+ * Load labels from localStorage
+ * @returns {Object} Labels object keyed by cut height string
+ */
+function loadLabelsFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(LABELS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    console.warn("Failed to load cluster labels from localStorage:", e);
+    return {};
+  }
+}
+
+/**
+ * Save current labels to localStorage
+ */
+function saveLabelsToLocalStorage() {
+  try {
+    localStorage.setItem(
+      LABELS_STORAGE_KEY,
+      JSON.stringify(gridState.clusterLabels),
+    );
+  } catch (e) {
+    console.warn("Failed to save cluster labels to localStorage:", e);
+  }
+}
+
+/**
+ * Deep-merge two label objects. Overlay takes priority over base.
+ * @param {Object} base - Base labels
+ * @param {Object} overlay - Overlay labels (takes priority)
+ * @returns {Object} Merged labels
+ */
+function mergeLabels(base, overlay) {
+  const merged = {};
+  const allKeys = new Set([...Object.keys(base), ...Object.keys(overlay)]);
+  for (const heightKey of allKeys) {
+    merged[heightKey] = {
+      ...(base[heightKey] || {}),
+      ...(overlay[heightKey] || {}),
+    };
+  }
+  return merged;
+}
+
+/**
+ * Get labels object for the current cut height
+ * @returns {Object} Map of clusterIdx string -> { desc, heads }
+ */
+function getCurrentLabels() {
+  if (gridState.currentCutHeight === null) return {};
+  const key = getCutHeightKey(gridState.currentCutHeight);
+  return gridState.clusterLabels[key] || {};
+}
+
+/**
+ * Resolve stored labels against current cluster assignments.
+ * Matches each label's heads list to the current cluster that has
+ * the highest overlap, returning a map of clusterId -> desc.
+ * @param {Object} labelsForHeight - { clusterIdx: { desc, heads } }
+ * @returns {Object.<number, string>} Map of current clusterId -> desc
+ */
+function resolveLabelsToCurrentClusters(labelsForHeight) {
+  const assignments = window.CLUSTER_STATE.getAssignments();
+  // Track best overlap count per cluster to resolve conflicts
+  const resolvedCounts = {}; // clusterId -> best overlap count
+  const resolved = {}; // clusterId -> desc string
+
+  for (const [_origIdx, entry] of Object.entries(labelsForHeight)) {
+    if (!entry || !entry.desc) continue;
+    const heads = entry.heads || [];
+
+    // Count how many of this label's heads fall into each current cluster
+    const clusterOverlap = {};
+    for (const headId of heads) {
+      const cid = assignments[headId];
+      if (cid !== undefined) {
+        clusterOverlap[cid] = (clusterOverlap[cid] || 0) + 1;
+      }
+    }
+
+    // Find the cluster with the most overlap
+    let bestCluster = null;
+    let bestCount = 0;
+    for (const [cid, count] of Object.entries(clusterOverlap)) {
+      if (count > bestCount) {
+        bestCount = count;
+        bestCluster = parseInt(cid);
+      }
+    }
+
+    if (bestCluster !== null && bestCount > 0) {
+      // Only assign if this cluster doesn't already have a better match
+      if (!resolved[bestCluster] || bestCount > resolvedCounts[bestCluster]) {
+        resolved[bestCluster] = entry.desc;
+        resolvedCounts[bestCluster] = bestCount;
+      }
+    }
+  }
+
+  return resolved;
+}
+
+/**
+ * Update resolved labels for the current cut height and store in gridState
+ */
+function updateResolvedLabels() {
+  const labels = getCurrentLabels();
+  gridState.resolvedLabels = resolveLabelsToCurrentClusters(labels);
+}
+
+/**
+ * Set a cluster label for the current cut height
+ * @param {number} clusterId - Current cluster ID
+ * @param {string} desc - Description text (empty to delete)
+ */
+function setClusterLabel(clusterId, desc) {
+  if (gridState.currentCutHeight === null) return;
+  const key = getCutHeightKey(gridState.currentCutHeight);
+
+  if (!desc || desc.trim() === "") {
+    // Delete the label
+    if (gridState.clusterLabels[key]) {
+      delete gridState.clusterLabels[key][String(clusterId)];
+      if (Object.keys(gridState.clusterLabels[key]).length === 0) {
+        delete gridState.clusterLabels[key];
+      }
+    }
+  } else {
+    // Set the label with current heads snapshot
+    if (!gridState.clusterLabels[key]) {
+      gridState.clusterLabels[key] = {};
+    }
+    const heads = window.CLUSTER_STATE.getHeadsInCluster(clusterId);
+    gridState.clusterLabels[key][String(clusterId)] = {
+      desc: desc.trim(),
+      heads: heads,
+    };
+  }
+
+  saveLabelsToLocalStorage();
+  updateResolvedLabels();
+  renderSliderTicks();
+}
+
+/**
+ * Export all cluster labels as JSON download
+ */
+function exportClusterLabels() {
+  const blob = new Blob([JSON.stringify(gridState.clusterLabels, null, "\t")], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "cluster_labels.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Get all cut height keys that have at least one label
+ * @returns {number[]} Sorted array of cut heights with labels
+ */
+function getLabeledCutHeights() {
+  return Object.keys(gridState.clusterLabels)
+    .filter(
+      (key) =>
+        gridState.clusterLabels[key] &&
+        Object.keys(gridState.clusterLabels[key]).length > 0,
+    )
+    .map((key) => parseFloat(key))
+    .sort((a, b) => a - b);
+}
+
+/**
+ * Render tick marks on the cut-height slider for labeled cut heights
+ */
+function renderSliderTicks() {
+  const ticksContainer = document.getElementById("cut-height-ticks");
+  if (!ticksContainer) return;
+
+  ticksContainer.innerHTML = "";
+  const slider = document.getElementById("cut-height");
+  const maxHeight = parseFloat(slider.max) || 10;
+
+  const labeledHeights = getLabeledCutHeights();
+  for (const height of labeledHeights) {
+    const pct = (height / maxHeight) * 100;
+    const tick = document.createElement("div");
+    tick.className = "slider-tick";
+    tick.style.left = `${pct}%`;
+    tick.title = `${height.toFixed(3)} (labeled)`;
+    tick.addEventListener("click", () => {
+      slider.value = height;
+      document.getElementById("cut-height-input").value = height.toFixed(3);
+      updateClustersByHeight(height);
+    });
+    ticksContainer.appendChild(tick);
+  }
+}
+
+// =====================================================================
 
 /**
  * Generate single pattern viewer URL for a specific head and prompt
@@ -230,6 +453,31 @@ async function initGridView(config) {
       console.warn("rendered_prompts.jsonl not available for clustering page");
     }
 
+    // Load cluster labels: server-side first, then merge with localStorage
+    try {
+      const labelsUrl =
+        config.clusterLabelsUrl ||
+        "../../features/clustering/cluster_labels.json";
+      const labelsResp = await fetch(labelsUrl);
+      if (labelsResp.ok) {
+        gridState.serverLabels = await labelsResp.json();
+      }
+    } catch (e) {
+      console.warn("No server-side cluster labels found:", e);
+    }
+
+    const localLabels = loadLabelsFromLocalStorage();
+    gridState.clusterLabels = mergeLabels(gridState.serverLabels, localLabels);
+
+    // Determine initial cut height from labels
+    let initialCutHeight = 5;
+    const labeledHeights = getLabeledCutHeights();
+    if (labeledHeights.length === 1) {
+      initialCutHeight = labeledHeights[0];
+    } else if (labeledHeights.length > 1) {
+      initialCutHeight = labeledHeights[labeledHeights.length - 1]; // largest
+    }
+
     // Set up controls
     setupControls(config.defaultNClusters);
 
@@ -246,7 +494,6 @@ async function initGridView(config) {
     setupHelpTooltip();
 
     // Initial render with cut height and min cluster size
-    const initialCutHeight = 5;
     const initialMinClusterSize = gridState.minClusterSize;
     document.getElementById("cut-height").value = initialCutHeight;
     document.getElementById("cut-height-input").value =
@@ -1012,10 +1259,13 @@ async function updateSidePane() {
 
     const clusterId = window.CLUSTER_STATE.getClusterId(headId);
     if (clusterId !== undefined) {
-      const clusterLabel = document.createElement("span");
-      clusterLabel.className = "pattern-section-cluster";
-      clusterLabel.textContent = `Cluster ${clusterId}`;
-      header.appendChild(clusterLabel);
+      const clusterBadge = document.createElement("span");
+      clusterBadge.className = "pattern-section-cluster";
+      const label = gridState.resolvedLabels[clusterId];
+      clusterBadge.textContent = label
+        ? `Cluster ${clusterId}: ${label}`
+        : `Cluster ${clusterId}`;
+      header.appendChild(clusterBadge);
     }
 
     // Arrow link to attentionpedia
@@ -1124,10 +1374,12 @@ async function updateSidePane() {
 function showTooltip(event, headId) {
   const tooltip = gridState.tooltip;
   const clusterId = window.CLUSTER_STATE.getClusterId(headId);
+  const label =
+    clusterId !== undefined ? gridState.resolvedLabels[clusterId] : null;
 
   tooltip.innerHTML = `
     <div class="head-id">${headId}</div>
-    <div class="cluster-info">Cluster ${clusterId !== undefined ? clusterId : "?"}</div>
+    <div class="cluster-info">Cluster ${clusterId !== undefined ? clusterId : "?"}${label ? ": " + label : ""}</div>
   `;
   tooltip.style.display = "block";
   moveTooltip(event);
@@ -1192,8 +1444,17 @@ function updateStats(assignments, nClusters, smallClusters = new Set()) {
     });
   }
 
+  // Resolve and render labels
+  updateResolvedLabels();
+
   // Render top clusters list
   renderTopClusters();
+
+  // Render cluster labels editor
+  renderClusterLabels();
+
+  // Render slider ticks for labeled cut heights
+  renderSliderTicks();
 
   // Render mini dendrogram
   renderMiniDendrogram();
@@ -1416,6 +1677,68 @@ function renderMiniDendrogram() {
 }
 
 /**
+ * Render the cluster labels editor section
+ */
+function renderClusterLabels() {
+  const container = document.getElementById("cluster-labels");
+  if (!container) return;
+
+  const sizes = window.CLUSTER_STATE.getClusterSizes();
+  const resolved = gridState.resolvedLabels;
+
+  // Sort clusters by size descending, take top 20
+  const sortedClusters = Object.entries(sizes)
+    .map(([clusterId, size]) => ({ clusterId: parseInt(clusterId), size }))
+    .sort((a, b) => b.size - a.size)
+    .slice(0, 20);
+
+  container.innerHTML = `
+    <div class="cluster-labels-header">
+      <span class="cluster-labels-title">Cluster Labels:</span>
+      <button class="toggle-btn" id="export-labels-btn">Export Labels</button>
+    </div>
+    <div class="cluster-labels-grid">
+      ${sortedClusters
+        .map(({ clusterId, size }) => {
+          const color =
+            clusterId === -1
+              ? "#666"
+              : window.CLUSTER_STATE.colors[
+                  clusterId % window.CLUSTER_STATE.colors.length
+                ];
+          const desc = resolved[clusterId] || "";
+          return `
+            <div class="cluster-label-row" data-cluster-id="${clusterId}">
+              <span class="cluster-label-color" style="background-color: ${color}"></span>
+              <span class="cluster-label-id">${clusterId === -1 ? "misc" : clusterId}</span>
+              <span class="cluster-label-size">(${size})</span>
+              <input type="text" class="cluster-label-input"
+                value="${desc.replace(/"/g, "&quot;")}"
+                placeholder="Add description..."
+                data-cluster-id="${clusterId}" />
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+
+  // Wire up input handlers
+  container.querySelectorAll(".cluster-label-input").forEach((input) => {
+    const clusterId = parseInt(input.dataset.clusterId);
+    input.addEventListener("change", () => {
+      setClusterLabel(clusterId, input.value);
+      renderTopClusters(); // Update chips to show labels
+    });
+  });
+
+  // Wire up export button
+  document
+    .getElementById("export-labels-btn")
+    .addEventListener("click", exportClusterLabels);
+}
+
+/**
  * Render the top 20 largest clusters as clickable chips
  */
 function renderTopClusters() {
@@ -1433,6 +1756,8 @@ function renderTopClusters() {
 
   const hasMore = totalClusters > 20;
 
+  const resolved = gridState.resolvedLabels;
+
   container.innerHTML = `
     <span class="top-clusters-label">Top ${sortedClusters.length} clusters:</span>
     ${sortedClusters
@@ -1446,10 +1771,15 @@ function renderTopClusters() {
           heads.length > 0 &&
           heads.every((h) => gridState.selectedHeads.includes(h));
         const selectedClass = allSelected ? "selected" : "";
+        const label = resolved[clusterId] || "";
+        const labelHtml = label
+          ? `<span class="cluster-chip-label" title="${label.replace(/"/g, "&quot;")}">${label}</span>`
+          : "";
         return `
           <div class="cluster-chip ${selectedClass}" data-cluster-id="${clusterId}">
             <span class="cluster-chip-color" style="background-color: ${color}"></span>
             <span class="cluster-chip-size">${size}</span>
+            ${labelHtml}
           </div>
         `;
       })
