@@ -15,7 +15,7 @@ from typing import Sequence
 import torch
 import torch.nn.functional as F
 from torch import Tensor
-from jaxtyping import Float
+from jaxtyping import Bool, Float, Int
 
 from attention_motifs.ablation.data import (
 	RepeatedSequence,
@@ -177,7 +177,7 @@ def repeated_sequence_loss(
 		)
 
 	# Batch the sequences
-	tokens: Tensor = sequences_to_batch(sequences)
+	tokens: Int[Tensor, "batch seq"] = sequences_to_batch(sequences)
 	tokens = tokens.to(model.cfg.device)
 
 	# Determine whether sequences already have BOS
@@ -185,7 +185,7 @@ def repeated_sequence_loss(
 
 	# Get logits
 	with torch.no_grad():
-		logits: Tensor = model(tokens, prepend_bos=not has_bos)
+		logits: Float[Tensor, "batch seq vocab"] = model(tokens, prepend_bos=not has_bos)
 
 	# If model prepended BOS and our sequences didn't have it, logits are
 	# shifted by 1.  But if our sequences already have BOS and we told the
@@ -197,8 +197,8 @@ def repeated_sequence_loss(
 		# Model prepended BOS, so logits[:, 0] corresponds to BOS.
 		# logits[:, 1:] correspond to our tokens.
 		# For next-token prediction: predict tokens[i] from logits[i] (with BOS shift)
-		logits_for_loss: Tensor = logits[:, 1:-1, :]  # skip BOS, align with tokens
-		targets: Tensor = tokens[:, 1:]  # predict tokens[1] from logits[1], etc.
+		logits_for_loss: Float[Tensor, "batch pos vocab"] = logits[:, 1:-1, :]  # skip BOS, align with tokens
+		targets: Int[Tensor, "batch pos"] = tokens[:, 1:]  # predict tokens[1] from logits[1], etc.
 		# Trim to match
 		min_len: int = min(logits_for_loss.shape[1], targets.shape[1])
 		logits_for_loss = logits_for_loss[:, :min_len, :]
@@ -209,7 +209,7 @@ def repeated_sequence_loss(
 		targets = tokens[:, 1:]
 
 	# Compute per-position loss
-	loss_per_pos: Tensor = F.cross_entropy(
+	loss_per_pos: Float[Tensor, "batch pos"] = F.cross_entropy(
 		logits_for_loss.reshape(-1, logits_for_loss.shape[-1]),
 		targets.reshape(-1),
 		reduction="none",
@@ -217,7 +217,7 @@ def repeated_sequence_loss(
 
 	if only_induction_positions:
 		# Create mask for induction positions
-		mask: Tensor = get_induction_mask(sequences, pad_to_length=tokens.shape[1])
+		mask: Bool[Tensor, "batch seq"] = get_induction_mask(sequences, pad_to_length=tokens.shape[1])
 		# Shift mask by 1 to align with loss positions: loss[i] predicts token[i+1]
 		mask = mask[:, 1:].to(model.cfg.device)
 
@@ -225,8 +225,8 @@ def repeated_sequence_loss(
 		mask = mask[:, : loss_per_pos.shape[1]]
 
 		# Masked mean
-		masked_loss: Tensor = loss_per_pos * mask.float()
-		mean_loss: Tensor = masked_loss.sum() / mask.sum().clamp(min=1)
+		masked_loss: Float[Tensor, "batch pos"] = loss_per_pos * mask.float()
+		mean_loss: Float[Tensor, ""] = masked_loss.sum() / mask.sum().clamp(min=1)
 	else:
 		mean_loss = loss_per_pos.mean()
 
@@ -262,7 +262,7 @@ def _prefix_score_impl(
 	float
 	    Mean attention weight on the target position.
 	"""
-	tokens: Tensor = sequences_to_batch(sequences)
+	tokens: Int[Tensor, "batch seq"] = sequences_to_batch(sequences)
 	tokens = tokens.to(model.cfg.device)
 
 	has_bos: bool = sequences[0].has_bos if sequences else False
@@ -278,7 +278,7 @@ def _prefix_score_impl(
 	# Get attention pattern: (batch, n_heads, query_pos, key_pos)
 	# When has_bos=False and prepend_bos=True, positions are shifted by 1
 	# (position 0 is the model-inserted BOS).
-	attn_pattern: Tensor = cache[f"blocks.{layer}.attn.hook_pattern"][:, head, :, :]
+	attn_pattern: Float[Tensor, "batch query key"] = cache[f"blocks.{layer}.attn.hook_pattern"][:, head, :, :]
 	# Shape: (batch, query_pos, key_pos)
 
 	# Position offset: if model prepended BOS, all token positions shift by 1
@@ -502,7 +502,7 @@ def icl_score(
 		for prompt in prompts:
 			if isinstance(prompt, str):
 				# to_tokens() prepends BOS when default_prepend_bos=True
-				tokens: Tensor = model.to_tokens(prompt)
+				tokens: Int[Tensor, "1 seq"] = model.to_tokens(prompt)
 			else:
 				tokens = prompt.unsqueeze(0) if prompt.dim() == 1 else prompt
 				# Tensor inputs bypass TransformerLens BOS prepending
@@ -512,7 +512,7 @@ def icl_score(
 				if model.cfg.default_prepend_bos:
 					bos_id: int = getattr(model.tokenizer, "bos_token_id", None) or 0
 					if tokens.shape[1] == 0 or tokens[0, 0].item() != bos_id:
-						bos_tensor: Tensor = torch.full(
+						bos_tensor: Int[Tensor, "batch 1"] = torch.full(
 							(tokens.shape[0], 1),
 							bos_id,
 							dtype=tokens.dtype,
@@ -526,20 +526,20 @@ def icl_score(
 			if tokens.shape[1] <= late_pos:
 				continue
 
-			logits: Tensor = model(tokens)
+			logits: Float[Tensor, "1 seq vocab"] = model(tokens)
 
 			# Compute loss at specific positions
 			# Loss at position i predicts token i+1
 			if early_pos < tokens.shape[1] - 1:
-				early_logits: Tensor = logits[:, early_pos, :]
-				early_target: Tensor = tokens[:, early_pos + 1]
-				early_loss: Tensor = F.cross_entropy(early_logits, early_target)
+				early_logits: Float[Tensor, "1 vocab"] = logits[:, early_pos, :]
+				early_target: Int[Tensor, " 1"] = tokens[:, early_pos + 1]
+				early_loss: Float[Tensor, ""] = F.cross_entropy(early_logits, early_target)
 				early_losses.append(early_loss.item())
 
 			if late_pos < tokens.shape[1] - 1:
-				late_logits: Tensor = logits[:, late_pos, :]
-				late_target: Tensor = tokens[:, late_pos + 1]
-				late_loss: Tensor = F.cross_entropy(late_logits, late_target)
+				late_logits: Float[Tensor, "1 vocab"] = logits[:, late_pos, :]
+				late_target: Int[Tensor, " 1"] = tokens[:, late_pos + 1]
+				late_loss: Float[Tensor, ""] = F.cross_entropy(late_logits, late_target)
 				late_losses.append(late_loss.item())
 
 	if not early_losses or not late_losses:
@@ -658,7 +658,7 @@ def copying_score(
 			device=str(model.cfg.device),
 		)
 
-	tokens: Tensor = sequences_to_batch(sequences)
+	tokens: Int[Tensor, "batch seq"] = sequences_to_batch(sequences)
 	tokens = tokens.to(model.cfg.device)
 
 	has_bos: bool = sequences[0].has_bos if sequences else False
@@ -672,19 +672,19 @@ def copying_score(
 		)
 
 	# z: (batch, pos, n_heads, d_head)
-	z: Tensor = cache[hook_name][:, :, head, :]  # (batch, pos, d_head)
+	z: Float[Tensor, "batch pos d_head"] = cache[hook_name][:, :, head, :]
 
 	# Project through output matrix to get contribution to residual stream
-	W_O: Tensor = model.W_O[layer, head]  # (d_head, d_model)
+	W_O: Float[Tensor, "d_head d_model"] = model.W_O[layer, head]
 
 	# Head's contribution to residual: z @ W_O
-	head_contribution: Tensor = torch.einsum(
+	head_contribution: Float[Tensor, "batch pos d_model"] = torch.einsum(
 		"bpd,dm->bpm", z, W_O
-	)  # (batch, pos, d_model)
+	)
 
 	# Project to logits: contribution @ W_U
-	W_U: Tensor = model.W_U  # (d_model, vocab)
-	logit_contribution: Tensor = torch.einsum("bpm,mv->bpv", head_contribution, W_U)
+	W_U: Float[Tensor, "d_model vocab"] = model.W_U
+	logit_contribution: Float[Tensor, "batch pos vocab"] = torch.einsum("bpm,mv->bpv", head_contribution, W_U)
 
 	pos_shift: int = 0 if has_bos else 1
 
@@ -776,7 +776,7 @@ def ov_copying_score(
 			device=str(model.cfg.device),
 		)
 
-	tokens: Tensor = sequences_to_batch(sequences)
+	tokens: Int[Tensor, "batch seq"] = sequences_to_batch(sequences)
 	tokens = tokens.to(model.cfg.device)
 
 	has_bos: bool = sequences[0].has_bos if sequences else False
@@ -797,8 +797,8 @@ def ov_copying_score(
 	attn: Float[Tensor, "batch dest src"] = cache[hook_pattern_name][:, head, :, :]
 
 	# Head contribution to logits
-	W_O: Tensor = model.W_O[layer, head]  # (d_head, d_model)
-	W_U: Tensor = model.W_U  # (d_model, vocab)
+	W_O: Float[Tensor, "d_head d_model"] = model.W_O[layer, head]
+	W_U: Float[Tensor, "d_model vocab"] = model.W_U
 	head_logits: Float[Tensor, "batch pos vocab"] = torch.einsum(
 		"bpd,dm,mv->bpv", z, W_O, W_U
 	)
@@ -830,10 +830,10 @@ def ov_copying_score(
 		# Model added BOS at position 0; attn has seq_len = tokens.shape[1] + 1
 		# Build aligned token tensor with BOS prepended
 		bos_id: int = getattr(model.tokenizer, "bos_token_id", None) or 0
-		bos_col: Tensor = torch.full(
+		bos_col: Int[Tensor, "batch 1"] = torch.full(
 			(batch_size, 1), bos_id, dtype=tokens.dtype, device=tokens.device
 		)
-		aligned_tokens: Tensor = torch.cat([bos_col, tokens], dim=1)
+		aligned_tokens: Int[Tensor, "batch seq"] = torch.cat([bos_col, tokens], dim=1)
 		# Trim to match attn dim
 		aligned_tokens = aligned_tokens[:, :seq_len]
 	else:
@@ -843,11 +843,11 @@ def ov_copying_score(
 	# For each src position j, gather the logit for token at j
 	# src_tokens shape: (batch, src_len) -> expand to (batch, dest, src)
 	src_len: int = attn.shape[2]
-	src_tokens: Tensor = aligned_tokens[:, :src_len]  # (batch, src_len)
+	src_tokens: Int[Tensor, "batch src"] = aligned_tokens[:, :src_len]
 
 	# Gather logits for attended-to tokens: positive_logits[b, q, src_tokens[b, j]]
 	# Expand src_tokens to (batch, dest, src) for gathering
-	src_tokens_expanded: Tensor = src_tokens.unsqueeze(1).expand(
+	src_tokens_expanded: Int[Tensor, "batch dest src"] = src_tokens.unsqueeze(1).expand(
 		batch_size, seq_len, src_len
 	)
 
@@ -860,7 +860,7 @@ def ov_copying_score(
 	# Approach: expand positive_logits to (batch, dest, src) by gathering vocab dim
 	# at src_tokens indices
 	# For each (b, q, j): logit = positive_logits[b, q, src_tokens_expanded[b, q, j]]
-	attended_logits: Tensor = torch.zeros(
+	attended_logits: Float[Tensor, "batch dest src"] = torch.zeros(
 		batch_size, seq_len, src_len, device=tokens.device
 	)
 	for q in range(seq_len):
@@ -872,31 +872,29 @@ def ov_copying_score(
 
 	# Attention-weighted sum of attended logits per (batch, dest)
 	# attn: (batch, dest, src), attended_logits: (batch, dest, src)
-	weighted_attended: Tensor = (attn * attended_logits).sum(dim=-1)  # (batch, dest)
+	weighted_attended: Float[Tensor, "batch dest"] = (attn * attended_logits).sum(dim=-1)
 
 	# Total positive logit mass over sample tokens per (batch, dest).
 	# Paper: "to that of all tokens in this sample" — sum only over the
 	# unique token types present in each sequence, not the full vocabulary.
 	# Each batch element has its own set of ~25 unique token types.
-	total_positive: Tensor = torch.zeros(
-		batch_size, seq_len, device=tokens.device
-	)
+	total_positive: Float[Tensor, "batch dest"] = torch.zeros(batch_size, seq_len, device=tokens.device)
 	for b in range(batch_size):
-		unique_b: Tensor = aligned_tokens[b].unique()
+		unique_b: Int[Tensor, " n_unique"] = aligned_tokens[b].unique()
 		total_positive[b] = positive_logits[b, :, unique_b].sum(dim=-1)
 
 	# Raw ratio (avoid division by zero)
-	valid_mask: Tensor = total_positive > 1e-10
-	raw_ratio: Tensor = torch.zeros_like(weighted_attended)
+	valid_mask: Bool[Tensor, "batch dest"] = total_positive > 1e-10
+	raw_ratio: Float[Tensor, "batch dest"] = torch.zeros_like(weighted_attended)
 	raw_ratio[valid_mask] = weighted_attended[valid_mask] / total_positive[valid_mask]
 
 	# Scale to [-1, 1]: score = 2 * ratio - 1
-	scaled: Tensor = 2.0 * raw_ratio - 1.0
+	scaled: Float[Tensor, "batch dest"] = 2.0 * raw_ratio - 1.0
 
 	# Average over valid positions (skip position 0 which is BOS)
 	start_pos: int = 1
-	valid_scores: Tensor = scaled[:, start_pos:]
-	valid_counts: Tensor = valid_mask[:, start_pos:].float()
+	valid_scores: Float[Tensor, "batch pos"] = scaled[:, start_pos:]
+	valid_counts: Float[Tensor, "batch pos"] = valid_mask[:, start_pos:].float()
 
 	if valid_counts.sum() > 0:
 		return (valid_scores * valid_counts).sum().item() / valid_counts.sum().item()
