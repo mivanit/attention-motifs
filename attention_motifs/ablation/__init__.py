@@ -35,6 +35,7 @@ from attention_motifs.ablation.experiment import (
 	evaluate_induction_scores,
 	get_all_head_scores,
 )
+from attention_motifs.ablation.frontend import write_ablation_frontend
 
 __all__ = [
 	# candidates
@@ -60,4 +61,6 @@ __all__ = [
 	"run_ablation_experiment",
 	"evaluate_induction_scores",
 	"get_all_head_scores",
+	# frontend
+	"write_ablation_frontend",
 ]

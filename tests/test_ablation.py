@@ -1,5 +1,7 @@
 """Tests for the ablation study infrastructure."""
 
+from pathlib import Path
+
 import pytest
 import torch
 
@@ -18,6 +20,7 @@ from attention_motifs.ablation.candidates import (
 	get_known_induction_heads,
 	DistanceCandidates,
 )
+from attention_motifs.ablation.experiment import ExperimentConfig, ExperimentResults
 from attention_motifs.ablation.metrics import AblationResult
 
 
@@ -655,3 +658,78 @@ class TestIntegration:
 		with ablator.ablate_heads([(0, 0)], method=AblationMethod.PATTERN_PRESERVING):
 			output: torch.Tensor = model(tokens, prepend_bos=False)
 			assert output is not None
+
+
+# ============================================================
+# Tests for frontend.py - Ablation Frontend
+# ============================================================
+
+
+class TestAblationFrontend:
+	"""Tests for ablation frontend HTML generation."""
+
+	def _make_results(self) -> dict[str, ExperimentResults]:
+		"""Create mock ExperimentResults for testing."""
+		results: ExperimentResults = ExperimentResults(
+			model_name="test-model",
+			config=ExperimentConfig(
+				n_sequences=10,
+				seq_length=5,
+				n_repetitions=2,
+			),
+			baseline_loss=3.5,
+			baseline_icl=-0.3,
+			results=[
+				AblationResult(
+					head="test-model:L0:H0",
+					ablation_method=AblationMethod.ZERO,
+					baseline_repeated_loss=3.5,
+					ablated_repeated_loss=4.2,
+					loss_increase=0.7,
+					baseline_prefix_score=0.15,
+					ablated_prefix_score=0.05,
+					prefix_score_decrease=0.1,
+				),
+			],
+		)
+		return {"test-model": results}
+
+	def test_write_ablation_frontend(self, tmp_path: Path) -> None:
+		"""Test that write_ablation_frontend produces valid HTML."""
+		from attention_motifs.ablation.frontend import write_ablation_frontend
+
+		all_results: dict[str, ExperimentResults] = self._make_results()
+		output_path: Path = write_ablation_frontend(all_results, tmp_path)
+
+		assert output_path.exists()
+		html: str = output_path.read_text()
+		assert "__ABLATION_DATA__" not in html
+		assert "test-model" in html
+		assert "test-model:L0:H0" in html
+		assert output_path.name == "ablation_results.html"
+
+	def test_write_ablation_frontend_custom_filename(self, tmp_path: Path) -> None:
+		"""Test custom filename for ablation frontend."""
+		from attention_motifs.ablation.frontend import write_ablation_frontend
+
+		all_results: dict[str, ExperimentResults] = self._make_results()
+		output_path: Path = write_ablation_frontend(
+			all_results, tmp_path, filename="custom.html"
+		)
+		assert output_path.name == "custom.html"
+		assert output_path.exists()
+
+	def test_serialize_results_structure(self) -> None:
+		"""Test that _serialize_results produces correct structure."""
+		from attention_motifs.ablation.frontend import _serialize_results
+
+		all_results: dict[str, ExperimentResults] = self._make_results()
+		data: dict = _serialize_results(all_results)
+
+		assert "models" in data
+		assert "test-model" in data["models"]
+		model_data: dict = data["models"]["test-model"]
+		assert model_data["baseline_loss"] == 3.5
+		assert model_data["config"]["n_sequences"] == 10
+		assert len(model_data["results"]) == 1
+		assert model_data["results"][0]["head"] == "test-model:L0:H0"

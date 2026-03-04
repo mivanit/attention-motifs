@@ -448,6 +448,12 @@ def run_cross_model_experiment(
 				output_dir_ / f"{cached_sanitize_model_name(model_name)}_results.json"
 			)
 
+	# Write HTML frontend if output_dir is set
+	if output_dir_ is not None and all_results:
+		from attention_motifs.ablation.frontend import write_ablation_frontend
+
+		write_ablation_frontend(all_results, output_dir_)
+
 	return all_results
 
 
@@ -576,6 +582,12 @@ def evaluate_induction_scores(
 			results.save(
 				output_dir_ / f"{cached_sanitize_model_name(model_name)}_results.json"
 			)
+
+	# Write HTML frontend if output_dir is set
+	if output_dir_ is not None and all_results:
+		from attention_motifs.ablation.frontend import write_ablation_frontend
+
+		write_ablation_frontend(all_results, output_dir_)
 
 	return all_results
 

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ablation Results</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <script id="ablation-data" type="application/json">
+      __ABLATION_DATA__
+    </script>
+
+    <div class="container">
+      <h1>Ablation Experiment Results</h1>
+
+      <div class="config-summary" id="config-summary"></div>
+
+      <div class="model-tabs" id="model-tabs"></div>
+
+      <div class="model-summary" id="model-summary"></div>
+
+      <div class="controls" id="controls">
+        <div class="control-group">
+          <label>Method:</label>
+          <span id="method-filters"></span>
+        </div>
+        <div class="control-group">
+          <label>Columns:</label>
+          <span id="column-toggles"></span>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table id="results-table">
+          <thead id="results-thead"></thead>
+          <tbody id="results-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
