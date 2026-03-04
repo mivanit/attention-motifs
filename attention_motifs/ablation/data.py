@@ -5,7 +5,7 @@ Generates sequences designed to elicit and test induction behavior:
 - Natural text with repetitions
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Sequence
 
 import torch
@@ -20,19 +20,22 @@ class RepeatedSequence:
 	Attributes
 	----------
 	tokens
-	    Full token sequence including all repetitions.
+	    Full token sequence including all repetitions (and optional BOS).
 	base_length
 	    Length of the base pattern before repetition.
 	n_repetitions
 	    Number of times the pattern is repeated.
 	repetition_starts
 	    Token indices where each repetition begins.
+	has_bos
+	    Whether ``tokens[0]`` is a BOS token prepended before the pattern.
 	"""
 
 	tokens: Int[Tensor, "seq_len"]
 	base_length: int
 	n_repetitions: int
-	repetition_starts: list[int]
+	repetition_starts: list[int] = field(default_factory=list)
+	has_bos: bool = False
 
 	@property
 	def seq_len(self) -> int:
@@ -67,15 +70,19 @@ def generate_repeated_sequences(
 	exclude_special: bool = True,
 	exclude_rare: bool = True,
 	rare_threshold: int = 1000,
+	exclude_common: bool = True,
+	common_threshold: int = 100,
+	prepend_bos: bool = True,
+	bos_token_id: int | None = None,
 	seed: int | None = None,
 	device: str = "cpu",
 ) -> list[RepeatedSequence]:
 	"""Generate random token sequences repeated multiple times.
 
-	Creates sequences of the form [A1 A2 ... An][A1 A2 ... An]...
-	where A1...An are random tokens. This is the standard test for
-	induction heads: they should learn to predict Ai+1 after seeing Ai
-	in the repeated portion.
+	Creates sequences of the form ``[BOS][A1 A2 ... An][A1 A2 ... An]...``
+	where A1...An are random tokens.  This is the standard test for
+	induction heads (Olsson et al. 2022): they should learn to predict
+	``Ai+1`` after seeing ``Ai`` in the repeated portion.
 
 	Parameters
 	----------
@@ -92,7 +99,19 @@ def generate_repeated_sequences(
 	exclude_rare
 	    Exclude rare tokens (high token IDs).
 	rare_threshold
-	    Token IDs above vocab_size - rare_threshold are considered rare.
+	    Token IDs above ``vocab_size - rare_threshold`` are considered rare.
+	exclude_common
+	    Exclude the most common tokens (low token IDs in BPE tokenizers).
+	    The paper excludes "the most common and the least common tokens".
+	common_threshold
+	    Token IDs below this value are considered common and excluded when
+	    ``exclude_common`` is True.
+	prepend_bos
+	    Prepend a BOS (beginning-of-sequence) token.  The paper specifies
+	    "prepend a start of sequence token".
+	bos_token_id
+	    Explicit BOS token ID.  If ``None``, reads from
+	    ``tokenizer.bos_token_id`` (falling back to 0).
 	seed
 	    Random seed for reproducibility.
 	device
@@ -107,7 +126,7 @@ def generate_repeated_sequences(
 		torch.manual_seed(seed)
 
 	# Get vocab size
-	vocab_size = (
+	vocab_size: int = (
 		tokenizer.vocab_size if hasattr(tokenizer, "vocab_size") else len(tokenizer)
 	)
 
@@ -118,7 +137,7 @@ def generate_repeated_sequences(
 		# Common special token attributes
 		special_ids: set[int] = set()
 		for attr in ["bos_token_id", "eos_token_id", "pad_token_id", "unk_token_id"]:
-			token_id = getattr(tokenizer, attr, None)
+			token_id: int | None = getattr(tokenizer, attr, None)
 			if token_id is not None:
 				special_ids.add(token_id)
 
@@ -128,26 +147,50 @@ def generate_repeated_sequences(
 
 		valid_tokens = [t for t in valid_tokens if t not in special_ids]
 
+	if exclude_common:
+		valid_tokens = [t for t in valid_tokens if t >= common_threshold]
+
 	if exclude_rare:
 		# Exclude very high token IDs (often rare/special)
-		max_token = vocab_size - rare_threshold
+		max_token: int = vocab_size - rare_threshold
 		valid_tokens = [t for t in valid_tokens if t < max_token]
 
-	valid_tokens_tensor = torch.tensor(valid_tokens, device=device)
-	n_valid = len(valid_tokens_tensor)
+	valid_tokens_tensor: Int[Tensor, " n_valid"] = torch.tensor(
+		valid_tokens, device=device
+	)
+	n_valid: int = len(valid_tokens_tensor)
+
+	# Resolve BOS token ID
+	resolved_bos_id: int = 0
+	if prepend_bos:
+		if bos_token_id is not None:
+			resolved_bos_id = bos_token_id
+		else:
+			resolved_bos_id = getattr(tokenizer, "bos_token_id", None) or 0
 
 	sequences: list[RepeatedSequence] = []
 
 	for _ in range(n_sequences):
 		# Sample random indices into valid_tokens
-		indices = torch.randint(0, n_valid, (seq_length,), device=device)
-		base_tokens = valid_tokens_tensor[indices]
+		indices: Int[Tensor, " seq_length"] = torch.randint(
+			0, n_valid, (seq_length,), device=device
+		)
+		base_tokens: Int[Tensor, " seq_length"] = valid_tokens_tensor[indices]
 
 		# Repeat the sequence
-		full_tokens = base_tokens.repeat(n_repetitions)
+		full_tokens: Int[Tensor, " total_len"] = base_tokens.repeat(n_repetitions)
 
-		# Track repetition starts
-		repetition_starts = [i * seq_length for i in range(n_repetitions)]
+		if prepend_bos:
+			bos_tensor: Int[Tensor, " 1"] = torch.tensor(
+				[resolved_bos_id], device=device
+			)
+			full_tokens = torch.cat([bos_tensor, full_tokens])
+			# repetition_starts are shifted by 1 for the BOS prefix
+			repetition_starts: list[int] = [
+				1 + i * seq_length for i in range(n_repetitions)
+			]
+		else:
+			repetition_starts = [i * seq_length for i in range(n_repetitions)]
 
 		sequences.append(
 			RepeatedSequence(
@@ -155,6 +198,7 @@ def generate_repeated_sequences(
 				base_length=seq_length,
 				n_repetitions=n_repetitions,
 				repetition_starts=repetition_starts,
+				has_bos=prepend_bos,
 			)
 		)
 
@@ -168,6 +212,8 @@ def generate_abab_sequences(
 	n_repetitions: int = 10,
 	seed: int | None = None,
 	device: str = "cpu",
+	prepend_bos: bool = True,
+	bos_token_id: int | None = None,
 ) -> list[RepeatedSequence]:
 	"""Generate simple A-B-A-B pattern sequences.
 
@@ -188,6 +234,10 @@ def generate_abab_sequences(
 	    Random seed.
 	device
 	    Device for tensors.
+	prepend_bos
+	    Prepend a BOS token.
+	bos_token_id
+	    Explicit BOS token ID.
 
 	Returns
 	-------
@@ -201,6 +251,8 @@ def generate_abab_sequences(
 		n_repetitions=n_repetitions,
 		seed=seed,
 		device=device,
+		prepend_bos=prepend_bos,
+		bos_token_id=bos_token_id,
 	)
 
 
@@ -229,14 +281,14 @@ def sequences_to_batch(
 	if not sequences:
 		raise ValueError("Empty sequence list")
 
-	max_len = max(s.seq_len for s in sequences)
-	target_len = pad_to_length if pad_to_length is not None else max_len
+	max_len: int = max(s.seq_len for s in sequences)
+	target_len: int = pad_to_length if pad_to_length is not None else max_len
 
 	batch: list[Tensor] = []
 	for seq in sequences:
-		tokens = seq.tokens
+		tokens: Tensor = seq.tokens
 		if tokens.shape[0] < target_len:
-			padding = torch.full(
+			padding: Tensor = torch.full(
 				(target_len - tokens.shape[0],),
 				pad_token_id,
 				dtype=tokens.dtype,
@@ -275,12 +327,14 @@ def get_induction_mask(
 	if not sequences:
 		raise ValueError("Empty sequence list")
 
-	max_len = max(s.seq_len for s in sequences)
-	target_len = pad_to_length if pad_to_length is not None else max_len
+	max_len: int = max(s.seq_len for s in sequences)
+	target_len: int = pad_to_length if pad_to_length is not None else max_len
 
 	masks: list[Tensor] = []
 	for seq in sequences:
-		mask = torch.zeros(target_len, dtype=torch.bool, device=seq.tokens.device)
+		mask: Tensor = torch.zeros(
+			target_len, dtype=torch.bool, device=seq.tokens.device
+		)
 		for pos in seq.get_induction_positions():
 			if pos < target_len:
 				mask[pos] = True
@@ -319,14 +373,16 @@ def generate_long_context_prompts(
 	sequences: list[Tensor] = []
 
 	for text in source_texts:
-		tokens = tokenizer.encode(text, return_tensors="pt").squeeze(0)
+		tokens: Tensor = tokenizer.encode(text, return_tensors="pt").squeeze(0)
 
 		if tokens.shape[0] >= target_length:
 			tokens = tokens[:target_length]
 		else:
 			# Repeat text until we reach target length
 			while tokens.shape[0] < target_length:
-				more_tokens = tokenizer.encode(text, return_tensors="pt").squeeze(0)
+				more_tokens: Tensor = tokenizer.encode(
+					text, return_tensors="pt"
+				).squeeze(0)
 				tokens = torch.cat([tokens, more_tokens])
 			tokens = tokens[:target_length]
 

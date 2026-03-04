@@ -28,6 +28,9 @@ class AblationMethod(Enum):
 
 	ZERO = "zero"  # Set head output to 0
 	MEAN = "mean"  # Set head output to pre-computed mean activation
+	PATTERN_PRESERVING = (
+		"pattern_preserving"  # Zero head output, freeze all attn patterns
+	)
 
 
 @dataclass
@@ -35,7 +38,7 @@ class HeadAblator:
 	"""TransformerLens-based attention head ablation.
 
 	Provides methods to disable specific attention heads during forward
-	passes using either zero or mean ablation.
+	passes using zero, mean, or pattern-preserving ablation.
 
 	Attributes
 	----------
@@ -50,10 +53,12 @@ class HeadAblator:
 	--------
 	>>> model = load_model("gpt2-small")
 	>>> ablator = HeadAblator(model)
-	>>> # Compute mean activations from calibration data
-	>>> ablator.compute_mean_activations(calibration_prompts)
-	>>> # Run model with head L5:H5 ablated
+	>>> # Zero ablation
 	>>> with ablator.ablate_heads([(5, 5)], method=AblationMethod.ZERO):
+	...     output = model(input_ids)
+	>>> # Pattern-preserving ablation
+	>>> ablator.set_clean_patterns(tokens)
+	>>> with ablator.ablate_heads([(5, 5)], method=AblationMethod.PATTERN_PRESERVING):
 	...     output = model(input_ids)
 	"""
 
@@ -62,6 +67,9 @@ class HeadAblator:
 		default_factory=dict
 	)
 	device: str = field(default="cuda")
+	_clean_patterns: dict[str, Float[Tensor, "batch n_heads dest src"]] | None = field(
+		default=None, init=False, repr=False
+	)
 
 	def __post_init__(self):
 		if HookedTransformer is None:
@@ -86,6 +94,66 @@ class HeadAblator:
 	def _get_hook_name(self, layer: int) -> str:
 		"""Get the hook name for attention head output at a layer."""
 		return f"blocks.{layer}.attn.hook_z"
+
+	def _get_pattern_hook_name(self, layer: int) -> str:
+		"""Get the hook name for attention patterns at a layer."""
+		return f"blocks.{layer}.attn.hook_pattern"
+
+	def cache_clean_patterns(
+		self,
+		tokens: Tensor,
+		prepend_bos: bool = False,
+	) -> dict[str, Float[Tensor, "batch n_heads dest src"]]:
+		"""Run a clean forward pass and cache all attention patterns.
+
+		Parameters
+		----------
+		tokens
+		    Input token tensor.
+		prepend_bos
+		    Whether the model should prepend BOS.
+
+		Returns
+		-------
+		dict[str, Tensor]
+		    Mapping from hook name to attention pattern tensor.
+		"""
+		pattern_names: list[str] = [
+			self._get_pattern_hook_name(layer) for layer in range(self.n_layers)
+		]
+		with torch.no_grad():
+			_, cache = self.model.run_with_cache(
+				tokens, names_filter=pattern_names, prepend_bos=prepend_bos
+			)
+		clean_patterns: dict[str, Float[Tensor, "batch n_heads dest src"]] = {
+			name: cache[name].clone() for name in pattern_names
+		}
+		return clean_patterns
+
+	def set_clean_patterns(
+		self,
+		tokens: Tensor,
+		prepend_bos: bool = False,
+	) -> None:
+		"""Cache clean attention patterns for pattern-preserving ablation.
+
+		Must be called before using ``AblationMethod.PATTERN_PRESERVING``
+		with the ``ablate_heads`` context manager.
+
+		Parameters
+		----------
+		tokens
+		    Input token tensor (same tokens that will be used in the ablated pass).
+		prepend_bos
+		    Whether the model should prepend BOS.
+		"""
+		self._clean_patterns = self.cache_clean_patterns(
+			tokens, prepend_bos=prepend_bos
+		)
+
+	def clear_clean_patterns(self) -> None:
+		"""Clear cached clean patterns to free memory."""
+		self._clean_patterns = None
 
 	def compute_mean_activations(
 		self,
@@ -127,7 +195,7 @@ class HeadAblator:
 			) -> Tensor:
 				# z shape: (batch, pos, n_heads, d_head)
 				for head in range(self.n_heads):
-					head_z = z[:, :, head, :]  # (batch, pos, d_head)
+					head_z: Tensor = z[:, :, head, :]  # (batch, pos, d_head)
 					# Sum over batch and position
 					activation_sums[(layer, head)] += head_z.sum(dim=(0, 1))
 					activation_counts[(layer, head)] += (
@@ -138,7 +206,7 @@ class HeadAblator:
 			return hook
 
 		# Build hooks for all layers
-		hooks = [
+		hooks: list[tuple[str, Callable]] = [
 			(self._get_hook_name(layer), make_accumulator_hook(layer))
 			for layer in range(self.n_layers)
 		]
@@ -155,7 +223,7 @@ class HeadAblator:
 				# Tokenize if needed
 				if isinstance(batch[0], str):
 					# we can safely assume everything in the batch is str
-					tokens = self.model.to_tokens(batch)  # type: ignore[arg-type]
+					tokens: Tensor = self.model.to_tokens(batch)  # type: ignore[arg-type]
 				else:
 					# isinstance on batch[0] doesn't narrow the list type for mypy
 					tokens = torch.stack(batch) if isinstance(batch, list) else batch  # type: ignore[arg-type]
@@ -166,7 +234,7 @@ class HeadAblator:
 
 		# Compute means
 		for (layer, head), total in activation_sums.items():
-			count = activation_counts[(layer, head)]
+			count: int = activation_counts[(layer, head)]
 			if count > 0:
 				self.mean_cache[(layer, head)] = total / count
 			else:
@@ -189,7 +257,8 @@ class HeadAblator:
 		heads
 		    List of head indices to ablate.
 		method
-		    Ablation method (zero or mean).
+		    Ablation method (zero, mean, or pattern_preserving — all zero
+		    the head output; the difference is in whether patterns are frozen).
 
 		Returns
 		-------
@@ -201,10 +270,10 @@ class HeadAblator:
 			z: Float[Tensor, "batch pos n_heads d_head"], hook: HookPoint
 		) -> Float[Tensor, "batch pos n_heads d_head"]:
 			# Clone to avoid modifying original
-			z_modified = z.clone()
+			z_modified: Tensor = z.clone()
 
 			for head in heads:
-				if method == AblationMethod.ZERO:
+				if method in (AblationMethod.ZERO, AblationMethod.PATTERN_PRESERVING):
 					z_modified[:, :, head, :] = 0.0
 				elif method == AblationMethod.MEAN:
 					if (layer, head) not in self.mean_cache:
@@ -212,10 +281,34 @@ class HeadAblator:
 							f"Mean activation for layer {layer}, head {head} not cached. "
 							"Call compute_mean_activations() first."
 						)
-					mean_val = self.mean_cache[(layer, head)]
+					mean_val: Tensor = self.mean_cache[(layer, head)]
 					z_modified[:, :, head, :] = mean_val
 
 			return z_modified
+
+		return hook
+
+	def _create_pattern_freeze_hook(
+		self,
+		clean_pattern: Float[Tensor, "batch n_heads dest src"],
+	) -> Callable[[Tensor, HookPoint], Tensor]:
+		"""Create a hook that replaces attention patterns with cached clean ones.
+
+		Parameters
+		----------
+		clean_pattern
+		    Clean attention pattern to substitute.
+
+		Returns
+		-------
+		Callable
+		    Hook function that returns the clean pattern.
+		"""
+
+		def hook(
+			pattern: Float[Tensor, "batch n_heads dest src"], hook: HookPoint
+		) -> Float[Tensor, "batch n_heads dest src"]:
+			return clean_pattern
 
 		return hook
 
@@ -227,23 +320,32 @@ class HeadAblator:
 	) -> Iterator[None]:
 		"""Context manager to temporarily ablate specified heads.
 
+		For ``PATTERN_PRESERVING``, ``set_clean_patterns(tokens)`` must be
+		called first to cache the clean-run attention patterns.
+
 		Parameters
 		----------
 		heads
 		    List of (layer, head) tuples to ablate.
 		method
-		    Ablation method (zero or mean).
+		    Ablation method (zero, mean, or pattern_preserving).
 
 		Yields
 		------
 		None
-		    Use within a `with` block to run model with ablated heads.
+		    Use within a ``with`` block to run model with ablated heads.
 
 		Examples
 		--------
 		>>> with ablator.ablate_heads([(5, 5), (6, 9)], AblationMethod.ZERO):
 		...     logits = model(tokens)
 		"""
+		if method == AblationMethod.PATTERN_PRESERVING and self._clean_patterns is None:
+			raise ValueError(
+				"Call set_clean_patterns(tokens) before using PATTERN_PRESERVING. "
+				"Pattern-preserving ablation requires a clean forward pass first."
+			)
+
 		# Group heads by layer for efficient hook creation
 		heads_by_layer: dict[int, list[int]] = {}
 		for layer, head in heads:
@@ -251,8 +353,8 @@ class HeadAblator:
 				heads_by_layer[layer] = []
 			heads_by_layer[layer].append(head)
 
-		# Create hooks
-		hooks: list[tuple[str, Callable[[Tensor, HookPoint], Tensor]]] = [
+		# Create z-ablation hooks
+		all_hooks: list[tuple[str, Callable[[Tensor, HookPoint], Tensor]]] = [
 			(
 				self._get_hook_name(layer),
 				self._create_ablation_hook(layer, layer_heads, method),
@@ -260,16 +362,28 @@ class HeadAblator:
 			for layer, layer_heads in heads_by_layer.items()
 		]
 
-		# Register hooks by adding to the hook point's fwd_hooks list
-		for hook_name, hook_fn in hooks:
-			# add_hook expects `_HookFunctionProtocol: (tensor: Tensor, *, hook: HookPoint) -> Union[Any, None])` which is what we have, so ignore here is fine
+		# For pattern-preserving: add pattern-freeze hooks for ALL layers
+		if method == AblationMethod.PATTERN_PRESERVING:
+			assert self._clean_patterns is not None
+			for layer in range(self.n_layers):
+				pattern_hook_name: str = self._get_pattern_hook_name(layer)
+				clean_pattern: Tensor = self._clean_patterns[pattern_hook_name]
+				all_hooks.append(
+					(
+						pattern_hook_name,
+						self._create_pattern_freeze_hook(clean_pattern),
+					)
+				)
+
+		# Register hooks
+		for hook_name, hook_fn in all_hooks:
 			self.model.hook_dict[hook_name].add_hook(hook_fn)  # ty: ignore[invalid-argument-type] # pyright: ignore[reportArgumentType]
 
 		try:
 			yield
 		finally:
 			# Remove our hooks (they are the last ones added to each hook point)
-			for hook_name, _ in hooks:
+			for hook_name, _ in all_hooks:
 				hook_point = self.model.hook_dict[hook_name]
 				if hook_point.fwd_hooks:
 					hook_point.fwd_hooks.pop()
@@ -280,10 +394,12 @@ class HeadAblator:
 		heads: list[tuple[int, int]],
 		method: AblationMethod = AblationMethod.ZERO,
 		return_type: str = "logits",
+		prepend_bos: bool = True,
 	) -> Tensor:
 		"""Run model with specified heads ablated.
 
-		Convenience method that wraps the context manager.
+		For ``PATTERN_PRESERVING``, automatically caches clean patterns
+		if not already cached.
 
 		Parameters
 		----------
@@ -295,14 +411,19 @@ class HeadAblator:
 		    Ablation method.
 		return_type
 		    What to return ("logits", "loss", etc.).
+		prepend_bos
+		    Whether the model should prepend BOS.
 
 		Returns
 		-------
 		Tensor
 		    Model output with ablated heads.
 		"""
+		if method == AblationMethod.PATTERN_PRESERVING and self._clean_patterns is None:
+			self.set_clean_patterns(tokens, prepend_bos=prepend_bos)
+
 		with self.ablate_heads(heads, method):
-			return self.model(tokens, return_type=return_type)
+			return self.model(tokens, return_type=return_type, prepend_bos=prepend_bos)
 
 	def run_with_hooks_ablation(
 		self,
@@ -339,14 +460,29 @@ class HeadAblator:
 				heads_by_layer[layer] = []
 			heads_by_layer[layer].append(head)
 
-		# Create hooks
-		hooks = [
+		# Create z-ablation hooks
+		hooks: list[tuple[str, Callable]] = [
 			(
 				self._get_hook_name(layer),
 				self._create_ablation_hook(layer, layer_heads, method),
 			)
 			for layer, layer_heads in heads_by_layer.items()
 		]
+
+		# For pattern-preserving: add pattern-freeze hooks
+		if method == AblationMethod.PATTERN_PRESERVING:
+			if self._clean_patterns is None:
+				self.set_clean_patterns(tokens)
+			assert self._clean_patterns is not None
+			for layer in range(self.n_layers):
+				pattern_hook_name = self._get_pattern_hook_name(layer)
+				clean_pattern = self._clean_patterns[pattern_hook_name]
+				hooks.append(
+					(
+						pattern_hook_name,
+						self._create_pattern_freeze_hook(clean_pattern),
+					)
+				)
 
 		return self.model.run_with_hooks(
 			tokens,
