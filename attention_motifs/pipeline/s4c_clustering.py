@@ -1,6 +1,8 @@
 """Pipeline step 4c: Compute hierarchical clustering from head distances."""
 
+import json
 import sys
+from pathlib import Path
 
 from attention_motifs.features.analysis import DistanceTensorResult
 from attention_motifs.features.clustering import HierarchicalClusteringResult
@@ -32,6 +34,14 @@ def head_clustering(cfg: PipelineConfig) -> None:
 
 	# Save results
 	clustering.save(cfg.data_path("clustering"))
+
+	# Generate default cluster labels (null name/desc placeholders)
+	default_labels: dict = clustering.generate_default_labels(
+		cfg.clustering_n_clusters_list
+	)
+	labels_path: Path = Path(cfg.data_path("clustering")) / "cluster_labels.json"
+	with open(labels_path, "w") as f:
+		json.dump(default_labels, f, indent=2)
 
 	if cfg.verbose > 0:
 		n_heads: int = len(clustering.cls_values)

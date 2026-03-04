@@ -119,6 +119,39 @@ class HierarchicalClusteringResult:
 		}
 		return assignments
 
+	def generate_default_labels(
+		self,
+		n_clusters_list: list[int],
+	) -> dict[str, dict[str, dict[str, str | None | list[str]]]]:
+		"""Generate default cluster labels with null name/desc for each K.
+
+		For each K, computes the cut height from the linkage matrix
+		and creates entries with null name, null desc, and the heads list.
+		"""
+		labels: dict[str, dict[str, dict[str, str | None | list[str]]]] = {}
+		n: int = len(self.cls_values)
+		for k in n_clusters_list:
+			if k >= n:
+				continue
+			# Cut height for K clusters: midpoint between last-kept and first-skipped merge
+			low: float = float(self.linkage_matrix[n - 1 - k, 2])
+			high: float = float(self.linkage_matrix[n - k, 2])
+			cut_height: float = (low + high) / 2
+			height_key: str = f"{cut_height:.3f}"
+
+			assignments: dict[str, int] = self.get_clusters(n_clusters=k)
+
+			# Group heads by cluster
+			clusters: dict[int, list[str]] = {}
+			for head_id, cluster_id in assignments.items():
+				clusters.setdefault(cluster_id, []).append(head_id)
+
+			labels[height_key] = {
+				str(cluster_id): {"name": None, "desc": None, "heads": sorted(heads)}
+				for cluster_id, heads in sorted(clusters.items())
+			}
+		return labels
+
 	def get_max_height(self) -> float:
 		"""Get the maximum height in the dendrogram (root merge distance)."""
 		max_height: float = float(self.linkage_matrix[-1, 2])
