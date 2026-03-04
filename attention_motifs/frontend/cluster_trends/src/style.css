@@ -129,26 +129,6 @@ select:focus {
   height: 100% !important;
 }
 
-.toggle-btn {
-  background: #0f3460;
-  color: #a0c4ff;
-  border: 1px solid #1a4080;
-  border-radius: 4px;
-  padding: 3px 8px;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.toggle-btn:hover {
-  background: #1a4080;
-}
-
-.toggle-btn.active {
-  background: #1a4080;
-  border-color: #a0c4ff;
-  color: #fff;
-}
-
 .family-toggles {
   display: flex;
   gap: 4px;
