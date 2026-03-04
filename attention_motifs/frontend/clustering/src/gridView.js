@@ -30,7 +30,7 @@ let gridState = {
   originalModelOrder: [],
   modelDataFrame: null,
   selectionNote: "",
-  clusterLabels: {}, // merged labels: cutHeightKey -> { clusterIdx: { desc, heads } }
+  clusterLabels: {}, // merged labels: cutHeightKey -> { clusterIdx: { name, desc, heads } }
   serverLabels: {}, // server-loaded baseline labels (same structure)
   resolvedLabels: {}, // current cut height resolved: clusterId -> {name, desc}
 };
@@ -98,7 +98,7 @@ function mergeLabels(base, overlay) {
 
 /**
  * Get labels object for the current cut height
- * @returns {Object} Map of clusterIdx string -> { desc, heads }
+ * @returns {Object} Map of clusterIdx string -> { name, desc, heads }
  */
 function getCurrentLabels() {
   if (gridState.currentCutHeight === null) return {};

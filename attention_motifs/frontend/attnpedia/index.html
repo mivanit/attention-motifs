@@ -3810,7 +3810,7 @@
      * localStorage labels override server labels on merge.
      *
      * @param {string|null} [serverUrl] - URL to fetch server-side labels JSON
-     * @returns {Promise<Object>} Merged labels: { cutHeightKey: { clusterIdx: { desc, heads } } }
+     * @returns {Promise<Object>} Merged labels: { cutHeightKey: { clusterIdx: { name, desc, heads } } }
      */
     async function loadClusterLabels(serverUrl) {
       // Load from localStorage
