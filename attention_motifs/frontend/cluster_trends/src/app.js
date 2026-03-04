@@ -434,7 +434,9 @@ function buildLayerChartScatter(filtered, showLines) {
           callbacks: {
             label: (ctx) => {
               const ds = ctx.dataset;
-              return `${ds._model} | ${clusterLegendLabel(ds._clusterId)} | depth=${ctx.parsed.x.toFixed(2)} frac=${ctx.parsed.y.toFixed(3)}`;
+              const line = `${ds._model} | ${clusterLegendLabel(ds._clusterId)} | depth=${ctx.parsed.x.toFixed(2)} frac=${ctx.parsed.y.toFixed(3)}`;
+              const desc = clusterDesc(ds._clusterId);
+              return desc ? [line, desc] : line;
             },
           },
         },
@@ -592,7 +594,9 @@ function buildLayerChartDistribution(filtered) {
           callbacks: {
             label: (ctx) => {
               const ds = ctx.dataset;
-              return `${clusterLegendLabel(ds._clusterId)} (${ds._role}) | depth=${ctx.parsed.x.toFixed(2)} frac=${ctx.parsed.y.toFixed(3)}`;
+              const line = `${clusterLegendLabel(ds._clusterId)} (${ds._role}) | depth=${ctx.parsed.x.toFixed(2)} frac=${ctx.parsed.y.toFixed(3)}`;
+              const desc = clusterDesc(ds._clusterId);
+              return desc ? [line, desc] : line;
             },
           },
         },
@@ -699,7 +703,9 @@ function buildSizeChartScatter(filtered) {
             label: (ctx) => {
               const pt = ctx.raw;
               const ds = ctx.dataset;
-              return `${pt.model} | ${clusterLegendLabel(ds._clusterId)} | frac=${pt.y.toFixed(3)}`;
+              const line = `${pt.model} | ${clusterLegendLabel(ds._clusterId)} | frac=${pt.y.toFixed(3)}`;
+              const desc = clusterDesc(ds._clusterId);
+              return desc ? [line, desc] : line;
             },
           },
         },
