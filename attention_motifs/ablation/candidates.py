@@ -1,8 +1,13 @@
-"""Identify candidate induction heads from embedding proximity.
+"""Candidate head identification and selection for ablation experiments.
 
-Uses the pre-computed head embedding distances to find attention heads
-in other models that are nearby known GPT-2 small induction heads.
+Provides:
+- CandidateHeads: unified container for heads to evaluate, with factory
+  methods that construct from clustering, pattern types, or pipeline config.
+- DistanceCandidates: specialized container for heads identified via
+  embedding proximity to known induction heads.
 """
+
+from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -10,8 +15,9 @@ from pathlib import Path
 
 import polars as pl
 
-from attention_motifs.attnpedia.attnpedia import AttentionPedia
-from attention_motifs.features.analysis import DistanceTensorResult, parse_cls
+from attention_motifs.attnpedia.attnpedia import AttentionPedia, parse_cls
+from attention_motifs.features.analysis import DistanceTensorResult
+from attention_motifs.util.model_name import cached_sanitize_model_name
 
 
 # Known induction head types from AttentionPedia
@@ -57,9 +63,217 @@ def get_known_induction_heads(
 	return sorted(heads)
 
 
+# ============================================================
+# CandidateHeads: unified container for heads to evaluate
+# ============================================================
+
+
 @dataclass
 class CandidateHeads:
-	"""Container for candidate induction heads identified via embedding proximity.
+	"""Heads to evaluate, grouped by model.
+
+	Construct via factory class methods:
+	- ``from_clustering``: cut a hierarchical clustering at a given height
+	- ``from_pattern_types``: use pre-computed PatternTypes assignments
+	- ``from_pipeline_config``: infer clustering path from pipeline config
+	- ``from_distance_candidates``: convert from DistanceCandidates
+	"""
+
+	heads_by_model: dict[str, list[tuple[int, int]]]
+
+	# --- Properties ---
+
+	@property
+	def models(self) -> list[str]:
+		"""Sorted list of model names."""
+		return sorted(self.heads_by_model.keys())
+
+	@property
+	def n_heads(self) -> int:
+		"""Total number of heads across all models."""
+		return sum(len(heads) for heads in self.heads_by_model.values())
+
+	def summary(self) -> str:
+		"""Human-readable summary for CLI output."""
+		lines: list[str] = []
+		for model_name in sorted(self.heads_by_model):
+			heads: list[tuple[int, int]] = self.heads_by_model[model_name]
+			head_strs: list[str] = [f"L{layer}:H{head}" for layer, head in heads]
+			lines.append(f"  {model_name}: {len(heads)} heads — {', '.join(head_strs)}")
+		lines.append(
+			f"  Total: {self.n_heads} heads across {len(self.heads_by_model)} models"
+		)
+		return "\n".join(lines)
+
+	def filter_models(self, models: list[str]) -> CandidateHeads:
+		"""Return new CandidateHeads restricted to given models."""
+		models_set: set[str] = {cached_sanitize_model_name(m) for m in models}
+		filtered: dict[str, list[tuple[int, int]]] = {
+			m: h for m, h in self.heads_by_model.items() if m in models_set
+		}
+		return CandidateHeads(heads_by_model=filtered)
+
+	# --- Factory methods ---
+
+	@classmethod
+	def from_clustering(
+		cls,
+		clustering_path: Path | str,
+		cluster_id: int,
+		cut_height: float | None = None,
+		n_clusters: int | None = None,
+	) -> CandidateHeads:
+		"""Load clustering, cut at given height/n_clusters, extract heads for cluster_id.
+
+		Parameters
+		----------
+		clustering_path
+		    Path to clustering directory (contains linkage.npy, clustering_meta.json).
+		cluster_id
+		    Cluster index to extract.
+		cut_height
+		    Height at which to cut the dendrogram.
+		n_clusters
+		    Number of clusters (alternative to cut_height).
+		"""
+		from attention_motifs.features.clustering import HierarchicalClusteringResult
+
+		clustering: HierarchicalClusteringResult = HierarchicalClusteringResult.read(
+			clustering_path
+		)
+		assignments: dict[str, int] = clustering.get_clusters(
+			n_clusters=n_clusters,
+			cut_height=cut_height,
+		)
+		return cls._from_assignments(assignments, cluster_id)
+
+	@classmethod
+	def from_pattern_types(
+		cls,
+		pattern_types_path: Path | str,
+		cluster_id: int,
+	) -> CandidateHeads:
+		"""Load PatternTypes JSON, extract heads for cluster_id.
+
+		Parameters
+		----------
+		pattern_types_path
+		    Path to pattern_types.json file.
+		cluster_id
+		    Cluster index to extract (must match a type ID in the file).
+		"""
+		from attention_motifs.pattern_types.pattern_types import PatternTypes
+
+		pt: PatternTypes = PatternTypes.read(pattern_types_path)
+		head_ids: list[str] = pt.heads_by_type(cluster_id)
+
+		heads_by_model: dict[str, list[tuple[int, int]]] = {}
+		for head_id in head_ids:
+			model_name: str
+			layer: int
+			head: int
+			model_name, layer, head = parse_cls(head_id)
+			if model_name not in heads_by_model:
+				heads_by_model[model_name] = []
+			heads_by_model[model_name].append((layer, head))
+
+		return cls(heads_by_model=heads_by_model)
+
+	@classmethod
+	def from_pipeline_config(
+		cls,
+		cluster_id: int,
+		cut_height: float | None = None,
+		n_clusters: int | None = None,
+		pipeline_cfg_path: Path | str = "pipeline_cfg.toml",
+	) -> CandidateHeads:
+		"""Infer clustering path from pipeline config, then construct.
+
+		Loads the pipeline config and derives the clustering path via
+		``cfg.data_path("clustering")``, then delegates to ``from_clustering``.
+
+		Parameters
+		----------
+		cluster_id
+		    Cluster index to extract.
+		cut_height
+		    Height at which to cut the dendrogram.
+		n_clusters
+		    Number of clusters (alternative to cut_height).
+		pipeline_cfg_path
+		    Path to pipeline TOML config (default: ``pipeline_cfg.toml``).
+		"""
+		from attention_motifs.pipeline.cfg import PipelineConfig
+
+		cfg: PipelineConfig = PipelineConfig.read(Path(pipeline_cfg_path))
+		clustering_path: Path = cfg.data_path("clustering")
+		return cls.from_clustering(
+			clustering_path,
+			cluster_id=cluster_id,
+			cut_height=cut_height,
+			n_clusters=n_clusters,
+		)
+
+	@classmethod
+	def from_distance_candidates(
+		cls,
+		distance_candidates: DistanceCandidates,
+		n_per_model: int = 10,
+	) -> CandidateHeads:
+		"""Convert DistanceCandidates to CandidateHeads (drops scores).
+
+		Parameters
+		----------
+		distance_candidates
+		    Distance-based candidate identification result.
+		n_per_model
+		    Number of top candidates per model to include.
+		"""
+		from attention_motifs.attnpedia import heads_from_strings
+
+		heads_by_model: dict[str, list[tuple[int, int]]] = {}
+		for model_name in distance_candidates.candidates_by_model:
+			top: list[tuple[str, float]] = distance_candidates.get_top_candidates(
+				model_name, n=n_per_model
+			)
+			if top:
+				head_strs: list[str] = [h for h, _ in top]
+				heads_by_model[model_name] = heads_from_strings(head_strs)
+
+		return cls(heads_by_model=heads_by_model)
+
+	# --- Internal helpers ---
+
+	@classmethod
+	def _from_assignments(
+		cls,
+		assignments: dict[str, int],
+		cluster_id: int,
+	) -> CandidateHeads:
+		"""Build from a head_id → cluster_id mapping, filtering to cluster_id."""
+		heads_by_model: dict[str, list[tuple[int, int]]] = {}
+		for head_id, cid in assignments.items():
+			if cid != cluster_id:
+				continue
+			model_name: str
+			layer: int
+			head: int
+			model_name, layer, head = parse_cls(head_id)
+			if model_name not in heads_by_model:
+				heads_by_model[model_name] = []
+			heads_by_model[model_name].append((layer, head))
+
+		return cls(heads_by_model=heads_by_model)
+
+
+# ============================================================
+# DistanceCandidates: distance-based candidate identification
+# ============================================================
+
+
+@dataclass
+class DistanceCandidates:
+	"""Candidate induction heads identified via embedding proximity.
 
 	Attributes
 	----------
@@ -148,7 +362,7 @@ class CandidateHeads:
 		return pl.DataFrame(rows).sort("score", descending=True)
 
 	@classmethod
-	def read(cls, path: Path | str) -> "CandidateHeads":
+	def read(cls, path: Path | str) -> DistanceCandidates:
 		"""Load candidate heads from a saved file."""
 		import json
 
@@ -185,7 +399,7 @@ def find_candidate_induction_heads(
 	k_neighbors: int = 20,
 	exclude_reference_model: bool = True,
 	score_method: str = "frequency",
-) -> CandidateHeads:
+) -> DistanceCandidates:
 	"""Find candidate induction heads based on proximity in embedding space.
 
 	For each reference (known) induction head, finds the K nearest neighbors
@@ -209,7 +423,7 @@ def find_candidate_induction_heads(
 
 	Returns
 	-------
-	CandidateHeads
+	DistanceCandidates
 	    Container with candidate heads organized by model.
 	"""
 	if reference_heads is None:
@@ -285,7 +499,7 @@ def find_candidate_induction_heads(
 	for model in candidates_by_model:
 		candidates_by_model[model].sort(key=lambda x: x[1], reverse=True)
 
-	return CandidateHeads(
+	return DistanceCandidates(
 		reference_heads=reference_heads,
 		candidates_by_model=dict(candidates_by_model),
 		all_neighbors=all_neighbors,
@@ -296,7 +510,7 @@ def find_candidate_induction_heads(
 
 def get_control_heads(
 	distance_result: DistanceTensorResult,
-	candidate_heads: CandidateHeads,
+	candidate_heads: DistanceCandidates,
 	model: str,
 	n_controls: int = 10,
 	method: str = "far",

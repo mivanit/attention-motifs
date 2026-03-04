@@ -1,34 +1,77 @@
 """CLI for ablation experiments.
 
 Usage:
+    # From pattern types file:
+    python -m attention_motifs.ablation cluster \
+        --pattern-types pattern_types.json --cluster-id 3
+
+    # From explicit clustering path:
     python -m attention_motifs.ablation cluster \
         --clustering-path data/features/clustering \
-        --cut-height 5.0 \
-        --cluster-id 3 \
-        --device cuda \
-        --output-dir data/ablation/cluster_3
+        --cut-height 5.0 --cluster-id 3
+
+    # Infer clustering path from pipeline config:
+    python -m attention_motifs.ablation cluster \
+        --cut-height 5.0 --cluster-id 3
 """
 
 import argparse
 import sys
 
+from attention_motifs.ablation.candidates import CandidateHeads
 from attention_motifs.ablation.experiment import (
 	ExperimentConfig,
-	run_cluster_ablation,
+	evaluate_induction_scores,
 )
 
 
 def cluster_command(args: argparse.Namespace) -> None:
 	"""Run ablation on all heads in a specific cluster."""
-	# Validate cut parameters
-	if args.cut_height is None and args.n_clusters is None:
-		print("Error: Must specify --cut-height or --n-clusters", file=sys.stderr)
-		sys.exit(1)
+	# Build CandidateHeads from the appropriate source
+	candidates: CandidateHeads
+	if args.pattern_types is not None:
+		candidates = CandidateHeads.from_pattern_types(
+			args.pattern_types, args.cluster_id
+		)
+	elif args.clustering_path is not None:
+		# Validate cut parameters when using raw clustering
+		if args.cut_height is None and args.n_clusters is None:
+			print(
+				"Error: Must specify --cut-height or --n-clusters"
+				" when using --clustering-path",
+				file=sys.stderr,
+			)
+			sys.exit(1)
+		candidates = CandidateHeads.from_clustering(
+			args.clustering_path,
+			args.cluster_id,
+			cut_height=args.cut_height,
+			n_clusters=args.n_clusters,
+		)
+	else:
+		# Infer from pipeline config
+		if args.cut_height is None and args.n_clusters is None:
+			print(
+				"Error: Must specify --cut-height or --n-clusters"
+				" when inferring from pipeline config",
+				file=sys.stderr,
+			)
+			sys.exit(1)
+		candidates = CandidateHeads.from_pipeline_config(
+			args.cluster_id,
+			cut_height=args.cut_height,
+			n_clusters=args.n_clusters,
+			pipeline_cfg_path=args.pipeline_cfg,
+		)
 
-	# Parse models filter
-	models: list[str] | None = None
+	# Filter to specific models if requested
 	if args.models is not None:
-		models = [m.strip() for m in args.models.split(",") if m.strip()]
+		models: list[str] = [m.strip() for m in args.models.split(",") if m.strip()]
+		candidates = candidates.filter_models(models)
+
+	if candidates.n_heads == 0:
+		print("Error: No heads found for the specified cluster", file=sys.stderr)
+		sys.exit(1)
 
 	# Build experiment config
 	config: ExperimentConfig = ExperimentConfig(
@@ -39,13 +82,9 @@ def cluster_command(args: argparse.Namespace) -> None:
 		seed=args.seed,
 	)
 
-	results: dict = run_cluster_ablation(
-		clustering_path=args.clustering_path,
-		cluster_id=args.cluster_id,
-		cut_height=args.cut_height,
-		n_clusters=args.n_clusters,
+	results: dict = evaluate_induction_scores(
+		candidates=candidates,
 		config=config,
-		models=models,
 		device=args.device,
 		output_dir=args.output_dir,
 		show_progress=True,
@@ -70,23 +109,34 @@ def main() -> None:
 		"cluster",
 		help="Run ablation on heads in a specific cluster",
 	)
-	cluster_parser.add_argument(
+
+	# --- Input source (mutually exclusive) ---
+	source_group = cluster_parser.add_mutually_exclusive_group()
+	source_group.add_argument(
+		"--pattern-types",
+		type=str,
+		default=None,
+		help="Path to pattern_types.json (pre-computed assignments)",
+	)
+	source_group.add_argument(
 		"--clustering-path",
 		type=str,
-		required=True,
+		default=None,
 		help="Path to clustering directory (contains linkage.npy, clustering_meta.json)",
 	)
+
+	# --- Cluster selection ---
 	cluster_parser.add_argument(
 		"--cluster-id",
 		type=int,
 		required=True,
-		help="Cluster index (0-indexed) to ablate",
+		help="Cluster index to ablate",
 	)
 	cluster_parser.add_argument(
 		"--cut-height",
 		type=float,
 		default=None,
-		help="Height at which to cut the dendrogram",
+		help="Height at which to cut the dendrogram (for --clustering-path or pipeline config)",
 	)
 	cluster_parser.add_argument(
 		"--n-clusters",
@@ -94,6 +144,16 @@ def main() -> None:
 		default=None,
 		help="Number of clusters (alternative to --cut-height)",
 	)
+
+	# --- Pipeline config fallback ---
+	cluster_parser.add_argument(
+		"--pipeline-cfg",
+		type=str,
+		default="pipeline_cfg.toml",
+		help="Path to pipeline TOML config for inferring clustering path (default: pipeline_cfg.toml)",
+	)
+
+	# --- Filtering and runtime ---
 	cluster_parser.add_argument(
 		"--models",
 		type=str,
@@ -112,6 +172,8 @@ def main() -> None:
 		default=None,
 		help="Directory to save results (default: no save)",
 	)
+
+	# --- Experiment config ---
 	cluster_parser.add_argument(
 		"--n-sequences",
 		type=int,
