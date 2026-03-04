@@ -95,9 +95,15 @@ async function loadClusterLabels(serverUrl) {
   if (serverUrl) {
     try {
       const resp = await fetch(serverUrl);
-      if (resp.ok) serverLabels = await resp.json();
+      if (resp.ok) {
+        serverLabels = await resp.json();
+      } else {
+        console.warn(
+          `Cluster labels not found at ${serverUrl} (${resp.status})`,
+        );
+      }
     } catch (e) {
-      // Server labels are optional
+      console.warn("Failed to fetch cluster labels:", e);
     }
   }
 

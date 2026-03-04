@@ -137,6 +137,7 @@ DEFAULT_VIS_CONFIGS: dict[str, dict[str, Any]] = dict(
 			"hoverColumns": ["cls", "type.primary", "type.group"],
 			"clustering_meta_url": "../../../features/clustering/clustering_meta.json",
 			"clustering_linkage_url": "../../../features/clustering/linkage.json",
+			"cluster_labels_url": "../../../features/clustering/cluster_labels.json",
 			"selectedPoints": {
 				"size": 20,
 				"sizeMin": 0.1,

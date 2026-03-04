@@ -31,7 +31,6 @@ let gridState = {
   modelDataFrame: null,
   selectionNote: "",
   clusterLabels: {}, // merged labels: cutHeightKey -> { clusterIdx: { name, desc, heads } }
-  serverLabels: {}, // server-loaded baseline labels (same structure)
   resolvedLabels: {}, // current cut height resolved: clusterId -> {name, desc}
 };
 
@@ -51,20 +50,6 @@ function getCutHeightKey(cutHeight) {
 }
 
 /**
- * Load labels from localStorage
- * @returns {Object} Labels object keyed by cut height string
- */
-function loadLabelsFromLocalStorage() {
-  try {
-    const raw = localStorage.getItem(LABELS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch (e) {
-    console.warn("Failed to load cluster labels from localStorage:", e);
-    return {};
-  }
-}
-
-/**
  * Save current labels to localStorage
  */
 function saveLabelsToLocalStorage() {
@@ -76,24 +61,6 @@ function saveLabelsToLocalStorage() {
   } catch (e) {
     console.warn("Failed to save cluster labels to localStorage:", e);
   }
-}
-
-/**
- * Deep-merge two label objects. Overlay takes priority over base.
- * @param {Object} base - Base labels
- * @param {Object} overlay - Overlay labels (takes priority)
- * @returns {Object} Merged labels
- */
-function mergeLabels(base, overlay) {
-  const merged = {};
-  const allKeys = new Set([...Object.keys(base), ...Object.keys(overlay)]);
-  for (const heightKey of allKeys) {
-    merged[heightKey] = {
-      ...(base[heightKey] || {}),
-      ...(overlay[heightKey] || {}),
-    };
-  }
-  return merged;
 }
 
 /**
@@ -479,21 +446,11 @@ async function initGridView(config) {
       console.warn("rendered_prompts.jsonl not available for clustering page");
     }
 
-    // Load cluster labels: server-side first, then merge with localStorage
-    try {
-      const labelsUrl =
-        config.clusterLabelsUrl ||
-        "../../features/clustering/cluster_labels.json";
-      const labelsResp = await fetch(labelsUrl);
-      if (labelsResp.ok) {
-        gridState.serverLabels = await labelsResp.json();
-      }
-    } catch (e) {
-      console.warn("No server-side cluster labels found:", e);
-    }
-
-    const localLabels = loadLabelsFromLocalStorage();
-    gridState.clusterLabels = mergeLabels(gridState.serverLabels, localLabels);
+    // Load cluster labels (server + localStorage, merged by shared util)
+    const labelsUrl =
+      config.clusterLabelsUrl ||
+      "../../features/clustering/cluster_labels.json";
+    gridState.clusterLabels = await loadClusterLabels(labelsUrl);
 
     // Determine initial cut height from labels
     let initialCutHeight = 5;
