@@ -83,6 +83,12 @@ def _add_runtime_args(parser: argparse.ArgumentParser) -> None:
 		help="Comma-separated list of models to restrict to (default: all models in cluster)",
 	)
 	parser.add_argument(
+		"--model-family",
+		type=str,
+		default=None,
+		help="Comma-separated family prefixes to include (e.g. 'gpt2,pythia')",
+	)
+	parser.add_argument(
 		"--device",
 		type=str,
 		default="cuda",
@@ -146,6 +152,17 @@ def _run_and_print(
 	if args.models is not None:
 		models: list[str] = [m.strip() for m in args.models.split(",") if m.strip()]
 		candidates = candidates.filter_models(models)
+
+	if args.model_family is not None:
+		prefixes: list[str] = [
+			p.strip() for p in args.model_family.split(",") if p.strip()
+		]
+		matching: list[str] = [
+			m
+			for m in candidates.models
+			if any(p in m for p in prefixes)
+		]
+		candidates = candidates.filter_models(matching)
 
 	if candidates.n_heads == 0:
 		print("Error: No heads found for the specified cluster", file=sys.stderr)
