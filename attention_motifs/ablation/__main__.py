@@ -158,9 +158,7 @@ def _run_and_print(
 			p.strip() for p in args.model_family.split(",") if p.strip()
 		]
 		matching: list[str] = [
-			m
-			for m in candidates.models
-			if any(p in m for p in prefixes)
+			m for m in candidates.models if any(p in m for p in prefixes)
 		]
 		candidates = candidates.filter_models(matching)
 
