@@ -9,6 +9,7 @@ This module provides tools to:
 
 from attention_motifs.ablation.candidates import (
 	CandidateHeads,
+	DistanceCandidates,
 	get_known_induction_heads,
 	find_candidate_induction_heads,
 	get_control_heads,
@@ -20,7 +21,10 @@ from attention_motifs.ablation.ablate import (
 from attention_motifs.ablation.metrics import (
 	repeated_sequence_loss,
 	prefix_matching_score,
+	preceding_token_score,
 	icl_score,
+	copying_score,
+	ov_copying_score,
 	AblationResult,
 )
 from attention_motifs.ablation.data import (
@@ -28,13 +32,14 @@ from attention_motifs.ablation.data import (
 )
 from attention_motifs.ablation.experiment import (
 	run_ablation_experiment,
-	get_cluster_heads_by_model,
-	run_cluster_ablation,
+	evaluate_induction_scores,
+	get_all_head_scores,
 )
 
 __all__ = [
 	# candidates
 	"CandidateHeads",
+	"DistanceCandidates",
 	"get_known_induction_heads",
 	"find_candidate_induction_heads",
 	"get_control_heads",
@@ -44,12 +49,15 @@ __all__ = [
 	# metrics
 	"repeated_sequence_loss",
 	"prefix_matching_score",
+	"preceding_token_score",
 	"icl_score",
+	"copying_score",
+	"ov_copying_score",
 	"AblationResult",
 	# data
 	"generate_repeated_sequences",
 	# experiment
 	"run_ablation_experiment",
-	"get_cluster_heads_by_model",
-	"run_cluster_ablation",
+	"evaluate_induction_scores",
+	"get_all_head_scores",
 ]
