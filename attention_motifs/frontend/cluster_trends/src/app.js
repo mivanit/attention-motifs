@@ -29,8 +29,7 @@ let currentK = null;
 /** @type {Chart|null} */ let sizeChart = null;
 /** @type {Chart|null} */ let entropyChart = null;
 
-// Which models/families are enabled (true = visible)
-/** @type {Object<string, boolean>} */ let modelEnabled = {};
+// Which families are enabled (true = visible)
 /** @type {Object<string, boolean>} */ let familyEnabled = {};
 
 // Cut-height clustering state
@@ -41,20 +40,7 @@ let currentK = null;
 let currentRecords = { by_layer: [], by_model: [], entropy_by_layer: [] };
 
 // ── Colors ──────────────────────────────────────────────────────
-
-const GOLDEN_ANGLE = 137.508;
-
-/**
- * Generate a distinct color for a cluster index.
- * @param {number} idx
- * @returns {string} CSS hsl color
- */
-function clusterColor(idx) {
-  const hue = (idx * GOLDEN_ANGLE) % 360;
-  const sat = 65 + (idx % 3) * 10;
-  const lit = 50 + (idx % 2) * 8;
-  return `hsl(${hue}, ${sat}%, ${lit}%)`;
-}
+// clusterColor() and clusterColorAlpha() are provided by cluster_utils.js
 
 /**
  * Generate a color for a model index (different palette from clusters).
@@ -279,68 +265,48 @@ function updateFromK(k) {
 }
 
 // ── Toggle helpers ──────────────────────────────────────────────
+// buildToggleButtons() is provided by cluster_utils.js
 
 /**
- * Create model toggle buttons inside a container.
- * @param {string} containerId
- * @param {() => void} onChange - called when a toggle changes
+ * Check whether a model passes the current family filter.
+ * @param {string} modelName
+ * @returns {boolean}
  */
-function buildModelToggles(containerId, onChange) {
-  const container = document.getElementById(containerId);
-  container.innerHTML = "";
-  const models = Object.keys(DATA.models).sort();
-  for (const m of models) {
-    const btn = document.createElement("span");
-    btn.className = "model-toggle";
-    btn.textContent = m;
-    btn.dataset.model = m;
-    if (!modelEnabled[m]) btn.classList.add("disabled");
-    btn.addEventListener("click", () => {
-      modelEnabled[m] = !modelEnabled[m];
-      btn.classList.toggle("disabled", !modelEnabled[m]);
-      onChange();
-    });
-    container.appendChild(btn);
-  }
-}
-
-/**
- * Create family toggle buttons inside a container.
- * @param {string} containerId
- * @param {() => void} onChange
- */
-function buildFamilyToggles(containerId, onChange) {
-  const container = document.getElementById(containerId);
-  container.innerHTML = "";
-  const families = [
-    ...new Set(Object.values(DATA.models).map((m) => m.family)),
-  ].sort();
-  for (const f of families) {
-    const btn = document.createElement("span");
-    btn.className = "family-toggle";
-    btn.textContent = f;
-    btn.dataset.family = f;
-    if (!familyEnabled[f]) btn.classList.add("disabled");
-    btn.addEventListener("click", () => {
-      familyEnabled[f] = !familyEnabled[f];
-      btn.classList.toggle("disabled", !familyEnabled[f]);
-      onChange();
-    });
-    container.appendChild(btn);
-  }
+function isModelEnabled(modelName) {
+  const meta = DATA.models[modelName];
+  return meta != null && familyEnabled[meta.family] === true;
 }
 
 // ── Chart 1: Layer depth x cluster fraction ─────────────────────
 
 function buildLayerChart() {
   const records = currentRecords.by_layer;
+  const showDist = document.getElementById("layer-distribution").checked;
   const showLines = document.getElementById("show-lines").checked;
 
+  // Disable "Lines" checkbox when distribution is active
+  document.getElementById("show-lines").disabled = showDist;
+
+  // Filter by enabled families
+  const filtered = records.filter((r) => isModelEnabled(r.model));
+
+  if (showDist) {
+    buildLayerChartDistribution(filtered);
+  } else {
+    buildLayerChartScatter(filtered, showLines);
+  }
+}
+
+/**
+ * Scatter/line mode for the layer chart (original behavior).
+ * @param {Array} filtered - family-filtered by_layer records
+ * @param {boolean} showLines
+ */
+function buildLayerChartScatter(filtered, showLines) {
   // Group by cluster -> array of {x: depth, y: frac, model}
   /** @type {Object<number, Array<{x:number, y:number, model:string}>>} */
   const byCluster = {};
-  for (const r of records) {
-    if (!modelEnabled[r.model]) continue;
+  for (const r of filtered) {
     if (!byCluster[r.cluster]) byCluster[r.cluster] = [];
     byCluster[r.cluster].push({ x: r.depth, y: r.frac, model: r.model });
   }
@@ -393,10 +359,7 @@ function buildLayerChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      interaction: {
-        mode: "nearest",
-        intersect: true,
-      },
+      interaction: { mode: "nearest", intersect: true },
       scales: {
         x: {
           title: {
@@ -423,11 +386,9 @@ function buildLayerChart() {
           labels: {
             color: "#c0c0d0",
             font: { size: 11 },
-            // Only show one entry per cluster (not per model)
             filter: (item) => item.text !== "",
           },
           onClick: (_e, legendItem, legend) => {
-            // Toggle all datasets for this cluster
             const cid =
               legend.chart.data.datasets[legendItem.datasetIndex]._clusterId;
             const isHidden = !legendItem.hidden;
@@ -452,18 +413,202 @@ function buildLayerChart() {
   });
 }
 
+/**
+ * Distribution mode for the layer chart.
+ * Per cluster: min/max/mean band across models at each depth.
+ * @param {Array} filtered - family-filtered by_layer records
+ */
+function buildLayerChartDistribution(filtered) {
+  // Group by cluster
+  /** @type {Object<number, Array<{depth:number, frac:number}>>} */
+  const byCluster = {};
+  for (const r of filtered) {
+    if (!byCluster[r.cluster]) byCluster[r.cluster] = [];
+    byCluster[r.cluster].push({ depth: r.depth, frac: r.frac });
+  }
+
+  const clusterIds = Object.keys(byCluster)
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  const datasets = [];
+
+  for (const cid of clusterIds) {
+    const points = byCluster[cid];
+    // Group by depth -> collect frac values
+    /** @type {Object<string, number[]>} */
+    const byDepth = {};
+    for (const p of points) {
+      const dk = p.depth.toFixed(4);
+      if (!byDepth[dk]) byDepth[dk] = [];
+      byDepth[dk].push(p.frac);
+    }
+
+    const depths = Object.keys(byDepth)
+      .map(Number)
+      .sort((a, b) => a - b);
+    const maxPts = depths.map((d) => {
+      const vals = byDepth[d.toFixed(4)];
+      return { x: d, y: Math.max(...vals) };
+    });
+    const minPts = depths.map((d) => {
+      const vals = byDepth[d.toFixed(4)];
+      return { x: d, y: Math.min(...vals) };
+    });
+    const meanPts = depths.map((d) => {
+      const vals = byDepth[d.toFixed(4)];
+      return { x: d, y: vals.reduce((a, b) => a + b, 0) / vals.length };
+    });
+
+    const color = clusterColor(cid);
+    const fillColor = clusterColorAlpha(cid, 0.15);
+
+    // Max line (fill down to next dataset = min line)
+    datasets.push({
+      label: `Cluster ${cid}`,
+      data: maxPts,
+      borderColor: color,
+      borderWidth: 1,
+      borderDash: [4, 2],
+      pointRadius: 0,
+      showLine: true,
+      tension: 0.2,
+      fill: "+1",
+      backgroundColor: fillColor,
+      _clusterId: cid,
+    });
+    // Min line
+    datasets.push({
+      label: "",
+      data: minPts,
+      borderColor: color,
+      borderWidth: 1,
+      borderDash: [4, 2],
+      pointRadius: 0,
+      showLine: true,
+      tension: 0.2,
+      fill: false,
+      _clusterId: cid,
+    });
+    // Mean line (solid, thicker)
+    datasets.push({
+      label: "",
+      data: meanPts,
+      borderColor: color,
+      borderWidth: 2.5,
+      pointRadius: 1,
+      pointHoverRadius: 4,
+      showLine: true,
+      tension: 0.2,
+      fill: false,
+      _clusterId: cid,
+    });
+  }
+
+  const ctx = document.getElementById("layer-chart").getContext("2d");
+  if (layerChart) layerChart.destroy();
+
+  layerChart = new Chart(ctx, {
+    type: "scatter",
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "nearest", intersect: false },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: "Normalized Layer Depth",
+            color: "#a0a0b0",
+          },
+          min: -0.02,
+          max: 1.02,
+          ticks: { color: "#808090" },
+          grid: { color: "#1a2a40" },
+        },
+        y: {
+          title: { display: true, text: "Fraction of Heads", color: "#a0a0b0" },
+          min: 0,
+          ticks: { color: "#808090" },
+          grid: { color: "#1a2a40" },
+        },
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: "right",
+          labels: {
+            color: "#c0c0d0",
+            font: { size: 11 },
+            filter: (item) => item.text !== "",
+          },
+          onClick: (_e, legendItem, legend) => {
+            const cid =
+              legend.chart.data.datasets[legendItem.datasetIndex]._clusterId;
+            const isHidden = !legendItem.hidden;
+            for (let i = 0; i < legend.chart.data.datasets.length; i++) {
+              if (legend.chart.data.datasets[i]._clusterId === cid) {
+                legend.chart.setDatasetVisibility(i, isHidden);
+              }
+            }
+            legend.chart.update();
+          },
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const ds = ctx.dataset;
+              const role =
+                ds.borderDash && ds.borderDash.length
+                  ? ds.fill
+                    ? "max"
+                    : "min"
+                  : "mean";
+              return `Cluster ${ds._clusterId} (${role}) | depth=${ctx.parsed.x.toFixed(2)} frac=${ctx.parsed.y.toFixed(3)}`;
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
 // ── Chart 2: Model size x cluster fraction ──────────────────────
 
 function buildSizeChart() {
   const records = currentRecords.by_model;
+  const showDist = document.getElementById("size-distribution").checked;
 
+  // Filter by enabled families
+  const filtered = records.filter((r) => isModelEnabled(r.model));
+
+  if (showDist) {
+    buildSizeChartDistribution(filtered);
+  } else {
+    buildSizeChartScatter(filtered);
+  }
+}
+
+/** @type {(val: number) => string} */
+function formatParams(val) {
+  if (val >= 1e9) return (val / 1e9).toFixed(1) + "B";
+  if (val >= 1e6) return (val / 1e6).toFixed(0) + "M";
+  if (val >= 1e3) return (val / 1e3).toFixed(0) + "K";
+  return String(val);
+}
+
+/**
+ * Scatter mode for the size chart (original behavior).
+ * @param {Array} filtered - family-filtered by_model records
+ */
+function buildSizeChartScatter(filtered) {
   // Group by cluster
   /** @type {Object<number, Array<{x:number, y:number, model:string}>>} */
   const byCluster = {};
-  for (const r of records) {
+  for (const r of filtered) {
     const meta = DATA.models[r.model];
     if (!meta) continue;
-    if (!familyEnabled[meta.family]) continue;
     if (!byCluster[r.cluster]) byCluster[r.cluster] = [];
     byCluster[r.cluster].push({
       x: meta.n_params,
@@ -501,23 +646,12 @@ function buildSizeChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      interaction: {
-        mode: "nearest",
-        intersect: true,
-      },
+      interaction: { mode: "nearest", intersect: true },
       scales: {
         x: {
           type: "logarithmic",
           title: { display: true, text: "Parameters", color: "#a0a0b0" },
-          ticks: {
-            color: "#808090",
-            callback: (val) => {
-              if (val >= 1e9) return (val / 1e9).toFixed(1) + "B";
-              if (val >= 1e6) return (val / 1e6).toFixed(0) + "M";
-              if (val >= 1e3) return (val / 1e3).toFixed(0) + "K";
-              return val;
-            },
-          },
+          ticks: { color: "#808090", callback: formatParams },
           grid: { color: "#1a2a40" },
         },
         y: {
@@ -547,16 +681,126 @@ function buildSizeChart() {
   });
 }
 
+/**
+ * Distribution mode for the size chart.
+ * At each model size, show min/max/mean of cluster fractions across all clusters.
+ * @param {Array} filtered - family-filtered by_model records
+ */
+function buildSizeChartDistribution(filtered) {
+  // Group by model size -> collect all frac values across clusters
+  /** @type {Object<number, number[]>} */
+  const bySize = {};
+  for (const r of filtered) {
+    const meta = DATA.models[r.model];
+    if (!meta) continue;
+    const sizeKey = meta.n_params;
+    if (!bySize[sizeKey]) bySize[sizeKey] = [];
+    bySize[sizeKey].push(r.frac);
+  }
+
+  const sizes = Object.keys(bySize)
+    .map(Number)
+    .sort((a, b) => a - b);
+  const maxPts = sizes.map((s) => ({ x: s, y: Math.max(...bySize[s]) }));
+  const minPts = sizes.map((s) => ({ x: s, y: Math.min(...bySize[s]) }));
+  const meanPts = sizes.map((s) => {
+    const v = bySize[s];
+    return { x: s, y: v.reduce((a, b) => a + b, 0) / v.length };
+  });
+
+  const bandColor = "hsl(210, 60%, 60%)";
+  const fillColor = "hsla(210, 60%, 60%, 0.15)";
+
+  const datasets = [
+    {
+      label: "Max",
+      data: maxPts,
+      borderColor: bandColor,
+      borderWidth: 1,
+      borderDash: [4, 2],
+      pointRadius: 0,
+      showLine: true,
+      tension: 0.2,
+      fill: "+1",
+      backgroundColor: fillColor,
+    },
+    {
+      label: "Min",
+      data: minPts,
+      borderColor: bandColor,
+      borderWidth: 1,
+      borderDash: [4, 2],
+      pointRadius: 0,
+      showLine: true,
+      tension: 0.2,
+      fill: false,
+    },
+    {
+      label: "Mean",
+      data: meanPts,
+      borderColor: bandColor,
+      borderWidth: 2.5,
+      pointRadius: 2,
+      pointHoverRadius: 4,
+      showLine: true,
+      tension: 0.2,
+      fill: false,
+    },
+  ];
+
+  const ctx = document.getElementById("size-chart").getContext("2d");
+  if (sizeChart) sizeChart.destroy();
+
+  sizeChart = new Chart(ctx, {
+    type: "scatter",
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "nearest", intersect: false },
+      scales: {
+        x: {
+          type: "logarithmic",
+          title: { display: true, text: "Parameters", color: "#a0a0b0" },
+          ticks: { color: "#808090", callback: formatParams },
+          grid: { color: "#1a2a40" },
+        },
+        y: {
+          title: { display: true, text: "Fraction of Heads", color: "#a0a0b0" },
+          min: 0,
+          ticks: { color: "#808090" },
+          grid: { color: "#1a2a40" },
+        },
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: "right",
+          labels: { color: "#c0c0d0", font: { size: 11 } },
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const ds = ctx.dataset;
+              return `${ds.label} | ${formatParams(ctx.parsed.x)} | frac=${ctx.parsed.y.toFixed(3)}`;
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
 // ── Chart 3: Cluster entropy by layer ───────────────────────────
 
 function buildEntropyChart() {
   const records = currentRecords.entropy_by_layer;
 
-  // Group by model
+  // Group by model (filtered by family)
   /** @type {Object<string, Array<{x:number, y:number}>>} */
   const byModel = {};
   for (const r of records) {
-    if (!modelEnabled[r.model]) continue;
+    if (!isModelEnabled(r.model)) continue;
     if (!byModel[r.model]) byModel[r.model] = [];
     byModel[r.model].push({ x: r.depth, y: r.entropy });
   }
@@ -653,13 +897,10 @@ async function init() {
     return;
   }
 
-  // Initialize toggle states
-  for (const m of Object.keys(DATA.models)) {
-    modelEnabled[m] = true;
-  }
+  // Initialize family toggle states
   const families = [
     ...new Set(Object.values(DATA.models).map((m) => m.family)),
-  ];
+  ].sort();
   for (const f of families) {
     familyEnabled[f] = true;
   }
@@ -714,18 +955,26 @@ async function init() {
     buildLayerChart();
   });
 
-  // Build toggle buttons
-  buildModelToggles("layer-model-toggles", () => {
-    buildLayerChart();
-    buildEntropyChart();
-  });
-  buildFamilyToggles("size-family-toggles", () => {
-    buildSizeChart();
-  });
-  buildModelToggles("entropy-model-toggles", () => {
-    buildEntropyChart();
-    buildLayerChart();
-  });
+  // Distribution toggles
+  document
+    .getElementById("layer-distribution")
+    .addEventListener("change", () => {
+      buildLayerChart();
+    });
+  document
+    .getElementById("size-distribution")
+    .addEventListener("change", () => {
+      buildSizeChart();
+    });
+
+  // Build global family toggle (controls all 3 charts)
+  buildToggleButtons(
+    "global-family-toggles",
+    families,
+    familyEnabled,
+    "family-toggle",
+    rebuildAll,
+  );
 
   // Show charts, hide loading
   document.getElementById("loading").style.display = "none";

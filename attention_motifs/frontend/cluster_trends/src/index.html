@@ -49,6 +49,10 @@
           <label for="show-lines">Lines:</label>
           <input type="checkbox" id="show-lines" checked />
         </div>
+        <div class="control-group">
+          <label style="font-size: 12px; color: #808090">Families:</label>
+          <div class="family-toggles" id="global-family-toggles"></div>
+        </div>
       </div>
 
       <div id="loading">Loading cluster trends data...</div>
@@ -62,8 +66,10 @@
             heads at that layer belonging to each cluster.
           </p>
           <div class="chart-controls">
-            <label style="font-size: 12px; color: #808090">Models:</label>
-            <div class="model-toggles" id="layer-model-toggles"></div>
+            <div class="control-group">
+              <label for="layer-distribution">Distribution:</label>
+              <input type="checkbox" id="layer-distribution" />
+            </div>
           </div>
           <div class="chart-canvas-container">
             <canvas id="layer-chart"></canvas>
@@ -78,8 +84,10 @@
             scale).
           </p>
           <div class="chart-controls">
-            <label style="font-size: 12px; color: #808090">Families:</label>
-            <div class="family-toggles" id="size-family-toggles"></div>
+            <div class="control-group">
+              <label for="size-distribution">Distribution:</label>
+              <input type="checkbox" id="size-distribution" />
+            </div>
           </div>
           <div class="chart-canvas-container">
             <canvas id="size-chart"></canvas>
@@ -93,10 +101,6 @@
             Shannon entropy of cluster distribution at each layer. Higher = more
             diverse clusters, lower = dominated by one cluster.
           </p>
-          <div class="chart-controls">
-            <label style="font-size: 12px; color: #808090">Models:</label>
-            <div class="model-toggles" id="entropy-model-toggles"></div>
-          </div>
           <div class="chart-canvas-container">
             <canvas id="entropy-chart"></canvas>
           </div>
@@ -105,6 +109,7 @@
     </div>
 
     <script src="../../libs/chart.min.js"></script>
+    <script src="../../shared/cluster_utils.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
