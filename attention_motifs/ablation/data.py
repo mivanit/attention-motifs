@@ -56,7 +56,13 @@ class RepeatedSequence:
 		for rep_idx, start in enumerate(self.repetition_starts):
 			if rep_idx == 0:
 				continue  # Skip first repetition
-			# All positions after the start of this repetition
+			# Start from start + 1: the first token of each repetition
+			# boundary (e.g. position 6 in [BOS][ABCDE][ABCDE]...) has no
+			# prior context for cross-repetition induction in rep 1
+			# (BOS→A ≠ E→A).  For rep 2+ the boundary token IS predictable
+			# via induction (E→A was seen before), but we intentionally
+			# exclude it to focus on within-pattern induction and avoid
+			# the boundary effect.
 			for pos in range(start + 1, min(start + self.base_length, self.seq_len)):
 				positions.append(pos)
 		return positions

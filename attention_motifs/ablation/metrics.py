@@ -339,6 +339,29 @@ def prefix_matching_score(
 
 	High score indicates induction-like attention pattern.
 
+	.. note:: **Divergence from Olsson et al. 2022.**
+
+	   The paper's "prefix matching" evaluator (§ Methods, Head activation
+	   evaluators) measures attention to "the tokens that preceded the same
+	   token in earlier repeats" — i.e. offset **-1** from the earlier
+	   occurrence.  The paper's informal definition is consistent: "does the
+	   head attend to earlier tokens that are *followed by* a token that
+	   matches the present token?"
+
+	   This function uses offset **+1** instead: for query token A in rep 2,
+	   it measures attention to the token *after* A in rep 1 (= B, the
+	   token the induction head should copy).  This matches the actual
+	   K-composition mechanism — a previous-token head writes "A preceded
+	   me" into position B's residual stream, and the induction head's key
+	   at B matches the query at A — and is what TransformerLens's
+	   ``get_induction_head_detection_pattern`` computes (via
+	   ``torch.roll(duplicate_pattern, shifts=1, dims=1)``).
+
+	   The paper's literal offset-1 metric is available as
+	   :func:`preceding_token_score`; both are tracked in
+	   :class:`AblationResult` (``prefix_score_decrease`` for offset+1,
+	   ``prefix_score_decrease_legacy`` for offset-1).
+
 	Parameters
 	----------
 	model
@@ -393,9 +416,12 @@ def preceding_token_score(
 	at position B (2nd rep) the score checks attention to A in the 1st rep
 	(the token *before* the previous B).
 
-	This is the metric described in the paper's Methods section as "tokens
-	that preceded the same token in earlier repeats" (offset-1).  It may
-	capture Q-composition or other non-standard induction patterns.
+	This is the literal metric from the Olsson et al. 2022 "prefix matching"
+	evaluator (§ Methods, Head activation evaluators): "the average of all
+	attention pattern entries attending from a given token back to the
+	tokens that preceded the same token in earlier repeats" — offset **-1**.
+	See :func:`prefix_matching_score` for why that function uses offset+1
+	instead and how the two relate.
 
 	Parameters
 	----------
@@ -701,9 +727,23 @@ def ov_copying_score(
 	Measures the general tendency of a head to copy the token it attends
 	to into its output, regardless of sequence structure.
 
-	From Olsson et al. 2022: compute the head's logit contribution,
-	subtract mean, apply ReLU, then measure the fraction of positive
-	logit mass allocated to the attended-to token.  Scaled to [-1, 1].
+	From Olsson et al. 2022 (§ Methods, Head activation evaluators,
+	"Copying"): compute the head's logit contribution, subtract mean,
+	apply ReLU, then "compute the ratio of the amount it raises the logits
+	of the token being attended to, to that of all tokens in this sample.
+	This value ranges from 0 (only raises other tokens) to 0.5 (only
+	raises the present token), so we scale it into the range of -1 to 1."
+
+	.. note::
+
+	   The paper's copying evaluator specifies a single *non-repeated*
+	   sequence of 25 random tokens, while in practice this function
+	   receives the same repeated sequences used by the other metrics.
+	   The repetition structure affects the head's attention pattern
+	   (induction heads will attend strongly to offset+1 positions),
+	   making this score somewhat induction-specific rather than a pure
+	   OV-circuit measure.  See :func:`copying_score` for an explicitly
+	   induction-specific alternative.
 
 	Parameters
 	----------
@@ -774,9 +814,13 @@ def ov_copying_score(
 	# logit mass that goes to the attended-to token.
 	#
 	# attended_logit = sum_j attn[b, q, j] * positive_logits[b, q, tokens[b, j]]
-	# total_logit    = sum_v positive_logits[b, q, v]
+	# total_logit    = sum_{t in sample} positive_logits[b, q, t]
 	# raw_ratio      = attended_logit / total_logit   (in [0, 0.5] for a copying head)
 	# score          = 2 * raw_ratio - 1              (scaled to [-1, 1])
+	#
+	# Paper: "ratio ... to that of all tokens in this sample" — the
+	# denominator sums over the unique token types present in the
+	# sequence, not the full vocabulary.
 
 	batch_size: int = tokens.shape[0]
 	seq_len: int = attn.shape[1]  # dest positions (may include model BOS)
@@ -830,8 +874,16 @@ def ov_copying_score(
 	# attn: (batch, dest, src), attended_logits: (batch, dest, src)
 	weighted_attended: Tensor = (attn * attended_logits).sum(dim=-1)  # (batch, dest)
 
-	# Total positive logit mass per (batch, dest)
-	total_positive: Tensor = positive_logits.sum(dim=-1)  # (batch, dest)
+	# Total positive logit mass over sample tokens per (batch, dest).
+	# Paper: "to that of all tokens in this sample" — sum only over the
+	# unique token types present in each sequence, not the full vocabulary.
+	# Each batch element has its own set of ~25 unique token types.
+	total_positive: Tensor = torch.zeros(
+		batch_size, seq_len, device=tokens.device
+	)
+	for b in range(batch_size):
+		unique_b: Tensor = aligned_tokens[b].unique()
+		total_positive[b] = positive_logits[b, :, unique_b].sum(dim=-1)
 
 	# Raw ratio (avoid division by zero)
 	valid_mask: Tensor = total_positive > 1e-10
