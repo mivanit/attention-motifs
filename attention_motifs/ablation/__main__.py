@@ -278,7 +278,7 @@ def head_command(args: argparse.Namespace) -> None:
 		from attention_motifs.pattern_types.pattern_types import PatternTypes
 
 		pt: PatternTypes = PatternTypes.read(args.pattern_types)
-		cluster_id: int | None = pt.head_to_type.get(head_id)
+		cluster_id: int | None = pt.assignments.get(head_id)
 		if cluster_id is None:
 			print(
 				f"Error: Head '{head_id}' not found in pattern types file",
