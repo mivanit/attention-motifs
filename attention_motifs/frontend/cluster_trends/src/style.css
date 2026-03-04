@@ -149,14 +149,12 @@ select:focus {
   color: #fff;
 }
 
-.model-toggles,
 .family-toggles {
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
 }
 
-.model-toggle,
 .family-toggle {
   font-size: 11px;
   padding: 2px 6px;
@@ -168,7 +166,6 @@ select:focus {
   user-select: none;
 }
 
-.model-toggle.disabled,
 .family-toggle.disabled {
   opacity: 0.35;
   background: #0a1a30;

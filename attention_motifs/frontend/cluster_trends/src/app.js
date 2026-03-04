@@ -506,6 +506,7 @@ function buildLayerChartDistribution(filtered) {
       fill: "+1",
       backgroundColor: fillColor,
       _clusterId: cid,
+      _role: "max",
     });
     // Min line
     datasets.push({
@@ -519,6 +520,7 @@ function buildLayerChartDistribution(filtered) {
       tension: 0.2,
       fill: false,
       _clusterId: cid,
+      _role: "min",
     });
     // Mean line (solid, thicker)
     datasets.push({
@@ -532,6 +534,7 @@ function buildLayerChartDistribution(filtered) {
       tension: 0.2,
       fill: false,
       _clusterId: cid,
+      _role: "mean",
     });
   }
 
@@ -589,13 +592,7 @@ function buildLayerChartDistribution(filtered) {
           callbacks: {
             label: (ctx) => {
               const ds = ctx.dataset;
-              const role =
-                ds.borderDash && ds.borderDash.length
-                  ? ds.fill
-                    ? "max"
-                    : "min"
-                  : "mean";
-              return `${clusterLegendLabel(ds._clusterId)} (${role}) | depth=${ctx.parsed.x.toFixed(2)} frac=${ctx.parsed.y.toFixed(3)}`;
+              return `${clusterLegendLabel(ds._clusterId)} (${ds._role}) | depth=${ctx.parsed.x.toFixed(2)} frac=${ctx.parsed.y.toFixed(3)}`;
             },
           },
         },
