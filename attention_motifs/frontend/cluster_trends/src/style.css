@@ -7,15 +7,15 @@
 body {
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #1a1a2e;
-  color: #e0e0e0;
+  background: #f8f9fa;
+  color: #333;
   min-height: 100vh;
 }
 
 .nav-bar {
-  background: #16213e;
+  background: white;
   padding: 8px 16px;
-  border-bottom: 1px solid #0f3460;
+  border-bottom: 1px solid #ddd;
 }
 
 .nav-bar-content {
@@ -27,17 +27,17 @@ body {
 }
 
 .nav-bar a {
-  color: #a0c4ff;
+  color: #1565c0;
   text-decoration: none;
   font-size: 14px;
 }
 
 .nav-bar a:hover {
-  color: #fff;
+  color: #0d47a1;
 }
 
 .nav-current {
-  color: #fff;
+  color: #666;
   font-weight: bold;
   font-size: 14px;
 }
@@ -51,6 +51,7 @@ body {
 h1 {
   margin-bottom: 16px;
   font-size: 1.5em;
+  color: #333;
 }
 
 .global-controls {
@@ -59,8 +60,9 @@ h1 {
   align-items: center;
   margin-bottom: 20px;
   padding: 12px 16px;
-  background: #16213e;
+  background: white;
   border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   flex-wrap: wrap;
 }
 
@@ -72,41 +74,41 @@ h1 {
 
 .control-group label {
   font-size: 13px;
-  color: #a0a0b0;
+  color: #555;
   white-space: nowrap;
 }
 
 select,
-input[type="checkbox"],
 input[type="number"] {
-  background: #0f3460;
-  color: #e0e0e0;
-  border: 1px solid #1a4080;
+  background: white;
+  color: #333;
+  border: 1px solid #ddd;
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 13px;
 }
 
 select:focus {
-  outline: 1px solid #a0c4ff;
+  outline: 1px solid #1565c0;
 }
 
 .chart-section {
-  background: #16213e;
+  background: white;
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .chart-section h2 {
   font-size: 1.1em;
   margin-bottom: 4px;
-  color: #c0d0e0;
+  color: #333;
 }
 
 .chart-section .chart-desc {
   font-size: 12px;
-  color: #808090;
+  color: #666;
   margin-bottom: 12px;
 }
 
@@ -140,20 +142,20 @@ select:focus {
   padding: 2px 6px;
   border-radius: 3px;
   cursor: pointer;
-  border: 1px solid #1a4080;
-  background: #0f3460;
-  color: #a0c4ff;
+  border: 1px solid #ddd;
+  background: #f5f5f5;
+  color: #555;
   user-select: none;
 }
 
 .family-toggle.disabled {
   opacity: 0.35;
-  background: #0a1a30;
+  background: #e8e8e8;
 }
 
 #loading {
   text-align: center;
   padding: 60px;
-  color: #808090;
+  color: #666;
   font-size: 16px;
 }

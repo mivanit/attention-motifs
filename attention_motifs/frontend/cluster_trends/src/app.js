@@ -395,18 +395,18 @@ function buildLayerChartScatter(filtered, showLines) {
           title: {
             display: true,
             text: "Normalized Layer Depth",
-            color: "#a0a0b0",
+            color: "#555",
           },
           min: -0.02,
           max: 1.02,
-          ticks: { color: "#808090" },
-          grid: { color: "#1a2a40" },
+          ticks: { color: "#888" },
+          grid: { color: "rgba(0,0,0,0.08)" },
         },
         y: {
-          title: { display: true, text: "Fraction of Heads", color: "#a0a0b0" },
+          title: { display: true, text: "Fraction of Heads", color: "#555" },
           min: 0,
-          ticks: { color: "#808090" },
-          grid: { color: "#1a2a40" },
+          ticks: { color: "#888" },
+          grid: { color: "rgba(0,0,0,0.08)" },
         },
       },
       plugins: {
@@ -414,7 +414,7 @@ function buildLayerChartScatter(filtered, showLines) {
           display: true,
           position: "right",
           labels: {
-            color: "#c0c0d0",
+            color: "#555",
             font: { size: 11 },
             filter: (item) => item.text !== "",
           },
@@ -555,18 +555,18 @@ function buildLayerChartDistribution(filtered) {
           title: {
             display: true,
             text: "Normalized Layer Depth",
-            color: "#a0a0b0",
+            color: "#555",
           },
           min: -0.02,
           max: 1.02,
-          ticks: { color: "#808090" },
-          grid: { color: "#1a2a40" },
+          ticks: { color: "#888" },
+          grid: { color: "rgba(0,0,0,0.08)" },
         },
         y: {
-          title: { display: true, text: "Fraction of Heads", color: "#a0a0b0" },
+          title: { display: true, text: "Fraction of Heads", color: "#555" },
           min: 0,
-          ticks: { color: "#808090" },
-          grid: { color: "#1a2a40" },
+          ticks: { color: "#888" },
+          grid: { color: "rgba(0,0,0,0.08)" },
         },
       },
       plugins: {
@@ -574,7 +574,7 @@ function buildLayerChartDistribution(filtered) {
           display: true,
           position: "right",
           labels: {
-            color: "#c0c0d0",
+            color: "#555",
             font: { size: 11 },
             filter: (item) => item.text !== "",
           },
@@ -681,22 +681,22 @@ function buildSizeChartScatter(filtered) {
       scales: {
         x: {
           type: "logarithmic",
-          title: { display: true, text: "Parameters", color: "#a0a0b0" },
-          ticks: { color: "#808090", callback: formatParams },
-          grid: { color: "#1a2a40" },
+          title: { display: true, text: "Parameters", color: "#555" },
+          ticks: { color: "#888", callback: formatParams },
+          grid: { color: "rgba(0,0,0,0.08)" },
         },
         y: {
-          title: { display: true, text: "Fraction of Heads", color: "#a0a0b0" },
+          title: { display: true, text: "Fraction of Heads", color: "#555" },
           min: 0,
-          ticks: { color: "#808090" },
-          grid: { color: "#1a2a40" },
+          ticks: { color: "#888" },
+          grid: { color: "rgba(0,0,0,0.08)" },
         },
       },
       plugins: {
         legend: {
           display: true,
           position: "right",
-          labels: { color: "#c0c0d0", font: { size: 11 } },
+          labels: { color: "#555", font: { size: 11 } },
         },
         tooltip: {
           callbacks: {
@@ -716,39 +716,61 @@ function buildSizeChartScatter(filtered) {
 
 /**
  * Distribution mode for the size chart.
- * At each model size, show min/max/mean of cluster fractions across all clusters.
+ * Per cluster: min/max/mean band across models at each model size.
  * @param {Array} filtered - family-filtered by_model records
  */
 function buildSizeChartDistribution(filtered) {
-  // Group by model size -> collect all frac values across clusters
-  /** @type {Object<number, number[]>} */
-  const bySize = {};
+  // Group by cluster first
+  /** @type {Object<number, Array<{size:number, frac:number}>>} */
+  const byCluster = {};
   for (const r of filtered) {
     const meta = DATA.models[r.model];
     if (!meta) continue;
-    const sizeKey = meta.n_params;
-    if (!bySize[sizeKey]) bySize[sizeKey] = [];
-    bySize[sizeKey].push(r.frac);
+    if (!byCluster[r.cluster]) byCluster[r.cluster] = [];
+    byCluster[r.cluster].push({ size: meta.n_params, frac: r.frac });
   }
 
-  const sizes = Object.keys(bySize)
+  const clusterIds = Object.keys(byCluster)
     .map(Number)
     .sort((a, b) => a - b);
-  const maxPts = sizes.map((s) => ({ x: s, y: Math.max(...bySize[s]) }));
-  const minPts = sizes.map((s) => ({ x: s, y: Math.min(...bySize[s]) }));
-  const meanPts = sizes.map((s) => {
-    const v = bySize[s];
-    return { x: s, y: v.reduce((a, b) => a + b, 0) / v.length };
-  });
 
-  const bandColor = "hsl(210, 60%, 60%)";
-  const fillColor = "hsla(210, 60%, 60%, 0.15)";
+  const datasets = [];
 
-  const datasets = [
-    {
-      label: "Max",
+  for (const cid of clusterIds) {
+    const points = byCluster[cid];
+    // Group by model size -> collect frac values
+    /** @type {Object<string, number[]>} */
+    const bySize = {};
+    for (const p of points) {
+      const sk = String(p.size);
+      if (!bySize[sk]) bySize[sk] = [];
+      bySize[sk].push(p.frac);
+    }
+
+    const sizes = Object.keys(bySize)
+      .map(Number)
+      .sort((a, b) => a - b);
+    const maxPts = sizes.map((s) => ({
+      x: s,
+      y: Math.max(...bySize[String(s)]),
+    }));
+    const minPts = sizes.map((s) => ({
+      x: s,
+      y: Math.min(...bySize[String(s)]),
+    }));
+    const meanPts = sizes.map((s) => {
+      const vals = bySize[String(s)];
+      return { x: s, y: vals.reduce((a, b) => a + b, 0) / vals.length };
+    });
+
+    const color = clusterColor(cid);
+    const fillColor = clusterColorAlpha(cid, 0.15);
+
+    // Max line (fill down to next dataset = min line)
+    datasets.push({
+      label: clusterLegendLabel(cid),
       data: maxPts,
-      borderColor: bandColor,
+      borderColor: color,
       borderWidth: 1,
       borderDash: [4, 2],
       pointRadius: 0,
@@ -756,30 +778,38 @@ function buildSizeChartDistribution(filtered) {
       tension: 0.2,
       fill: "+1",
       backgroundColor: fillColor,
-    },
-    {
-      label: "Min",
+      _clusterId: cid,
+      _role: "max",
+    });
+    // Min line
+    datasets.push({
+      label: "",
       data: minPts,
-      borderColor: bandColor,
+      borderColor: color,
       borderWidth: 1,
       borderDash: [4, 2],
       pointRadius: 0,
       showLine: true,
       tension: 0.2,
       fill: false,
-    },
-    {
-      label: "Mean",
+      _clusterId: cid,
+      _role: "min",
+    });
+    // Mean line (solid, thicker)
+    datasets.push({
+      label: "",
       data: meanPts,
-      borderColor: bandColor,
+      borderColor: color,
       borderWidth: 2.5,
-      pointRadius: 2,
+      pointRadius: 1,
       pointHoverRadius: 4,
       showLine: true,
       tension: 0.2,
       fill: false,
-    },
-  ];
+      _clusterId: cid,
+      _role: "mean",
+    });
+  }
 
   const ctx = document.getElementById("size-chart").getContext("2d");
   if (sizeChart) sizeChart.destroy();
@@ -794,28 +824,45 @@ function buildSizeChartDistribution(filtered) {
       scales: {
         x: {
           type: "logarithmic",
-          title: { display: true, text: "Parameters", color: "#a0a0b0" },
-          ticks: { color: "#808090", callback: formatParams },
-          grid: { color: "#1a2a40" },
+          title: { display: true, text: "Parameters", color: "#555" },
+          ticks: { color: "#888", callback: formatParams },
+          grid: { color: "rgba(0,0,0,0.08)" },
         },
         y: {
-          title: { display: true, text: "Fraction of Heads", color: "#a0a0b0" },
+          title: { display: true, text: "Fraction of Heads", color: "#555" },
           min: 0,
-          ticks: { color: "#808090" },
-          grid: { color: "#1a2a40" },
+          ticks: { color: "#888" },
+          grid: { color: "rgba(0,0,0,0.08)" },
         },
       },
       plugins: {
         legend: {
           display: true,
           position: "right",
-          labels: { color: "#c0c0d0", font: { size: 11 } },
+          labels: {
+            color: "#555",
+            font: { size: 11 },
+            filter: (item) => item.text !== "",
+          },
+          onClick: (_e, legendItem, legend) => {
+            const cid =
+              legend.chart.data.datasets[legendItem.datasetIndex]._clusterId;
+            const isHidden = !legendItem.hidden;
+            for (let i = 0; i < legend.chart.data.datasets.length; i++) {
+              if (legend.chart.data.datasets[i]._clusterId === cid) {
+                legend.chart.setDatasetVisibility(i, isHidden);
+              }
+            }
+            legend.chart.update();
+          },
         },
         tooltip: {
           callbacks: {
             label: (ctx) => {
               const ds = ctx.dataset;
-              return `${ds.label} | ${formatParams(ctx.parsed.x)} | frac=${ctx.parsed.y.toFixed(3)}`;
+              const line = `${clusterLegendLabel(ds._clusterId)} (${ds._role}) | ${formatParams(ctx.parsed.x)} | frac=${ctx.parsed.y.toFixed(3)}`;
+              const desc = clusterDesc(ds._clusterId);
+              return desc ? [line, desc] : line;
             },
           },
         },
@@ -874,29 +921,29 @@ function buildEntropyChart() {
           title: {
             display: true,
             text: "Normalized Layer Depth",
-            color: "#a0a0b0",
+            color: "#555",
           },
           min: -0.02,
           max: 1.02,
-          ticks: { color: "#808090" },
-          grid: { color: "#1a2a40" },
+          ticks: { color: "#888" },
+          grid: { color: "rgba(0,0,0,0.08)" },
         },
         y: {
           title: {
             display: true,
             text: "Shannon Entropy (bits)",
-            color: "#a0a0b0",
+            color: "#555",
           },
           min: 0,
-          ticks: { color: "#808090" },
-          grid: { color: "#1a2a40" },
+          ticks: { color: "#888" },
+          grid: { color: "rgba(0,0,0,0.08)" },
         },
       },
       plugins: {
         legend: {
           display: true,
           position: "right",
-          labels: { color: "#c0c0d0", font: { size: 11 } },
+          labels: { color: "#555", font: { size: 11 } },
         },
         tooltip: {
           callbacks: {
@@ -934,8 +981,9 @@ async function init() {
   const families = [
     ...new Set(Object.values(DATA.models).map((m) => m.family)),
   ].sort();
+  const defaultFamilies = ["pythia", "gpt2"];
   for (const f of families) {
-    familyEnabled[f] = true;
+    familyEnabled[f] = defaultFamilies.includes(f);
   }
 
   // Populate K selector
