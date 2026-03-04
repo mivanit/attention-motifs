@@ -39,6 +39,11 @@ let currentK = null;
 // Current records used by chart builders (either precomputed or dynamic)
 let currentRecords = { by_layer: [], by_model: [], entropy_by_layer: [] };
 
+// Cluster labels state
+/** @type {Object} */ let allClusterLabels = {};
+/** @type {Object<number, {name: string, desc: string|null}>} */ let resolvedLabels =
+  {};
+
 // ── Colors ──────────────────────────────────────────────────────
 // clusterColor() and clusterColorAlpha() are provided by cluster_utils.js
 
@@ -240,11 +245,35 @@ function computeTrendRecords(assignments) {
 }
 
 /**
+ * Get a legend/tooltip label for a cluster, using name if available.
+ * @param {number} cid
+ * @returns {string}
+ */
+function clusterLegendLabel(cid) {
+  return clusterDisplayName(cid, resolvedLabels);
+}
+
+/**
+ * Get the desc (long description) for a cluster, if available.
+ * @param {number} cid
+ * @returns {string|null}
+ */
+function clusterDesc(cid) {
+  const label = resolvedLabels[cid];
+  return label ? label.desc : null;
+}
+
+/**
  * Update currentRecords from a cut height and rebuild charts.
  * @param {number} cutHeight
  */
 function updateFromCutHeight(cutHeight) {
   const assignments = computeAssignmentsByCutHeight(cutHeight);
+  resolvedLabels = resolveClusterLabels(
+    allClusterLabels,
+    cutHeight,
+    assignments,
+  );
   currentRecords = computeTrendRecords(assignments);
   rebuildAll();
 }
@@ -256,6 +285,7 @@ function updateFromCutHeight(cutHeight) {
 function updateFromK(k) {
   currentK = k;
   const key = `k${k}`;
+  resolvedLabels = {}; // labels are keyed by cut height, not K
   currentRecords = {
     by_layer: DATA.by_layer[key] || [],
     by_model: DATA.by_model[key] || [],
@@ -334,7 +364,7 @@ function buildLayerChartScatter(filtered, showLines) {
       if (!pts) continue;
       pts.sort((a, b) => a.x - b.x);
       datasets.push({
-        label: isFirst ? `Cluster ${cid}` : "",
+        label: isFirst ? clusterLegendLabel(cid) : "",
         data: pts,
         backgroundColor: color,
         borderColor: color,
@@ -404,7 +434,7 @@ function buildLayerChartScatter(filtered, showLines) {
           callbacks: {
             label: (ctx) => {
               const ds = ctx.dataset;
-              return `${ds._model} | Cluster ${ds._clusterId} | depth=${ctx.parsed.x.toFixed(2)} frac=${ctx.parsed.y.toFixed(3)}`;
+              return `${ds._model} | ${clusterLegendLabel(ds._clusterId)} | depth=${ctx.parsed.x.toFixed(2)} frac=${ctx.parsed.y.toFixed(3)}`;
             },
           },
         },
@@ -465,7 +495,7 @@ function buildLayerChartDistribution(filtered) {
 
     // Max line (fill down to next dataset = min line)
     datasets.push({
-      label: `Cluster ${cid}`,
+      label: clusterLegendLabel(cid),
       data: maxPts,
       borderColor: color,
       borderWidth: 1,
@@ -565,7 +595,7 @@ function buildLayerChartDistribution(filtered) {
                     ? "max"
                     : "min"
                   : "mean";
-              return `Cluster ${ds._clusterId} (${role}) | depth=${ctx.parsed.x.toFixed(2)} frac=${ctx.parsed.y.toFixed(3)}`;
+              return `${clusterLegendLabel(ds._clusterId)} (${role}) | depth=${ctx.parsed.x.toFixed(2)} frac=${ctx.parsed.y.toFixed(3)}`;
             },
           },
         },
@@ -625,7 +655,7 @@ function buildSizeChartScatter(filtered) {
     const pts = (byCluster[cid] || []).sort((a, b) => a.x - b.x);
     const color = clusterColor(cid);
     return {
-      label: `Cluster ${cid}`,
+      label: clusterLegendLabel(cid),
       data: pts,
       backgroundColor: color,
       borderColor: color,
@@ -672,7 +702,7 @@ function buildSizeChartScatter(filtered) {
             label: (ctx) => {
               const pt = ctx.raw;
               const ds = ctx.dataset;
-              return `${pt.model} | Cluster ${ds._clusterId} | frac=${pt.y.toFixed(3)}`;
+              return `${pt.model} | ${clusterLegendLabel(ds._clusterId)} | frac=${pt.y.toFixed(3)}`;
             },
           },
         },
@@ -924,6 +954,10 @@ async function init() {
 
   // Load clustering data for cut-height mode
   const clusteringAvailable = await loadClusteringData();
+
+  // Load cluster labels
+  const labelsUrl = "../../features/clustering/cluster_labels.json";
+  allClusterLabels = await loadClusterLabels(labelsUrl);
 
   // Cut height slider (bidirectional range + number input)
   const cutSlider = document.getElementById("cut-height");

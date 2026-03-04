@@ -68,3 +68,116 @@ function buildToggleButtons(
     container.appendChild(btn);
   }
 }
+
+// ── Cluster labels ──────────────────────────────────────────────
+
+const CLUSTER_LABELS_STORAGE_KEY = "clustering_labels";
+
+/**
+ * Load cluster labels from localStorage and optionally from a server URL.
+ * localStorage labels override server labels on merge.
+ *
+ * @param {string|null} [serverUrl] - URL to fetch server-side labels JSON
+ * @returns {Promise<Object>} Merged labels: { cutHeightKey: { clusterIdx: { name, desc, heads } } }
+ */
+async function loadClusterLabels(serverUrl) {
+  // Load from localStorage
+  let localLabels = {};
+  try {
+    const raw = localStorage.getItem(CLUSTER_LABELS_STORAGE_KEY);
+    if (raw) localLabels = JSON.parse(raw);
+  } catch (e) {
+    console.warn("Failed to load cluster labels from localStorage:", e);
+  }
+
+  // Load from server (optional)
+  let serverLabels = {};
+  if (serverUrl) {
+    try {
+      const resp = await fetch(serverUrl);
+      if (resp.ok) serverLabels = await resp.json();
+    } catch (e) {
+      // Server labels are optional
+    }
+  }
+
+  // Merge: server as base, localStorage overrides
+  const merged = {};
+  const allKeys = new Set([
+    ...Object.keys(serverLabels),
+    ...Object.keys(localLabels),
+  ]);
+  for (const heightKey of allKeys) {
+    merged[heightKey] = {
+      ...(serverLabels[heightKey] || {}),
+      ...(localLabels[heightKey] || {}),
+    };
+  }
+  return merged;
+}
+
+/**
+ * Resolve stored labels against current cluster assignments.
+ * Matches each label's heads list to the current cluster with the
+ * highest overlap, returning a map of clusterId -> {name, desc}.
+ *
+ * @param {Object} allLabels - Full labels object keyed by cut height
+ * @param {number} cutHeight - Current cut height
+ * @param {Object<string, number>} assignments - headId -> clusterId
+ * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+ */
+function resolveClusterLabels(allLabels, cutHeight, assignments) {
+  const heightKey = cutHeight.toFixed(3);
+  const labelsForHeight = allLabels[heightKey];
+  if (!labelsForHeight) return {};
+
+  const resolvedCounts = {};
+  const resolved = {};
+
+  for (const [_origIdx, entry] of Object.entries(labelsForHeight)) {
+    if (!entry || !entry.name) continue;
+    const heads = entry.heads || [];
+
+    // Count overlap with each current cluster
+    const clusterOverlap = {};
+    for (const headId of heads) {
+      const cid = assignments[headId];
+      if (cid !== undefined) {
+        clusterOverlap[cid] = (clusterOverlap[cid] || 0) + 1;
+      }
+    }
+
+    // Find cluster with most overlap
+    let bestCluster = null;
+    let bestCount = 0;
+    for (const [cid, count] of Object.entries(clusterOverlap)) {
+      if (count > bestCount) {
+        bestCount = count;
+        bestCluster = parseInt(cid);
+      }
+    }
+
+    if (bestCluster !== null && bestCount > 0) {
+      if (!resolved[bestCluster] || bestCount > resolvedCounts[bestCluster]) {
+        resolved[bestCluster] = { name: entry.name, desc: entry.desc || null };
+        resolvedCounts[bestCluster] = bestCount;
+      }
+    }
+  }
+
+  return resolved;
+}
+
+/**
+ * Get a short display name for a cluster, using name if available.
+ *
+ * @param {number} clusterId
+ * @param {Object<number, {name: string, desc: string|null}>} resolvedLabels
+ * @returns {string} e.g. "Cluster 3: Induction" or "Cluster 3"
+ */
+function clusterDisplayName(clusterId, resolvedLabels) {
+  if (clusterId === -1) return "misc";
+  const label = resolvedLabels[clusterId];
+  if (label && label.name) return `Cluster ${clusterId}: ${label.name}`;
+  return `Cluster ${clusterId}`;
+}

@@ -651,6 +651,13 @@ h1 {
   color: #aaa;
 }
 
+.tooltip .cluster-desc {
+  color: #999;
+  font-size: 11px;
+  margin-top: 2px;
+  font-style: italic;
+}
+
 /* Loading state */
 .loading {
   text-align: center;
@@ -805,22 +812,33 @@ h1 {
   min-width: 40px;
 }
 
-.cluster-label-input {
-  flex: 1;
+.cluster-label-name,
+.cluster-label-desc {
   padding: 3px 8px;
   font-size: 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-family: inherit;
-  max-width: 300px;
 }
 
-.cluster-label-input:focus {
+.cluster-label-name {
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.cluster-label-desc {
+  flex: 1;
+  max-width: 250px;
+}
+
+.cluster-label-name:focus,
+.cluster-label-desc:focus {
   outline: none;
   border-color: #1565c0;
 }
 
-.cluster-label-input:not(:placeholder-shown) {
+.cluster-label-name:not(:placeholder-shown),
+.cluster-label-desc:not(:placeholder-shown) {
   border-color: #90caf9;
   background: #f0f7ff;
 }

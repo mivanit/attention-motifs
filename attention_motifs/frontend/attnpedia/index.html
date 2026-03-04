@@ -3728,6 +3728,194 @@
     
     </script>
     <!-- end 'autocomplete.js' -->
+        <!-- begin '../../shared/cluster_utils.js' -->
+    <script>
+    /**
+     * Shared clustering visualization utilities.
+     *
+     * Used by cluster_trends and potentially other frontends that need
+     * cluster coloring and toggle buttons.
+     */
+    
+    // ── Cluster colors (golden angle) ──────────────────────────────
+    
+    const GOLDEN_ANGLE = 137.508;
+    
+    /**
+     * Generate a distinct opaque color for a cluster index.
+     * @param {number} idx
+     * @returns {string} CSS hsl color
+     */
+    function clusterColor(idx) {
+      const hue = (idx * GOLDEN_ANGLE) % 360;
+      const sat = 65 + (idx % 3) * 10;
+      const lit = 50 + (idx % 2) * 8;
+      return `hsl(${hue}, ${sat}%, ${lit}%)`;
+    }
+    
+    /**
+     * Generate a distinct color with alpha for a cluster index.
+     * @param {number} idx
+     * @param {number} alpha - opacity 0..1
+     * @returns {string} CSS hsla color
+     */
+    function clusterColorAlpha(idx, alpha) {
+      const hue = (idx * GOLDEN_ANGLE) % 360;
+      const sat = 65 + (idx % 3) * 10;
+      const lit = 50 + (idx % 2) * 8;
+      return `hsla(${hue}, ${sat}%, ${lit}%, ${alpha})`;
+    }
+    
+    // ── Toggle buttons ─────────────────────────────────────────────
+    
+    /**
+     * Build toggle buttons inside a container element.
+     * Each button toggles a boolean in the shared enabledState object.
+     *
+     * @param {string} containerId - DOM element ID for the container
+     * @param {string[]} items - sorted list of item labels
+     * @param {Object<string, boolean>} enabledState - shared state (mutated in place)
+     * @param {string} cssClass - CSS class for each button (e.g. "family-toggle")
+     * @param {() => void} onChange - callback when any toggle changes
+     */
+    function buildToggleButtons(
+      containerId,
+      items,
+      enabledState,
+      cssClass,
+      onChange,
+    ) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+      for (const item of items) {
+        const btn = document.createElement("span");
+        btn.className = cssClass;
+        btn.textContent = item;
+        if (!enabledState[item]) btn.classList.add("disabled");
+        btn.addEventListener("click", () => {
+          enabledState[item] = !enabledState[item];
+          btn.classList.toggle("disabled", !enabledState[item]);
+          onChange();
+        });
+        container.appendChild(btn);
+      }
+    }
+    
+    // ── Cluster labels ──────────────────────────────────────────────
+    
+    const CLUSTER_LABELS_STORAGE_KEY = "clustering_labels";
+    
+    /**
+     * Load cluster labels from localStorage and optionally from a server URL.
+     * localStorage labels override server labels on merge.
+     *
+     * @param {string|null} [serverUrl] - URL to fetch server-side labels JSON
+     * @returns {Promise<Object>} Merged labels: { cutHeightKey: { clusterIdx: { desc, heads } } }
+     */
+    async function loadClusterLabels(serverUrl) {
+      // Load from localStorage
+      let localLabels = {};
+      try {
+        const raw = localStorage.getItem(CLUSTER_LABELS_STORAGE_KEY);
+        if (raw) localLabels = JSON.parse(raw);
+      } catch (e) {
+        console.warn("Failed to load cluster labels from localStorage:", e);
+      }
+    
+      // Load from server (optional)
+      let serverLabels = {};
+      if (serverUrl) {
+        try {
+          const resp = await fetch(serverUrl);
+          if (resp.ok) serverLabels = await resp.json();
+        } catch (e) {
+          // Server labels are optional
+        }
+      }
+    
+      // Merge: server as base, localStorage overrides
+      const merged = {};
+      const allKeys = new Set([
+        ...Object.keys(serverLabels),
+        ...Object.keys(localLabels),
+      ]);
+      for (const heightKey of allKeys) {
+        merged[heightKey] = {
+          ...(serverLabels[heightKey] || {}),
+          ...(localLabels[heightKey] || {}),
+        };
+      }
+      return merged;
+    }
+    
+    /**
+     * Resolve stored labels against current cluster assignments.
+     * Matches each label's heads list to the current cluster with the
+     * highest overlap, returning a map of clusterId -> {name, desc}.
+     *
+     * @param {Object} allLabels - Full labels object keyed by cut height
+     * @param {number} cutHeight - Current cut height
+     * @param {Object<string, number>} assignments - headId -> clusterId
+     * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+     */
+    function resolveClusterLabels(allLabels, cutHeight, assignments) {
+      const heightKey = cutHeight.toFixed(3);
+      const labelsForHeight = allLabels[heightKey];
+      if (!labelsForHeight) return {};
+    
+      const resolvedCounts = {};
+      const resolved = {};
+    
+      for (const [_origIdx, entry] of Object.entries(labelsForHeight)) {
+        if (!entry || !entry.name) continue;
+        const heads = entry.heads || [];
+    
+        // Count overlap with each current cluster
+        const clusterOverlap = {};
+        for (const headId of heads) {
+          const cid = assignments[headId];
+          if (cid !== undefined) {
+            clusterOverlap[cid] = (clusterOverlap[cid] || 0) + 1;
+          }
+        }
+    
+        // Find cluster with most overlap
+        let bestCluster = null;
+        let bestCount = 0;
+        for (const [cid, count] of Object.entries(clusterOverlap)) {
+          if (count > bestCount) {
+            bestCount = count;
+            bestCluster = parseInt(cid);
+          }
+        }
+    
+        if (bestCluster !== null && bestCount > 0) {
+          if (!resolved[bestCluster] || bestCount > resolvedCounts[bestCluster]) {
+            resolved[bestCluster] = { name: entry.name, desc: entry.desc || null };
+            resolvedCounts[bestCluster] = bestCount;
+          }
+        }
+      }
+    
+      return resolved;
+    }
+    
+    /**
+     * Get a short display name for a cluster, using name if available.
+     *
+     * @param {number} clusterId
+     * @param {Object<number, {name: string, desc: string|null}>} resolvedLabels
+     * @returns {string} e.g. "Cluster 3: Induction" or "Cluster 3"
+     */
+    function clusterDisplayName(clusterId, resolvedLabels) {
+      if (clusterId === -1) return "misc";
+      const label = resolvedLabels[clusterId];
+      if (label && label.name) return `Cluster ${clusterId}: ${label.name}`;
+      return `Cluster ${clusterId}`;
+    }
+    
+    </script>
+    <!-- end '../../shared/cluster_utils.js' -->
         <!-- begin 'clustering.js' -->
     <script>
     /**
@@ -3749,6 +3937,10 @@
         this._cutHeight = null;
         this._maxCutHeight = null;
         this._minClusterSize = 0;
+    
+        // Cluster labels (loaded from localStorage + server)
+        this._labels = {};
+        this._resolvedLabels = {};
     
         // Generate distinct colors using golden angle
         this._colors = this._generateColors(50);
@@ -3811,6 +4003,12 @@
           if (this._linkage && this._linkage.length > 0) {
             this._maxCutHeight = Math.max(...this._linkage.map((row) => row[2]));
           }
+    
+          // Load cluster labels (uses shared loadClusterLabels from cluster_utils.js)
+          const labelsUrl =
+            CONFIG.cluster_labels_url ||
+            "../../features/clustering/cluster_labels.json";
+          this._labels = await loadClusterLabels(labelsUrl);
     
           // Compute initial assignments
           this._computeAssignmentsByNClusters(this._nClusters);
@@ -3935,6 +4133,7 @@
         this._rawAssignments = this._computeByHeight(cutHeight);
         this._assignments = this._applyMinSizeFilter(this._rawAssignments);
         this._nClusters = nClusters;
+        this._resolveLabels();
       }
     
       /**
@@ -3952,6 +4151,22 @@
           Object.values(this._assignments).filter((c) => c !== -1),
         );
         this._nClusters = clusterIds.size;
+        this._resolveLabels();
+      }
+    
+      /**
+       * Resolve cluster labels against current assignments
+       */
+      _resolveLabels() {
+        if (this._cutHeight !== null && Object.keys(this._labels).length > 0) {
+          this._resolvedLabels = resolveClusterLabels(
+            this._labels,
+            this._cutHeight,
+            this._assignments,
+          );
+        } else {
+          this._resolvedLabels = {};
+        }
       }
     
       /**
@@ -3982,6 +4197,7 @@
           Object.values(this._assignments).filter((c) => c !== -1),
         );
         this._nClusters = clusterIds.size;
+        this._resolveLabels();
       }
     
       /**
@@ -4104,9 +4320,18 @@
       }
     
       /**
+       * Get cluster label for a cluster ID (synchronous, for use after loading)
+       * @param {number} clusterId
+       * @returns {{name: string, desc: string|null}|null}
+       */
+      getClusterLabel(clusterId) {
+        return this._resolvedLabels[clusterId] || null;
+      }
+    
+      /**
        * Get top N clusters sorted by size descending
        * @param {number} n - how many to return
-       * @returns {Array<{id: number, size: number, color: string}>}
+       * @returns {Array<{id: number, size: number, color: string, label: {name: string, desc: string|null}|null}>}
        */
       async getTopClusters(n) {
         const sizes = await this.getClusterSizes();
@@ -4115,6 +4340,7 @@
             id: parseInt(id),
             size,
             color: this.getClusterColor(parseInt(id)),
+            label: this.getClusterLabel(parseInt(id)),
           }))
           .sort((a, b) => b.size - a.size);
         return sorted.slice(0, n);
@@ -5331,6 +5557,7 @@
             id: clusterId,
             size: sizes[clusterId] || 0,
             color: this.clustering.getClusterColor(clusterId),
+            label: this.clustering.getClusterLabel(clusterId),
           };
         },
     
@@ -5637,7 +5864,8 @@
                         class="cluster-chip"
                         :style="`background-color: ${cluster.color}`"
                         @click="window.open(getClusterPageUrl(), '_blank')"
-                        x-text="`#${cluster.id} (${cluster.size})`"
+                        :title="cluster.label?.desc || ''"
+                        x-text="`#${cluster.id} (${cluster.size})${cluster.label?.name ? ' — ' + cluster.label.name : ''}`"
                       ></span>
                     </template>
                   </div>
@@ -5652,7 +5880,8 @@
                     class="cluster-chip cluster-chip-inline"
                     :style="`background-color: ${current_head_cluster.color}`"
                     @click="window.open(getClusterPageUrl(), '_blank')"
-                    x-text="`#${current_head_cluster.id} (${current_head_cluster.size} heads)`"
+                    :title="current_head_cluster.label?.desc || ''"
+                    x-text="`#${current_head_cluster.id} (${current_head_cluster.size} heads)${current_head_cluster.label?.name ? ' — ' + current_head_cluster.label.name : ''}`"
                   ></span>
                 </div>
               </template>
@@ -6092,13 +6321,15 @@
                         class="cluster-column-chip"
                         :style="`background-color: ${headRow.clusterInfo.color}`"
                         @click="window.open(getClusterPageUrl(), '_blank')"
+                        :title="headRow.clusterInfo.label?.desc || ''"
                         x-text="`#${headRow.clusterInfo.id}`"
                       ></span>
                     </template>
                     <template x-if="headRow.clusterInfo">
                       <div
                         class="cluster-cell-size"
-                        x-text="`(${headRow.clusterInfo.size} heads)`"
+                        :title="headRow.clusterInfo.label?.desc || ''"
+                        x-text="`(${headRow.clusterInfo.size} heads)${headRow.clusterInfo.label?.name ? ' ' + headRow.clusterInfo.label.name : ''}`"
                       ></div>
                     </template>
                     <template x-if="!headRow.clusterInfo">

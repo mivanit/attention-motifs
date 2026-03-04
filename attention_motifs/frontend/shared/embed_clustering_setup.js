@@ -55,13 +55,17 @@ HOOKS.onReady = async (pointCloud, uiManager) => {
     return clustering.getClusterColorRGB(cid);
   };
 
-  // Hover extension hook: show cluster ID with colored dot
+  // Hover extension hook: show cluster ID, name, and desc
   HOOKS.hoverExtendFn = (rowIndex, row) => {
     if (!enabled) return null;
     const cid = clustering._assignments[row.cls];
     if (cid === undefined) return null;
     const color = clustering.getClusterColor(cid);
-    return `<b>Cluster</b>: ${cid === -1 ? "misc" : cid} <span style="color:${color}">\u25cf</span>`;
+    const label = clustering.getClusterLabel(cid);
+    let text = `<b>Cluster</b>: ${cid === -1 ? "misc" : cid} <span style="color:${color}">\u25cf</span>`;
+    if (label && label.name) text += ` <b>${label.name}</b>`;
+    if (label && label.desc) text += `<br><i>${label.desc}</i>`;
+    return text;
   };
 
   // Bind cut height slider
@@ -80,6 +84,7 @@ HOOKS.onReady = async (pointCloud, uiManager) => {
     clustering._assignments = clustering._applyMinSizeFilter(
       clustering._rawAssignments,
     );
+    clustering._resolveLabels();
     rebuildAndRefresh();
   });
 

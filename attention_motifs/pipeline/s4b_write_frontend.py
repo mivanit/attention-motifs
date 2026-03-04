@@ -47,14 +47,17 @@ def write_frontend(cfg: PipelineConfig) -> None:
 	embed_head_dir: Path = vis_output_path / embed_head_vis_cfg["path"]
 	embed_head_dir.mkdir(parents=True, exist_ok=True)
 
-	# Build hooks JS: ClusteringLoader class + setup script
+	# Build hooks JS: cluster_utils + ClusteringLoader + setup script
+	cluster_utils_js: str = (
+		frontend_resources_path / "shared/cluster_utils.js"
+	).read_text()
 	clustering_js: str = (
 		frontend_resources_path / "attnpedia/src/clustering.js"
 	).read_text()
 	setup_js: str = (
 		frontend_resources_path / "shared/embed_clustering_setup.js"
 	).read_text()
-	hooks_js: str = clustering_js + "\n" + setup_js
+	hooks_js: str = cluster_utils_js + "\n" + clustering_js + "\n" + setup_js
 
 	# Inject hooks into jev HTML
 	embed_head_html: str = inline_hooks(hooks_js, embed_html)

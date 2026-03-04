@@ -18,6 +18,10 @@ class ClusteringLoader {
     this._maxCutHeight = null;
     this._minClusterSize = 0;
 
+    // Cluster labels (loaded from localStorage + server)
+    this._labels = {};
+    this._resolvedLabels = {};
+
     // Generate distinct colors using golden angle
     this._colors = this._generateColors(50);
   }
@@ -79,6 +83,12 @@ class ClusteringLoader {
       if (this._linkage && this._linkage.length > 0) {
         this._maxCutHeight = Math.max(...this._linkage.map((row) => row[2]));
       }
+
+      // Load cluster labels (uses shared loadClusterLabels from cluster_utils.js)
+      const labelsUrl =
+        CONFIG.cluster_labels_url ||
+        "../../features/clustering/cluster_labels.json";
+      this._labels = await loadClusterLabels(labelsUrl);
 
       // Compute initial assignments
       this._computeAssignmentsByNClusters(this._nClusters);
@@ -203,6 +213,7 @@ class ClusteringLoader {
     this._rawAssignments = this._computeByHeight(cutHeight);
     this._assignments = this._applyMinSizeFilter(this._rawAssignments);
     this._nClusters = nClusters;
+    this._resolveLabels();
   }
 
   /**
@@ -220,6 +231,22 @@ class ClusteringLoader {
       Object.values(this._assignments).filter((c) => c !== -1),
     );
     this._nClusters = clusterIds.size;
+    this._resolveLabels();
+  }
+
+  /**
+   * Resolve cluster labels against current assignments
+   */
+  _resolveLabels() {
+    if (this._cutHeight !== null && Object.keys(this._labels).length > 0) {
+      this._resolvedLabels = resolveClusterLabels(
+        this._labels,
+        this._cutHeight,
+        this._assignments,
+      );
+    } else {
+      this._resolvedLabels = {};
+    }
   }
 
   /**
@@ -250,6 +277,7 @@ class ClusteringLoader {
       Object.values(this._assignments).filter((c) => c !== -1),
     );
     this._nClusters = clusterIds.size;
+    this._resolveLabels();
   }
 
   /**
@@ -372,9 +400,18 @@ class ClusteringLoader {
   }
 
   /**
+   * Get cluster label for a cluster ID (synchronous, for use after loading)
+   * @param {number} clusterId
+   * @returns {{name: string, desc: string|null}|null}
+   */
+  getClusterLabel(clusterId) {
+    return this._resolvedLabels[clusterId] || null;
+  }
+
+  /**
    * Get top N clusters sorted by size descending
    * @param {number} n - how many to return
-   * @returns {Array<{id: number, size: number, color: string}>}
+   * @returns {Array<{id: number, size: number, color: string, label: {name: string, desc: string|null}|null}>}
    */
   async getTopClusters(n) {
     const sizes = await this.getClusterSizes();
@@ -383,6 +420,7 @@ class ClusteringLoader {
         id: parseInt(id),
         size,
         color: this.getClusterColor(parseInt(id)),
+        label: this.getClusterLabel(parseInt(id)),
       }))
       .sort((a, b) => b.size - a.size);
     return sorted.slice(0, n);

@@ -1204,6 +1204,7 @@ document.addEventListener("alpine:init", () => {
         id: clusterId,
         size: sizes[clusterId] || 0,
         color: this.clustering.getClusterColor(clusterId),
+        label: this.clustering.getClusterLabel(clusterId),
       };
     },
 

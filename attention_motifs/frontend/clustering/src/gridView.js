@@ -32,7 +32,7 @@ let gridState = {
   selectionNote: "",
   clusterLabels: {}, // merged labels: cutHeightKey -> { clusterIdx: { desc, heads } }
   serverLabels: {}, // server-loaded baseline labels (same structure)
-  resolvedLabels: {}, // current cut height resolved: clusterId -> desc
+  resolvedLabels: {}, // current cut height resolved: clusterId -> {name, desc}
 };
 
 // =====================================================================
@@ -109,18 +109,18 @@ function getCurrentLabels() {
 /**
  * Resolve stored labels against current cluster assignments.
  * Matches each label's heads list to the current cluster that has
- * the highest overlap, returning a map of clusterId -> desc.
- * @param {Object} labelsForHeight - { clusterIdx: { desc, heads } }
- * @returns {Object.<number, string>} Map of current clusterId -> desc
+ * the highest overlap, returning a map of clusterId -> {name, desc}.
+ * @param {Object} labelsForHeight - { clusterIdx: { name, desc, heads } }
+ * @returns {Object.<number, {name: string, desc: string|null}>} Map of current clusterId -> label info
  */
 function resolveLabelsToCurrentClusters(labelsForHeight) {
   const assignments = window.CLUSTER_STATE.getAssignments();
   // Track best overlap count per cluster to resolve conflicts
   const resolvedCounts = {}; // clusterId -> best overlap count
-  const resolved = {}; // clusterId -> desc string
+  const resolved = {}; // clusterId -> {name, desc}
 
   for (const [_origIdx, entry] of Object.entries(labelsForHeight)) {
-    if (!entry || !entry.desc) continue;
+    if (!entry || !entry.name) continue;
     const heads = entry.heads || [];
 
     // Count how many of this label's heads fall into each current cluster
@@ -145,7 +145,7 @@ function resolveLabelsToCurrentClusters(labelsForHeight) {
     if (bestCluster !== null && bestCount > 0) {
       // Only assign if this cluster doesn't already have a better match
       if (!resolved[bestCluster] || bestCount > resolvedCounts[bestCluster]) {
-        resolved[bestCluster] = entry.desc;
+        resolved[bestCluster] = { name: entry.name, desc: entry.desc || null };
         resolvedCounts[bestCluster] = bestCount;
       }
     }
@@ -165,24 +165,29 @@ function updateResolvedLabels() {
 /**
  * Set a cluster label for the current cut height
  * @param {number} clusterId - Current cluster ID
- * @param {string} desc - Description text (empty to delete)
+ * @param {string|null} name - Short name (null/empty to clear)
+ * @param {string|null} desc - Longer description (null/empty for none)
  */
-function setClusterLabel(clusterId, desc) {
+function setClusterLabel(clusterId, name, desc) {
   if (gridState.currentCutHeight === null) return;
   const key = getCutHeightKey(gridState.currentCutHeight);
 
-  if (!desc || desc.trim() === "") {
-    // Clear this cluster's desc (set to null)
+  const trimName = name ? name.trim() : "";
+  const trimDesc = desc ? desc.trim() : "";
+
+  if (!trimName) {
+    // Clear this cluster's label
     if (
       gridState.clusterLabels[key] &&
       gridState.clusterLabels[key][String(clusterId)]
     ) {
+      gridState.clusterLabels[key][String(clusterId)].name = null;
       gridState.clusterLabels[key][String(clusterId)].desc = null;
-      // If no cluster at this height has a non-null desc, remove the entire height
-      const hasAnyDesc = Object.values(gridState.clusterLabels[key]).some(
-        (e) => e && e.desc,
+      // If no cluster at this height has a name, remove the entire height
+      const hasAny = Object.values(gridState.clusterLabels[key]).some(
+        (e) => e && e.name,
       );
-      if (!hasAnyDesc) {
+      if (!hasAny) {
         delete gridState.clusterLabels[key];
       }
     }
@@ -193,15 +198,17 @@ function setClusterLabel(clusterId, desc) {
     }
     const heads = window.CLUSTER_STATE.getHeadsInCluster(clusterId);
     gridState.clusterLabels[key][String(clusterId)] = {
-      desc: desc.trim(),
+      name: trimName,
+      desc: trimDesc || null,
       heads: heads,
     };
 
-    // Populate all other clusters at this height with desc: null
+    // Populate all other clusters at this height with null name/desc
     const allClusterIds = Object.keys(window.CLUSTER_STATE.getClusterSizes());
     for (const cid of allClusterIds) {
       if (!(cid in gridState.clusterLabels[key])) {
         gridState.clusterLabels[key][cid] = {
+          name: null,
           desc: null,
           heads: window.CLUSTER_STATE.getHeadsInCluster(parseInt(cid)),
         };
@@ -238,8 +245,8 @@ function getLabeledCutHeights() {
     .filter((key) => {
       const entries = gridState.clusterLabels[key];
       if (!entries) return false;
-      // Require at least one entry with a non-null desc
-      return Object.values(entries).some((e) => e && e.desc);
+      // Require at least one entry with a non-null name
+      return Object.values(entries).some((e) => e && e.name);
     })
     .map((key) => parseFloat(key))
     .sort((a, b) => a - b);
@@ -1281,9 +1288,11 @@ async function updateSidePane() {
       const clusterBadge = document.createElement("span");
       clusterBadge.className = "pattern-section-cluster";
       const label = gridState.resolvedLabels[clusterId];
-      clusterBadge.textContent = label
-        ? `Cluster ${clusterId}: ${label}`
-        : `Cluster ${clusterId}`;
+      clusterBadge.textContent =
+        label && label.name
+          ? `Cluster ${clusterId}: ${label.name}`
+          : `Cluster ${clusterId}`;
+      if (label && label.desc) clusterBadge.title = label.desc;
       header.appendChild(clusterBadge);
     }
 
@@ -1395,10 +1404,14 @@ function showTooltip(event, headId) {
   const clusterId = window.CLUSTER_STATE.getClusterId(headId);
   const label =
     clusterId !== undefined ? gridState.resolvedLabels[clusterId] : null;
+  const nameStr = label && label.name ? `: ${label.name}` : "";
+  const descStr =
+    label && label.desc ? `<div class="cluster-desc">${label.desc}</div>` : "";
 
   tooltip.innerHTML = `
     <div class="head-id">${headId}</div>
-    <div class="cluster-info">Cluster ${clusterId !== undefined ? clusterId : "?"}${label ? ": " + label : ""}</div>
+    <div class="cluster-info">Cluster ${clusterId !== undefined ? clusterId : "?"}${nameStr}</div>
+    ${descStr}
   `;
   tooltip.style.display = "block";
   moveTooltip(event);
@@ -1725,15 +1738,21 @@ function renderClusterLabels() {
               : window.CLUSTER_STATE.colors[
                   clusterId % window.CLUSTER_STATE.colors.length
                 ];
-          const desc = resolved[clusterId] || "";
+          const label = resolved[clusterId];
+          const name = (label && label.name) || "";
+          const desc = (label && label.desc) || "";
           return `
             <div class="cluster-label-row" data-cluster-id="${clusterId}">
               <span class="cluster-label-color" style="background-color: ${color}"></span>
               <span class="cluster-label-id">${clusterId === -1 ? "misc" : clusterId}</span>
               <span class="cluster-label-size">(${size})</span>
-              <input type="text" class="cluster-label-input"
+              <input type="text" class="cluster-label-name"
+                value="${name.replace(/"/g, "&quot;")}"
+                placeholder="Name"
+                data-cluster-id="${clusterId}" />
+              <input type="text" class="cluster-label-desc"
                 value="${desc.replace(/"/g, "&quot;")}"
-                placeholder="Add description..."
+                placeholder="Description"
                 data-cluster-id="${clusterId}" />
             </div>
           `;
@@ -1743,12 +1762,16 @@ function renderClusterLabels() {
   `;
 
   // Wire up input handlers
-  container.querySelectorAll(".cluster-label-input").forEach((input) => {
-    const clusterId = parseInt(input.dataset.clusterId);
-    input.addEventListener("change", () => {
-      setClusterLabel(clusterId, input.value);
-      renderTopClusters(); // Update chips to show labels
-    });
+  container.querySelectorAll(".cluster-label-row").forEach((row) => {
+    const clusterId = parseInt(row.dataset.clusterId);
+    const nameInput = row.querySelector(".cluster-label-name");
+    const descInput = row.querySelector(".cluster-label-desc");
+    const onChange = () => {
+      setClusterLabel(clusterId, nameInput.value, descInput.value);
+      renderTopClusters();
+    };
+    nameInput.addEventListener("change", onChange);
+    descInput.addEventListener("change", onChange);
   });
 
   // Wire up export button
@@ -1790,9 +1813,11 @@ function renderTopClusters() {
           heads.length > 0 &&
           heads.every((h) => gridState.selectedHeads.includes(h));
         const selectedClass = allSelected ? "selected" : "";
-        const label = resolved[clusterId] || "";
-        const labelHtml = label
-          ? `<span class="cluster-chip-label" title="${label.replace(/"/g, "&quot;")}">${label}</span>`
+        const label = resolved[clusterId];
+        const name = (label && label.name) || "";
+        const desc = (label && label.desc) || "";
+        const labelHtml = name
+          ? `<span class="cluster-chip-label" title="${desc.replace(/"/g, "&quot;")}">${name}</span>`
           : "";
         return `
           <div class="cluster-chip ${selectedClass}" data-cluster-id="${clusterId}">

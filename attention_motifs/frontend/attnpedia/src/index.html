@@ -30,6 +30,7 @@
     <script src="prompts.js"></script>
     <script src="headInfo.js"></script>
     <script src="autocomplete.js"></script>
+    <script src="../../shared/cluster_utils.js"></script>
     <script src="clustering.js"></script>
     <script src="app.js"></script>
   </head>
@@ -253,7 +254,8 @@
                         class="cluster-chip"
                         :style="`background-color: ${cluster.color}`"
                         @click="window.open(getClusterPageUrl(), '_blank')"
-                        x-text="`#${cluster.id} (${cluster.size})`"
+                        :title="cluster.label?.desc || ''"
+                        x-text="`#${cluster.id} (${cluster.size})${cluster.label?.name ? ' — ' + cluster.label.name : ''}`"
                       ></span>
                     </template>
                   </div>
@@ -268,7 +270,8 @@
                     class="cluster-chip cluster-chip-inline"
                     :style="`background-color: ${current_head_cluster.color}`"
                     @click="window.open(getClusterPageUrl(), '_blank')"
-                    x-text="`#${current_head_cluster.id} (${current_head_cluster.size} heads)`"
+                    :title="current_head_cluster.label?.desc || ''"
+                    x-text="`#${current_head_cluster.id} (${current_head_cluster.size} heads)${current_head_cluster.label?.name ? ' — ' + current_head_cluster.label.name : ''}`"
                   ></span>
                 </div>
               </template>
@@ -708,13 +711,15 @@
                         class="cluster-column-chip"
                         :style="`background-color: ${headRow.clusterInfo.color}`"
                         @click="window.open(getClusterPageUrl(), '_blank')"
+                        :title="headRow.clusterInfo.label?.desc || ''"
                         x-text="`#${headRow.clusterInfo.id}`"
                       ></span>
                     </template>
                     <template x-if="headRow.clusterInfo">
                       <div
                         class="cluster-cell-size"
-                        x-text="`(${headRow.clusterInfo.size} heads)`"
+                        :title="headRow.clusterInfo.label?.desc || ''"
+                        x-text="`(${headRow.clusterInfo.size} heads)${headRow.clusterInfo.label?.name ? ' ' + headRow.clusterInfo.label.name : ''}`"
                       ></div>
                     </template>
                     <template x-if="!headRow.clusterInfo">
