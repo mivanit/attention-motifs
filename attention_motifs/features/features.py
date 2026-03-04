@@ -276,7 +276,8 @@ def compute_scalar_features(
 	return dict(
 		# diagonal: standard features, fit diff to beta dist
 		**prefix_dict(vec_features(A.diagonal(), reduced=False), prefix="diag"),
-		# off-diagonal: standard features, fit diff to beta dist
+		# attention to position 0: BOS token for models with default_prepend_bos=True
+		# (GPT-2, Pythia, TinyStories, Gemma), first content token otherwise (e.g. Llama)
 		**prefix_dict(vec_features(A[:, 0], reduced=False), prefix="first_tok"),
 		# transition tensor: standard features, standard features on diff, linear envelope on transition time
 		# 	TODO: standard features on decay rate

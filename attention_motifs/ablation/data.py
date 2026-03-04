@@ -348,11 +348,20 @@ def generate_long_context_prompts(
 	source_texts: list[str],
 	target_length: int = 512,
 	device: str = "cpu",
+	prepend_bos: bool = True,
+	bos_token_id: int | None = None,
 ) -> list[Int[Tensor, " seq_len"]]:
 	"""Generate long prompts for ICL score evaluation.
 
 	Takes source texts and tokenizes them to fixed length for
 	measuring loss at early vs late positions.
+
+	Note: ``tokenizer.encode()`` typically does NOT add a BOS token for
+	GPT-2-style tokenizers.  When these tensors are later passed to
+	``model()`` as tensor input, TransformerLens will **not** prepend BOS
+	(``prepend_bos`` only affects string inputs).  Set ``prepend_bos=True``
+	(the default) to ensure the returned sequences begin with a BOS token,
+	matching the convention used by ``generate_repeated_sequences``.
 
 	Parameters
 	----------
@@ -361,19 +370,39 @@ def generate_long_context_prompts(
 	source_texts
 	    List of text strings.
 	target_length
-	    Target sequence length (truncate or pad).
+	    Target sequence length (truncate or pad), including BOS if prepended.
 	device
 	    Device for tensors.
+	prepend_bos
+	    Prepend a BOS token.  Ensures consistency with how TransformerLens
+	    processes string inputs (which auto-prepend BOS).
+	bos_token_id
+	    Explicit BOS token ID.  If ``None``, reads from
+	    ``tokenizer.bos_token_id`` (falling back to 0).
 
 	Returns
 	-------
 	list[Tensor]
-	    List of tokenized sequences.
+	    List of tokenized sequences, each of shape ``(target_length,)``.
 	"""
+	# Resolve BOS token ID
+	resolved_bos_id: int = 0
+	if prepend_bos:
+		if bos_token_id is not None:
+			resolved_bos_id = bos_token_id
+		else:
+			resolved_bos_id = getattr(tokenizer, "bos_token_id", None) or 0
+
 	sequences: list[Tensor] = []
 
 	for text in source_texts:
 		tokens: Tensor = tokenizer.encode(text, return_tensors="pt").squeeze(0)
+
+		if prepend_bos:
+			bos_tensor: Int[Tensor, " 1"] = torch.tensor(
+				[resolved_bos_id], dtype=tokens.dtype
+			)
+			tokens = torch.cat([bos_tensor, tokens])
 
 		if tokens.shape[0] >= target_length:
 			tokens = tokens[:target_length]

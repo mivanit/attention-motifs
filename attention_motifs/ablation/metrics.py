@@ -455,6 +455,10 @@ def icl_score(
 	prompts
 	    List of text prompts or tokenized sequences.
 	    Should be long enough to have tokens at late_pos.
+	    Tensor inputs should already include BOS if the model expects it
+	    (``default_prepend_bos=True``), since TransformerLens only
+	    auto-prepends BOS for string inputs.  If a tensor is missing BOS,
+	    it will be prepended automatically.
 	early_pos
 	    Position for early loss measurement.
 	late_pos
@@ -471,9 +475,24 @@ def icl_score(
 	with torch.no_grad():
 		for prompt in prompts:
 			if isinstance(prompt, str):
+				# to_tokens() prepends BOS when default_prepend_bos=True
 				tokens: Tensor = model.to_tokens(prompt)
 			else:
 				tokens = prompt.unsqueeze(0) if prompt.dim() == 1 else prompt
+				# Tensor inputs bypass TransformerLens BOS prepending
+				# (prepend_bos only affects string inputs in HookedTransformer.forward).
+				# Prepend BOS here if model expects it and tensor doesn't have it,
+				# so tensor and string paths produce equivalent model contexts.
+				if model.cfg.default_prepend_bos:
+					bos_id: int = getattr(model.tokenizer, "bos_token_id", None) or 0
+					if tokens.shape[1] == 0 or tokens[0, 0].item() != bos_id:
+						bos_tensor: Tensor = torch.full(
+							(tokens.shape[0], 1),
+							bos_id,
+							dtype=tokens.dtype,
+							device=tokens.device,
+						)
+						tokens = torch.cat([bos_tensor, tokens], dim=1)
 
 			tokens = tokens.to(model.cfg.device)
 
