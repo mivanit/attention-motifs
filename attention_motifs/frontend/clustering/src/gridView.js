@@ -172,10 +172,17 @@ function setClusterLabel(clusterId, desc) {
   const key = getCutHeightKey(gridState.currentCutHeight);
 
   if (!desc || desc.trim() === "") {
-    // Delete the label
-    if (gridState.clusterLabels[key]) {
-      delete gridState.clusterLabels[key][String(clusterId)];
-      if (Object.keys(gridState.clusterLabels[key]).length === 0) {
+    // Clear this cluster's desc (set to null)
+    if (
+      gridState.clusterLabels[key] &&
+      gridState.clusterLabels[key][String(clusterId)]
+    ) {
+      gridState.clusterLabels[key][String(clusterId)].desc = null;
+      // If no cluster at this height has a non-null desc, remove the entire height
+      const hasAnyDesc = Object.values(gridState.clusterLabels[key]).some(
+        (e) => e && e.desc,
+      );
+      if (!hasAnyDesc) {
         delete gridState.clusterLabels[key];
       }
     }
@@ -189,6 +196,17 @@ function setClusterLabel(clusterId, desc) {
       desc: desc.trim(),
       heads: heads,
     };
+
+    // Populate all other clusters at this height with desc: null
+    const allClusterIds = Object.keys(window.CLUSTER_STATE.getClusterSizes());
+    for (const cid of allClusterIds) {
+      if (!(cid in gridState.clusterLabels[key])) {
+        gridState.clusterLabels[key][cid] = {
+          desc: null,
+          heads: window.CLUSTER_STATE.getHeadsInCluster(parseInt(cid)),
+        };
+      }
+    }
   }
 
   saveLabelsToLocalStorage();
@@ -217,11 +235,12 @@ function exportClusterLabels() {
  */
 function getLabeledCutHeights() {
   return Object.keys(gridState.clusterLabels)
-    .filter(
-      (key) =>
-        gridState.clusterLabels[key] &&
-        Object.keys(gridState.clusterLabels[key]).length > 0,
-    )
+    .filter((key) => {
+      const entries = gridState.clusterLabels[key];
+      if (!entries) return false;
+      // Require at least one entry with a non-null desc
+      return Object.values(entries).some((e) => e && e.desc);
+    })
     .map((key) => parseFloat(key))
     .sort((a, b) => a - b);
 }
