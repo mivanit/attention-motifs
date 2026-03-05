@@ -8,10 +8,11 @@ Orchestrates the complete workflow:
 """
 
 import warnings
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 import json
-from typing import Iterable, cast
+from typing import Any, Iterable, cast
 
 from pattern_lens.load_model import load_model
 
@@ -78,6 +79,7 @@ class ExperimentConfig:
 	)
 	n_calibration_prompts: int = 50
 	seed: int = 42
+	micro_batch_size: int = 20
 
 
 @dataclass
@@ -182,6 +184,39 @@ class ExperimentResults:
 		)
 
 
+def _batched_metric(
+	fn: Callable[..., float],
+	sequences: Sequence[RepeatedSequence],
+	micro_batch_size: int,
+	**kwargs: Any,
+) -> float:
+	"""Run a metric function in micro-batches and return weighted mean.
+
+	Parameters
+	----------
+	fn
+	    Metric function that accepts ``sequences=`` and returns a float.
+	sequences
+	    Full list of sequences.
+	micro_batch_size
+	    Max sequences per forward pass.
+	**kwargs
+	    Forwarded to *fn*.
+	"""
+	if micro_batch_size >= len(sequences):
+		return fn(sequences=sequences, **kwargs)
+
+	total: float = 0.0
+	count: int = 0
+	for i in range(0, len(sequences), micro_batch_size):
+		chunk: Sequence[RepeatedSequence] = sequences[i : i + micro_batch_size]
+		result: float = fn(sequences=chunk, **kwargs)
+		total += result * len(chunk)
+		count += len(chunk)
+		torch.cuda.empty_cache()
+	return total / count
+
+
 def run_ablation_experiment(
 	model_name: str,
 	candidate_heads: list[tuple[int, int]] | list[str],
@@ -269,7 +304,10 @@ def run_ablation_experiment(
 
 	# Compute baseline metrics (no ablation)
 	print("Computing baseline metrics...")
-	baseline_loss: float = repeated_sequence_loss(model, sequences)
+	mbs: int = config.micro_batch_size
+	baseline_loss: float = _batched_metric(
+		repeated_sequence_loss, sequences, mbs, model=model
+	)
 	baseline_icl: float = icl_score(model, icl_prompts) if icl_prompts else 0.0
 
 	exp_results: ExperimentResults = ExperimentResults(
@@ -294,31 +332,82 @@ def run_ablation_experiment(
 
 		try:
 			# Compute baseline scores for this head
-			baseline_prefix: float = prefix_matching_score(
-				model, layer, head, sequences
+			baseline_prefix: float = _batched_metric(
+				prefix_matching_score,
+				sequences,
+				mbs,
+				model=model,
+				layer=layer,
+				head=head,
 			)
-			baseline_prefix_legacy: float = preceding_token_score(
-				model, layer, head, sequences
+			baseline_prefix_legacy: float = _batched_metric(
+				preceding_token_score,
+				sequences,
+				mbs,
+				model=model,
+				layer=layer,
+				head=head,
 			)
-			baseline_copy: float = copying_score(model, layer, head, sequences)
-			baseline_ov_copy: float = ov_copying_score(model, layer, head, sequences)
+			baseline_copy: float = _batched_metric(
+				copying_score,
+				sequences,
+				mbs,
+				model=model,
+				layer=layer,
+				head=head,
+			)
+			baseline_ov_copy: float = _batched_metric(
+				ov_copying_score,
+				sequences,
+				mbs,
+				model=model,
+				layer=layer,
+				head=head,
+			)
 
 			for method in config.ablation_methods:
 				# Run with ablation
 				with ablator.ablate_heads([(layer, head)], method):
-					ablated_loss: float = repeated_sequence_loss(model, sequences)
-					ablated_prefix: float = prefix_matching_score(
-						model, layer, head, sequences
+					ablated_loss: float = _batched_metric(
+						repeated_sequence_loss,
+						sequences,
+						mbs,
+						model=model,
 					)
-					ablated_prefix_legacy: float = preceding_token_score(
-						model, layer, head, sequences
+					ablated_prefix: float = _batched_metric(
+						prefix_matching_score,
+						sequences,
+						mbs,
+						model=model,
+						layer=layer,
+						head=head,
+					)
+					ablated_prefix_legacy: float = _batched_metric(
+						preceding_token_score,
+						sequences,
+						mbs,
+						model=model,
+						layer=layer,
+						head=head,
 					)
 					ablated_icl: float = (
 						icl_score(model, icl_prompts) if icl_prompts else 0.0
 					)
-					ablated_copy: float = copying_score(model, layer, head, sequences)
-					ablated_ov_copy: float = ov_copying_score(
-						model, layer, head, sequences
+					ablated_copy: float = _batched_metric(
+						copying_score,
+						sequences,
+						mbs,
+						model=model,
+						layer=layer,
+						head=head,
+					)
+					ablated_ov_copy: float = _batched_metric(
+						ov_copying_score,
+						sequences,
+						mbs,
+						model=model,
+						layer=layer,
+						head=head,
 					)
 
 				result: AblationResult = AblationResult(

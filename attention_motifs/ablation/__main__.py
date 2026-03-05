@@ -132,6 +132,12 @@ def _add_runtime_args(parser: argparse.ArgumentParser) -> None:
 		default=42,
 		help="Random seed (default: 42)",
 	)
+	parser.add_argument(
+		"--micro-batch-size",
+		type=int,
+		default=20,
+		help="Sequences per micro-batch for metric computation (default: 20)",
+	)
 
 
 def _build_config(args: argparse.Namespace) -> ExperimentConfig:
@@ -142,6 +148,7 @@ def _build_config(args: argparse.Namespace) -> ExperimentConfig:
 		n_repetitions=args.n_repetitions,
 		n_calibration_prompts=args.n_calibration_prompts,
 		seed=args.seed,
+		micro_batch_size=args.micro_batch_size,
 	)
 
 
