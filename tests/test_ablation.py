@@ -695,29 +695,23 @@ class TestAblationFrontend:
 		return {"test-model": results}
 
 	def test_write_ablation_frontend(self, tmp_path: Path) -> None:
-		"""Test that write_ablation_frontend produces valid HTML."""
+		"""Test that write_ablation_frontend writes HTML and data JSON."""
 		from attention_motifs.ablation.frontend import write_ablation_frontend
 
 		all_results: dict[str, ExperimentResults] = self._make_results()
 		output_path: Path = write_ablation_frontend(all_results, tmp_path)
 
 		assert output_path.exists()
-		html: str = output_path.read_text()
-		assert "__ABLATION_DATA__" not in html
-		assert "test-model" in html
-		assert "test-model:L0:H0" in html
-		assert output_path.name == "ablation_results.html"
+		assert output_path.name == "index.html"
 
-	def test_write_ablation_frontend_custom_filename(self, tmp_path: Path) -> None:
-		"""Test custom filename for ablation frontend."""
-		from attention_motifs.ablation.frontend import write_ablation_frontend
+		data_path: Path = tmp_path / "ablation_results.json"
+		assert data_path.exists()
 
-		all_results: dict[str, ExperimentResults] = self._make_results()
-		output_path: Path = write_ablation_frontend(
-			all_results, tmp_path, filename="custom.html"
-		)
-		assert output_path.name == "custom.html"
-		assert output_path.exists()
+		import json
+
+		data: dict = json.loads(data_path.read_text())
+		assert "test-model" in data["models"]
+		assert data["models"]["test-model"]["results"][0]["head"] == "test-model:L0:H0"
 
 	def test_serialize_results_structure(self) -> None:
 		"""Test that _serialize_results produces correct structure."""

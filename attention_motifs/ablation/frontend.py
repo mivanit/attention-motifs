@@ -1,4 +1,4 @@
-"""Write self-contained ablation results HTML."""
+"""Write ablation results frontend: HTML + data JSON."""
 
 import importlib.resources
 import json
@@ -9,16 +9,13 @@ import attention_motifs
 from attention_motifs.ablation.experiment import ExperimentResults
 
 
-_DATA_PLACEHOLDER: str = "__ABLATION_DATA__"
-
-
 def _get_bundled_html() -> str:
 	"""Load the bundled ablation frontend HTML from package resources.
 
 	Returns
 	-------
 	str
-	    Bundled HTML string with ``__ABLATION_DATA__`` placeholder.
+	    Bundled HTML string.
 	"""
 	frontend_resources_path: Path = Path(
 		importlib.resources.files(attention_motifs).joinpath("frontend"),  # type: ignore[arg-type]
@@ -66,44 +63,38 @@ def _serialize_results(
 def write_ablation_frontend(
 	all_results: dict[str, ExperimentResults],
 	output_dir: Path | str,
-	filename: str = "ablation_results.html",
 ) -> Path:
-	"""Write a self-contained HTML report of ablation results.
+	"""Write ablation frontend HTML and results data to *output_dir*.
 
-	Reads the bundled HTML template, embeds serialized results by
-	replacing the ``__ABLATION_DATA__`` placeholder, and writes the
-	resulting file to *output_dir*.
+	Copies the bundled ``index.html`` and writes serialized results as
+	a separate ``ablation_results.json`` file.  The frontend fetches
+	the JSON at runtime.
 
 	Parameters
 	----------
 	all_results
 	    Mapping of model_name to ExperimentResults.
 	output_dir
-	    Directory to write the HTML file.
-	filename
-	    Name of the output HTML file.
+	    Directory to write files into.
 
 	Returns
 	-------
 	Path
-	    Path to the written HTML file.
+	    Path to the written ``index.html``.
 	"""
 	output_dir = Path(output_dir)
 	output_dir.mkdir(parents=True, exist_ok=True)
 
+	# Copy bundled HTML
 	html: str = _get_bundled_html()
+	html_path: Path = output_dir / "index.html"
+	html_path.write_text(html)
+
+	# Write data JSON
 	data: dict[str, Any] = _serialize_results(all_results)
-	data_json: str = json.dumps(data)
+	data_path: Path = output_dir / "ablation_results.json"
+	data_path.write_text(json.dumps(data))
 
-	if _DATA_PLACEHOLDER not in html:
-		raise ValueError(
-			f"Bundled HTML does not contain placeholder '{_DATA_PLACEHOLDER}'. "
-			"Run 'make am-frontend-bundle' to rebuild the frontend."
-		)
-
-	html = html.replace(_DATA_PLACEHOLDER, data_json)
-
-	output_path: Path = output_dir / filename
-	output_path.write_text(html)
-	print(f"Wrote ablation frontend to {output_path}")
-	return output_path
+	print(f"Wrote ablation frontend to {html_path}")
+	print(f"Wrote ablation data to {data_path}")
+	return html_path

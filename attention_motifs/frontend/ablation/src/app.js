@@ -1,3 +1,10 @@
+// === Config ===
+
+const urlParams = new URLSearchParams(window.location.search);
+const CONFIG = {
+  dataUrl: urlParams.get("data") || "ablation_results.json",
+};
+
 // === Data ===
 
 let allData = null;
@@ -81,14 +88,21 @@ const COLUMN_LABELS = {
 
 // === Init ===
 
-function init() {
-  const dataEl = document.getElementById("ablation-data");
-  if (!dataEl || dataEl.textContent.trim() === "__ABLATION_DATA__") {
+async function init() {
+  let resp;
+  try {
+    resp = await fetch(CONFIG.dataUrl);
+  } catch {
     document.querySelector(".container").innerHTML =
-      '<p style="color:#999;text-align:center;padding:60px;">No data embedded. This template is populated by the ablation pipeline.</p>';
+      '<p style="color:#999;text-align:center;padding:60px;">Failed to load data. Serve this directory over HTTP to view results.</p>';
     return;
   }
-  allData = JSON.parse(dataEl.textContent);
+  if (!resp.ok) {
+    document.querySelector(".container").innerHTML =
+      `<p style="color:#999;text-align:center;padding:60px;">No data found at <code>${CONFIG.dataUrl}</code>.</p>`;
+    return;
+  }
+  allData = await resp.json();
   const modelNames = Object.keys(allData.models);
   if (modelNames.length === 0) return;
 
