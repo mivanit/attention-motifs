@@ -230,7 +230,7 @@ class HeadAblator:
 
 				# Run with hooks
 
-				self.model.run_with_hooks(tokens, fwd_hooks=hooks)  # pyright: ignore[reportArgumentType]
+				self.model.run_with_hooks(tokens, fwd_hooks=hooks)  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
 
 		# Compute means
 		for (layer, head), total in activation_sums.items():
@@ -486,6 +486,6 @@ class HeadAblator:
 
 		return self.model.run_with_hooks(
 			tokens,
-			fwd_hooks=hooks,  # pyright: ignore[reportArgumentType]
+			fwd_hooks=hooks,  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
 			return_type=return_type,
 		)

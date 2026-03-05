@@ -4,7 +4,7 @@ import importlib.resources
 from typing import Any
 
 from js_embedding_vis import fetch_jev
-from js_embedding_vis.inline_cfg import inline_hooks
+from js_embedding_vis.inline_cfg import inline_hooks  # type: ignore[import-untyped]
 
 import attention_motifs
 from attention_motifs.pipeline.cfg import PipelineConfig

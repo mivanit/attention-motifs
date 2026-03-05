@@ -8,7 +8,7 @@ from typing import Callable, Iterable, Literal, Sequence, overload
 import math
 from collections import defaultdict
 from statistics import median
-from typing import Self, Any
+from typing import Any, Self, cast
 
 import numpy as np
 import polars as pl
@@ -463,6 +463,15 @@ def _build_distance_tensor(
 ) -> Float[np.ndarray, "h h p"]: ...
 
 
+@overload
+def _build_distance_tensor(
+	data: Float[np.ndarray, "p h d"],
+	*,
+	order: int = ...,
+	reduce: bool,
+) -> Float[np.ndarray, "h h"] | Float[np.ndarray, "h h p"]: ...
+
+
 def _build_distance_tensor(
 	data: Float[np.ndarray, "p h d"],
 	*,
@@ -545,13 +554,14 @@ class DistanceTensorResult(SerializableDataclass):
 		if isinstance(data, cls):
 			return data
 		assert isinstance(data, dict)
-		assert data["is_reduced"], (
+		d: dict[str, Any] = cast(dict[str, Any], data)  # narrow for ty
+		assert d["is_reduced"], (
 			"data must be reduced when loading -- non-reduced would be huge!"
 		)
 		return cls(
-			cls_values=data["cls_values"],
-			prompt_values=data["prompt_values"],
-			distances=data["distances"],
+			cls_values=d["cls_values"],
+			prompt_values=d["prompt_values"],
+			distances=d["distances"],
 			is_reduced=True,
 		)
 
