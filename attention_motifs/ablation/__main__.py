@@ -29,6 +29,7 @@ from attention_motifs.ablation.experiment import (
 	ExperimentResults,
 	evaluate_induction_scores,
 )
+from attention_motifs.pipeline.cfg import PipelineConfig
 
 
 # ============================================================
@@ -152,8 +153,7 @@ def _run_and_print(
 	if args.models is not None:
 		models: list[str] = [m.strip() for m in args.models.split(",") if m.strip()]
 		candidates = candidates.filter_models(models)
-
-	if args.model_family is not None:
+	elif args.model_family is not None:
 		prefixes: list[str] = [
 			p.strip() for p in args.model_family.split(",") if p.strip()
 		]
@@ -161,6 +161,10 @@ def _run_and_print(
 			m for m in candidates.models if any(p in m for p in prefixes)
 		]
 		candidates = candidates.filter_models(matching)
+	else:
+		# Default: restrict to models listed in pipeline config
+		cfg: PipelineConfig = PipelineConfig.read(Path(args.pipeline_cfg))
+		candidates = candidates.filter_models(cfg.models)
 
 	if candidates.n_heads == 0:
 		print("Error: No heads found for the specified cluster", file=sys.stderr)
@@ -199,7 +203,6 @@ def _get_assignments(args: argparse.Namespace) -> dict[str, int]:
 	Exits with error if --pattern-types is used (not supported for lookup).
 	"""
 	from attention_motifs.features.clustering import HierarchicalClusteringResult
-	from attention_motifs.pipeline.cfg import PipelineConfig
 
 	if args.clustering_path is not None:
 		_require_cut_params(args, "when using --clustering-path")
