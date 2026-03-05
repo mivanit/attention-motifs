@@ -626,10 +626,11 @@ publish: check version build verify-git
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # .coverage* glob also removes .coverage.* parallel sidecar files from `coverage run --parallel-mode`
 # don't search `.` because `data/` can be huge
+# but still delete the root mypy cache
 .PHONY: clean
 clean:
 	@echo "clean up temporary files"
-	rm -rf .ruff_cache .pytest_cache .coverage* dist build $(PACKAGE_NAME).egg-info $(TESTS_TEMP_DIR)
+	rm -rf .ruff_cache .pytest_cache .mypy_cache .coverage* dist build $(PACKAGE_NAME).egg-info $(TESTS_TEMP_DIR)
 	-find $(PACKAGE_NAME) $(TESTS_DIR) $(DOCS_DIR) -type d -name '__pycache__' -exec rm -rf {} +
 	-find $(PACKAGE_NAME) $(TESTS_DIR) $(DOCS_DIR) -type d -name '.mypy_cache' -exec rm -rf {} +
 	-find $(PACKAGE_NAME) $(TESTS_DIR) $(DOCS_DIR) -type f -name '*.py[co]' -delete
