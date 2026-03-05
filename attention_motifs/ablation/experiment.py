@@ -52,7 +52,7 @@ from transformer_lens import HookedTransformer
 
 
 @dataclass
-class ExperimentConfig:
+class AblationConfig:
 	"""Configuration for ablation experiments.
 
 	Attributes
@@ -83,7 +83,7 @@ class ExperimentConfig:
 
 
 @dataclass
-class ExperimentResults:
+class AblationResults:
 	"""Container for experiment results.
 
 	Attributes
@@ -101,7 +101,7 @@ class ExperimentResults:
 	"""
 
 	model_name: str
-	config: ExperimentConfig
+	config: AblationConfig
 	results: list[AblationResult] = field(default_factory=list)
 	baseline_loss: float = 0.0
 	baseline_icl: float = 0.0
@@ -133,12 +133,12 @@ class ExperimentResults:
 		path.write_text(json.dumps(data, indent=2))
 
 	@classmethod
-	def load(cls, path: Path | str) -> "ExperimentResults":
+	def load(cls, path: Path | str) -> "AblationResults":
 		"""Load results from JSON file."""
 		path = Path(path)
 		data: dict = json.loads(path.read_text())
 
-		config: ExperimentConfig = ExperimentConfig(
+		config: AblationConfig = AblationConfig(
 			n_sequences=data["config"]["n_sequences"],
 			seq_length=data["config"]["seq_length"],
 			n_repetitions=data["config"]["n_repetitions"],
@@ -221,11 +221,11 @@ def run_ablation_experiment(
 	model_name: str,
 	candidate_heads: list[tuple[int, int]] | list[str],
 	control_heads: list[tuple[int, int]] | list[str] | None = None,
-	config: ExperimentConfig | None = None,
+	config: AblationConfig | None = None,
 	icl_prompts: list[str] | None = None,
 	device: str = "cuda",
 	show_progress: bool = True,
-) -> ExperimentResults:
+) -> AblationResults:
 	"""Run full ablation experiment on a model.
 
 	Parameters
@@ -251,7 +251,7 @@ def run_ablation_experiment(
 	    Results container with all ablation measurements.
 	"""
 	if config is None:
-		config = ExperimentConfig()
+		config = AblationConfig()
 
 	# Convert string heads to tuples if needed
 	candidate_heads_int: list[tuple[int, int]]
@@ -310,7 +310,7 @@ def run_ablation_experiment(
 	)
 	baseline_icl: float = icl_score(model, icl_prompts) if icl_prompts else 0.0
 
-	exp_results: ExperimentResults = ExperimentResults(
+	exp_results: AblationResults = AblationResults(
 		model_name=model_name,
 		config=config,
 		baseline_loss=baseline_loss,
@@ -453,12 +453,12 @@ def run_cross_model_experiment(
 	models: list[str],
 	n_candidates_per_model: int = 10,
 	n_controls_per_model: int = 5,
-	config: ExperimentConfig | None = None,
+	config: AblationConfig | None = None,
 	icl_prompts: list[str] | None = None,
 	device: str = "cuda",
 	output_dir: Path | str | None = None,
 	show_progress: bool = True,
-) -> dict[str, ExperimentResults]:
+) -> dict[str, AblationResults]:
 	"""Run ablation experiments across multiple models.
 
 	Finds candidate induction heads for each model based on proximity
@@ -502,7 +502,7 @@ def run_cross_model_experiment(
 		k_neighbors=n_candidates_per_model * 2,
 	)
 
-	all_results: dict[str, ExperimentResults] = {}
+	all_results: dict[str, AblationResults] = {}
 
 	for model_name in models:
 		# Resume: skip models with existing results
@@ -512,7 +512,7 @@ def run_cross_model_experiment(
 			)
 			if results_path.exists():
 				print(f"Skipping {model_name} — results exist at {results_path}")
-				all_results[model_name] = ExperimentResults.load(results_path)
+				all_results[model_name] = AblationResults.load(results_path)
 				continue
 
 		print(f"\n{'=' * 60}")
@@ -540,7 +540,7 @@ def run_cross_model_experiment(
 			control_heads = heads_from_strings(control_strs)
 
 		# Run experiment
-		results: ExperimentResults = run_ablation_experiment(
+		results: AblationResults = run_ablation_experiment(
 			model_name=model_name,
 			candidate_heads=candidate_heads,
 			control_heads=control_heads,
@@ -568,7 +568,7 @@ def run_cross_model_experiment(
 	return all_results
 
 
-def analyze_results(results: ExperimentResults) -> pl.DataFrame:
+def analyze_results(results: AblationResults) -> pl.DataFrame:
 	"""Analyze ablation results and compute summary statistics.
 
 	Parameters
@@ -607,7 +607,7 @@ def analyze_results(results: ExperimentResults) -> pl.DataFrame:
 	return summary
 
 
-def get_all_head_scores(results: ExperimentResults) -> pl.DataFrame:
+def get_all_head_scores(results: AblationResults) -> pl.DataFrame:
 	"""Return a DataFrame with all metric scores for all heads.
 
 	Unlike ``identify_induction_heads``, this does not apply any
@@ -630,11 +630,11 @@ def get_all_head_scores(results: ExperimentResults) -> pl.DataFrame:
 
 def evaluate_induction_scores(
 	candidates: CandidateHeads,
-	config: ExperimentConfig | None = None,
+	config: AblationConfig | None = None,
 	device: str = "cuda",
 	output_dir: Path | str | None = None,
 	show_progress: bool = True,
-) -> dict[str, ExperimentResults]:
+) -> dict[str, AblationResults]:
 	"""Run ablation experiments on candidate heads across all models.
 
 	Iterates over models in ``candidates.heads_by_model``, calls
@@ -672,7 +672,7 @@ def evaluate_induction_scores(
 		output_dir_.mkdir(parents=True, exist_ok=True)
 
 	# Run ablation per model
-	all_results: dict[str, ExperimentResults] = {}
+	all_results: dict[str, AblationResults] = {}
 	for model_name, heads in sorted(candidates.heads_by_model.items()):
 		# Resume: skip models with existing results
 		if output_dir_ is not None:
@@ -681,14 +681,14 @@ def evaluate_induction_scores(
 			)
 			if results_path.exists():
 				print(f"Skipping {model_name} — results exist at {results_path}")
-				all_results[model_name] = ExperimentResults.load(results_path)
+				all_results[model_name] = AblationResults.load(results_path)
 				continue
 
 		print(f"\n{'=' * 60}")
 		print(f"Evaluating induction scores: {model_name} ({len(heads)} heads)")
 		print(f"{'=' * 60}")
 
-		results: ExperimentResults = run_ablation_experiment(
+		results: AblationResults = run_ablation_experiment(
 			model_name=model_name,
 			candidate_heads=heads,
 			config=config,
@@ -714,7 +714,7 @@ def evaluate_induction_scores(
 
 
 def identify_induction_heads(
-	results: ExperimentResults,
+	results: AblationResults,
 	loss_threshold: float = 0.5,
 	prefix_threshold: float = 0.1,
 ) -> list[str]:

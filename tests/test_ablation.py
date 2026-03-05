@@ -20,7 +20,7 @@ from attention_motifs.ablation.candidates import (
 	get_known_induction_heads,
 	DistanceCandidates,
 )
-from attention_motifs.ablation.experiment import ExperimentConfig, ExperimentResults
+from attention_motifs.ablation.experiment import AblationConfig, AblationResults
 from attention_motifs.ablation.metrics import AblationResult
 
 
@@ -668,11 +668,11 @@ class TestIntegration:
 class TestAblationFrontend:
 	"""Tests for ablation frontend HTML generation."""
 
-	def _make_results(self) -> dict[str, ExperimentResults]:
+	def _make_results(self) -> dict[str, AblationResults]:
 		"""Create mock ExperimentResults for testing."""
-		results: ExperimentResults = ExperimentResults(
+		results: AblationResults = AblationResults(
 			model_name="test-model",
-			config=ExperimentConfig(
+			config=AblationConfig(
 				n_sequences=10,
 				seq_length=5,
 				n_repetitions=2,
@@ -698,7 +698,7 @@ class TestAblationFrontend:
 		"""Test that write_ablation_frontend writes HTML and data JSON."""
 		from attention_motifs.ablation.frontend import write_ablation_frontend
 
-		all_results: dict[str, ExperimentResults] = self._make_results()
+		all_results: dict[str, AblationResults] = self._make_results()
 		output_path: Path = write_ablation_frontend(all_results, tmp_path)
 
 		assert output_path.exists()
@@ -717,7 +717,7 @@ class TestAblationFrontend:
 		"""Test that _serialize_results produces correct structure."""
 		from attention_motifs.ablation.frontend import _serialize_results
 
-		all_results: dict[str, ExperimentResults] = self._make_results()
+		all_results: dict[str, AblationResults] = self._make_results()
 		data: dict = _serialize_results(all_results)
 
 		assert "models" in data

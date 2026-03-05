@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import attention_motifs
-from attention_motifs.ablation.experiment import ExperimentResults
+from attention_motifs.ablation.experiment import AblationResults
 
 
 def _get_bundled_html() -> str:
@@ -25,7 +25,7 @@ def _get_bundled_html() -> str:
 
 
 def _serialize_results(
-	all_results: dict[str, ExperimentResults],
+	all_results: dict[str, AblationResults],
 ) -> dict[str, Any]:
 	"""Serialize multiple ExperimentResults into a JSON-compatible dict.
 
@@ -61,7 +61,7 @@ def _serialize_results(
 
 
 def write_ablation_frontend(
-	all_results: dict[str, ExperimentResults],
+	all_results: dict[str, AblationResults],
 	output_dir: Path | str,
 ) -> Path:
 	"""Write ablation frontend HTML and results data to *output_dir*.

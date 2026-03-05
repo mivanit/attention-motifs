@@ -25,8 +25,8 @@ from pathlib import Path
 
 from attention_motifs.ablation.candidates import CandidateHeads
 from attention_motifs.ablation.experiment import (
-	ExperimentConfig,
-	ExperimentResults,
+	AblationConfig,
+	AblationResults,
 	evaluate_induction_scores,
 )
 from attention_motifs.pipeline.cfg import PipelineConfig
@@ -140,9 +140,9 @@ def _add_runtime_args(parser: argparse.ArgumentParser) -> None:
 	)
 
 
-def _build_config(args: argparse.Namespace) -> ExperimentConfig:
+def _build_config(args: argparse.Namespace) -> AblationConfig:
 	"""Build ExperimentConfig from parsed CLI args."""
-	return ExperimentConfig(
+	return AblationConfig(
 		n_sequences=args.n_sequences,
 		seq_length=args.seq_length,
 		n_repetitions=args.n_repetitions,
@@ -177,9 +177,9 @@ def _run_and_print(
 		print("Error: No heads found for the specified cluster", file=sys.stderr)
 		sys.exit(1)
 
-	config: ExperimentConfig = _build_config(args)
+	config: AblationConfig = _build_config(args)
 
-	results: dict[str, ExperimentResults] = evaluate_induction_scores(
+	results: dict[str, AblationResults] = evaluate_induction_scores(
 		candidates=candidates,
 		config=config,
 		device=args.device,
