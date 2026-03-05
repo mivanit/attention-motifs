@@ -685,6 +685,7 @@ def copying_score(
 
 	# z: (batch, pos, n_heads, d_head)
 	z: Float[Tensor, "batch pos d_head"] = cache[hook_name][:, :, head, :]
+	del cache
 
 	# Project through output matrix to get contribution to residual stream
 	W_O: Float[Tensor, "d_head d_model"] = model.W_O[layer, head]
@@ -693,12 +694,14 @@ def copying_score(
 	head_contribution: Float[Tensor, "batch pos d_model"] = torch.einsum(
 		"bpd,dm->bpm", z, W_O
 	)
+	del z
 
 	# Project to logits: contribution @ W_U
 	W_U: Float[Tensor, "d_model vocab"] = model.W_U
 	logit_contribution: Float[Tensor, "batch pos vocab"] = torch.einsum(
 		"bpm,mv->bpv", head_contribution, W_U
 	)
+	del head_contribution
 
 	pos_shift: int = 0 if has_bos else 1
 
@@ -805,115 +808,114 @@ def ov_copying_score(
 			prepend_bos=not has_bos,
 		)
 
-	# z: (batch, pos, d_head)
-	z: Float[Tensor, "batch pos d_head"] = cache[hook_z_name][:, :, head, :]
-	# attn: (batch, dest_pos, src_pos)
-	attn: Float[Tensor, "batch dest src"] = cache[hook_pattern_name][:, head, :, :]
+		# z: (batch, pos, d_head)
+		z: Float[Tensor, "batch pos d_head"] = cache[hook_z_name][:, :, head, :]
+		# attn: (batch, dest_pos, src_pos)
+		attn: Float[Tensor, "batch dest src"] = cache[hook_pattern_name][
+			:, head, :, :
+		]
+		del cache
 
-	# Head contribution to logits
-	W_O: Float[Tensor, "d_head d_model"] = model.W_O[layer, head]
-	W_U: Float[Tensor, "d_model vocab"] = model.W_U
-	head_logits: Float[Tensor, "batch pos vocab"] = torch.einsum(
-		"bpd,dm,mv->bpv", z, W_O, W_U
-	)
-
-	# Subtract per-position mean, apply ReLU (paper: "subtracting the mean
-	# of the logits and passing through a ReLU")
-	mean_logits: Float[Tensor, "batch pos 1"] = head_logits.mean(dim=-1, keepdim=True)
-	positive_logits: Float[Tensor, "batch pos vocab"] = F.relu(
-		head_logits - mean_logits
-	)
-
-	# For each (batch, dest_pos): compute attention-weighted fraction of
-	# logit mass that goes to the attended-to token.
-	#
-	# attended_logit = sum_j attn[b, q, j] * positive_logits[b, q, tokens[b, j]]
-	# total_logit    = sum_{t in sample} positive_logits[b, q, t]
-	# raw_ratio      = attended_logit / total_logit   (in [0, 0.5] for a copying head)
-	# score          = 2 * raw_ratio - 1              (scaled to [-1, 1])
-	#
-	# Paper: "ratio ... to that of all tokens in this sample" — the
-	# denominator sums over the unique token types present in the
-	# sequence, not the full vocabulary.
-
-	batch_size: int = tokens.shape[0]
-	seq_len: int = attn.shape[1]  # dest positions (may include model BOS)
-
-	# Determine the token tensor that aligns with attn positions
-	if not has_bos:
-		# Model added BOS at position 0; attn has seq_len = tokens.shape[1] + 1
-		# Build aligned token tensor with BOS prepended
-		bos_id: int = getattr(model.tokenizer, "bos_token_id", None) or 0
-		bos_col: Int[Tensor, "batch 1"] = torch.full(
-			(batch_size, 1), bos_id, dtype=tokens.dtype, device=tokens.device
+		# Head contribution to logits
+		W_O: Float[Tensor, "d_head d_model"] = model.W_O[layer, head]
+		W_U: Float[Tensor, "d_model vocab"] = model.W_U
+		head_logits: Float[Tensor, "batch pos vocab"] = torch.einsum(
+			"bpd,dm,mv->bpv", z, W_O, W_U
 		)
-		aligned_tokens: Int[Tensor, "batch seq"] = torch.cat([bos_col, tokens], dim=1)
-		# Trim to match attn dim
-		aligned_tokens = aligned_tokens[:, :seq_len]
-	else:
-		aligned_tokens = tokens[:, :seq_len]
+		del z
 
-	# Vectorized computation:
-	# For each src position j, gather the logit for token at j
-	# src_tokens shape: (batch, src_len) -> expand to (batch, dest, src)
-	src_len: int = attn.shape[2]
-	src_tokens: Int[Tensor, "batch src"] = aligned_tokens[:, :src_len]
+		# Subtract per-position mean, apply ReLU (paper: "subtracting the mean
+		# of the logits and passing through a ReLU")
+		mean_logits: Float[Tensor, "batch pos 1"] = head_logits.mean(
+			dim=-1, keepdim=True
+		)
+		positive_logits: Float[Tensor, "batch pos vocab"] = F.relu(
+			head_logits - mean_logits
+		)
+		del head_logits, mean_logits
 
-	# Gather logits for attended-to tokens: positive_logits[b, q, src_tokens[b, j]]
-	# Expand src_tokens to (batch, dest, src) for gathering
-	src_tokens_expanded: Int[Tensor, "batch dest src"] = src_tokens.unsqueeze(1).expand(
-		batch_size, seq_len, src_len
-	)
+		# For each (batch, dest_pos): compute attention-weighted fraction of
+		# logit mass that goes to the attended-to token.
+		#
+		# attended_logit = sum_j attn[b, q, j] * positive_logits[b, q, tokens[b, j]]
+		# total_logit    = sum_{t in sample} positive_logits[b, q, t]
+		# raw_ratio      = attended_logit / total_logit   (in [0, 0.5] for a copying head)
+		# score          = 2 * raw_ratio - 1              (scaled to [-1, 1])
+		#
+		# Paper: "ratio ... to that of all tokens in this sample" — the
+		# denominator sums over the unique token types present in the
+		# sequence, not the full vocabulary.
 
-	# positive_logits: (batch, dest, vocab) -> gather along vocab dim
-	# We need positive_logits[b, q, src_tokens[b, j]] for each (b, q, j)
-	# Reshape for gathering: (batch * dest, vocab) x (batch * dest, src) doesn't work
-	# Instead: for each dest position, gather src token logits
-	# positive_logits[:, :, :].gather(2, ...) — need to index vocab dim
+		batch_size: int = tokens.shape[0]
+		seq_len: int = attn.shape[1]  # dest positions (may include model BOS)
 
-	# Approach: expand positive_logits to (batch, dest, src) by gathering vocab dim
-	# at src_tokens indices
-	# For each (b, q, j): logit = positive_logits[b, q, src_tokens_expanded[b, q, j]]
-	attended_logits: Float[Tensor, "batch dest src"] = torch.zeros(
-		batch_size, seq_len, src_len, device=tokens.device
-	)
-	for q in range(seq_len):
-		# positive_logits[:, q, :] shape: (batch, vocab)
-		# src_tokens shape: (batch, src_len)
-		attended_logits[:, q, :] = torch.gather(
-			positive_logits[:, q, :], dim=1, index=src_tokens.long()
+		# Determine the token tensor that aligns with attn positions
+		if not has_bos:
+			# Model added BOS at position 0; attn has seq_len = tokens.shape[1] + 1
+			# Build aligned token tensor with BOS prepended
+			bos_id: int = getattr(model.tokenizer, "bos_token_id", None) or 0
+			bos_col: Int[Tensor, "batch 1"] = torch.full(
+				(batch_size, 1), bos_id, dtype=tokens.dtype, device=tokens.device
+			)
+			aligned_tokens: Int[Tensor, "batch seq"] = torch.cat(
+				[bos_col, tokens], dim=1
+			)
+			# Trim to match attn dim
+			aligned_tokens = aligned_tokens[:, :seq_len]
+		else:
+			aligned_tokens = tokens[:, :seq_len]
+
+		# Vectorized computation:
+		# For each src position j, gather the logit for token at j
+		src_len: int = attn.shape[2]
+		src_tokens: Int[Tensor, "batch src"] = aligned_tokens[:, :src_len]
+
+		# Gather logits for attended-to tokens: positive_logits[b, q, src_tokens[b, j]]
+		attended_logits: Float[Tensor, "batch dest src"] = torch.zeros(
+			batch_size, seq_len, src_len, device=tokens.device
+		)
+		for q in range(seq_len):
+			attended_logits[:, q, :] = torch.gather(
+				positive_logits[:, q, :], dim=1, index=src_tokens.long()
+			)
+
+		# Attention-weighted sum of attended logits per (batch, dest)
+		weighted_attended: Float[Tensor, "batch dest"] = (
+			attn * attended_logits
+		).sum(dim=-1)
+		del attended_logits
+
+		# Total positive logit mass over sample tokens per (batch, dest).
+		# Paper: "to that of all tokens in this sample" — sum only over the
+		# unique token types present in each sequence, not the full vocabulary.
+		total_positive: Float[Tensor, "batch dest"] = torch.zeros(
+			batch_size, seq_len, device=tokens.device
+		)
+		for b in range(batch_size):
+			unique_b: Int[Tensor, " n_unique"] = aligned_tokens[b].unique()
+			total_positive[b] = positive_logits[b, :, unique_b].sum(dim=-1)
+		del positive_logits
+
+		# Raw ratio (avoid division by zero)
+		valid_mask: Bool[Tensor, "batch dest"] = total_positive > 1e-10
+		raw_ratio: Float[Tensor, "batch dest"] = torch.zeros_like(
+			weighted_attended
+		)
+		raw_ratio[valid_mask] = (
+			weighted_attended[valid_mask] / total_positive[valid_mask]
 		)
 
-	# Attention-weighted sum of attended logits per (batch, dest)
-	# attn: (batch, dest, src), attended_logits: (batch, dest, src)
-	weighted_attended: Float[Tensor, "batch dest"] = (attn * attended_logits).sum(
-		dim=-1
-	)
+		# Scale to [-1, 1]: score = 2 * ratio - 1
+		scaled: Float[Tensor, "batch dest"] = 2.0 * raw_ratio - 1.0
 
-	# Total positive logit mass over sample tokens per (batch, dest).
-	# Paper: "to that of all tokens in this sample" — sum only over the
-	# unique token types present in each sequence, not the full vocabulary.
-	# Each batch element has its own set of ~25 unique token types.
-	total_positive: Float[Tensor, "batch dest"] = torch.zeros(
-		batch_size, seq_len, device=tokens.device
-	)
-	for b in range(batch_size):
-		unique_b: Int[Tensor, " n_unique"] = aligned_tokens[b].unique()
-		total_positive[b] = positive_logits[b, :, unique_b].sum(dim=-1)
+		# Average over valid positions (skip position 0 which is BOS)
+		start_pos: int = 1
+		valid_scores: Float[Tensor, "batch pos"] = scaled[:, start_pos:]
+		valid_counts: Float[Tensor, "batch pos"] = valid_mask[:, start_pos:].float()
 
-	# Raw ratio (avoid division by zero)
-	valid_mask: Bool[Tensor, "batch dest"] = total_positive > 1e-10
-	raw_ratio: Float[Tensor, "batch dest"] = torch.zeros_like(weighted_attended)
-	raw_ratio[valid_mask] = weighted_attended[valid_mask] / total_positive[valid_mask]
-
-	# Scale to [-1, 1]: score = 2 * ratio - 1
-	scaled: Float[Tensor, "batch dest"] = 2.0 * raw_ratio - 1.0
-
-	# Average over valid positions (skip position 0 which is BOS)
-	start_pos: int = 1
-	valid_scores: Float[Tensor, "batch pos"] = scaled[:, start_pos:]
-	valid_counts: Float[Tensor, "batch pos"] = valid_mask[:, start_pos:].float()
-
-	if valid_counts.sum() > 0:
-		return (valid_scores * valid_counts).sum().item() / valid_counts.sum().item()
-	return 0.0
+		if valid_counts.sum() > 0:
+			return (
+				(valid_scores * valid_counts).sum().item()
+				/ valid_counts.sum().item()
+			)
+		return 0.0

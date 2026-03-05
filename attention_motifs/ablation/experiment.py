@@ -45,6 +45,7 @@ from attention_motifs.ablation.metrics import (
 	ov_copying_score,
 )
 
+import torch
 from torch import Tensor
 from transformer_lens import HookedTransformer
 
@@ -291,58 +292,71 @@ def run_ablation_experiment(
 	for layer, head in heads_to_ablate:
 		head_str: str = f"{model_name}:L{layer}:H{head}"
 
-		# Compute baseline scores for this head
-		baseline_prefix: float = prefix_matching_score(model, layer, head, sequences)
-		baseline_prefix_legacy: float = preceding_token_score(
-			model, layer, head, sequences
-		)
-		baseline_copy: float = copying_score(model, layer, head, sequences)
-		baseline_ov_copy: float = ov_copying_score(model, layer, head, sequences)
-
-		for method in config.ablation_methods:
-			# Run with ablation
-			with ablator.ablate_heads([(layer, head)], method):
-				ablated_loss: float = repeated_sequence_loss(model, sequences)
-				ablated_prefix: float = prefix_matching_score(
-					model, layer, head, sequences
-				)
-				ablated_prefix_legacy: float = preceding_token_score(
-					model, layer, head, sequences
-				)
-				ablated_icl: float = (
-					icl_score(model, icl_prompts) if icl_prompts else 0.0
-				)
-				ablated_copy: float = copying_score(model, layer, head, sequences)
-				ablated_ov_copy: float = ov_copying_score(model, layer, head, sequences)
-
-			result: AblationResult = AblationResult(
-				head=head_str,
-				ablation_method=method,
-				baseline_repeated_loss=baseline_loss,
-				ablated_repeated_loss=ablated_loss,
-				loss_increase=ablated_loss - baseline_loss,
-				baseline_prefix_score=baseline_prefix,
-				ablated_prefix_score=ablated_prefix,
-				prefix_score_decrease=baseline_prefix - ablated_prefix,
-				baseline_prefix_score_legacy=baseline_prefix_legacy,
-				ablated_prefix_score_legacy=ablated_prefix_legacy,
-				prefix_score_decrease_legacy=(
-					baseline_prefix_legacy - ablated_prefix_legacy
-				),
-				baseline_icl_score=baseline_icl,
-				ablated_icl_score=ablated_icl,
-				icl_degradation=ablated_icl - baseline_icl,
-				copying_score=baseline_copy,
-				ablated_copying_score=ablated_copy,
-				copying_score_decrease=baseline_copy - ablated_copy,
-				ov_copying_score=baseline_ov_copy,
-				ablated_ov_copying_score=ablated_ov_copy,
-				ov_copying_score_decrease=baseline_ov_copy - ablated_ov_copy,
+		try:
+			# Compute baseline scores for this head
+			baseline_prefix: float = prefix_matching_score(
+				model, layer, head, sequences
 			)
-			exp_results.results.append(result)
+			baseline_prefix_legacy: float = preceding_token_score(
+				model, layer, head, sequences
+			)
+			baseline_copy: float = copying_score(model, layer, head, sequences)
+			baseline_ov_copy: float = ov_copying_score(model, layer, head, sequences)
 
-	# Clean up cached patterns
+			for method in config.ablation_methods:
+				# Run with ablation
+				with ablator.ablate_heads([(layer, head)], method):
+					ablated_loss: float = repeated_sequence_loss(model, sequences)
+					ablated_prefix: float = prefix_matching_score(
+						model, layer, head, sequences
+					)
+					ablated_prefix_legacy: float = preceding_token_score(
+						model, layer, head, sequences
+					)
+					ablated_icl: float = (
+						icl_score(model, icl_prompts) if icl_prompts else 0.0
+					)
+					ablated_copy: float = copying_score(
+						model, layer, head, sequences
+					)
+					ablated_ov_copy: float = ov_copying_score(
+						model, layer, head, sequences
+					)
+
+				result: AblationResult = AblationResult(
+					head=head_str,
+					ablation_method=method,
+					baseline_repeated_loss=baseline_loss,
+					ablated_repeated_loss=ablated_loss,
+					loss_increase=ablated_loss - baseline_loss,
+					baseline_prefix_score=baseline_prefix,
+					ablated_prefix_score=ablated_prefix,
+					prefix_score_decrease=baseline_prefix - ablated_prefix,
+					baseline_prefix_score_legacy=baseline_prefix_legacy,
+					ablated_prefix_score_legacy=ablated_prefix_legacy,
+					prefix_score_decrease_legacy=(
+						baseline_prefix_legacy - ablated_prefix_legacy
+					),
+					baseline_icl_score=baseline_icl,
+					ablated_icl_score=ablated_icl,
+					icl_degradation=ablated_icl - baseline_icl,
+					copying_score=baseline_copy,
+					ablated_copying_score=ablated_copy,
+					copying_score_decrease=baseline_copy - ablated_copy,
+					ov_copying_score=baseline_ov_copy,
+					ablated_ov_copying_score=ablated_ov_copy,
+					ov_copying_score_decrease=baseline_ov_copy - ablated_ov_copy,
+				)
+				exp_results.results.append(result)
+		except torch.cuda.OutOfMemoryError:
+			print(f"  OOM on {head_str}, skipping")
+			torch.cuda.empty_cache()
+
+	# Clean up cached patterns and free GPU memory
 	ablator.clear_clean_patterns()
+	del ablator
+	del model
+	torch.cuda.empty_cache()
 
 	return exp_results
 
@@ -404,6 +418,17 @@ def run_cross_model_experiment(
 	all_results: dict[str, ExperimentResults] = {}
 
 	for model_name in models:
+		# Resume: skip models with existing results
+		if output_dir_ is not None:
+			results_path: Path = (
+				output_dir_
+				/ f"{cached_sanitize_model_name(model_name)}_results.json"
+			)
+			if results_path.exists():
+				print(f"Skipping {model_name} — results exist at {results_path}")
+				all_results[model_name] = ExperimentResults.load(results_path)
+				continue
+
 		print(f"\n{'=' * 60}")
 		print(f"Running experiment for: {model_name}")
 		print(f"{'=' * 60}")
@@ -563,6 +588,17 @@ def evaluate_induction_scores(
 	# Run ablation per model
 	all_results: dict[str, ExperimentResults] = {}
 	for model_name, heads in sorted(candidates.heads_by_model.items()):
+		# Resume: skip models with existing results
+		if output_dir_ is not None:
+			results_path: Path = (
+				output_dir_
+				/ f"{cached_sanitize_model_name(model_name)}_results.json"
+			)
+			if results_path.exists():
+				print(f"Skipping {model_name} — results exist at {results_path}")
+				all_results[model_name] = ExperimentResults.load(results_path)
+				continue
+
 		print(f"\n{'=' * 60}")
 		print(f"Evaluating induction scores: {model_name} ({len(heads)} heads)")
 		print(f"{'=' * 60}")
