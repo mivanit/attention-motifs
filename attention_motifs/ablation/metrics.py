@@ -811,9 +811,7 @@ def ov_copying_score(
 		# z: (batch, pos, d_head)
 		z: Float[Tensor, "batch pos d_head"] = cache[hook_z_name][:, :, head, :]
 		# attn: (batch, dest_pos, src_pos)
-		attn: Float[Tensor, "batch dest src"] = cache[hook_pattern_name][
-			:, head, :, :
-		]
+		attn: Float[Tensor, "batch dest src"] = cache[hook_pattern_name][:, head, :, :]
 		del cache
 
 		# Head contribution to logits
@@ -880,9 +878,9 @@ def ov_copying_score(
 			)
 
 		# Attention-weighted sum of attended logits per (batch, dest)
-		weighted_attended: Float[Tensor, "batch dest"] = (
-			attn * attended_logits
-		).sum(dim=-1)
+		weighted_attended: Float[Tensor, "batch dest"] = (attn * attended_logits).sum(
+			dim=-1
+		)
 		del attended_logits
 
 		# Total positive logit mass over sample tokens per (batch, dest).
@@ -898,9 +896,7 @@ def ov_copying_score(
 
 		# Raw ratio (avoid division by zero)
 		valid_mask: Bool[Tensor, "batch dest"] = total_positive > 1e-10
-		raw_ratio: Float[Tensor, "batch dest"] = torch.zeros_like(
-			weighted_attended
-		)
+		raw_ratio: Float[Tensor, "batch dest"] = torch.zeros_like(weighted_attended)
 		raw_ratio[valid_mask] = (
 			weighted_attended[valid_mask] / total_positive[valid_mask]
 		)
@@ -915,7 +911,6 @@ def ov_copying_score(
 
 		if valid_counts.sum() > 0:
 			return (
-				(valid_scores * valid_counts).sum().item()
-				/ valid_counts.sum().item()
-			)
+				valid_scores * valid_counts
+			).sum().item() / valid_counts.sum().item()
 		return 0.0

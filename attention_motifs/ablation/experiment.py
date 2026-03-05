@@ -316,9 +316,7 @@ def run_ablation_experiment(
 					ablated_icl: float = (
 						icl_score(model, icl_prompts) if icl_prompts else 0.0
 					)
-					ablated_copy: float = copying_score(
-						model, layer, head, sequences
-					)
+					ablated_copy: float = copying_score(model, layer, head, sequences)
 					ablated_ov_copy: float = ov_copying_score(
 						model, layer, head, sequences
 					)
@@ -421,8 +419,7 @@ def run_cross_model_experiment(
 		# Resume: skip models with existing results
 		if output_dir_ is not None:
 			results_path: Path = (
-				output_dir_
-				/ f"{cached_sanitize_model_name(model_name)}_results.json"
+				output_dir_ / f"{cached_sanitize_model_name(model_name)}_results.json"
 			)
 			if results_path.exists():
 				print(f"Skipping {model_name} — results exist at {results_path}")
@@ -591,8 +588,7 @@ def evaluate_induction_scores(
 		# Resume: skip models with existing results
 		if output_dir_ is not None:
 			results_path: Path = (
-				output_dir_
-				/ f"{cached_sanitize_model_name(model_name)}_results.json"
+				output_dir_ / f"{cached_sanitize_model_name(model_name)}_results.json"
 			)
 			if results_path.exists():
 				print(f"Skipping {model_name} — results exist at {results_path}")
