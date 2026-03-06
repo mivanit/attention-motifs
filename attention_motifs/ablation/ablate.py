@@ -78,6 +78,7 @@ class HeadAblator:
 				"Install with: pip install transformer-lens"
 			)
 		self.device = str(self.model.cfg.device)
+		self.model.eval()
 
 	@property
 	def n_layers(self) -> int:
@@ -422,7 +423,7 @@ class HeadAblator:
 		if method == AblationMethod.PATTERN_PRESERVING and self._clean_patterns is None:
 			self.set_clean_patterns(tokens, prepend_bos=prepend_bos)
 
-		with self.ablate_heads(heads, method):
+		with self.ablate_heads(heads, method), torch.no_grad():
 			return self.model(tokens, return_type=return_type, prepend_bos=prepend_bos)
 
 	def run_with_hooks_ablation(
@@ -484,8 +485,9 @@ class HeadAblator:
 					)
 				)
 
-		return self.model.run_with_hooks(
-			tokens,
-			fwd_hooks=hooks,  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
-			return_type=return_type,
-		)
+		with torch.no_grad():
+			return self.model.run_with_hooks(
+				tokens,
+				fwd_hooks=hooks,  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
+				return_type=return_type,
+			)
