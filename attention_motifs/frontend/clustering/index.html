@@ -2152,6 +2152,72 @@
     
     </script>
     <!-- end '../../shared/cluster_utils.js' -->
+        <!-- begin '../../shared/clustering_config.js' -->
+    <script>
+    /**
+     * Shared clustering configuration state.
+     *
+     * Persists clustering UI state (cut height, highlighted cluster, etc.)
+     * to localStorage so it can be shared across cluster_trends and clustering
+     * pages without URL parameters.
+     */
+    
+    const CLUSTERING_CONFIG_KEY = "clustering_config";
+    
+    const ClusteringConfig = {
+      /**
+       * Load full state from localStorage.
+       * @returns {Object} parsed state (empty object if nothing stored)
+       */
+      load() {
+        try {
+          return JSON.parse(localStorage.getItem(CLUSTERING_CONFIG_KEY)) || {};
+        } catch {
+          return {};
+        }
+      },
+    
+      /**
+       * Merge partial state into localStorage.
+       * @param {Object} partial - key/value pairs to merge
+       */
+      save(partial) {
+        const current = this.load();
+        localStorage.setItem(
+          CLUSTERING_CONFIG_KEY,
+          JSON.stringify({ ...current, ...partial }),
+        );
+      },
+    
+      /** @returns {number|null} */
+      getCutHeight() {
+        return this.load().cutHeight ?? null;
+      },
+    
+      /** @param {number} h */
+      setCutHeight(h) {
+        this.save({ cutHeight: h });
+      },
+    
+      /** @returns {number|null} */
+      getHighlightCluster() {
+        return this.load().highlightCluster ?? null;
+      },
+    
+      /** @param {number} id */
+      setHighlightCluster(id) {
+        this.save({ highlightCluster: id });
+      },
+    
+      clearHighlightCluster() {
+        const s = this.load();
+        delete s.highlightCluster;
+        localStorage.setItem(CLUSTERING_CONFIG_KEY, JSON.stringify(s));
+      },
+    };
+    
+    </script>
+    <!-- end '../../shared/clustering_config.js' -->
         <!-- begin 'clusterState.js' -->
     <script>
     /**
@@ -2755,13 +2821,18 @@
           "../../features/clustering/cluster_labels.json";
         gridState.clusterLabels = await loadClusterLabels(labelsUrl);
     
-        // Determine initial cut height from labels
+        // Determine initial cut height: shared config > labels > default
         let initialCutHeight = 5;
-        const labeledHeights = getLabeledCutHeights();
-        if (labeledHeights.length === 1) {
-          initialCutHeight = labeledHeights[0];
-        } else if (labeledHeights.length > 1) {
-          initialCutHeight = labeledHeights[labeledHeights.length - 1]; // largest
+        const savedCutHeight = ClusteringConfig.getCutHeight();
+        if (savedCutHeight !== null) {
+          initialCutHeight = savedCutHeight;
+        } else {
+          const labeledHeights = getLabeledCutHeights();
+          if (labeledHeights.length === 1) {
+            initialCutHeight = labeledHeights[0];
+          } else if (labeledHeights.length > 1) {
+            initialCutHeight = labeledHeights[labeledHeights.length - 1]; // largest
+          }
         }
     
         // Set up controls
@@ -2788,6 +2859,13 @@
         document.getElementById("min-cluster-size-input").value =
           initialMinClusterSize;
         updateClustersByHeight(initialCutHeight);
+    
+        // Handle highlight cluster from shared config (e.g. navigated from cluster_trends)
+        const highlightId = ClusteringConfig.getHighlightCluster();
+        if (highlightId !== null) {
+          ClusteringConfig.clearHighlightCluster();
+          selectCluster(highlightId);
+        }
       } catch (error) {
         console.error("Error initializing grid view:", error);
         container.innerHTML = `<div class="error">Error loading data: ${error.message}</div>`;
@@ -3188,6 +3266,7 @@
      */
     function updateClustersByHeight(cutHeight) {
       gridState.currentCutHeight = cutHeight;
+      ClusteringConfig.setCutHeight(cutHeight);
     
       const rawAssignments = computeClustersByHeightInternal(cutHeight);
       const rawNClusters = new Set(Object.values(rawAssignments)).size;
