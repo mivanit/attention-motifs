@@ -452,13 +452,18 @@ async function initGridView(config) {
       "../../features/clustering/cluster_labels.json";
     gridState.clusterLabels = await loadClusterLabels(labelsUrl);
 
-    // Determine initial cut height from labels
+    // Determine initial cut height: shared config > labels > default
     let initialCutHeight = 5;
-    const labeledHeights = getLabeledCutHeights();
-    if (labeledHeights.length === 1) {
-      initialCutHeight = labeledHeights[0];
-    } else if (labeledHeights.length > 1) {
-      initialCutHeight = labeledHeights[labeledHeights.length - 1]; // largest
+    const savedCutHeight = ClusteringConfig.getCutHeight();
+    if (savedCutHeight !== null) {
+      initialCutHeight = savedCutHeight;
+    } else {
+      const labeledHeights = getLabeledCutHeights();
+      if (labeledHeights.length === 1) {
+        initialCutHeight = labeledHeights[0];
+      } else if (labeledHeights.length > 1) {
+        initialCutHeight = labeledHeights[labeledHeights.length - 1]; // largest
+      }
     }
 
     // Set up controls
@@ -485,6 +490,13 @@ async function initGridView(config) {
     document.getElementById("min-cluster-size-input").value =
       initialMinClusterSize;
     updateClustersByHeight(initialCutHeight);
+
+    // Handle highlight cluster from shared config (e.g. navigated from cluster_trends)
+    const highlightId = ClusteringConfig.getHighlightCluster();
+    if (highlightId !== null) {
+      ClusteringConfig.clearHighlightCluster();
+      selectCluster(highlightId);
+    }
   } catch (error) {
     console.error("Error initializing grid view:", error);
     container.innerHTML = `<div class="error">Error loading data: ${error.message}</div>`;
@@ -885,6 +897,7 @@ function updateClusters(nClusters) {
  */
 function updateClustersByHeight(cutHeight) {
   gridState.currentCutHeight = cutHeight;
+  ClusteringConfig.setCutHeight(cutHeight);
 
   const rawAssignments = computeClustersByHeightInternal(cutHeight);
   const rawNClusters = new Set(Object.values(rawAssignments)).size;

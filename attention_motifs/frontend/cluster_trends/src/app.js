@@ -29,8 +29,9 @@ let currentK = null;
 /** @type {Chart|null} */ let sizeChart = null;
 /** @type {Chart|null} */ let entropyChart = null;
 
-// Which families are enabled (true = visible)
+// Which families/models are enabled (true = visible)
 /** @type {Object<string, boolean>} */ let familyEnabled = {};
+/** @type {Object<string, boolean>} */ let modelEnabled = {};
 
 // Cut-height clustering state
 /** @type {number[][]|null} */ let linkageData = null;
@@ -268,6 +269,8 @@ function clusterDesc(cid) {
  * @param {number} cutHeight
  */
 function updateFromCutHeight(cutHeight) {
+  gridState.currentCutHeight = cutHeight;
+  ClusteringConfig.setCutHeight(cutHeight);
   const assignments = computeAssignmentsByCutHeight(cutHeight);
   resolvedLabels = resolveClusterLabels(
     allClusterLabels,
@@ -303,8 +306,7 @@ function updateFromK(k) {
  * @returns {boolean}
  */
 function isModelEnabled(modelName) {
-  const meta = DATA.models[modelName];
-  return meta != null && familyEnabled[meta.family] === true;
+  return modelEnabled[modelName] === true;
 }
 
 // ── Chart 1: Layer depth x cluster fraction ─────────────────────
@@ -958,12 +960,177 @@ function buildEntropyChart() {
   });
 }
 
+// ── Cluster chips ───────────────────────────────────────────────
+
+/**
+ * Render cluster chips above the charts.
+ * Each chip links to the clustering page with the current cut height
+ * and highlights that cluster.
+ */
+function renderClusterChips() {
+  const container = document.getElementById("cluster-chips");
+  if (!container) return;
+
+  // Compute cluster sizes from by_model records (all models, not filtered)
+  /** @type {Object<number, number>} */
+  const clusterSizes = {};
+  for (const r of currentRecords.by_model) {
+    clusterSizes[r.cluster] = (clusterSizes[r.cluster] || 0) + r.count;
+  }
+
+  const sorted = Object.entries(clusterSizes)
+    .map(([cid, size]) => ({ clusterId: parseInt(cid), size }))
+    .filter((c) => c.clusterId !== -1)
+    .sort((a, b) => b.size - a.size);
+
+  const top = sorted.slice(0, 20);
+  const hasMore = sorted.length > 20;
+
+  container.innerHTML =
+    `<span class="top-clusters-label">Clusters (${sorted.length}):</span>` +
+    top
+      .map(({ clusterId, size }) => {
+        const color = clusterColor(clusterId);
+        const label = resolvedLabels[clusterId];
+        const name = (label && label.name) || "";
+        const desc = (label && label.desc) || "";
+        const labelHtml = name
+          ? `<span class="cluster-chip-label" title="${desc.replace(/"/g, "&quot;")}">${name}</span>`
+          : "";
+        return `
+        <div class="cluster-chip" data-cluster-id="${clusterId}">
+          <span class="cluster-chip-color" style="background-color: ${color}"></span>
+          <span class="cluster-chip-size">${size}</span>
+          ${labelHtml}
+        </div>`;
+      })
+      .join("") +
+    (hasMore
+      ? `<span class="top-clusters-ellipsis">... +${sorted.length - 20} more</span>`
+      : "");
+
+  container.classList.add("visible");
+
+  // Click → navigate to clustering page with shared config
+  container.querySelectorAll(".cluster-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const clusterId = parseInt(chip.dataset.clusterId);
+      if (gridState.currentCutHeight != null) {
+        ClusteringConfig.setCutHeight(gridState.currentCutHeight);
+      }
+      ClusteringConfig.setHighlightCluster(clusterId);
+      window.location.href = "../clustering/index.html";
+    });
+  });
+}
+
+// Track current cut height for chip navigation
+/** @type {{currentCutHeight: number|null}} */
+const gridState = { currentCutHeight: null };
+
+// ── Family / model toggles ──────────────────────────────────────
+
+/**
+ * Build nested family→model toggle buttons.
+ * Click family = expand/collapse model list.
+ * Shift+click family = toggle all models in family.
+ * Click model = toggle individual model.
+ * @param {string} containerId
+ * @param {Object<string, string[]>} familyModels - family name -> sorted model names
+ */
+function buildFamilyModelToggles(containerId, familyModels) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+
+  for (const [family, models] of Object.entries(familyModels)) {
+    const group = document.createElement("div");
+    group.className = "family-group";
+
+    // Family header button
+    const familyBtn = document.createElement("span");
+    familyBtn.className = "family-toggle";
+    familyBtn.textContent = family;
+    updateFamilyBtnState(familyBtn, family, models);
+
+    familyBtn.addEventListener("click", (e) => {
+      if (e.shiftKey) {
+        // Shift+click: toggle all models in family
+        const allEnabled = models.every((m) => modelEnabled[m]);
+        for (const m of models) {
+          modelEnabled[m] = !allEnabled;
+        }
+        familyEnabled[family] = !allEnabled;
+        updateFamilyBtnState(familyBtn, family, models);
+        updateModelBtnStates(modelRow, models);
+        rebuildAll();
+      } else {
+        // Click: expand/collapse
+        modelRow.classList.toggle("expanded");
+      }
+    });
+
+    // Model row (initially collapsed)
+    const modelRow = document.createElement("div");
+    modelRow.className = "model-toggles";
+
+    for (const m of models) {
+      const btn = document.createElement("span");
+      btn.className = "model-toggle";
+      btn.textContent = m;
+      if (!modelEnabled[m]) btn.classList.add("disabled");
+
+      btn.addEventListener("click", () => {
+        modelEnabled[m] = !modelEnabled[m];
+        btn.classList.toggle("disabled", !modelEnabled[m]);
+        // Update family state
+        familyEnabled[family] = models.some((mm) => modelEnabled[mm]);
+        updateFamilyBtnState(familyBtn, family, models);
+        rebuildAll();
+      });
+      modelRow.appendChild(btn);
+    }
+
+    group.appendChild(familyBtn);
+    group.appendChild(modelRow);
+    container.appendChild(group);
+  }
+}
+
+/**
+ * Update family button visual state based on model enabled states.
+ * @param {HTMLElement} btn
+ * @param {string} family
+ * @param {string[]} models
+ */
+function updateFamilyBtnState(btn, _family, models) {
+  const enabledCount = models.filter((m) => modelEnabled[m]).length;
+  btn.classList.remove("disabled", "partial");
+  if (enabledCount === 0) {
+    btn.classList.add("disabled");
+  } else if (enabledCount < models.length) {
+    btn.classList.add("partial");
+  }
+}
+
+/**
+ * Update model button states in a model row.
+ * @param {HTMLElement} modelRow
+ * @param {string[]} models
+ */
+function updateModelBtnStates(modelRow, models) {
+  const btns = modelRow.querySelectorAll(".model-toggle");
+  btns.forEach((btn, i) => {
+    btn.classList.toggle("disabled", !modelEnabled[models[i]]);
+  });
+}
+
 // ── Rebuild all ─────────────────────────────────────────────────
 
 function rebuildAll() {
   buildLayerChart();
   buildSizeChart();
   buildEntropyChart();
+  renderClusterChips();
 }
 
 // ── Init ────────────────────────────────────────────────────────
@@ -977,13 +1144,25 @@ async function init() {
     return;
   }
 
-  // Initialize family toggle states
+  // Initialize family and model toggle states
   const families = [
     ...new Set(Object.values(DATA.models).map((m) => m.family)),
   ].sort();
   const defaultFamilies = ["pythia", "gpt2"];
+
+  /** @type {Object<string, string[]>} */
+  const familyModels = {};
+  for (const [modelName, meta] of Object.entries(DATA.models)) {
+    if (!familyModels[meta.family]) familyModels[meta.family] = [];
+    familyModels[meta.family].push(modelName);
+  }
   for (const f of families) {
-    familyEnabled[f] = defaultFamilies.includes(f);
+    familyModels[f].sort();
+    const enabled = defaultFamilies.includes(f);
+    familyEnabled[f] = enabled;
+    for (const m of familyModels[f]) {
+      modelEnabled[m] = enabled;
+    }
   }
 
   // Populate K selector
@@ -1052,22 +1231,20 @@ async function init() {
       buildSizeChart();
     });
 
-  // Build global family toggle (controls all 3 charts)
-  buildToggleButtons(
-    "global-family-toggles",
-    families,
-    familyEnabled,
-    "family-toggle",
-    rebuildAll,
-  );
+  // Build nested family→model toggles
+  buildFamilyModelToggles("global-family-toggles", familyModels);
 
   // Show charts, hide loading
   document.getElementById("loading").style.display = "none";
   document.getElementById("charts-container").style.display = "block";
 
-  // Initial draw: use cut height = 5 if clustering available, else K
+  // Initial draw: use shared config cut height if available
   if (clusteringAvailable) {
-    updateFromCutHeight(5);
+    const savedCutHeight = ClusteringConfig.getCutHeight();
+    const startCutHeight = savedCutHeight ?? 5;
+    cutSlider.value = startCutHeight;
+    cutInput.value = startCutHeight.toFixed(2);
+    updateFromCutHeight(startCutHeight);
   } else {
     updateFromK(currentK);
   }
