@@ -462,9 +462,7 @@ class TestAblationResult:
 			baseline_repeated_loss=3.5,
 			ablated_repeated_loss=5.0,
 			loss_increase=1.5,
-			baseline_prefix_score=0.15,
-			ablated_prefix_score=0.05,
-			prefix_score_decrease=0.1,
+			prefix_score=0.15,
 			baseline_icl_score=-0.5,
 			ablated_icl_score=-0.2,
 			icl_degradation=0.3,
@@ -472,31 +470,23 @@ class TestAblationResult:
 		assert result.head == "pythia-1b:L5:H7"
 		assert result.loss_increase == 1.5
 
-	def test_new_fields_default_to_zero(self):
-		"""Test backward compatibility: new fields default to 0.0."""
+	def test_optional_fields_default_to_zero(self):
+		"""Test that optional fields default to 0.0."""
 		result: AblationResult = AblationResult(
 			head="test:L0:H0",
 			ablation_method=AblationMethod.ZERO,
 			baseline_repeated_loss=3.0,
 			ablated_repeated_loss=4.0,
 			loss_increase=1.0,
-			baseline_prefix_score=0.1,
-			ablated_prefix_score=0.05,
-			prefix_score_decrease=0.05,
+			prefix_score=0.1,
 		)
-		# All new fields should default to 0.0
-		assert result.baseline_prefix_score_legacy == 0.0
-		assert result.ablated_prefix_score_legacy == 0.0
-		assert result.prefix_score_decrease_legacy == 0.0
+		# Optional fields should default to 0.0
+		assert result.prefix_score_legacy == 0.0
+		assert result.copying_score == 0.0
+		assert result.ov_copying_score == 0.0
 		assert result.baseline_icl_score == 0.0
 		assert result.ablated_icl_score == 0.0
 		assert result.icl_degradation == 0.0
-		assert result.copying_score == 0.0
-		assert result.ablated_copying_score == 0.0
-		assert result.copying_score_decrease == 0.0
-		assert result.ov_copying_score == 0.0
-		assert result.ablated_ov_copying_score == 0.0
-		assert result.ov_copying_score_decrease == 0.0
 
 	def test_to_dict(self):
 		result: AblationResult = AblationResult(
@@ -505,9 +495,7 @@ class TestAblationResult:
 			baseline_repeated_loss=3.0,
 			ablated_repeated_loss=4.0,
 			loss_increase=1.0,
-			baseline_prefix_score=0.1,
-			ablated_prefix_score=0.05,
-			prefix_score_decrease=0.05,
+			prefix_score=0.1,
 			baseline_icl_score=-0.3,
 			ablated_icl_score=-0.1,
 			icl_degradation=0.2,
@@ -518,34 +506,26 @@ class TestAblationResult:
 		assert d["loss_increase"] == 1.0
 
 	def test_serialize_includes_all_fields(self):
-		"""Test that serialize() includes all new metric fields."""
+		"""Test that serialize() includes all metric fields."""
 		result: AblationResult = AblationResult(
 			head="test:L0:H0",
 			ablation_method=AblationMethod.ZERO,
 			baseline_repeated_loss=3.0,
 			ablated_repeated_loss=4.0,
 			loss_increase=1.0,
-			baseline_prefix_score=0.1,
-			ablated_prefix_score=0.05,
-			prefix_score_decrease=0.05,
+			prefix_score=0.1,
+			prefix_score_legacy=0.05,
 			copying_score=0.7,
-			ablated_copying_score=0.2,
-			copying_score_decrease=0.5,
 			ov_copying_score=0.6,
-			ablated_ov_copying_score=0.3,
-			ov_copying_score_decrease=0.3,
 		)
 		d: dict = result.serialize()
-		# Check new fields are present in serialized output
+		assert d["prefix_score"] == 0.1
+		assert d["prefix_score_legacy"] == 0.05
 		assert d["copying_score"] == 0.7
-		assert d["ablated_copying_score"] == 0.2
-		assert d["copying_score_decrease"] == 0.5
 		assert d["ov_copying_score"] == 0.6
-		assert d["ablated_ov_copying_score"] == 0.3
-		assert d["ov_copying_score_decrease"] == 0.3
-		assert d["baseline_prefix_score_legacy"] == 0.0
-		assert d["ablated_prefix_score_legacy"] == 0.0
-		assert d["prefix_score_decrease_legacy"] == 0.0
+		assert d["baseline_icl_score"] == 0.0
+		assert d["ablated_icl_score"] == 0.0
+		assert d["icl_degradation"] == 0.0
 
 	def test_pattern_preserving_ablation_method(self):
 		"""Test AblationResult with pattern-preserving method."""
@@ -555,9 +535,7 @@ class TestAblationResult:
 			baseline_repeated_loss=3.0,
 			ablated_repeated_loss=4.0,
 			loss_increase=1.0,
-			baseline_prefix_score=0.1,
-			ablated_prefix_score=0.05,
-			prefix_score_decrease=0.05,
+			prefix_score=0.1,
 		)
 		d: dict = result.serialize()
 		assert d["ablation_method"] == "pattern_preserving"
@@ -686,9 +664,7 @@ class TestAblationFrontend:
 					baseline_repeated_loss=3.5,
 					ablated_repeated_loss=4.2,
 					loss_increase=0.7,
-					baseline_prefix_score=0.15,
-					ablated_prefix_score=0.05,
-					prefix_score_decrease=0.1,
+					prefix_score=0.15,
 				),
 			],
 		)

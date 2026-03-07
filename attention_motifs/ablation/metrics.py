@@ -32,6 +32,20 @@ from transformer_lens import HookedTransformer
 class AblationResult:
 	"""Results from an ablation experiment on a single head.
 
+	Metrics are split into two categories:
+
+	**Ablation impact** (causal metrics that change when head is ablated):
+	- Loss on repeated sequences (baseline vs ablated)
+
+	**Head characterization** (properties of the head, computed once without
+	ablation; these are NOT affected by ablation because prefix scores read
+	attention patterns (computed before hook_z) and copying scores become
+	tautologically zero when z is ablated):
+	- Prefix matching score (offset+1, induction)
+	- Prefix matching score (offset-1, legacy)
+	- Copying score (induction-specific)
+	- OV copying score (paper-style)
+
 	Attributes
 	----------
 	head
@@ -44,64 +58,37 @@ class AblationResult:
 	    Loss on repeated sequences with ablation.
 	loss_increase
 	    Difference: ablated - baseline (positive = head was helping).
-	baseline_prefix_score
-	    Prefix matching score (offset+1, induction) without ablation.
-	ablated_prefix_score
-	    Prefix matching score with ablation.
-	prefix_score_decrease
-	    Difference: baseline - ablated (positive = head was doing induction).
-	baseline_prefix_score_legacy
-	    Preceding token score (offset-1) without ablation.
-	ablated_prefix_score_legacy
-	    Preceding token score with ablation.
-	prefix_score_decrease_legacy
-	    Difference: baseline - ablated for legacy prefix score.
+	prefix_score
+	    Prefix matching score (offset+1, induction). Head characterization.
+	prefix_score_legacy
+	    Preceding token score (offset-1). Head characterization.
+	copying_score
+	    Induction-specific copying score. Head characterization.
+	ov_copying_score
+	    Paper-style OV copying score. Head characterization.
 	baseline_icl_score
 	    In-context learning score without ablation.
 	ablated_icl_score
 	    In-context learning score with ablation.
 	icl_degradation
 	    How much worse ICL became (more negative = worse).
-	copying_score
-	    Induction-specific copying score (baseline).
-	ablated_copying_score
-	    Induction-specific copying score (ablated).
-	copying_score_decrease
-	    Difference: baseline - ablated.
-	ov_copying_score
-	    Paper-style OV copying score (baseline).
-	ablated_ov_copying_score
-	    Paper-style OV copying score (ablated).
-	ov_copying_score_decrease
-	    Difference: baseline - ablated.
 	"""
 
 	head: str
 	ablation_method: AblationMethod
-	# Repeated sequence loss
+	# Ablation impact (causal)
 	baseline_repeated_loss: float
 	ablated_repeated_loss: float
 	loss_increase: float
-	# Prefix matching (offset+1, induction)
-	baseline_prefix_score: float
-	ablated_prefix_score: float
-	prefix_score_decrease: float
-	# Preceding token (offset-1, legacy)
-	baseline_prefix_score_legacy: float = 0.0
-	ablated_prefix_score_legacy: float = 0.0
-	prefix_score_decrease_legacy: float = 0.0
-	# ICL
+	# Head characterization (not affected by ablation)
+	prefix_score: float
+	prefix_score_legacy: float = 0.0
+	copying_score: float = 0.0
+	ov_copying_score: float = 0.0
+	# ICL (structure kept for future wiring)
 	baseline_icl_score: float = 0.0
 	ablated_icl_score: float = 0.0
 	icl_degradation: float = 0.0
-	# Copying score (induction-specific)
-	copying_score: float = 0.0
-	ablated_copying_score: float = 0.0
-	copying_score_decrease: float = 0.0
-	# OV copying score (paper-style)
-	ov_copying_score: float = 0.0
-	ablated_ov_copying_score: float = 0.0
-	ov_copying_score_decrease: float = 0.0
 
 	def serialize(self) -> dict:
 		"""Convert to dictionary."""
@@ -111,21 +98,13 @@ class AblationResult:
 			"baseline_repeated_loss": self.baseline_repeated_loss,
 			"ablated_repeated_loss": self.ablated_repeated_loss,
 			"loss_increase": self.loss_increase,
-			"baseline_prefix_score": self.baseline_prefix_score,
-			"ablated_prefix_score": self.ablated_prefix_score,
-			"prefix_score_decrease": self.prefix_score_decrease,
-			"baseline_prefix_score_legacy": self.baseline_prefix_score_legacy,
-			"ablated_prefix_score_legacy": self.ablated_prefix_score_legacy,
-			"prefix_score_decrease_legacy": self.prefix_score_decrease_legacy,
+			"prefix_score": self.prefix_score,
+			"prefix_score_legacy": self.prefix_score_legacy,
+			"copying_score": self.copying_score,
+			"ov_copying_score": self.ov_copying_score,
 			"baseline_icl_score": self.baseline_icl_score,
 			"ablated_icl_score": self.ablated_icl_score,
 			"icl_degradation": self.icl_degradation,
-			"copying_score": self.copying_score,
-			"ablated_copying_score": self.ablated_copying_score,
-			"copying_score_decrease": self.copying_score_decrease,
-			"ov_copying_score": self.ov_copying_score,
-			"ablated_ov_copying_score": self.ablated_ov_copying_score,
-			"ov_copying_score_decrease": self.ov_copying_score_decrease,
 		}
 
 

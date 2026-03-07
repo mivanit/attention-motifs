@@ -75,7 +75,11 @@ class AblationConfig:
 	seq_length: int = 25
 	n_repetitions: int = 4
 	ablation_methods: list[AblationMethod] = field(
-		default_factory=lambda: [AblationMethod.ZERO, AblationMethod.MEAN]
+		default_factory=lambda: [
+			AblationMethod.ZERO,
+			AblationMethod.MEAN,
+			AblationMethod.PATTERN_PRESERVING,
+		]
 	)
 	n_calibration_prompts: int = 50
 	seed: int = 42
@@ -156,21 +160,19 @@ class AblationResults:
 				baseline_repeated_loss=r["baseline_repeated_loss"],
 				ablated_repeated_loss=r["ablated_repeated_loss"],
 				loss_increase=r["loss_increase"],
-				baseline_prefix_score=r["baseline_prefix_score"],
-				ablated_prefix_score=r["ablated_prefix_score"],
-				prefix_score_decrease=r["prefix_score_decrease"],
-				baseline_prefix_score_legacy=r.get("baseline_prefix_score_legacy", 0.0),
-				ablated_prefix_score_legacy=r.get("ablated_prefix_score_legacy", 0.0),
-				prefix_score_decrease_legacy=r.get("prefix_score_decrease_legacy", 0.0),
+				# New names, with fallback to old names for backwards compat
+				prefix_score=r.get(
+					"prefix_score", r.get("baseline_prefix_score", 0.0)
+				),
+				prefix_score_legacy=r.get(
+					"prefix_score_legacy",
+					r.get("baseline_prefix_score_legacy", 0.0),
+				),
+				copying_score=r.get("copying_score", 0.0),
+				ov_copying_score=r.get("ov_copying_score", 0.0),
 				baseline_icl_score=r.get("baseline_icl_score", 0.0),
 				ablated_icl_score=r.get("ablated_icl_score", 0.0),
 				icl_degradation=r.get("icl_degradation", 0.0),
-				copying_score=r.get("copying_score", 0.0),
-				ablated_copying_score=r.get("ablated_copying_score", 0.0),
-				copying_score_decrease=r.get("copying_score_decrease", 0.0),
-				ov_copying_score=r.get("ov_copying_score", 0.0),
-				ablated_ov_copying_score=r.get("ablated_ov_copying_score", 0.0),
-				ov_copying_score_decrease=r.get("ov_copying_score_decrease", 0.0),
 			)
 			for r in data["results"]
 		]
@@ -331,8 +333,8 @@ def run_ablation_experiment(
 		head_str: str = f"{model_name}:L{layer}:H{head}"
 
 		try:
-			# Compute baseline scores for this head
-			baseline_prefix: float = _batched_metric(
+			# Compute head characterization scores (not affected by ablation)
+			head_prefix: float = _batched_metric(
 				prefix_matching_score,
 				sequences,
 				mbs,
@@ -340,7 +342,7 @@ def run_ablation_experiment(
 				layer=layer,
 				head=head,
 			)
-			baseline_prefix_legacy: float = _batched_metric(
+			head_prefix_legacy: float = _batched_metric(
 				preceding_token_score,
 				sequences,
 				mbs,
@@ -348,7 +350,7 @@ def run_ablation_experiment(
 				layer=layer,
 				head=head,
 			)
-			baseline_copy: float = _batched_metric(
+			head_copy: float = _batched_metric(
 				copying_score,
 				sequences,
 				mbs,
@@ -356,7 +358,7 @@ def run_ablation_experiment(
 				layer=layer,
 				head=head,
 			)
-			baseline_ov_copy: float = _batched_metric(
+			head_ov_copy: float = _batched_metric(
 				ov_copying_score,
 				sequences,
 				mbs,
@@ -366,7 +368,7 @@ def run_ablation_experiment(
 			)
 
 			for method in config.ablation_methods:
-				# Run with ablation
+				# Run with ablation — only compute causal metrics
 				with ablator.ablate_heads([(layer, head)], method):
 					ablated_loss: float = _batched_metric(
 						repeated_sequence_loss,
@@ -374,40 +376,8 @@ def run_ablation_experiment(
 						mbs,
 						model=model,
 					)
-					ablated_prefix: float = _batched_metric(
-						prefix_matching_score,
-						sequences,
-						mbs,
-						model=model,
-						layer=layer,
-						head=head,
-					)
-					ablated_prefix_legacy: float = _batched_metric(
-						preceding_token_score,
-						sequences,
-						mbs,
-						model=model,
-						layer=layer,
-						head=head,
-					)
 					ablated_icl: float = (
 						icl_score(model, icl_prompts) if icl_prompts else 0.0
-					)
-					ablated_copy: float = _batched_metric(
-						copying_score,
-						sequences,
-						mbs,
-						model=model,
-						layer=layer,
-						head=head,
-					)
-					ablated_ov_copy: float = _batched_metric(
-						ov_copying_score,
-						sequences,
-						mbs,
-						model=model,
-						layer=layer,
-						head=head,
 					)
 
 				result: AblationResult = AblationResult(
@@ -416,23 +386,13 @@ def run_ablation_experiment(
 					baseline_repeated_loss=baseline_loss,
 					ablated_repeated_loss=ablated_loss,
 					loss_increase=ablated_loss - baseline_loss,
-					baseline_prefix_score=baseline_prefix,
-					ablated_prefix_score=ablated_prefix,
-					prefix_score_decrease=baseline_prefix - ablated_prefix,
-					baseline_prefix_score_legacy=baseline_prefix_legacy,
-					ablated_prefix_score_legacy=ablated_prefix_legacy,
-					prefix_score_decrease_legacy=(
-						baseline_prefix_legacy - ablated_prefix_legacy
-					),
+					prefix_score=head_prefix,
+					prefix_score_legacy=head_prefix_legacy,
+					copying_score=head_copy,
+					ov_copying_score=head_ov_copy,
 					baseline_icl_score=baseline_icl,
 					ablated_icl_score=ablated_icl,
 					icl_degradation=ablated_icl - baseline_icl,
-					copying_score=baseline_copy,
-					ablated_copying_score=ablated_copy,
-					copying_score_decrease=baseline_copy - ablated_copy,
-					ov_copying_score=baseline_ov_copy,
-					ablated_ov_copying_score=ablated_ov_copy,
-					ov_copying_score_decrease=baseline_ov_copy - ablated_ov_copy,
 				)
 				exp_results.results.append(result)
 		except torch.cuda.OutOfMemoryError:
@@ -590,15 +550,11 @@ def analyze_results(results: AblationResults) -> pl.DataFrame:
 			[
 				pl.col("loss_increase").mean().alias("mean_loss_increase"),
 				pl.col("loss_increase").max().alias("max_loss_increase"),
-				pl.col("prefix_score_decrease").mean().alias("mean_prefix_decrease"),
-				pl.col("prefix_score_decrease_legacy")
-				.mean()
-				.alias("mean_prefix_decrease_legacy"),
+				pl.col("prefix_score").first().alias("prefix_score"),
+				pl.col("prefix_score_legacy").first().alias("prefix_score_legacy"),
 				pl.col("icl_degradation").mean().alias("mean_icl_degradation"),
-				pl.col("copying_score_decrease").mean().alias("mean_copying_decrease"),
-				pl.col("ov_copying_score_decrease")
-				.mean()
-				.alias("mean_ov_copying_decrease"),
+				pl.col("copying_score").first().alias("copying_score"),
+				pl.col("ov_copying_score").first().alias("ov_copying_score"),
 			]
 		)
 		.sort("mean_loss_increase", descending=True)
@@ -752,7 +708,7 @@ def identify_induction_heads(
 	induction_heads: list[str] = (
 		df.filter(
 			(pl.col("loss_increase") > loss_threshold)
-			& (pl.col("baseline_prefix_score") > prefix_threshold)
+			& (pl.col("prefix_score") > prefix_threshold)
 		)
 		.select("head")
 		.unique()

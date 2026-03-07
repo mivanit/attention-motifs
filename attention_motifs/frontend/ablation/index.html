@@ -262,50 +262,27 @@
     // Column definitions grouped by metric family
     const METRIC_GROUPS = {
       Loss: ["baseline_repeated_loss", "ablated_repeated_loss", "loss_increase"],
-      "Prefix (induction)": [
-        "baseline_prefix_score",
-        "ablated_prefix_score",
-        "prefix_score_decrease",
-      ],
-      "Prefix (legacy)": [
-        "baseline_prefix_score_legacy",
-        "ablated_prefix_score_legacy",
-        "prefix_score_decrease_legacy",
-      ],
+      "Induction Scores": ["prefix_score", "copying_score", "ov_copying_score"],
+      "Prefix (legacy)": ["prefix_score_legacy"],
       ICL: ["baseline_icl_score", "ablated_icl_score", "icl_degradation"],
-      Copying: ["copying_score", "ablated_copying_score", "copying_score_decrease"],
-      "OV Copying": [
-        "ov_copying_score",
-        "ablated_ov_copying_score",
-        "ov_copying_score_decrease",
-      ],
     };
     
     // Which groups are visible by default
-    const DEFAULT_VISIBLE_GROUPS = new Set([
-      "Loss",
-      "Prefix (induction)",
-      "ICL",
-      "Copying",
-    ]);
+    const DEFAULT_VISIBLE_GROUPS = new Set(["Loss", "Induction Scores", "ICL"]);
     
     let visibleGroups = new Set(DEFAULT_VISIBLE_GROUPS);
     
-    // Delta columns and their color semantics
+    // Columns with color semantics
     // "higher_is_worse" means a large positive value gets red coloring
+    // "higher_is_worse: false" means a large positive value gets green coloring
     const DELTA_COLUMNS = {
       loss_increase: { higher_is_worse: true, thresholds: [0.1, 0.5] },
-      prefix_score_decrease: { higher_is_worse: false, thresholds: [0.03, 0.1] },
-      prefix_score_decrease_legacy: {
-        higher_is_worse: false,
-        thresholds: [0.03, 0.1],
-      },
       icl_degradation: { higher_is_worse: true, thresholds: [0.05, 0.2] },
-      copying_score_decrease: { higher_is_worse: false, thresholds: [0.05, 0.2] },
-      ov_copying_score_decrease: {
-        higher_is_worse: false,
-        thresholds: [0.05, 0.2],
-      },
+      // Head characterization scores: higher = more induction-like
+      prefix_score: { higher_is_worse: false, thresholds: [0.1, 0.3] },
+      prefix_score_legacy: { higher_is_worse: false, thresholds: [0.1, 0.3] },
+      copying_score: { higher_is_worse: false, thresholds: [0.5, 2.0] },
+      ov_copying_score: { higher_is_worse: false, thresholds: [0.05, 0.2] },
     };
     
     // Human-readable short labels for column headers
@@ -315,21 +292,13 @@
       baseline_repeated_loss: "Base Loss",
       ablated_repeated_loss: "Abl. Loss",
       loss_increase: "\u0394 Loss",
-      baseline_prefix_score: "Base Prefix",
-      ablated_prefix_score: "Abl. Prefix",
-      prefix_score_decrease: "\u0394 Prefix",
-      baseline_prefix_score_legacy: "Base Pfx Leg.",
-      ablated_prefix_score_legacy: "Abl. Pfx Leg.",
-      prefix_score_decrease_legacy: "\u0394 Pfx Leg.",
+      prefix_score: "Prefix",
+      prefix_score_legacy: "Pfx Leg.",
+      copying_score: "Copying",
+      ov_copying_score: "OV Copy",
       baseline_icl_score: "Base ICL",
       ablated_icl_score: "Abl. ICL",
       icl_degradation: "\u0394 ICL",
-      copying_score: "Base Copy",
-      ablated_copying_score: "Abl. Copy",
-      copying_score_decrease: "\u0394 Copy",
-      ov_copying_score: "Base OV",
-      ablated_ov_copying_score: "Abl. OV",
-      ov_copying_score_decrease: "\u0394 OV",
     };
     
     // === Init ===
