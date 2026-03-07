@@ -473,9 +473,7 @@ def load_icl_texts(
 				texts.append(text)
 
 	if not texts:
-		raise ValueError(
-			f"No texts with >= {min_chars} chars found in {path}"
-		)
+		raise ValueError(f"No texts with >= {min_chars} chars found in {path}")
 
 	rng: random.Random = random.Random(seed)
 	if len(texts) > n_prompts:

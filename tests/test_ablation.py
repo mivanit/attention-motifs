@@ -633,7 +633,10 @@ class TestIntegration:
 
 		# Should work after caching
 		ablator.set_clean_patterns(tokens)
-		with ablator.ablate_heads([(0, 0)], method=AblationMethod.PATTERN_PRESERVING), torch.no_grad():
+		with (
+			ablator.ablate_heads([(0, 0)], method=AblationMethod.PATTERN_PRESERVING),
+			torch.no_grad(),
+		):
 			output: torch.Tensor = model(tokens, prepend_bos=False)
 			assert output is not None
 
