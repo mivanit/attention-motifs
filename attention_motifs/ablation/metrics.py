@@ -348,8 +348,8 @@ def prefix_matching_score(
 
 	   The paper's literal offset-1 metric is available as
 	   :func:`preceding_token_score`; both are tracked in
-	   :class:`AblationResult` (``prefix_score_decrease`` for offset+1,
-	   ``prefix_score_decrease_legacy`` for offset-1).
+	   :class:`AblationResult` (``prefix_score`` for offset+1,
+	   ``prefix_score_legacy`` for offset-1).
 
 	Parameters
 	----------
