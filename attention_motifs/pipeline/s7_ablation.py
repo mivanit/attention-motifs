@@ -112,7 +112,7 @@ def _resolve_cluster_ids(
 	Supports three modes (checked in order):
 	1. ``heads``: look up each head's cluster in assignments
 	2. ``cluster_ids``: use explicit cluster indices
-	3. Neither: ablate all clusters
+	3. Neither: default to ``["gpt2-small:L5:H5"]``
 
 	Returns
 	-------
@@ -141,8 +141,18 @@ def _resolve_cluster_ids(
 		return {cid: [] for cid in cluster_ids_cfg}
 
 	else:
-		# Mode 3: all clusters
-		return {cid: [] for cid in sorted(set(assignments.values()))}
+		# Mode 3: default to gpt2-small:L5:H5 (known induction head)
+		default_heads: list[str] = ["gpt2-small:L5:H5"]
+		cluster_to_seeds = {}
+		for head_id in default_heads:
+			if head_id not in assignments:
+				raise ValueError(
+					f"Default head '{head_id}' not found in clustering assignments. "
+					f"Specify 'heads' or 'cluster_ids' explicitly in [ablation]."
+				)
+			cid = assignments[head_id]
+			cluster_to_seeds.setdefault(cid, []).append(head_id)
+		return cluster_to_seeds
 
 
 def run_ablation(cfg: PipelineConfig) -> None:
