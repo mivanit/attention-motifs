@@ -140,6 +140,12 @@ def _add_runtime_args(parser: argparse.ArgumentParser) -> None:
 		help="Sequences per micro-batch for metric computation (default: 20)",
 	)
 	parser.add_argument(
+		"--calibration-prompts-file",
+		type=str,
+		default="data/text/pile_10k.jsonl",
+		help="Path to JSONL file with natural-text prompts for mean ablation calibration (default: data/text/pile_10k.jsonl)",
+	)
+	parser.add_argument(
 		"--icl-prompts-file",
 		type=str,
 		default="data/text/pile_10k.jsonl",
@@ -166,6 +172,7 @@ def _build_config(args: argparse.Namespace) -> AblationConfig:
 		seq_length=args.seq_length,
 		n_repetitions=args.n_repetitions,
 		n_calibration_prompts=args.n_calibration_prompts,
+		calibration_prompts_file=args.calibration_prompts_file,
 		seed=args.seed,
 		micro_batch_size=args.micro_batch_size,
 		icl_prompts_file=icl_file,

@@ -67,6 +67,9 @@ class AblationConfig:
 	    List of ablation methods to test.
 	n_calibration_prompts
 	    Number of prompts for mean ablation calibration.
+	calibration_prompts_file
+	    Path to JSONL file with natural-text prompts for mean ablation
+	    calibration.  If None, falls back to using test sequences.
 	seed
 	    Random seed for reproducibility.
 	icl_prompts_file
@@ -87,6 +90,7 @@ class AblationConfig:
 		]
 	)
 	n_calibration_prompts: int = 50
+	calibration_prompts_file: str | None = "data/text/pile_10k.jsonl"
 	seed: int = 42
 	micro_batch_size: int = 20
 	icl_prompts_file: str | None = None
@@ -135,6 +139,7 @@ class AblationResults:
 				"n_repetitions": self.config.n_repetitions,
 				"ablation_methods": [m.value for m in self.config.ablation_methods],
 				"n_calibration_prompts": self.config.n_calibration_prompts,
+				"calibration_prompts_file": self.config.calibration_prompts_file,
 				"seed": self.config.seed,
 				"icl_prompts_file": self.config.icl_prompts_file,
 				"n_icl_prompts": self.config.n_icl_prompts,
@@ -159,6 +164,7 @@ class AblationResults:
 				AblationMethod(m) for m in data["config"]["ablation_methods"]
 			],
 			n_calibration_prompts=data["config"]["n_calibration_prompts"],
+			calibration_prompts_file=data["config"].get("calibration_prompts_file"),
 			seed=data["config"]["seed"],
 			icl_prompts_file=data["config"].get("icl_prompts_file"),
 			n_icl_prompts=data["config"].get("n_icl_prompts", 50),
@@ -299,12 +305,38 @@ def run_ablation_experiment(
 
 	# Compute mean activations for mean ablation
 	if AblationMethod.MEAN in config.ablation_methods:
-		print("Computing mean activations for calibration...")
-		calibration_tokens: list[Tensor] = [
-			s.tokens for s in sequences[: config.n_calibration_prompts]
-		]
+		calibration_prompts: list[str] | list[Tensor] | None = None
+
+		# Try loading natural text for calibration (preferred)
+		if config.calibration_prompts_file is not None:
+			cal_path: Path = Path(config.calibration_prompts_file)
+			if cal_path.exists():
+				from attention_motifs.ablation.data import load_icl_texts
+
+				calibration_prompts = load_icl_texts(
+					cal_path,
+					n_prompts=config.n_calibration_prompts,
+					seed=config.seed,
+				)
+				print(
+					f"Computing mean activations from {len(calibration_prompts)} "
+					f"natural-text prompts ({cal_path.name})..."
+				)
+			else:
+				print(
+					f"Warning: calibration file not found at {cal_path}, "
+					"falling back to test sequences",
+				)
+
+		# Fall back to test sequences if no file loaded
+		if calibration_prompts is None:
+			print("Computing mean activations from test sequences...")
+			calibration_prompts = [
+				s.tokens for s in sequences[: config.n_calibration_prompts]
+			]
+
 		ablator.compute_mean_activations(
-			calibration_tokens, show_progress=show_progress
+			calibration_prompts, show_progress=show_progress
 		)
 
 	# For pattern-preserving ablation: cache clean patterns once

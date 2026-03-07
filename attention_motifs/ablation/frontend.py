@@ -51,6 +51,7 @@ def _serialize_results(
 					m.value for m in exp_results.config.ablation_methods
 				],
 				"n_calibration_prompts": exp_results.config.n_calibration_prompts,
+				"calibration_prompts_file": exp_results.config.calibration_prompts_file,
 				"seed": exp_results.config.seed,
 			},
 			"baseline_loss": exp_results.baseline_loss,
