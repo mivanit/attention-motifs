@@ -161,9 +161,7 @@ class AblationResults:
 				ablated_repeated_loss=r["ablated_repeated_loss"],
 				loss_increase=r["loss_increase"],
 				# New names, with fallback to old names for backwards compat
-				prefix_score=r.get(
-					"prefix_score", r.get("baseline_prefix_score", 0.0)
-				),
+				prefix_score=r.get("prefix_score", r.get("baseline_prefix_score", 0.0)),
 				prefix_score_legacy=r.get(
 					"prefix_score_legacy",
 					r.get("baseline_prefix_score_legacy", 0.0),
