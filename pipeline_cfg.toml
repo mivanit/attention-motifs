@@ -181,3 +181,21 @@ dataFile = "../../../features/pca.csv"
 # numericalPrefix = "embed."
 # defaultColorColumn = "type.group"
 
+# ablation experiments (step s7)
+# ============================================================
+# Runs ablation on heads from clustering results (requires s4c).
+# Specify clusters via `heads` (look up each head's cluster) or `cluster_ids`.
+# Omit both to ablate all clusters at the given cut height.
+[ablation]
+cut_height = 5.0
+heads = ["gpt2-small:L5:H5"]
+# cluster_ids = [3, 7]       # alternative: explicit cluster indices
+output_dir = "data/ablations"
+# n_sequences = 100
+# seq_length = 25
+# n_repetitions = 4
+# seed = 42
+# micro_batch_size = 20
+# n_calibration_prompts = 50
+# icl_prompts_file = "data/text/pile_10k.jsonl"
+

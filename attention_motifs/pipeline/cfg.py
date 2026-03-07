@@ -281,6 +281,10 @@ class PipelineConfig:
 		default_factory=lambda: DEFAULT_VIS_CONFIGS,
 	)
 
+	# ablation configuration (from [ablation] TOML section)
+	# empty dict = skip s7_ablation step
+	ablation: dict[str, Any] = field(default_factory=dict)
+
 	# plotting/logging
 	figures_dir: Path | None = None
 	figures_fnames: dict[FigureFilename, str] = field(
@@ -497,6 +501,7 @@ class PipelineConfig:
 			},
 			plot_kwargs=data.get("plot_kwargs", {}),
 			smart_mode=data.get("smart_mode", False),
+			ablation=data.get("ablation", {}),
 		)
 		config.models = [cached_sanitize_model_name(m) for m in config.models]
 		config.validate_cfg()

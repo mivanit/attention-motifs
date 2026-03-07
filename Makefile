@@ -876,7 +876,7 @@ am-frontend-deploy: am-frontend-bundle
 	$(PYTHON) attention_motifs/pipeline/s1c_write_idxs.py $(PIPELINE_CFG_PATH)
 	$(PYTHON) attention_motifs/pipeline/s4b_write_frontend.py $(PIPELINE_CFG_PATH)
 	$(PYTHON) attention_motifs/pipeline/s6c_write_cluster_frontend.py $(PIPELINE_CFG_PATH)
-	@mkdir -p data/ablation && cp $(FRONTEND_DIR)/ablation/index.html data/ablation/index.html
+	@mkdir -p data/ablations && cp $(FRONTEND_DIR)/ablation/index.html data/ablations/index.html
 
 
 # --- Deploy ---
