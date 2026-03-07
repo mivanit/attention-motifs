@@ -1,1 +1,4 @@
-0 errors, 0 warnings, 0 notes
+/home/miv/projects/attn/attention-motifs/notebooks/06-ablation_study.ipynb - cell 1
+  /home/miv/projects/attn/attention-motifs/notebooks/06-ablation_study.ipynb:1:23:2 - error: "ExperimentConfig" is unknown import symbol (reportAttributeAccessIssue)
+  /home/miv/projects/attn/attention-motifs/notebooks/06-ablation_study.ipynb:1:24:2 - error: "ExperimentResults" is unknown import symbol (reportAttributeAccessIssue)
+2 errors, 0 warnings, 0 notes

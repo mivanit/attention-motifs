@@ -1,26 +1,28 @@
-# ty: All checks passed!
-# basedpyright: 0 errors, 0 warnings, 0 notes
-# mypy: Found 1 error in 1 file (checked 77 source files)
+# ty: Found 2 diagnostics
+# basedpyright: 2 errors, 0 warnings, 0 notes
+# mypy: Success: no issues found in 82 source files
 
 [type_errors.ty]
-total_errors = 0
+total_errors = 2
 
 [type_errors.ty.by_type]
+"unresolved-import" = 2
 
 [type_errors.ty.by_file]
+"notebooks/06-ablation_study.ipynb:cell 2" = 2
 
 [type_errors.basedpyright]
-total_errors = 0
+total_errors = 2
 
 [type_errors.basedpyright.by_type]
+"reportAttributeAccessIssue" = 2
 
 [type_errors.basedpyright.by_file]
+"notebooks/06-ablation_study.ipynb - cell 1" = 2
 
 [type_errors.mypy]
-total_errors = 1
+total_errors = 0
 
 [type_errors.mypy.by_type]
-"call-overload" = 1
 
 [type_errors.mypy.by_file]
-"attention_motifs/features/analysis.py" = 1
