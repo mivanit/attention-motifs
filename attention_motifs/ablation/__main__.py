@@ -165,7 +165,7 @@ def _add_runtime_args(parser: argparse.ArgumentParser) -> None:
 
 
 def _build_config(args: argparse.Namespace) -> AblationConfig:
-	"""Build ExperimentConfig from parsed CLI args."""
+	"""Build AblationConfig from parsed CLI args."""
 	icl_file: str | None = None if args.no_icl else args.icl_prompts_file
 	return AblationConfig(
 		n_sequences=args.n_sequences,

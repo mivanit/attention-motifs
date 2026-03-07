@@ -650,7 +650,7 @@ class TestAblationFrontend:
 	"""Tests for ablation frontend HTML generation."""
 
 	def _make_results(self) -> dict[str, AblationResults]:
-		"""Create mock ExperimentResults for testing."""
+		"""Create mock AblationResults for testing."""
 		results: AblationResults = AblationResults(
 			model_name="test-model",
 			config=AblationConfig(
