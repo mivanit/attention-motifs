@@ -29,6 +29,7 @@ from attention_motifs.ablation.metrics import (
 )
 from attention_motifs.ablation.data import (
 	generate_repeated_sequences,
+	load_icl_texts,
 )
 from attention_motifs.ablation.experiment import (
 	run_ablation_experiment,
@@ -57,6 +58,7 @@ __all__ = [
 	"AblationResult",
 	# data
 	"generate_repeated_sequences",
+	"load_icl_texts",
 	# experiment
 	"run_ablation_experiment",
 	"evaluate_induction_scores",

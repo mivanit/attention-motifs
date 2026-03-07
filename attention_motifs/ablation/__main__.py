@@ -24,6 +24,7 @@ import sys
 from pathlib import Path
 
 from attention_motifs.ablation.candidates import CandidateHeads
+from attention_motifs.ablation.data import load_icl_texts
 from attention_motifs.ablation.experiment import (
 	AblationConfig,
 	AblationResults,
@@ -138,10 +139,28 @@ def _add_runtime_args(parser: argparse.ArgumentParser) -> None:
 		default=20,
 		help="Sequences per micro-batch for metric computation (default: 20)",
 	)
+	parser.add_argument(
+		"--icl-prompts-file",
+		type=str,
+		default="data/text/pile_10k.jsonl",
+		help="Path to JSONL file with natural-text prompts for ICL evaluation (default: data/text/pile_10k.jsonl)",
+	)
+	parser.add_argument(
+		"--n-icl-prompts",
+		type=int,
+		default=50,
+		help="Number of ICL prompts to sample (default: 50)",
+	)
+	parser.add_argument(
+		"--no-icl",
+		action="store_true",
+		help="Skip ICL evaluation entirely",
+	)
 
 
 def _build_config(args: argparse.Namespace) -> AblationConfig:
 	"""Build ExperimentConfig from parsed CLI args."""
+	icl_file: str | None = None if args.no_icl else args.icl_prompts_file
 	return AblationConfig(
 		n_sequences=args.n_sequences,
 		seq_length=args.seq_length,
@@ -149,6 +168,8 @@ def _build_config(args: argparse.Namespace) -> AblationConfig:
 		n_calibration_prompts=args.n_calibration_prompts,
 		seed=args.seed,
 		micro_batch_size=args.micro_batch_size,
+		icl_prompts_file=icl_file,
+		n_icl_prompts=args.n_icl_prompts,
 	)
 
 
@@ -179,9 +200,28 @@ def _run_and_print(
 
 	config: AblationConfig = _build_config(args)
 
+	# Load ICL prompts if configured
+	icl_prompts: list[str] | None = None
+	if config.icl_prompts_file is not None:
+		icl_path: Path = Path(config.icl_prompts_file)
+		if icl_path.exists():
+			icl_prompts = load_icl_texts(
+				icl_path,
+				n_prompts=config.n_icl_prompts,
+				seed=config.seed,
+			)
+			print(f"Loaded {len(icl_prompts)} ICL prompts from {icl_path}")
+		else:
+			print(
+				f"Warning: ICL prompts file not found at {icl_path}, "
+				"skipping ICL evaluation (run 'make am-setup' to download)",
+				file=sys.stderr,
+			)
+
 	results: dict[str, AblationResults] = evaluate_induction_scores(
 		candidates=candidates,
 		config=config,
+		icl_prompts=icl_prompts,
 		device=args.device,
 		output_dir=args.output_dir,
 		show_progress=True,

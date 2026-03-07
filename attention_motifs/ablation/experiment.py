@@ -69,6 +69,11 @@ class AblationConfig:
 	    Number of prompts for mean ablation calibration.
 	seed
 	    Random seed for reproducibility.
+	icl_prompts_file
+	    Path to JSONL file with natural-text prompts for ICL evaluation.
+	    If None, ICL scores are skipped.
+	n_icl_prompts
+	    Number of ICL prompts to sample from the file.
 	"""
 
 	n_sequences: int = 100
@@ -84,6 +89,8 @@ class AblationConfig:
 	n_calibration_prompts: int = 50
 	seed: int = 42
 	micro_batch_size: int = 20
+	icl_prompts_file: str | None = None
+	n_icl_prompts: int = 50
 
 
 @dataclass
@@ -129,6 +136,8 @@ class AblationResults:
 				"ablation_methods": [m.value for m in self.config.ablation_methods],
 				"n_calibration_prompts": self.config.n_calibration_prompts,
 				"seed": self.config.seed,
+				"icl_prompts_file": self.config.icl_prompts_file,
+				"n_icl_prompts": self.config.n_icl_prompts,
 			},
 			"baseline_loss": self.baseline_loss,
 			"baseline_icl": self.baseline_icl,
@@ -151,6 +160,8 @@ class AblationResults:
 			],
 			n_calibration_prompts=data["config"]["n_calibration_prompts"],
 			seed=data["config"]["seed"],
+			icl_prompts_file=data["config"].get("icl_prompts_file"),
+			n_icl_prompts=data["config"].get("n_icl_prompts", 50),
 		)
 
 		results: list[AblationResult] = [
@@ -585,6 +596,7 @@ def get_all_head_scores(results: AblationResults) -> pl.DataFrame:
 def evaluate_induction_scores(
 	candidates: CandidateHeads,
 	config: AblationConfig | None = None,
+	icl_prompts: list[str] | None = None,
 	device: str = "cuda",
 	output_dir: Path | str | None = None,
 	show_progress: bool = True,
@@ -600,6 +612,9 @@ def evaluate_induction_scores(
 	    Heads to evaluate, grouped by model.
 	config
 	    Experiment configuration. Uses defaults if None.
+	icl_prompts
+	    Text prompts for ICL score (should be long, 500+ tokens).
+	    If None, ICL scores are skipped.
 	device
 	    Device to run on.
 	output_dir
@@ -646,6 +661,7 @@ def evaluate_induction_scores(
 			model_name=model_name,
 			candidate_heads=heads,
 			config=config,
+			icl_prompts=icl_prompts,
 			device=device,
 			show_progress=show_progress,
 		)

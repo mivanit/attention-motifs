@@ -3,9 +3,13 @@
 Generates sequences designed to elicit and test induction behavior:
 - Repeated random token sequences ([A B C][A B C]...)
 - Natural text with repetitions
+- Long natural-text prompts for ICL evaluation
 """
 
+import json
+import random
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Sequence
 
 import torch
@@ -424,3 +428,57 @@ def generate_long_context_prompts(
 		sequences.append(tokens.to(device))
 
 	return sequences
+
+
+def load_icl_texts(
+	path: Path | str,
+	n_prompts: int = 50,
+	min_chars: int = 2000,
+	seed: int = 42,
+) -> list[str]:
+	"""Load long natural-text prompts for ICL score evaluation.
+
+	Reads a JSONL file (one JSON object per line with a ``"text"`` key),
+	filters for texts long enough to measure ICL (need 500+ tokens,
+	roughly 2000+ chars), and samples ``n_prompts`` of them.
+
+	Parameters
+	----------
+	path
+	    Path to a JSONL file.  Each line should be a JSON object with
+	    at least a ``"text"`` key (same format as pipeline prompts).
+	n_prompts
+	    Number of prompts to return.
+	min_chars
+	    Minimum character count to keep a text.  Default 2000 targets
+	    ~500+ tokens (needed for ``icl_score`` default ``late_pos=500``).
+	seed
+	    Random seed for sampling.
+
+	Returns
+	-------
+	list[str]
+	    Sampled text strings.
+	"""
+	path = Path(path)
+	texts: list[str] = []
+	with open(path) as f:
+		for line in f:
+			line = line.strip()
+			if not line:
+				continue
+			row: dict = json.loads(line)
+			text: str = row["text"]
+			if len(text) >= min_chars:
+				texts.append(text)
+
+	if not texts:
+		raise ValueError(
+			f"No texts with >= {min_chars} chars found in {path}"
+		)
+
+	rng: random.Random = random.Random(seed)
+	if len(texts) > n_prompts:
+		texts = rng.sample(texts, n_prompts)
+
+	return texts
