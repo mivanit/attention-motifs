@@ -27,12 +27,12 @@ def _get_bundled_html() -> str:
 def _serialize_results(
 	all_results: dict[str, AblationResults],
 ) -> dict[str, Any]:
-	"""Serialize multiple ExperimentResults into a JSON-compatible dict.
+	"""Serialize multiple AblationResults into a JSON-compatible dict.
 
 	Parameters
 	----------
 	all_results
-	    Mapping of model_name to ExperimentResults.
+	    Mapping of model_name to AblationResults.
 
 	Returns
 	-------
@@ -74,7 +74,7 @@ def write_ablation_frontend(
 	Parameters
 	----------
 	all_results
-	    Mapping of model_name to ExperimentResults.
+	    Mapping of model_name to AblationResults.
 	output_dir
 	    Directory to write files into.
 

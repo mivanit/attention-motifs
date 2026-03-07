@@ -12,7 +12,10 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 import json
-from typing import Any, Iterable, cast
+from typing import TYPE_CHECKING, Any, Iterable, cast
+
+if TYPE_CHECKING:
+	from attention_motifs.features.analysis import DistanceTensorResult
 
 from pattern_lens.load_model import load_model
 
@@ -141,6 +144,7 @@ class AblationResults:
 				"n_calibration_prompts": self.config.n_calibration_prompts,
 				"calibration_prompts_file": self.config.calibration_prompts_file,
 				"seed": self.config.seed,
+				"micro_batch_size": self.config.micro_batch_size,
 				"icl_prompts_file": self.config.icl_prompts_file,
 				"n_icl_prompts": self.config.n_icl_prompts,
 			},
@@ -166,6 +170,7 @@ class AblationResults:
 			n_calibration_prompts=data["config"]["n_calibration_prompts"],
 			calibration_prompts_file=data["config"].get("calibration_prompts_file"),
 			seed=data["config"]["seed"],
+			micro_batch_size=data["config"].get("micro_batch_size", 20),
 			icl_prompts_file=data["config"].get("icl_prompts_file"),
 			n_icl_prompts=data["config"].get("n_icl_prompts", 50),
 		)
@@ -264,7 +269,7 @@ def run_ablation_experiment(
 
 	Returns
 	-------
-	ExperimentResults
+	AblationResults
 	    Results container with all ablation measurements.
 	"""
 	if config is None:
@@ -450,7 +455,7 @@ def run_ablation_experiment(
 
 
 def run_cross_model_experiment(
-	distance_result,
+	distance_result: "DistanceTensorResult",
 	models: list[str],
 	n_candidates_per_model: int = 10,
 	n_controls_per_model: int = 5,
@@ -488,7 +493,7 @@ def run_cross_model_experiment(
 
 	Returns
 	-------
-	dict[str, ExperimentResults]
+	dict[str, AblationResults]
 	    Results for each model.
 	"""
 	output_dir_: Path | None = None
@@ -656,7 +661,7 @@ def evaluate_induction_scores(
 
 	Returns
 	-------
-	dict[str, ExperimentResults]
+	dict[str, AblationResults]
 	    Results for each model.
 	"""
 	if not candidates.heads_by_model:
