@@ -3922,6 +3922,72 @@
     
     </script>
     <!-- end '../../shared/cluster_utils.js' -->
+        <!-- begin '../../shared/clustering_config.js' -->
+    <script>
+    /**
+     * Shared clustering configuration state.
+     *
+     * Persists clustering UI state (cut height, highlighted cluster, etc.)
+     * to localStorage so it can be shared across cluster_trends and clustering
+     * pages without URL parameters.
+     */
+    
+    const CLUSTERING_CONFIG_KEY = "clustering_config";
+    
+    const ClusteringConfig = {
+      /**
+       * Load full state from localStorage.
+       * @returns {Object} parsed state (empty object if nothing stored)
+       */
+      load() {
+        try {
+          return JSON.parse(localStorage.getItem(CLUSTERING_CONFIG_KEY)) || {};
+        } catch {
+          return {};
+        }
+      },
+    
+      /**
+       * Merge partial state into localStorage.
+       * @param {Object} partial - key/value pairs to merge
+       */
+      save(partial) {
+        const current = this.load();
+        localStorage.setItem(
+          CLUSTERING_CONFIG_KEY,
+          JSON.stringify({ ...current, ...partial }),
+        );
+      },
+    
+      /** @returns {number|null} */
+      getCutHeight() {
+        return this.load().cutHeight ?? null;
+      },
+    
+      /** @param {number} h */
+      setCutHeight(h) {
+        this.save({ cutHeight: h });
+      },
+    
+      /** @returns {number|null} */
+      getHighlightCluster() {
+        return this.load().highlightCluster ?? null;
+      },
+    
+      /** @param {number} id */
+      setHighlightCluster(id) {
+        this.save({ highlightCluster: id });
+      },
+    
+      clearHighlightCluster() {
+        const s = this.load();
+        delete s.highlightCluster;
+        localStorage.setItem(CLUSTERING_CONFIG_KEY, JSON.stringify(s));
+      },
+    };
+    
+    </script>
+    <!-- end '../../shared/clustering_config.js' -->
         <!-- begin 'clustering.js' -->
     <script>
     /**
@@ -5639,10 +5705,22 @@
           this.show_cluster_colors = !this.show_cluster_colors;
         },
     
-        getClusterPageUrl() {
+        getClusterPageUrl(highlightClusterId = null) {
+          if (typeof ClusteringConfig !== "undefined") {
+            ClusteringConfig.setCutHeight(this.cluster_cut_height);
+            if (highlightClusterId !== null) {
+              ClusteringConfig.setHighlightCluster(highlightClusterId);
+            }
+          }
           const url = new URL("../clustering/index.html", window.location.href);
-          url.searchParams.set("n_clusters", this.n_clusters);
           return url.toString();
+        },
+    
+        getClusterTrendsUrl() {
+          if (typeof ClusteringConfig !== "undefined") {
+            ClusteringConfig.setCutHeight(this.cluster_cut_height);
+          }
+          return "../cluster_trends/index.html";
         },
       }));
     });
@@ -5662,6 +5740,8 @@
         <a href="../../vis/embeds/patterns/index.html">Pattern Embeddings</a>
         <a href="../../vis/embeds/heads/index.html">Head Embeddings</a>
         <a href="../../figures/head_embed_table.html">Head Embedding Table</a>
+        <a href="../clustering/index.html">Clustering</a>
+        <a href="../cluster_trends/index.html">Cluster Trends</a>
       </div>
     </nav>
 
@@ -5790,6 +5870,12 @@
                   @click="toggleClusterColors()"
                   x-text="show_cluster_colors ? 'Hide Colors' : 'Show Colors'"
                 ></button>
+                <a
+                  class="control-button cluster-toggle-btn"
+                  :href="getClusterTrendsUrl()"
+                  target="_blank"
+                  >Trends</a
+                >
               </div>
 
               <div class="cluster-control-group">
@@ -5869,7 +5955,7 @@
                       <span
                         class="cluster-chip"
                         :style="`background-color: ${cluster.color}`"
-                        @click="window.open(getClusterPageUrl(), '_blank')"
+                        @click="window.open(getClusterPageUrl(cluster.id), '_blank')"
                         :title="cluster.label?.desc || ''"
                         x-text="`#${cluster.id} (${cluster.size})${cluster.label?.name ? ' — ' + cluster.label.name : ''}`"
                       ></span>
@@ -5885,7 +5971,7 @@
                   <span
                     class="cluster-chip cluster-chip-inline"
                     :style="`background-color: ${current_head_cluster.color}`"
-                    @click="window.open(getClusterPageUrl(), '_blank')"
+                    @click="window.open(getClusterPageUrl(current_head_cluster.id), '_blank')"
                     :title="current_head_cluster.label?.desc || ''"
                     x-text="`#${current_head_cluster.id} (${current_head_cluster.size} heads)${current_head_cluster.label?.name ? ' — ' + current_head_cluster.label.name : ''}`"
                   ></span>
