@@ -71,7 +71,7 @@ class AblationResult:
 	ablated_icl_score
 	    In-context learning score with ablation.
 	icl_degradation
-	    How much worse ICL became (more negative = worse).
+	    How much worse ICL became (more positive = worse).
 	"""
 
 	head: str

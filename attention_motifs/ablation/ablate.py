@@ -309,7 +309,9 @@ class HeadAblator:
 		def hook(
 			pattern: Float[Tensor, "batch n_heads dest src"], hook: HookPoint
 		) -> Float[Tensor, "batch n_heads dest src"]:
-			return clean_pattern
+			# Slice to actual batch size — cached pattern may have a larger batch
+			# dim when the experiment micro-batches the forward pass.
+			return clean_pattern[: pattern.shape[0]]
 
 		return hook
 
@@ -383,11 +385,15 @@ class HeadAblator:
 		try:
 			yield
 		finally:
-			# Remove our hooks (they are the last ones added to each hook point)
+			# Remove our hooks (they are the last ones added to each hook point).
+			# Must call handle.hook.remove() to deregister the underlying PyTorch
+			# forward hook — just popping from fwd_hooks only removes TransformerLens's
+			# bookkeeping entry but leaves the hook active in nn.Module._forward_hooks.
 			for hook_name, _ in all_hooks:
 				hook_point = self.model.hook_dict[hook_name]
 				if hook_point.fwd_hooks:
-					hook_point.fwd_hooks.pop()
+					handle = hook_point.fwd_hooks.pop()
+					handle.hook.remove()
 
 	def run_with_ablation(
 		self,

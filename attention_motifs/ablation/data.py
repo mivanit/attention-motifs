@@ -14,7 +14,7 @@ from typing import Sequence
 
 import torch
 from torch import Tensor
-from jaxtyping import Int
+from jaxtyping import Bool, Int
 
 
 @dataclass
@@ -315,7 +315,7 @@ def sequences_to_batch(
 def get_induction_mask(
 	sequences: Sequence[RepeatedSequence],
 	pad_to_length: int | None = None,
-) -> Int[Tensor, "batch seq_len"]:
+) -> Bool[Tensor, "batch seq_len"]:
 	"""Create a mask indicating positions where induction should help.
 
 	Returns a boolean mask that is True at positions where the model
