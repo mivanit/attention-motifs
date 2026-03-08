@@ -8,7 +8,7 @@ Clusters can be specified by:
 - ``heads``: list of head IDs (e.g. ``["gpt2-small:L5:H5"]``); each head's
   cluster is looked up automatically
 - ``cluster_ids``: explicit cluster indices
-- Neither: ablate all clusters at the given cut height
+- Neither: default to gpt2-small:L5:H5
 
 Skipped automatically if [ablation] section is absent or empty in
 the pipeline config, or if cut params are not set.
@@ -16,11 +16,13 @@ the pipeline config, or if cut params are not set.
 
 import json
 import sys
+from dataclasses import fields
 from pathlib import Path
 from typing import Any
 
 from attention_motifs.ablation.ablate import AblationMethod
 from attention_motifs.ablation.candidates import CandidateHeads
+from attention_motifs.ablation.data import load_icl_texts
 from attention_motifs.ablation.experiment import (
 	AblationConfig,
 	AblationResults,
@@ -30,18 +32,8 @@ from attention_motifs.features.clustering import HierarchicalClusteringResult
 from attention_motifs.pipeline.cfg import PipelineConfig, pipeline_step_major
 
 
-# AblationConfig field names (for cherry-picking from TOML dict)
-_ABLATION_CONFIG_KEYS: set[str] = {
-	"n_sequences",
-	"seq_length",
-	"n_repetitions",
-	"n_calibration_prompts",
-	"seed",
-	"micro_batch_size",
-	"ablation_methods",
-	"icl_prompts_file",
-	"n_icl_prompts",
-}
+# AblationConfig field names (derived from the dataclass to stay in sync)
+_ABLATION_CONFIG_KEYS: set[str] = {f.name for f in fields(AblationConfig)}
 
 
 def _build_ablation_config(ablation_dict: dict[str, Any]) -> AblationConfig:
@@ -172,8 +164,8 @@ def run_ablation(cfg: PipelineConfig) -> None:
 	**Experiment parameters** (forwarded to AblationConfig):
 
 	- ``n_sequences``, ``seq_length``, ``n_repetitions``, ``seed``,
-	  ``micro_batch_size``, ``n_calibration_prompts``, ``ablation_methods``,
-	  ``icl_prompts_file``, ``n_icl_prompts``
+	  ``micro_batch_size``, ``n_calibration_prompts``, ``calibration_prompts_file``,
+	  ``ablation_methods``, ``icl_prompts_file``, ``n_icl_prompts``
 	"""
 	pipeline_step_major("pipeline step 7: ablation experiments")
 
@@ -206,6 +198,23 @@ def run_ablation(cfg: PipelineConfig) -> None:
 
 	# --- Build AblationConfig ---
 	config: AblationConfig = _build_ablation_config(ablation_dict)
+
+	# --- Load ICL prompts if configured ---
+	icl_prompts: list[str] | None = None
+	if config.icl_prompts_file is not None:
+		icl_path: Path = Path(config.icl_prompts_file)
+		if icl_path.exists():
+			icl_prompts = load_icl_texts(
+				icl_path,
+				n_prompts=config.n_icl_prompts,
+				seed=config.seed,
+			)
+			print(f"Loaded {len(icl_prompts)} ICL prompts from {icl_path}")
+		else:
+			print(
+				f"Warning: ICL prompts file not found at {icl_path}, "
+				"skipping ICL evaluation"
+			)
 
 	print(f"Ablation: {len(cluster_map)} cluster(s), output → {output_dir}")
 
@@ -250,6 +259,7 @@ def run_ablation(cfg: PipelineConfig) -> None:
 		results: dict[str, AblationResults] = evaluate_induction_scores(
 			candidates=candidates,
 			config=config,
+			icl_prompts=icl_prompts,
 			device=cfg.device,
 			output_dir=cluster_output,
 			show_progress=cfg.verbose > 0,
