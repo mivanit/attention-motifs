@@ -8,7 +8,7 @@ attention_motifs/ablation/candidates.py                     193     96    50%   
 attention_motifs/ablation/data.py                           132     25    81%   257, 292, 309, 338, 399-430, 469, 476
 attention_motifs/ablation/experiment.py                     208     72    65%   146-147, 196-204, 241, 247, 253-256, 297, 304-305, 337, 412-414, 467-542, 558-577, 597-598, 636-637, 657-659, 719-738
 attention_motifs/ablation/frontend.py                        25      0   100%
-attention_motifs/ablation/metrics.py                        207     58    72%   140, 172-181, 209, 370, 431, 478-533, 570-589, 636, 758, 824-832, 886
+attention_motifs/ablation/metrics.py                        205     56    73%   140, 172-181, 209, 370, 431, 478-533, 570-587, 634, 756, 822-830, 884
 attention_motifs/attnpedia/__init__.py                        2      0   100%
 attention_motifs/attnpedia/__main__.py                        3      3     0%   1-4
 attention_motifs/attnpedia/attnpedia.py                     152     47    69%   27, 30, 137-140, 183, 263-267, 281, 337-349, 354-405, 409
@@ -82,4 +82,4 @@ tests/test_pipeline_state.py                                 98      0   100%
 tests/test_transition_tensor.py                              41      0   100%
 tests/test_vec_features.py                                   76      0   100%
 ---------------------------------------------------------------------------------------
-TOTAL                                                      7314   1759    76%
+TOTAL                                                      7312   1757    76%
