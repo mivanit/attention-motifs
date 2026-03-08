@@ -90,9 +90,9 @@ class AblationResult(SerializableDataclass):
 	loss_increase: float
 	# Head characterization (not affected by ablation)
 	prefix_score: float
-	prefix_score_legacy: float = 0.0
-	copying_score: float = 0.0
-	ov_copying_score: float = 0.0
+	prefix_score_legacy: float = serializable_field(default=0.0)
+	copying_score: float = serializable_field(default=0.0)
+	ov_copying_score: float = serializable_field(default=0.0)
 	# ICL — None means not measured (no prompts provided)
 	baseline_icl_score: float | None = serializable_field(default=None)
 	ablated_icl_score: float | None = serializable_field(default=None)
