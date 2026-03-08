@@ -9,10 +9,15 @@ Orchestrates the complete workflow:
 
 import warnings
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
 from pathlib import Path
 import json
 from typing import TYPE_CHECKING, Any, Iterable, cast
+
+from muutils.json_serialize import (
+	SerializableDataclass,
+	serializable_dataclass,
+	serializable_field,
+)
 
 if TYPE_CHECKING:
 	from attention_motifs.features.analysis import DistanceTensorResult
@@ -54,8 +59,8 @@ from torch import Tensor
 from transformer_lens import HookedTransformer
 
 
-@dataclass
-class AblationConfig:
+@serializable_dataclass
+class AblationConfig(SerializableDataclass):
 	"""Configuration for ablation experiments.
 
 	Attributes
@@ -75,6 +80,8 @@ class AblationConfig:
 	    calibration.  If None, falls back to using test sequences.
 	seed
 	    Random seed for reproducibility.
+	micro_batch_size
+	    Sequences per micro-batch for metric computation.
 	icl_prompts_file
 	    Path to JSONL file with natural-text prompts for ICL evaluation.
 	    If None, ICL scores are skipped.
@@ -85,23 +92,27 @@ class AblationConfig:
 	n_sequences: int = 100
 	seq_length: int = 25
 	n_repetitions: int = 4
-	ablation_methods: list[AblationMethod] = field(
+	ablation_methods: list[AblationMethod] = serializable_field(
 		default_factory=lambda: [
 			AblationMethod.ZERO,
 			AblationMethod.MEAN,
 			AblationMethod.PATTERN_PRESERVING,
-		]
+		],
+		serialization_fn=lambda methods: [m.value for m in methods],
+		deserialize_fn=lambda methods: [AblationMethod(m) for m in methods],
 	)
 	n_calibration_prompts: int = 50
-	calibration_prompts_file: str | None = "data/text/pile_10k.jsonl"
+	calibration_prompts_file: str | None = serializable_field(
+		default="data/text/pile_10k.jsonl"
+	)
 	seed: int = 42
 	micro_batch_size: int = 20
-	icl_prompts_file: str | None = None
+	icl_prompts_file: str | None = serializable_field(default=None)
 	n_icl_prompts: int = 50
 
 
-@dataclass
-class AblationResults:
+@serializable_dataclass(methods_no_override=["load"])
+class AblationResults(SerializableDataclass):
 	"""Container for experiment results.
 
 	Attributes
@@ -115,14 +126,14 @@ class AblationResults:
 	baseline_loss
 	    Baseline loss without any ablation.
 	baseline_icl
-	    Baseline ICL score without any ablation.
+	    Baseline ICL score without any ablation. None if not measured.
 	"""
 
 	model_name: str
 	config: AblationConfig
-	results: list[AblationResult] = field(default_factory=list)
+	results: list[AblationResult] = serializable_field(default_factory=list)
 	baseline_loss: float = 0.0
-	baseline_icl: float = 0.0
+	baseline_icl: float | None = serializable_field(default=None)
 
 	def to_dataframe(self) -> pl.DataFrame:
 		"""Convert results to Polars DataFrame."""
@@ -133,47 +144,20 @@ class AblationResults:
 		"""Save results to JSON file."""
 		path = Path(path)
 		path.parent.mkdir(parents=True, exist_ok=True)
-
-		data: dict = {
-			"model_name": self.model_name,
-			"config": {
-				"n_sequences": self.config.n_sequences,
-				"seq_length": self.config.seq_length,
-				"n_repetitions": self.config.n_repetitions,
-				"ablation_methods": [m.value for m in self.config.ablation_methods],
-				"n_calibration_prompts": self.config.n_calibration_prompts,
-				"calibration_prompts_file": self.config.calibration_prompts_file,
-				"seed": self.config.seed,
-				"micro_batch_size": self.config.micro_batch_size,
-				"icl_prompts_file": self.config.icl_prompts_file,
-				"n_icl_prompts": self.config.n_icl_prompts,
-			},
-			"baseline_loss": self.baseline_loss,
-			"baseline_icl": self.baseline_icl,
-			"results": [r.serialize() for r in self.results],
-		}
-		path.write_text(json.dumps(data, indent=2))
+		path.write_text(json.dumps(self.serialize(), indent=2))
 
 	@classmethod
-	def load(cls, path: Path | str) -> "AblationResults":
-		"""Load results from JSON file."""
-		path = Path(path)
-		data: dict = json.loads(path.read_text())
+	def load(cls, data: dict | Path | str) -> "AblationResults":
+		"""Load results from JSON file or dict.
 
-		config: AblationConfig = AblationConfig(
-			n_sequences=data["config"]["n_sequences"],
-			seq_length=data["config"]["seq_length"],
-			n_repetitions=data["config"]["n_repetitions"],
-			ablation_methods=[
-				AblationMethod(m) for m in data["config"]["ablation_methods"]
-			],
-			n_calibration_prompts=data["config"]["n_calibration_prompts"],
-			calibration_prompts_file=data["config"].get("calibration_prompts_file"),
-			seed=data["config"]["seed"],
-			micro_batch_size=data["config"].get("micro_batch_size", 20),
-			icl_prompts_file=data["config"].get("icl_prompts_file"),
-			n_icl_prompts=data["config"].get("n_icl_prompts", 50),
-		)
+		Handles backwards compatibility for old field names
+		(``baseline_prefix_score`` → ``prefix_score``, etc.).
+		"""
+		# Support loading from file path
+		if isinstance(data, (Path, str)):
+			data = json.loads(Path(data).read_text())
+
+		config: AblationConfig = AblationConfig.load(data["config"])
 
 		results: list[AblationResult] = [
 			AblationResult(
@@ -190,9 +174,9 @@ class AblationResults:
 				),
 				copying_score=r.get("copying_score", 0.0),
 				ov_copying_score=r.get("ov_copying_score", 0.0),
-				baseline_icl_score=r.get("baseline_icl_score", 0.0),
-				ablated_icl_score=r.get("ablated_icl_score", 0.0),
-				icl_degradation=r.get("icl_degradation", 0.0),
+				baseline_icl_score=r.get("baseline_icl_score"),
+				ablated_icl_score=r.get("ablated_icl_score"),
+				icl_degradation=r.get("icl_degradation"),
 			)
 			for r in data["results"]
 		]
@@ -202,7 +186,7 @@ class AblationResults:
 			config=config,
 			results=results,
 			baseline_loss=data["baseline_loss"],
-			baseline_icl=data.get("baseline_icl", 0.0),
+			baseline_icl=data.get("baseline_icl"),
 		)
 
 
@@ -356,7 +340,7 @@ def run_ablation_experiment(
 	baseline_loss: float = _batched_metric(
 		repeated_sequence_loss, sequences, mbs, model=model
 	)
-	baseline_icl: float = icl_score(model, icl_prompts) if icl_prompts else 0.0
+	baseline_icl: float | None = icl_score(model, icl_prompts) if icl_prompts else None
 
 	exp_results: AblationResults = AblationResults(
 		model_name=model_name,
@@ -422,8 +406,8 @@ def run_ablation_experiment(
 						mbs,
 						model=model,
 					)
-					ablated_icl: float = (
-						icl_score(model, icl_prompts) if icl_prompts else 0.0
+					ablated_icl: float | None = (
+						icl_score(model, icl_prompts) if icl_prompts else None
 					)
 
 				result: AblationResult = AblationResult(
@@ -438,7 +422,9 @@ def run_ablation_experiment(
 					ov_copying_score=head_ov_copy,
 					baseline_icl_score=baseline_icl,
 					ablated_icl_score=ablated_icl,
-					icl_degradation=ablated_icl - baseline_icl,
+					icl_degradation=(ablated_icl - baseline_icl)
+					if (ablated_icl is not None and baseline_icl is not None)
+					else None,
 				)
 				exp_results.results.append(result)
 		except torch.cuda.OutOfMemoryError:

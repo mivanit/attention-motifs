@@ -39,25 +39,10 @@ def _serialize_results(
 	dict[str, Any]
 	    ``{"models": {"model_name": {...}, ...}}``
 	"""
-	models: dict[str, dict[str, Any]] = {}
-	for model_name, exp_results in all_results.items():
-		models[model_name] = {
-			"model_name": exp_results.model_name,
-			"config": {
-				"n_sequences": exp_results.config.n_sequences,
-				"seq_length": exp_results.config.seq_length,
-				"n_repetitions": exp_results.config.n_repetitions,
-				"ablation_methods": [
-					m.value for m in exp_results.config.ablation_methods
-				],
-				"n_calibration_prompts": exp_results.config.n_calibration_prompts,
-				"calibration_prompts_file": exp_results.config.calibration_prompts_file,
-				"seed": exp_results.config.seed,
-			},
-			"baseline_loss": exp_results.baseline_loss,
-			"baseline_icl": exp_results.baseline_icl,
-			"results": [r.serialize() for r in exp_results.results],
-		}
+	models: dict[str, Any] = {
+		model_name: exp_results.serialize()
+		for model_name, exp_results in all_results.items()
+	}
 	return {"models": models}
 
 

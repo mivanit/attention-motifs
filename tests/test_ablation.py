@@ -470,8 +470,8 @@ class TestAblationResult:
 		assert result.head == "pythia-1b:L5:H7"
 		assert result.loss_increase == 1.5
 
-	def test_optional_fields_default_to_zero(self):
-		"""Test that optional fields default to 0.0."""
+	def test_optional_fields_defaults(self):
+		"""Test that optional fields have correct defaults."""
 		result: AblationResult = AblationResult(
 			head="test:L0:H0",
 			ablation_method=AblationMethod.ZERO,
@@ -480,13 +480,14 @@ class TestAblationResult:
 			loss_increase=1.0,
 			prefix_score=0.1,
 		)
-		# Optional fields should default to 0.0
+		# Characterization fields default to 0.0
 		assert result.prefix_score_legacy == 0.0
 		assert result.copying_score == 0.0
 		assert result.ov_copying_score == 0.0
-		assert result.baseline_icl_score == 0.0
-		assert result.ablated_icl_score == 0.0
-		assert result.icl_degradation == 0.0
+		# ICL fields default to None (not measured)
+		assert result.baseline_icl_score is None
+		assert result.ablated_icl_score is None
+		assert result.icl_degradation is None
 
 	def test_to_dict(self):
 		result: AblationResult = AblationResult(
@@ -523,9 +524,9 @@ class TestAblationResult:
 		assert d["prefix_score_legacy"] == 0.05
 		assert d["copying_score"] == 0.7
 		assert d["ov_copying_score"] == 0.6
-		assert d["baseline_icl_score"] == 0.0
-		assert d["ablated_icl_score"] == 0.0
-		assert d["icl_degradation"] == 0.0
+		assert d["baseline_icl_score"] is None
+		assert d["ablated_icl_score"] is None
+		assert d["icl_degradation"] is None
 
 	def test_pattern_preserving_ablation_method(self):
 		"""Test AblationResult with pattern-preserving method."""

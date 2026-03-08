@@ -9,8 +9,13 @@ Implements key metrics from the literature:
 6. OV copying score (paper-style) - general OV-circuit copying tendency
 """
 
-from dataclasses import dataclass
 from typing import Sequence
+
+from muutils.json_serialize import (
+	SerializableDataclass,
+	serializable_dataclass,
+	serializable_field,
+)
 
 import torch
 import torch.nn.functional as F
@@ -28,8 +33,8 @@ from attention_motifs.ablation.ablate import AblationMethod
 from transformer_lens import HookedTransformer
 
 
-@dataclass
-class AblationResult:
+@serializable_dataclass
+class AblationResult(SerializableDataclass):
 	"""Results from an ablation experiment on a single head.
 
 	Metrics are split into two categories:
@@ -67,15 +72,18 @@ class AblationResult:
 	ov_copying_score
 	    Paper-style OV copying score. Head characterization.
 	baseline_icl_score
-	    In-context learning score without ablation.
+	    In-context learning score without ablation. None if not measured.
 	ablated_icl_score
-	    In-context learning score with ablation.
+	    In-context learning score with ablation. None if not measured.
 	icl_degradation
-	    How much worse ICL became (more positive = worse).
+	    How much worse ICL became (more positive = worse). None if not measured.
 	"""
 
 	head: str
-	ablation_method: AblationMethod
+	ablation_method: AblationMethod = serializable_field(
+		serialization_fn=lambda x: x.value,
+		deserialize_fn=lambda x: AblationMethod(x),
+	)
 	# Ablation impact (causal)
 	baseline_repeated_loss: float
 	ablated_repeated_loss: float
@@ -85,27 +93,10 @@ class AblationResult:
 	prefix_score_legacy: float = 0.0
 	copying_score: float = 0.0
 	ov_copying_score: float = 0.0
-	# ICL (structure kept for future wiring)
-	baseline_icl_score: float = 0.0
-	ablated_icl_score: float = 0.0
-	icl_degradation: float = 0.0
-
-	def serialize(self) -> dict:
-		"""Convert to dictionary."""
-		return {
-			"head": self.head,
-			"ablation_method": self.ablation_method.value,
-			"baseline_repeated_loss": self.baseline_repeated_loss,
-			"ablated_repeated_loss": self.ablated_repeated_loss,
-			"loss_increase": self.loss_increase,
-			"prefix_score": self.prefix_score,
-			"prefix_score_legacy": self.prefix_score_legacy,
-			"copying_score": self.copying_score,
-			"ov_copying_score": self.ov_copying_score,
-			"baseline_icl_score": self.baseline_icl_score,
-			"ablated_icl_score": self.ablated_icl_score,
-			"icl_degradation": self.icl_degradation,
-		}
+	# ICL — None means not measured (no prompts provided)
+	baseline_icl_score: float | None = serializable_field(default=None)
+	ablated_icl_score: float | None = serializable_field(default=None)
+	icl_degradation: float | None = serializable_field(default=None)
 
 
 def repeated_sequence_loss(
