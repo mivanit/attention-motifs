@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import polars as pl
 import pytest
@@ -254,6 +256,78 @@ class TestMissingPrompts:
 		)
 		np.testing.assert_allclose(parallel.distances, serial.distances, rtol=1e-12)
 		assert serial.prompt_values == parallel.prompt_values
+
+
+# ---------------------------------------------------------------------------
+# Round-trip serialization
+# ---------------------------------------------------------------------------
+
+
+def _make_reduced_result() -> DistanceTensorResult:
+	"""Create a reduced DistanceTensorResult for serialization tests."""
+	rng: np.random.Generator = np.random.default_rng(99)
+	n_heads: int = 4
+	distances: Float[np.ndarray, "h h"] = rng.standard_normal((n_heads, n_heads))
+	# Make symmetric with zero diagonal (valid distance matrix)
+	distances = (distances + distances.T) / 2
+	np.fill_diagonal(distances, 0.0)
+	return DistanceTensorResult(
+		cls_values=[f"model.L{i // 2}.H{i % 2}" for i in range(n_heads)],
+		prompt_values=[f"prompt_{j}" for j in range(6)],
+		distances=distances,
+		is_reduced=True,
+	)
+
+
+class TestDistanceTensorResultRoundtrip:
+	"""Round-trip serialization tests for DistanceTensorResult."""
+
+	def test_serialize_load_roundtrip(self) -> None:
+		"""serialize → load preserves all fields."""
+		original: DistanceTensorResult = _make_reduced_result()
+		data: dict = original.serialize()
+		restored: DistanceTensorResult = DistanceTensorResult.load(data)
+
+		assert restored.cls_values == original.cls_values
+		assert restored.prompt_values == original.prompt_values
+		assert restored.is_reduced is True
+		np.testing.assert_array_almost_equal(restored.distances, original.distances)
+
+	def test_save_raw_read_raw_roundtrip_f64(self, tmp_path: "Path") -> None:
+		"""save_raw → read_raw (f64) preserves values exactly."""
+		original: DistanceTensorResult = _make_reduced_result()
+		raw_dir: "Path" = tmp_path / "raw"
+		raw_dir.mkdir()
+		original.save_raw(raw_dir)
+
+		restored: DistanceTensorResult = DistanceTensorResult.read_raw(raw_dir, precision="f64")
+		assert restored.cls_values == original.cls_values
+		assert restored.is_reduced is True
+		np.testing.assert_array_almost_equal(restored.distances, original.distances)
+
+	def test_save_raw_read_raw_roundtrip_f32(self, tmp_path: "Path") -> None:
+		"""save_raw → read_raw (f32) preserves values within float32 tolerance."""
+		original: DistanceTensorResult = _make_reduced_result()
+		raw_dir: "Path" = tmp_path / "raw"
+		raw_dir.mkdir()
+		original.save_raw(raw_dir)
+
+		restored: DistanceTensorResult = DistanceTensorResult.read_raw(raw_dir, precision="f32")
+		np.testing.assert_allclose(
+			restored.distances, original.distances.astype(np.float32), rtol=1e-6
+		)
+
+	def test_save_raw_read_raw_roundtrip_f16(self, tmp_path: "Path") -> None:
+		"""save_raw → read_raw (f16) preserves values within float16 tolerance."""
+		original: DistanceTensorResult = _make_reduced_result()
+		raw_dir: "Path" = tmp_path / "raw"
+		raw_dir.mkdir()
+		original.save_raw(raw_dir)
+
+		restored: DistanceTensorResult = DistanceTensorResult.read_raw(raw_dir, precision="f16")
+		np.testing.assert_allclose(
+			restored.distances, original.distances.astype(np.float16), atol=1e-2
+		)
 
 
 class TestProperties:
