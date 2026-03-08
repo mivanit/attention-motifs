@@ -7,6 +7,8 @@ Orchestrates the complete workflow:
 4. Collect and organize results
 """
 
+from __future__ import annotations
+
 import warnings
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -111,7 +113,7 @@ class AblationConfig(SerializableDataclass):
 	n_icl_prompts: int = serializable_field(default=50)
 
 
-@serializable_dataclass(methods_no_override=["load"])
+@serializable_dataclass
 class AblationResults(SerializableDataclass):
 	"""Container for experiment results.
 
@@ -131,7 +133,11 @@ class AblationResults(SerializableDataclass):
 
 	model_name: str
 	config: AblationConfig
-	results: list[AblationResult] = serializable_field(default_factory=list)
+	results: list[AblationResult] = serializable_field(
+		default_factory=list,
+		serialization_fn=lambda results: [r.serialize() for r in results],
+		deserialize_fn=lambda results: [AblationResult.load(r) for r in results],
+	)
 	baseline_loss: float = serializable_field(default=0.0)
 	baseline_icl: float | None = serializable_field(default=None)
 
@@ -148,51 +154,21 @@ class AblationResults(SerializableDataclass):
 
 	@classmethod
 	def read(cls, path: Path | str) -> "AblationResults":
-		"""Read results from a JSON file."""
-		data: dict[str, Any] = json.loads(Path(path).read_text())
-		return cls.load(data)
-
-	@classmethod
-	def load(cls, data: dict[str, Any] | "AblationResults") -> "AblationResults":
-		"""Load results from a dict.
+		"""Read results from a JSON file.
 
 		Handles backwards compatibility for old field names
 		(``baseline_prefix_score`` → ``prefix_score``, etc.).
 		"""
-		if isinstance(data, AblationResults):
-			return data
+		data: dict[str, Any] = json.loads(Path(path).read_text())
 
-		config: AblationConfig = AblationConfig.load(data["config"])
+		# Remap legacy field names in result dicts before load()
+		for r in data.get("results", []):
+			if "prefix_score" not in r and "baseline_prefix_score" in r:
+				r["prefix_score"] = r.pop("baseline_prefix_score")
+			if "prefix_score_legacy" not in r and "baseline_prefix_score_legacy" in r:
+				r["prefix_score_legacy"] = r.pop("baseline_prefix_score_legacy")
 
-		results: list[AblationResult] = [
-			AblationResult(
-				head=r["head"],
-				ablation_method=AblationMethod(r["ablation_method"]),
-				baseline_repeated_loss=r["baseline_repeated_loss"],
-				ablated_repeated_loss=r["ablated_repeated_loss"],
-				loss_increase=r["loss_increase"],
-				# New names, with fallback to old names for backwards compat
-				prefix_score=r.get("prefix_score", r.get("baseline_prefix_score", 0.0)),
-				prefix_score_legacy=r.get(
-					"prefix_score_legacy",
-					r.get("baseline_prefix_score_legacy", 0.0),
-				),
-				copying_score=r.get("copying_score", 0.0),
-				ov_copying_score=r.get("ov_copying_score", 0.0),
-				baseline_icl_score=r.get("baseline_icl_score"),
-				ablated_icl_score=r.get("ablated_icl_score"),
-				icl_degradation=r.get("icl_degradation"),
-			)
-			for r in data["results"]
-		]
-
-		return cls(
-			model_name=data["model_name"],
-			config=config,
-			results=results,
-			baseline_loss=data["baseline_loss"],
-			baseline_icl=data.get("baseline_icl"),
-		)
+		return cls.load(data)
 
 
 def _batched_metric(
@@ -263,6 +239,7 @@ def run_ablation_experiment(
 	"""
 	if config is None:
 		config = AblationConfig()
+	assert config is not None
 
 	# Convert string heads to tuples if needed
 	candidate_heads_int: list[tuple[int, int]]
