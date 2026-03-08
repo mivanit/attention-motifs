@@ -541,7 +541,7 @@ def compute_all_metrics(
 	icl_prompts: list[str] | None = None,
 	n_sequences: int = 50,
 	seed: int | None = 42,
-) -> dict[str, float]:
+) -> dict[str, float | None]:
 	"""Compute all metrics for a single head.
 
 	Parameters
@@ -555,7 +555,7 @@ def compute_all_metrics(
 	repeated_sequences
 	    Pre-generated repeated sequences.
 	icl_prompts
-	    Prompts for ICL score (long texts).
+	    Prompts for ICL score (long texts). None to skip ICL.
 	n_sequences
 	    Number of sequences to generate if not provided.
 	seed
@@ -564,7 +564,7 @@ def compute_all_metrics(
 	Returns
 	-------
 	dict
-	    Dictionary with all metric values.
+	    Dictionary with all metric values. ICL score is None if not measured.
 	"""
 	# Generate sequences if needed
 	if repeated_sequences is None:
@@ -582,9 +582,7 @@ def compute_all_metrics(
 	copy: float = copying_score(model, layer, head, repeated_sequences)
 	ov_copy: float = ov_copying_score(model, layer, head, repeated_sequences)
 
-	icl: float = 0.0
-	if icl_prompts:
-		icl = icl_score(model, icl_prompts)
+	icl: float | None = icl_score(model, icl_prompts) if icl_prompts else None
 
 	return {
 		"repeated_loss": rep_loss,
