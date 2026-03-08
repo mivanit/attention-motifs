@@ -145,7 +145,7 @@ function renderModelSummary(modelData) {
   document.getElementById("model-summary").innerHTML = stats
     .map(
       ([label, value]) =>
-        `<div class="summary-stat"><span class="summary-label">${label}</span><span class="summary-value">${typeof value === "number" ? value.toFixed(4) : value}</span></div>`,
+        `<div class="summary-stat"><span class="summary-label">${label}</span><span class="summary-value">${value == null ? "N/A" : typeof value === "number" ? value.toFixed(4) : value}</span></div>`,
     )
     .join("");
 }
@@ -245,7 +245,11 @@ function renderTable(modelData) {
             const val = row[col];
             const cls = getCellClass(col, val);
             const display =
-              typeof val === "number" ? formatNumber(val) : val || "";
+              val == null
+                ? "\u2014"
+                : typeof val === "number"
+                  ? formatNumber(val)
+                  : val || "";
             if (col === "head" && val) {
               const encoded = val.replace(/:/g, "~");
               return `<td class="${cls}"><a href="../vis/attnpedia/index.html?head_viewing=${encoded}" target="_blank">${display}</a></td>`;
@@ -283,6 +287,7 @@ function sortResults(results, column, descending) {
 // === Formatting ===
 
 function formatNumber(val) {
+  if (val == null) return "\u2014";
   if (val === 0) return "0";
   if (Math.abs(val) < 0.0001) return val.toExponential(2);
   return val.toFixed(4);
