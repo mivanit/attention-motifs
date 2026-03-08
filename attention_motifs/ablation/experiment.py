@@ -59,7 +59,7 @@ from torch import Tensor
 from transformer_lens import HookedTransformer
 
 
-@serializable_dataclass
+@serializable_dataclass(kw_only=True)
 class AblationConfig(SerializableDataclass):
 	"""Configuration for ablation experiments.
 
@@ -89,9 +89,9 @@ class AblationConfig(SerializableDataclass):
 	    Number of ICL prompts to sample from the file.
 	"""
 
-	n_sequences: int = 100
-	seq_length: int = 25
-	n_repetitions: int = 4
+	n_sequences: int = serializable_field(default=100)
+	seq_length: int = serializable_field(default=25)
+	n_repetitions: int = serializable_field(default=4)
 	ablation_methods: list[AblationMethod] = serializable_field(
 		default_factory=lambda: [
 			AblationMethod.ZERO,
@@ -101,14 +101,14 @@ class AblationConfig(SerializableDataclass):
 		serialization_fn=lambda methods: [m.value for m in methods],
 		deserialize_fn=lambda methods: [AblationMethod(m) for m in methods],
 	)
-	n_calibration_prompts: int = 50
+	n_calibration_prompts: int = serializable_field(default=50)
 	calibration_prompts_file: str | None = serializable_field(
 		default="data/text/pile_10k.jsonl"
 	)
-	seed: int = 42
-	micro_batch_size: int = 20
+	seed: int = serializable_field(default=42)
+	micro_batch_size: int = serializable_field(default=20)
 	icl_prompts_file: str | None = serializable_field(default=None)
-	n_icl_prompts: int = 50
+	n_icl_prompts: int = serializable_field(default=50)
 
 
 @serializable_dataclass(methods_no_override=["load"])
@@ -132,7 +132,7 @@ class AblationResults(SerializableDataclass):
 	model_name: str
 	config: AblationConfig
 	results: list[AblationResult] = serializable_field(default_factory=list)
-	baseline_loss: float = 0.0
+	baseline_loss: float = serializable_field(default=0.0)
 	baseline_icl: float | None = serializable_field(default=None)
 
 	def to_dataframe(self) -> pl.DataFrame:
