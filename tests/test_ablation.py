@@ -1,5 +1,6 @@
 """Tests for the ablation study infrastructure."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -447,6 +448,60 @@ class TestDistanceCandidates:
 		assert len(df) == 1
 
 
+class TestDistanceCandidatesRoundtrip:
+	"""Round-trip serialization tests for DistanceCandidates."""
+
+	def _make_candidates(self) -> DistanceCandidates:
+		return DistanceCandidates(
+			reference_heads=["gpt2-small:L5:H5", "gpt2-small:L6:H9"],
+			candidates_by_model={
+				"pythia-1b": [("pythia-1b:L5:H7", 0.8), ("pythia-1b:L6:H3", 0.5)],
+				"gemma-2b": [("gemma-2b:L3:H2", 0.6)],
+			},
+			all_neighbors={
+				"gpt2-small:L5:H5": [("pythia-1b:L5:H7", 0.8)],
+			},
+			k_neighbors=20,
+			model_n_layers={"pythia-1b": 16, "gemma-2b": 18},
+		)
+
+	def test_save_read_roundtrip(self, tmp_path: Path) -> None:
+		"""save → read preserves all fields.
+
+		Note: JSON round-trips tuples as lists, so we compare with
+		list-converted originals.
+		"""
+		original: DistanceCandidates = self._make_candidates()
+		path: Path = tmp_path / "candidates.json"
+		original.save(path)
+
+		assert path.exists()
+		restored: DistanceCandidates = DistanceCandidates.read(path)
+
+		assert restored.reference_heads == original.reference_heads
+		assert restored.k_neighbors == original.k_neighbors
+		assert restored.model_n_layers == original.model_n_layers
+
+		# JSON converts tuples to lists, so compare element-by-element
+		for model in original.candidates_by_model:
+			assert model in restored.candidates_by_model
+			for (rh, rs), (oh, os) in zip(
+				restored.candidates_by_model[model],
+				original.candidates_by_model[model],
+			):
+				assert rh == oh
+				assert rs == os
+
+		for ref_head in original.all_neighbors:
+			assert ref_head in restored.all_neighbors
+			for (rh, rs), (oh, os) in zip(
+				restored.all_neighbors[ref_head],
+				original.all_neighbors[ref_head],
+			):
+				assert rh == oh
+				assert rs == os
+
+
 # ============================================================
 # Tests for metrics.py - AblationResult
 # ============================================================
@@ -540,6 +595,231 @@ class TestAblationResult:
 		)
 		d: dict = result.serialize()
 		assert d["ablation_method"] == "pattern_preserving"
+
+
+# ============================================================
+# Round-trip serialization tests
+# ============================================================
+
+
+def _make_ablation_result(*, with_icl: bool = True) -> AblationResult:
+	"""Create a fully-populated AblationResult for testing."""
+	kwargs: dict = dict(
+		head="test-model:L3:H7",
+		ablation_method=AblationMethod.ZERO,
+		baseline_repeated_loss=3.5,
+		ablated_repeated_loss=5.0,
+		loss_increase=1.5,
+		prefix_score=0.15,
+		prefix_score_legacy=0.12,
+		copying_score=0.7,
+		ov_copying_score=0.6,
+	)
+	if with_icl:
+		kwargs.update(
+			baseline_icl_score=-0.5,
+			ablated_icl_score=-0.2,
+			icl_degradation=0.3,
+		)
+	return AblationResult(**kwargs)
+
+
+def _make_ablation_config() -> AblationConfig:
+	"""Create an AblationConfig with non-default values."""
+	return AblationConfig(
+		n_sequences=50,
+		seq_length=30,
+		n_repetitions=3,
+		ablation_methods=[AblationMethod.ZERO, AblationMethod.PATTERN_PRESERVING],
+		n_calibration_prompts=100,
+		calibration_prompts_file="data/text/test.jsonl",
+		seed=123,
+		micro_batch_size=10,
+		icl_prompts_file="data/text/icl.jsonl",
+		n_icl_prompts=25,
+	)
+
+
+def _make_ablation_results() -> AblationResults:
+	"""Create an AblationResults with nested objects for testing."""
+	return AblationResults(
+		model_name="test-model",
+		config=_make_ablation_config(),
+		results=[
+			_make_ablation_result(with_icl=True),
+			AblationResult(
+				head="test-model:L1:H0",
+				ablation_method=AblationMethod.PATTERN_PRESERVING,
+				baseline_repeated_loss=3.0,
+				ablated_repeated_loss=3.8,
+				loss_increase=0.8,
+				prefix_score=0.05,
+				prefix_score_legacy=0.0,
+				copying_score=0.0,
+				ov_copying_score=0.0,
+			),
+		],
+		baseline_loss=3.5,
+		baseline_icl=-0.3,
+	)
+
+
+class TestAblationResultRoundtrip:
+	"""Round-trip serialization tests for AblationResult."""
+
+	def test_serialize_load_roundtrip(self) -> None:
+		"""serialize → load preserves all fields."""
+		original: AblationResult = _make_ablation_result(with_icl=True)
+		data: dict = original.serialize()
+		restored: AblationResult = AblationResult.load(data)
+
+		assert restored.head == original.head
+		assert restored.ablation_method == original.ablation_method
+		assert restored.baseline_repeated_loss == original.baseline_repeated_loss
+		assert restored.ablated_repeated_loss == original.ablated_repeated_loss
+		assert restored.loss_increase == original.loss_increase
+		assert restored.prefix_score == original.prefix_score
+		assert restored.prefix_score_legacy == original.prefix_score_legacy
+		assert restored.copying_score == original.copying_score
+		assert restored.ov_copying_score == original.ov_copying_score
+		assert restored.baseline_icl_score == original.baseline_icl_score
+		assert restored.ablated_icl_score == original.ablated_icl_score
+		assert restored.icl_degradation == original.icl_degradation
+
+	def test_serialize_load_roundtrip_defaults(self) -> None:
+		"""Round-trip preserves default values (None, 0.0)."""
+		original: AblationResult = _make_ablation_result(with_icl=False)
+		data: dict = original.serialize()
+		restored: AblationResult = AblationResult.load(data)
+
+		assert restored.baseline_icl_score is None
+		assert restored.ablated_icl_score is None
+		assert restored.icl_degradation is None
+		assert restored.prefix_score_legacy == original.prefix_score_legacy
+		assert restored.copying_score == original.copying_score
+
+
+class TestAblationConfigRoundtrip:
+	"""Round-trip serialization tests for AblationConfig."""
+
+	def test_serialize_load_roundtrip(self) -> None:
+		"""serialize → load preserves all fields, including enum list."""
+		original: AblationConfig = _make_ablation_config()
+		data: dict = original.serialize()
+		restored: AblationConfig = AblationConfig.load(data)
+
+		assert restored.n_sequences == original.n_sequences
+		assert restored.seq_length == original.seq_length
+		assert restored.n_repetitions == original.n_repetitions
+		assert restored.ablation_methods == original.ablation_methods
+		assert restored.n_calibration_prompts == original.n_calibration_prompts
+		assert restored.calibration_prompts_file == original.calibration_prompts_file
+		assert restored.seed == original.seed
+		assert restored.micro_batch_size == original.micro_batch_size
+		assert restored.icl_prompts_file == original.icl_prompts_file
+		assert restored.n_icl_prompts == original.n_icl_prompts
+
+	def test_serialize_load_roundtrip_defaults(self) -> None:
+		"""Default config round-trips correctly."""
+		original: AblationConfig = AblationConfig()
+		data: dict = original.serialize()
+		restored: AblationConfig = AblationConfig.load(data)
+
+		assert restored.ablation_methods == original.ablation_methods
+		assert restored.icl_prompts_file is None
+		assert restored.seed == 42
+
+
+class TestAblationResultsRoundtrip:
+	"""Round-trip serialization tests for AblationResults."""
+
+	def test_serialize_load_roundtrip(self) -> None:
+		"""serialize → load preserves all fields including nested objects."""
+		original: AblationResults = _make_ablation_results()
+		data: dict = original.serialize()
+		restored: AblationResults = AblationResults.load(data)
+
+		assert restored.model_name == original.model_name
+		assert restored.baseline_loss == original.baseline_loss
+		assert restored.baseline_icl == original.baseline_icl
+
+		# Nested config
+		assert restored.config.n_sequences == original.config.n_sequences
+		assert restored.config.ablation_methods == original.config.ablation_methods
+
+		# Nested results list
+		assert len(restored.results) == len(original.results)
+		assert restored.results[0].head == original.results[0].head
+		assert restored.results[0].ablation_method == original.results[0].ablation_method
+		assert restored.results[0].baseline_icl_score == original.results[0].baseline_icl_score
+		assert restored.results[1].head == original.results[1].head
+		assert restored.results[1].baseline_icl_score is None
+
+	def test_save_read_roundtrip(self, tmp_path: Path) -> None:
+		"""save → read preserves all fields."""
+		original: AblationResults = _make_ablation_results()
+		path: Path = tmp_path / "ablation_results.json"
+		original.save(path)
+
+		assert path.exists()
+		restored: AblationResults = AblationResults.read(path)
+
+		assert restored.model_name == original.model_name
+		assert restored.baseline_loss == original.baseline_loss
+		assert restored.baseline_icl == original.baseline_icl
+		assert len(restored.results) == len(original.results)
+		assert restored.results[0].head == original.results[0].head
+		assert restored.results[0].loss_increase == original.results[0].loss_increase
+		assert restored.config.seed == original.config.seed
+
+	def test_read_legacy_field_names(self, tmp_path: Path) -> None:
+		"""read() remaps old field names (baseline_prefix_score → prefix_score)."""
+		# Build raw JSON with legacy field names
+		legacy_data: dict = {
+			"model_name": "legacy-model",
+			"config": AblationConfig().serialize(),
+			"results": [
+				{
+					"head": "legacy-model:L0:H0",
+					"ablation_method": "zero",
+					"baseline_repeated_loss": 3.0,
+					"ablated_repeated_loss": 4.0,
+					"loss_increase": 1.0,
+					"baseline_prefix_score": 0.15,
+					"baseline_prefix_score_legacy": 0.12,
+					"copying_score": 0.0,
+					"ov_copying_score": 0.0,
+					"baseline_icl_score": None,
+					"ablated_icl_score": None,
+					"icl_degradation": None,
+				}
+			],
+			"baseline_loss": 3.0,
+			"baseline_icl": None,
+		}
+		path: Path = tmp_path / "legacy_results.json"
+		path.write_text(json.dumps(legacy_data))
+
+		restored: AblationResults = AblationResults.read(path)
+		assert restored.results[0].prefix_score == 0.15
+		assert restored.results[0].prefix_score_legacy == 0.12
+
+	def test_serialize_load_with_none_icl(self) -> None:
+		"""Round-trip preserves None baseline_icl and None ICL result fields."""
+		original: AblationResults = AblationResults(
+			model_name="no-icl-model",
+			config=AblationConfig(),
+			results=[_make_ablation_result(with_icl=False)],
+			baseline_loss=2.0,
+			baseline_icl=None,
+		)
+		data: dict = original.serialize()
+		restored: AblationResults = AblationResults.load(data)
+
+		assert restored.baseline_icl is None
+		assert restored.results[0].baseline_icl_score is None
+		assert restored.results[0].ablated_icl_score is None
+		assert restored.results[0].icl_degradation is None
 
 
 # ============================================================
