@@ -147,15 +147,20 @@ class AblationResults(SerializableDataclass):
 		path.write_text(json.dumps(self.serialize(), indent=2))
 
 	@classmethod
-	def load(cls, data: dict | Path | str) -> "AblationResults":
-		"""Load results from JSON file or dict.
+	def read(cls, path: Path | str) -> "AblationResults":
+		"""Read results from a JSON file."""
+		data: dict[str, Any] = json.loads(Path(path).read_text())
+		return cls.load(data)
+
+	@classmethod
+	def load(cls, data: dict[str, Any] | "AblationResults") -> "AblationResults":
+		"""Load results from a dict.
 
 		Handles backwards compatibility for old field names
 		(``baseline_prefix_score`` → ``prefix_score``, etc.).
 		"""
-		# Support loading from file path
-		if isinstance(data, (Path, str)):
-			data = json.loads(Path(data).read_text())
+		if isinstance(data, AblationResults):
+			return data
 
 		config: AblationConfig = AblationConfig.load(data["config"])
 
@@ -504,7 +509,7 @@ def run_cross_model_experiment(
 			)
 			if results_path.exists():
 				print(f"Skipping {model_name} — results exist at {results_path}")
-				all_results[model_name] = AblationResults.load(results_path)
+				all_results[model_name] = AblationResults.read(results_path)
 				continue
 
 		print(f"\n{'=' * 60}")
@@ -673,7 +678,7 @@ def evaluate_induction_scores(
 			)
 			if results_path.exists():
 				print(f"Skipping {model_name} — results exist at {results_path}")
-				all_results[model_name] = AblationResults.load(results_path)
+				all_results[model_name] = AblationResults.read(results_path)
 				continue
 
 		print(f"\n{'=' * 60}")
