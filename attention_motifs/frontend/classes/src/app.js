@@ -134,7 +134,7 @@ function displayClassifications(searchTerm = "") {
       const attnPediaUrl = `../vis/attnpedia/index.html?classification_mode=true&current_classification=${encodeURIComponent(classification.type)}`;
 
       html += `
-                <a href="${attnPediaUrl}" class="classification-item">
+                <div class="classification-item" onclick="window.location.href='${attnPediaUrl}'">
                     <div class="classification-name">
                         ${classification.name}
                         <span class="head-count">${classification.n_heads}</span>
@@ -142,11 +142,14 @@ function displayClassifications(searchTerm = "") {
                     <div class="classification-heads">
                         ${classification.heads
                           .slice(0, 3)
-                          .map((h) => h.split(":").slice(1).join(":"))
+                          .map((h) => {
+                            const encoded = h.replace(/:/g, "~");
+                            return `<a href="../vis/attnpedia/index.html?head_viewing=${encoded}" target="_blank" onclick="event.stopPropagation()">${h.split(":").slice(1).join(":")}</a>`;
+                          })
                           .join(", ")}
                         ${classification.heads.length > 3 ? "..." : ""}
                     </div>
-                </a>
+                </div>
             `;
     });
 

@@ -1280,10 +1280,22 @@ document.addEventListener("alpine:init", () => {
       this.show_cluster_colors = !this.show_cluster_colors;
     },
 
-    getClusterPageUrl() {
+    getClusterPageUrl(highlightClusterId = null) {
+      if (typeof ClusteringConfig !== "undefined") {
+        ClusteringConfig.setCutHeight(this.cluster_cut_height);
+        if (highlightClusterId !== null) {
+          ClusteringConfig.setHighlightCluster(highlightClusterId);
+        }
+      }
       const url = new URL("../clustering/index.html", window.location.href);
-      url.searchParams.set("n_clusters", this.n_clusters);
       return url.toString();
+    },
+
+    getClusterTrendsUrl() {
+      if (typeof ClusteringConfig !== "undefined") {
+        ClusteringConfig.setCutHeight(this.cluster_cut_height);
+      }
+      return "../cluster_trends/index.html";
     },
   }));
 });

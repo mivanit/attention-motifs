@@ -246,6 +246,10 @@ function renderTable(modelData) {
             const cls = getCellClass(col, val);
             const display =
               typeof val === "number" ? formatNumber(val) : val || "";
+            if (col === "head" && val) {
+              const encoded = val.replace(/:/g, "~");
+              return `<td class="${cls}"><a href="../vis/attnpedia/index.html?head_viewing=${encoded}" target="_blank">${display}</a></td>`;
+            }
             return `<td class="${cls}">${display}</td>`;
           })
           .join("") +

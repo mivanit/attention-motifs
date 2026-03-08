@@ -31,6 +31,7 @@
     <script src="headInfo.js"></script>
     <script src="autocomplete.js"></script>
     <script src="../../shared/cluster_utils.js"></script>
+    <script src="../../shared/clustering_config.js"></script>
     <script src="clustering.js"></script>
     <script src="app.js"></script>
   </head>
@@ -46,6 +47,8 @@
         <a href="../../vis/embeds/patterns/index.html">Pattern Embeddings</a>
         <a href="../../vis/embeds/heads/index.html">Head Embeddings</a>
         <a href="../../figures/head_embed_table.html">Head Embedding Table</a>
+        <a href="../clustering/index.html">Clustering</a>
+        <a href="../cluster_trends/index.html">Cluster Trends</a>
       </div>
     </nav>
 
@@ -174,6 +177,12 @@
                   @click="toggleClusterColors()"
                   x-text="show_cluster_colors ? 'Hide Colors' : 'Show Colors'"
                 ></button>
+                <a
+                  class="control-button cluster-toggle-btn"
+                  :href="getClusterTrendsUrl()"
+                  target="_blank"
+                  >Trends</a
+                >
               </div>
 
               <div class="cluster-control-group">
@@ -253,7 +262,7 @@
                       <span
                         class="cluster-chip"
                         :style="`background-color: ${cluster.color}`"
-                        @click="window.open(getClusterPageUrl(), '_blank')"
+                        @click="window.open(getClusterPageUrl(cluster.id), '_blank')"
                         :title="cluster.label?.desc || ''"
                         x-text="`#${cluster.id} (${cluster.size})${cluster.label?.name ? ' — ' + cluster.label.name : ''}`"
                       ></span>
@@ -269,7 +278,7 @@
                   <span
                     class="cluster-chip cluster-chip-inline"
                     :style="`background-color: ${current_head_cluster.color}`"
-                    @click="window.open(getClusterPageUrl(), '_blank')"
+                    @click="window.open(getClusterPageUrl(current_head_cluster.id), '_blank')"
                     :title="current_head_cluster.label?.desc || ''"
                     x-text="`#${current_head_cluster.id} (${current_head_cluster.size} heads)${current_head_cluster.label?.name ? ' — ' + current_head_cluster.label.name : ''}`"
                   ></span>
