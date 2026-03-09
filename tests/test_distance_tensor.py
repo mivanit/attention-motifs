@@ -300,7 +300,9 @@ class TestDistanceTensorResultRoundtrip:
 		raw_dir.mkdir()
 		original.save_raw(raw_dir)
 
-		restored: DistanceTensorResult = DistanceTensorResult.read_raw(raw_dir, precision="f64")
+		restored: DistanceTensorResult = DistanceTensorResult.read_raw(
+			raw_dir, precision="f64"
+		)
 		assert restored.cls_values == original.cls_values
 		assert restored.is_reduced is True
 		np.testing.assert_array_almost_equal(restored.distances, original.distances)
@@ -312,7 +314,9 @@ class TestDistanceTensorResultRoundtrip:
 		raw_dir.mkdir()
 		original.save_raw(raw_dir)
 
-		restored: DistanceTensorResult = DistanceTensorResult.read_raw(raw_dir, precision="f32")
+		restored: DistanceTensorResult = DistanceTensorResult.read_raw(
+			raw_dir, precision="f32"
+		)
 		np.testing.assert_allclose(
 			restored.distances, original.distances.astype(np.float32), rtol=1e-6
 		)
@@ -324,7 +328,9 @@ class TestDistanceTensorResultRoundtrip:
 		raw_dir.mkdir()
 		original.save_raw(raw_dir)
 
-		restored: DistanceTensorResult = DistanceTensorResult.read_raw(raw_dir, precision="f16")
+		restored: DistanceTensorResult = DistanceTensorResult.read_raw(
+			raw_dir, precision="f16"
+		)
 		np.testing.assert_allclose(
 			restored.distances, original.distances.astype(np.float16), atol=1e-2
 		)

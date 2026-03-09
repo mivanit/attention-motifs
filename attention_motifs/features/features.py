@@ -234,7 +234,6 @@ def scalar_feature_table(
 	print_log(f"# saving to {out_path}")
 	df.write_ndjson(out_path)
 
-
 	return df
 
 

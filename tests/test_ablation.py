@@ -750,8 +750,13 @@ class TestAblationResultsRoundtrip:
 		# Nested results list
 		assert len(restored.results) == len(original.results)
 		assert restored.results[0].head == original.results[0].head
-		assert restored.results[0].ablation_method == original.results[0].ablation_method
-		assert restored.results[0].baseline_icl_score == original.results[0].baseline_icl_score
+		assert (
+			restored.results[0].ablation_method == original.results[0].ablation_method
+		)
+		assert (
+			restored.results[0].baseline_icl_score
+			== original.results[0].baseline_icl_score
+		)
 		assert restored.results[1].head == original.results[1].head
 		assert restored.results[1].baseline_icl_score is None
 
