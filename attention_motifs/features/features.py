@@ -272,12 +272,60 @@ def compute_scalar_features(
 	# dbg_tensor(A_skew)
 	A_log_skew: Float[np.ndarray, "n_ctx n_ctx"] = skew_lt(A_log)
 
+	n_ctx: int = A.shape[0]
+	idx: Float[np.ndarray, " n_ctx"] = np.arange(n_ctx, dtype=np.float64)
+
+	# per-row entropy: -sum(A * log(A), axis=1)
+	row_entropy: Float[np.ndarray, " n_ctx"] = -np.nansum(
+		A * np.log(A + 1e-9), axis=1
+	)
+
+	# per-row weighted attention distance: sum(A[i,j] * |i-j|, axis=1)
+	dist_matrix: Float[np.ndarray, "n_ctx n_ctx"] = np.abs(
+		idx[:, None] - idx[None, :]
+	)
+	attn_distance: Float[np.ndarray, " n_ctx"] = np.sum(
+		A * dist_matrix, axis=1
+	)
+
+	# per-row max attention value
+	row_max: Float[np.ndarray, " n_ctx"] = np.max(A, axis=1)
+
+	# column sums: total attention received per position
+	col_sum: Float[np.ndarray, " n_ctx"] = np.sum(A, axis=0)
+
+	# band energy: fraction of attention mass within k diagonals
+	band_k: int = max(1, n_ctx // 4)
+	band_mask: Float[np.ndarray, "n_ctx n_ctx"] = (dist_matrix <= band_k).astype(
+		np.float64
+	)
+	band_energy: float = float(np.sum(A * band_mask) / np.sum(A))
+
+	# subdiagonal: attention to immediately preceding token
+	prev_tok: Float[np.ndarray, " n_ctx_minus1"] = np.diag(A, k=-1)
+
 	return dict(
 		# diagonal: standard features, fit diff to beta dist
 		**prefix_dict(vec_features(A.diagonal(), reduced=False), prefix="diag"),
 		# attention to position 0: BOS token for models with default_prepend_bos=True
 		# (GPT-2, Pythia, TinyStories, Gemma), first content token otherwise (e.g. Llama)
 		**prefix_dict(vec_features(A[:, 0], reduced=False), prefix="first_tok"),
+		# attention to final position
+		**prefix_dict(vec_features(A[:, -1], reduced=False), prefix="last_tok"),
+		# attention to immediately preceding token (subdiagonal)
+		**prefix_dict(vec_features(prev_tok, reduced=False), prefix="prev_tok"),
+		# per-row entropy of attention distribution
+		**prefix_dict(vec_features(row_entropy, reduced=False), prefix="row_entropy"),
+		# weighted average attention distance per row
+		**prefix_dict(
+			vec_features(attn_distance, reduced=False), prefix="attn_distance"
+		),
+		# max attention value per row (peakedness)
+		**prefix_dict(vec_features(row_max, reduced=False), prefix="row_max"),
+		# total attention received per position
+		**prefix_dict(vec_features(col_sum, reduced=False), prefix="col_sum"),
+		# fraction of attention within k-diagonal band
+		band_energy=band_energy,
 		# transition tensor: standard features, standard features on diff, linear envelope on transition time
 		# 	TODO: standard features on decay rate
 		# markov transition not that important?
