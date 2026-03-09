@@ -302,6 +302,7 @@ def compute_scalar_features(
 	band_energy: float = float(np.sum(A * band_mask) / np.sum(A))
 
 	# subdiagonal: attention to immediately preceding token
+	# NOTE: length n_ctx-1; vec_features produces NaN for n_ctx<=2 (not encountered in practice)
 	prev_tok: Float[np.ndarray, " n_ctx_minus1"] = np.diag(A, k=-1)
 
 	return dict(
