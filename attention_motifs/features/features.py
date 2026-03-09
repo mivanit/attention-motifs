@@ -1,5 +1,9 @@
 import os
 
+# HuggingFace's Rust tokenizers use internal thread pools. This module uses mp.Pool
+# (fork-based), and forking a process with active threads risks deadlocks from
+# inherited locked mutexes. Disabling tokenizer parallelism before import prevents
+# the thread pool from ever being created.
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import json
