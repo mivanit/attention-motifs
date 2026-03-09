@@ -234,10 +234,6 @@ def scalar_feature_table(
 	print_log(f"# saving to {out_path}")
 	df.write_ndjson(out_path)
 
-	# Clean up checkpoint files
-	for p in checkpoint_paths:
-		p.unlink()
-	print_log(f"# cleaned up {len(checkpoint_paths)} checkpoint files")
 
 	return df
 
