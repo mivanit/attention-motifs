@@ -20,7 +20,7 @@ attention_motifs/features/clustering.py                      72      1    99%   
 attention_motifs/features/feat/__init__.py                    0      0   100%
 attention_motifs/features/feat/hist_beta_fit.py               9      9     0%   1-39
 attention_motifs/features/feat/transition_tensor.py          17     17     0%   1-78
-attention_motifs/features/features.py                       119     38    68%   51-88, 92-95, 116-123, 140-141, 210-213, 217-218, 228, 247-256, 267-276
+attention_motifs/features/features.py                       127     49    61%   55-92, 96-99, 120-127, 144-145, 214-217, 221-222, 232, 246-255, 266-302
 attention_motifs/features/generate.py                        12     12     0%   1-44
 attention_motifs/features/head_analysis.py                  197     30    85%   89, 94, 145-146, 216-218, 300-303, 340-341, 354-358, 366, 393, 415-419, 426, 432, 434, 492, 504-505, 529-530, 534, 585
 attention_motifs/features/plotting.py                       141     76    46%   38-103, 205, 217, 274, 292-376
@@ -66,7 +66,7 @@ attention_motifs/util/model_name.py                          98     54    45%   
 attention_motifs/util/profiling.py                          140    140     0%   3-296
 attention_motifs/util/util.py                                40     25    38%   32-46, 55, 68-91
 tests/conftest.py                                            60     12    80%   34-35, 41-43, 78, 90-91, 99, 107-108, 120
-tests/test_ablation.py                                      417      3    99%   847-848, 913
+tests/test_ablation.py                                      417      3    99%   852-853, 918
 tests/test_analysis.py                                      121      0   100%
 tests/test_bins.py                                           51      0   100%
 tests/test_clustering.py                                     66      0   100%
@@ -82,4 +82,4 @@ tests/test_pipeline_state.py                                 98      0   100%
 tests/test_transition_tensor.py                              41      0   100%
 tests/test_vec_features.py                                   76      0   100%
 ---------------------------------------------------------------------------------------
-TOTAL                                                      7312   1757    76%
+TOTAL                                                      7320   1768    76%
