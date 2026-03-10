@@ -1000,7 +1000,7 @@ document.addEventListener("alpine:init", () => {
       }
 
       // Also search existing heads for partial matches
-      await this.head_distances._ensureLoaded();
+      await this.head_distances._ensureMetaLoaded();
       const query = this.head_search_query.toLowerCase();
       const allHeads = this.head_distances.head_dists_meta.cls_values;
 

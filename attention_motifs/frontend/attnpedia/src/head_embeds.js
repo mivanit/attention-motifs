@@ -18,7 +18,7 @@ class HeadDistances {
     this._meta_loaded = false;
     this._meta_promise = null;
     this.head_dists_meta = null;
-    // Don't start loading in constructor - let methods trigger it when needed
+    this._rowCache = new Map();
   }
 
   async _ensureMetaLoaded() {
@@ -45,7 +45,12 @@ class HeadDistances {
 
   /** Fetch a single row from the distances matrix via HTTP range request */
   async _loadRow(head_idx) {
-    return NDArray.loadSlice(CONFIG.headDistsnpy_url, head_idx);
+    if (this._rowCache.has(head_idx)) {
+      return this._rowCache.get(head_idx);
+    }
+    const promise = NDArray.loadSlice(CONFIG.headDistsnpy_url, head_idx);
+    this._rowCache.set(head_idx, promise);
+    return promise;
   }
 
   isMetadataLoaded() {
