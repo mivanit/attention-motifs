@@ -475,6 +475,7 @@ pyzmq==27.1.0
     # via
     #   ipykernel
     #   jupyter-client
+rangehttpserver==1.4.0
 referencing==0.37.0
     # via
     #   jsonschema
