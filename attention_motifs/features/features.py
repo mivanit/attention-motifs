@@ -276,17 +276,11 @@ def compute_scalar_features(
 	idx: Float[np.ndarray, " n_ctx"] = np.arange(n_ctx, dtype=np.float64)
 
 	# per-row entropy: -sum(A * log(A), axis=1)
-	row_entropy: Float[np.ndarray, " n_ctx"] = -np.nansum(
-		A * np.log(A + 1e-9), axis=1
-	)
+	row_entropy: Float[np.ndarray, " n_ctx"] = -np.nansum(A * np.log(A + 1e-9), axis=1)
 
 	# per-row weighted attention distance: sum(A[i,j] * |i-j|, axis=1)
-	dist_matrix: Float[np.ndarray, "n_ctx n_ctx"] = np.abs(
-		idx[:, None] - idx[None, :]
-	)
-	attn_distance: Float[np.ndarray, " n_ctx"] = np.sum(
-		A * dist_matrix, axis=1
-	)
+	dist_matrix: Float[np.ndarray, "n_ctx n_ctx"] = np.abs(idx[:, None] - idx[None, :])
+	attn_distance: Float[np.ndarray, " n_ctx"] = np.sum(A * dist_matrix, axis=1)
 
 	# per-row max attention value
 	row_max: Float[np.ndarray, " n_ctx"] = np.max(A, axis=1)
