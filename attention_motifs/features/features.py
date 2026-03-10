@@ -345,8 +345,12 @@ def compute_scalar_features(
 			prefix=["gram", "col"],
 		),
 		**prefix_dict(
+			gram_features(A_skew @ A_skew.T),
+			prefix=["gram", "skew", "row"],
+		),
+		**prefix_dict(
 			gram_features(A_skew.T @ A_skew),
-			prefix=["gram", "skew"],
+			prefix=["gram", "skew", "col"],
 		),
 		**prefix_dict(
 			gram_features(cosine_similarity_matrix(A_log)),
@@ -358,6 +362,10 @@ def compute_scalar_features(
 		),
 		**prefix_dict(
 			gram_features(cosine_similarity_matrix(A_log_skew)),
-			prefix=["log", "gram", "skew"],
+			prefix=["log", "gram", "skew", "row"],
+		),
+		**prefix_dict(
+			gram_features(cosine_similarity_matrix(A_log_skew, col=True)),
+			prefix=["log", "gram", "skew", "col"],
 		),
 	)
