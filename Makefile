@@ -892,8 +892,10 @@ am-deploy: am-frontend-deploy
 
 .PHONY: am-serve
 am-serve:
-	@echo "serve data/ on localhost"
-	$(PYTHON) -m http.server --directory data/
+	@echo "serve data/ on localhost (with Range request support)"
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	cd data/ && $(PYTHON) -m RangeHTTPServer 8000
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .PHONY: am-serve-patterns
 am-serve-patterns:
