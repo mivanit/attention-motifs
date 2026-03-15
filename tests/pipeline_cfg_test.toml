@@ -42,5 +42,6 @@ seq_length = 5
 n_repetitions = 2
 n_calibration_prompts = 2
 micro_batch_size = 2
+max_heads_per_model = 2
 calibration_prompts_file = "tests/data/pile_demo.jsonl"
 icl_prompts_file = "tests/data/pile_demo.jsonl"

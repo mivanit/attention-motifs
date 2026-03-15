@@ -91,6 +91,9 @@ class AblationConfig(SerializableDataclass):
 	    If None, ICL scores are skipped.
 	n_icl_prompts
 	    Number of ICL prompts to sample from the file.
+	max_heads_per_model
+	    If set, randomly sample at most this many heads per model
+	    (seeded by ``seed``). For testing only — prints a warning.
 	"""
 
 	n_sequences: int = serializable_field(default=100)
@@ -113,6 +116,7 @@ class AblationConfig(SerializableDataclass):
 	micro_batch_size: int = serializable_field(default=20)
 	icl_prompts_file: str | None = serializable_field(default=None)
 	n_icl_prompts: int = serializable_field(default=50)
+	max_heads_per_model: int | None = serializable_field(default=None)
 
 
 @serializable_dataclass
@@ -745,7 +749,20 @@ def evaluate_induction_scores(
 
 	# Run ablation per model
 	all_results: dict[str, AblationResults] = {}
-	for model_name, heads in sorted(candidates.heads_by_model.items()):
+	for model_name, heads_orig in sorted(candidates.heads_by_model.items()):
+		heads: list[tuple[int, int]] = list(heads_orig)
+		if config is not None and config.max_heads_per_model is not None:
+			warnings.warn(
+				f"max_heads_per_model={config.max_heads_per_model} is set — "
+				f"sampling {min(config.max_heads_per_model, len(heads))}/{len(heads)} "
+				f"heads for {model_name}. Do not use for production experiments.",
+				stacklevel=2,
+			)
+			if len(heads) > config.max_heads_per_model:
+				import random
+
+				rng: random.Random = random.Random(config.seed)
+				heads = rng.sample(heads, config.max_heads_per_model)
 		# Resume: skip models with existing results
 		if output_dir_ is not None:
 			results_path: Path = (
