@@ -70,6 +70,16 @@ const METRIC_DISPLAY_NAMES = {
 // === Chart margins ===
 const ABLATION_CHART_MARGIN = { top: 28, right: 12, bottom: 40, left: 44 };
 
+// === Helpers ===
+
+function escapeHTML(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 // === State ===
 
 let allData = null;
@@ -128,6 +138,14 @@ async function init() {
 
   allData = ablationData;
   apData = apResp;
+  clusteringAvailable = clusteringReady;
+
+  if (!clusteringReady) {
+    const el = document.getElementById("clustering-controls");
+    if (el)
+      el.innerHTML =
+        '<p style="color:#c33;font-size:13px;font-weight:bold;">\u26A0 Clustering data failed to load. Cluster features disabled.</p>';
+  }
 
   if (!allData.models || Object.keys(allData.models).length === 0) {
     showError("No model results found in data.");
@@ -197,21 +215,25 @@ function setupCutHeightSlider(initialValue) {
   document.getElementById("n-clusters-label").textContent =
     `(${clustering.getNClusters()} clusters)`;
 
-  slider.addEventListener("input", async () => {
+  let _sliderTimeout = null;
+  slider.addEventListener("input", () => {
     const h = parseFloat(slider.value);
     document.getElementById("cut-height-value").textContent = h.toFixed(2);
-    await clustering.setCutHeight(h);
-    ClusteringConfig.setCutHeight(h);
-    document.getElementById("n-clusters-label").textContent =
-      `(${clustering.getNClusters()} clusters)`;
+    clearTimeout(_sliderTimeout);
+    _sliderTimeout = setTimeout(async () => {
+      await clustering.setCutHeight(h);
+      ClusteringConfig.setCutHeight(h);
+      document.getElementById("n-clusters-label").textContent =
+        `(${clustering.getNClusters()} clusters)`;
 
-    // Update selected cluster to follow DEFAULT_HEAD
-    const newClusterId = clustering._assignments[DEFAULT_HEAD];
-    if (newClusterId !== undefined) selectedCluster = newClusterId;
+      // Update selected cluster to follow DEFAULT_HEAD
+      const newClusterId = clustering._assignments[DEFAULT_HEAD];
+      if (newClusterId !== undefined) selectedCluster = newClusterId;
 
-    renderClusterChips();
-    renderCharts();
-    renderTable();
+      renderClusterChips();
+      renderCharts();
+      renderTable();
+    }, 50);
   });
 }
 
@@ -438,10 +460,12 @@ function renderHistogram(metric, inValues, outValues) {
   const allValues = [...inValues, ...outValues];
   if (allValues.length === 0) return;
 
-  const min = Math.min(...allValues);
-  const max = Math.max(...allValues);
-  const nBins = 20;
-  const binWidth = (max - min) / nBins || 1;
+  const rawMin = Math.min(...allValues);
+  const rawMax = Math.max(...allValues);
+  const min = rawMin === rawMax ? rawMin - 0.5 : rawMin;
+  const max = rawMin === rawMax ? rawMax + 0.5 : rawMax;
+  const nBins = rawMin === rawMax ? 1 : 20;
+  const binWidth = (max - min) / nBins;
 
   function histogram(values) {
     const counts = new Array(nBins).fill(0);
@@ -478,7 +502,7 @@ function renderHistogram(metric, inValues, outValues) {
   const halfBar = barWidth / 2 - 1;
 
   const clusterColorStr =
-    selectedCluster !== null
+    selectedCluster !== null && clusteringAvailable
       ? clustering.getClusterColor(selectedCluster)
       : "hsl(210, 70%, 50%)";
   const clusterLabel = getClusterChipLabel();
@@ -588,7 +612,7 @@ function renderBoxPlot(metric, inValues, outValues) {
   createYAxis(g, yScale, { ticks: 6 });
 
   const clusterColorStr =
-    selectedCluster !== null
+    selectedCluster !== null && clusteringAvailable
       ? clustering.getClusterColor(selectedCluster)
       : "hsl(210, 70%, 50%)";
   const clusterLabel = getClusterChipLabel();
@@ -670,7 +694,7 @@ function renderBoxPlot(metric, inValues, outValues) {
 }
 
 function getClusterChipLabel() {
-  if (selectedCluster === null) return "Selected";
+  if (selectedCluster === null || !clusteringAvailable) return "Selected";
   const label = clustering.getClusterLabel(selectedCluster);
   if (label && label.name) return `Cluster ${selectedCluster}: ${label.name}`;
   return `Cluster ${selectedCluster}`;
@@ -784,7 +808,7 @@ function renderTable() {
   tbody.innerHTML = rows
     .map((row) => {
       const clusterId =
-        clustering && clustering._is_loaded
+        clusteringAvailable && clustering._is_loaded
           ? clustering._assignments[row.head]
           : undefined;
       const isInSelected = clusterId === selectedCluster;
@@ -802,18 +826,18 @@ function renderTable() {
 function renderCell(col, row, clusterId) {
   if (col === "head") {
     const encoded = row.head.replace(/:/g, "~");
-    return `<td class="cell-head"><a href="../vis/attnpedia/index.html?head_viewing=${encoded}" target="_blank">${row.head}</a></td>`;
+    return `<td class="cell-head"><a href="../vis/attnpedia/index.html?head_viewing=${encoded}" target="_blank">${escapeHTML(row.head)}</a></td>`;
   }
 
   if (col === "cluster") {
-    if (clusterId === undefined || clusterId === null) {
+    if (!clusteringAvailable || clusterId === undefined || clusterId === null) {
       return '<td class="cell-cluster">\u2014</td>';
     }
     const color = clustering.getClusterColor(clusterId);
     const label = clustering.getClusterLabel(clusterId);
     const name =
       label && label.name ? `${clusterId}: ${label.name}` : `${clusterId}`;
-    return `<td class="cell-cluster"><span class="cluster-badge" style="background:${color}">${name}</span></td>`;
+    return `<td class="cell-cluster"><span class="cluster-badge" style="background:${color}">${escapeHTML(name)}</span></td>`;
   }
 
   if (col === "classifications") {
@@ -822,7 +846,7 @@ function renderCell(col, row, clusterId) {
         ? apData.head_to_types[row.head] || []
         : [];
     if (types.length === 0) return "<td></td>";
-    return `<td class="cell-class">${types.map((t) => `<span class="class-badge">${t}</span>`).join(" ")}</td>`;
+    return `<td class="cell-class">${types.map((t) => `<span class="class-badge">${escapeHTML(t)}</span>`).join(" ")}</td>`;
   }
 
   const val = row[col];
@@ -833,7 +857,7 @@ function renderCell(col, row, clusterId) {
       : typeof val === "number"
         ? formatNumber(val)
         : val || "";
-  return `<td class="${cls}">${display}</td>`;
+  return `<td class="${cls}">${escapeHTML(display)}</td>`;
 }
 
 function sortBy(column) {
@@ -853,7 +877,7 @@ function sortResults(results, column, descending) {
     let vb = b[column];
 
     // Special sort for cluster column
-    if (column === "cluster" && clustering && clustering._is_loaded) {
+    if (column === "cluster" && clusteringAvailable && clustering._is_loaded) {
       va = clustering._assignments[a.head] ?? -999;
       vb = clustering._assignments[b.head] ?? -999;
     }
