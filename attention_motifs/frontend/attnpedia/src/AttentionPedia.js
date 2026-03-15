@@ -7,7 +7,9 @@ async function load_attnpedia() {
     const loaded = await r.json();
     return loaded;
   } else {
-    throw new Error(`Failed to load AttentionPedia data from ${path}`);
+    throw new Error(
+      `Failed to load AttentionPedia data from ${CONFIG.attnpedia_url}`,
+    );
   }
 }
 

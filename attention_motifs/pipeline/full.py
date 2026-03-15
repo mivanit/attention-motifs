@@ -20,6 +20,9 @@ from attention_motifs.pipeline.s6_clustered_embed import clustered_embed
 from attention_motifs.pipeline.s6b_cluster_trends import cluster_trends
 from attention_motifs.pipeline.s6c_write_cluster_frontend import write_cluster_frontend
 from attention_motifs.pipeline.s7_ablation import run_ablation
+from attention_motifs.pipeline.s7b_write_ablation_frontend import (
+	write_ablation_frontend as write_ablation_fe,
+)
 from attention_motifs.pipeline.cfg import PipelineConfig
 from attention_motifs.pipeline.s3_feat_proc import feat_proc
 from attention_motifs.pipeline.state import PipelineState, StepName
@@ -41,6 +44,7 @@ PIPELINE_STEPS: list[tuple[StepName, Callable[[PipelineConfig], None]]] = [
 	("s6b_cluster_trends", cluster_trends),
 	("s6c_write_cluster_frontend", write_cluster_frontend),
 	("s7_ablation", run_ablation),
+	("s7b_write_ablation_frontend", write_ablation_fe),
 ]
 
 

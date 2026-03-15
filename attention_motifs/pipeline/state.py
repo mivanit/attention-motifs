@@ -23,6 +23,7 @@ StepName = Literal[
 	"s6b_cluster_trends",
 	"s6c_write_cluster_frontend",
 	"s7_ablation",
+	"s7b_write_ablation_frontend",
 ]
 
 
