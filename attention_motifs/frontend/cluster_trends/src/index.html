@@ -73,9 +73,7 @@
               <input type="checkbox" id="layer-distribution" />
             </div>
           </div>
-          <div class="chart-canvas-container">
-            <canvas id="layer-chart"></canvas>
-          </div>
+          <div class="chart-svg-container" id="layer-chart-container"></div>
         </div>
 
         <!-- Chart 2: Model size x cluster fraction -->
@@ -91,9 +89,7 @@
               <input type="checkbox" id="size-distribution" />
             </div>
           </div>
-          <div class="chart-canvas-container">
-            <canvas id="size-chart"></canvas>
-          </div>
+          <div class="chart-svg-container" id="size-chart-container"></div>
         </div>
 
         <!-- Chart 3: Cluster entropy by layer -->
@@ -103,14 +99,13 @@
             Shannon entropy of cluster distribution at each layer. Higher = more
             diverse clusters, lower = dominated by one cluster.
           </p>
-          <div class="chart-canvas-container">
-            <canvas id="entropy-chart"></canvas>
-          </div>
+          <div class="chart-svg-container" id="entropy-chart-container"></div>
         </div>
       </div>
     </div>
 
-    <script src="../../libs/chart.min.js"></script>
+    <script src="../../libs/d3.min.js"></script>
+    <script src="../../shared/d3_chart_utils.js"></script>
     <script src="../../shared/cluster_utils.js"></script>
     <script src="../../shared/clustering_config.js"></script>
     <script src="app.js"></script>

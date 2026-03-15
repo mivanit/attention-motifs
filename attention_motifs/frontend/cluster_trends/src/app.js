@@ -8,6 +8,7 @@
  * 3. Cluster entropy by layer depth (line)
  *
  * Supports both precomputed K-based data and dynamic cut-height clustering.
+ * All charts render as SVG via D3.js for PDF-quality export.
  */
 
 // ── Config ──────────────────────────────────────────────────────
@@ -21,13 +22,12 @@ const CONFIG = {
     urlParams.get("linkage") || "../../features/clustering/linkage.json",
 };
 
+// ── Chart margins ───────────────────────────────────────────────
+const CHART_MARGIN = { top: 14, right: 160, bottom: 46, left: 56 };
+
 // ── State ───────────────────────────────────────────────────────
 let DATA = null;
 let currentK = null;
-
-/** @type {Chart|null} */ let layerChart = null;
-/** @type {Chart|null} */ let sizeChart = null;
-/** @type {Chart|null} */ let entropyChart = null;
 
 // Which families/models are enabled (true = visible)
 /** @type {Object<string, boolean>} */ let familyEnabled = {};
@@ -44,6 +44,9 @@ let currentRecords = { by_layer: [], by_model: [], entropy_by_layer: [] };
 /** @type {Object} */ let allClusterLabels = {};
 /** @type {Object<number, {name: string, desc: string|null}>} */ let resolvedLabels =
   {};
+
+// Cluster visibility state for legend toggling
+/** @type {Object<number, boolean>} */ let clusterVisible = {};
 
 // ── Colors ──────────────────────────────────────────────────────
 // clusterColor() and clusterColorAlpha() are provided by cluster_utils.js
@@ -278,6 +281,7 @@ function updateFromCutHeight(cutHeight) {
     assignments,
   );
   currentRecords = computeTrendRecords(assignments);
+  clusterVisible = {}; // Reset visibility on new clustering
   rebuildAll();
 }
 
@@ -294,6 +298,7 @@ function updateFromK(k) {
     by_model: DATA.by_model[key] || [],
     entropy_by_layer: DATA.entropy_by_layer[key] || [],
   };
+  clusterVisible = {}; // Reset visibility on new clustering
   rebuildAll();
 }
 
@@ -330,12 +335,19 @@ function buildLayerChart() {
 }
 
 /**
- * Scatter/line mode for the layer chart (original behavior).
+ * Scatter/line mode for the layer chart.
  * @param {Array} filtered - family-filtered by_layer records
  * @param {boolean} showLines
  */
 function buildLayerChartScatter(filtered, showLines) {
-  // Group by cluster -> array of {x: depth, y: frac, model}
+  const containerId = "layer-chart-container";
+  const { svg, g, innerWidth, innerHeight } = createChartSVG(
+    containerId,
+    CHART_MARGIN,
+  );
+  const tooltip = createTooltip(containerId);
+
+  // Group by cluster
   /** @type {Object<number, Array<{x:number, y:number, model:string}>>} */
   const byCluster = {};
   for (const r of filtered) {
@@ -347,104 +359,112 @@ function buildLayerChartScatter(filtered, showLines) {
     .map(Number)
     .sort((a, b) => a - b);
 
-  // For each cluster, create one dataset per model (so lines connect within a model)
-  const datasets = [];
+  // Initialize visibility
+  for (const cid of clusterIds) {
+    if (clusterVisible[cid] === undefined) clusterVisible[cid] = true;
+  }
+
+  const yMax = d3.max(filtered, (r) => r.frac) || 1;
+
+  const xScale = d3.scaleLinear().domain([-0.02, 1.02]).range([0, innerWidth]);
+  const yScale = d3
+    .scaleLinear()
+    .domain([0, yMax * 1.05])
+    .range([innerHeight, 0]);
+
+  createXAxis(g, xScale, {
+    height: innerHeight,
+    label: "Normalized Layer Depth",
+    gridHeight: innerHeight,
+  });
+  createYAxis(g, yScale, {
+    label: "Fraction of Heads",
+    gridWidth: innerWidth,
+  });
+
+  // Plot data per cluster
   const models = Object.keys(DATA.models).sort();
   for (const cid of clusterIds) {
     const points = byCluster[cid] || [];
-    // group by model
+    const color = clusterColor(cid);
+    const clusterG = g
+      .append("g")
+      .attr("class", `cluster-group cluster-${cid}`)
+      .style("display", clusterVisible[cid] ? null : "none");
+
+    // Group by model for lines
     /** @type {Object<string, Array<{x:number, y:number}>>} */
     const byModel = {};
     for (const p of points) {
       if (!byModel[p.model]) byModel[p.model] = [];
       byModel[p.model].push({ x: p.x, y: p.y });
     }
-    const color = clusterColor(cid);
-    let isFirst = true;
+
     for (const m of models) {
       const pts = byModel[m];
       if (!pts) continue;
       pts.sort((a, b) => a.x - b.x);
-      datasets.push({
-        label: isFirst ? clusterLegendLabel(cid) : "",
-        data: pts,
-        backgroundColor: color,
-        borderColor: color,
-        borderWidth: showLines ? 1.5 : 0,
-        pointRadius: 3,
-        pointHoverRadius: 5,
-        showLine: showLines,
-        tension: 0,
-        _clusterId: cid,
-        _model: m,
-      });
-      isFirst = false;
+
+      // Lines
+      if (showLines && pts.length > 1) {
+        const line = d3
+          .line()
+          .x((d) => xScale(d.x))
+          .y((d) => yScale(d.y));
+        clusterG
+          .append("path")
+          .datum(pts)
+          .attr("fill", "none")
+          .attr("stroke", color)
+          .attr("stroke-width", 1.5)
+          .attr("d", line);
+      }
+
+      // Points
+      clusterG
+        .selectAll(null)
+        .data(pts.map((p) => ({ ...p, model: m, cid })))
+        .enter()
+        .append("circle")
+        .attr("cx", (d) => xScale(d.x))
+        .attr("cy", (d) => yScale(d.y))
+        .attr("r", 3)
+        .attr("fill", color)
+        .on("mouseover", (event, d) => {
+          d3.select(event.target).attr("r", 5);
+          const label = clusterLegendLabel(d.cid);
+          let html = `${d.model} | ${label} | depth=${d.x.toFixed(2)} frac=${d.y.toFixed(3)}`;
+          const desc = clusterDesc(d.cid);
+          if (desc) html += `<br>${desc}`;
+          tooltip.show(event, html);
+        })
+        .on("mouseout", (event) => {
+          d3.select(event.target).attr("r", 3);
+          tooltip.hide();
+        });
     }
   }
 
-  const ctx = document.getElementById("layer-chart").getContext("2d");
-  if (layerChart) layerChart.destroy();
-
-  layerChart = new Chart(ctx, {
-    type: "scatter",
-    data: { datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: "nearest", intersect: true },
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: "Normalized Layer Depth",
-            color: "#555",
-          },
-          min: -0.02,
-          max: 1.02,
-          ticks: { color: "#888" },
-          grid: { color: "rgba(0,0,0,0.08)" },
-        },
-        y: {
-          title: { display: true, text: "Fraction of Heads", color: "#555" },
-          min: 0,
-          ticks: { color: "#888" },
-          grid: { color: "rgba(0,0,0,0.08)" },
-        },
-      },
-      plugins: {
-        legend: {
-          display: true,
-          position: "right",
-          labels: {
-            color: "#555",
-            font: { size: 11 },
-            filter: (item) => item.text !== "",
-          },
-          onClick: (_e, legendItem, legend) => {
-            const cid =
-              legend.chart.data.datasets[legendItem.datasetIndex]._clusterId;
-            const isHidden = !legendItem.hidden;
-            for (let i = 0; i < legend.chart.data.datasets.length; i++) {
-              if (legend.chart.data.datasets[i]._clusterId === cid) {
-                legend.chart.setDatasetVisibility(i, isHidden);
-              }
-            }
-            legend.chart.update();
-          },
-        },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const ds = ctx.dataset;
-              const line = `${ds._model} | ${clusterLegendLabel(ds._clusterId)} | depth=${ctx.parsed.x.toFixed(2)} frac=${ctx.parsed.y.toFixed(3)}`;
-              const desc = clusterDesc(ds._clusterId);
-              return desc ? [line, desc] : line;
-            },
-          },
-        },
-      },
+  // Legend
+  createLegend(svg, {
+    items: clusterIds.map((cid) => ({
+      label: clusterLegendLabel(cid),
+      color: clusterColor(cid),
+      _cid: cid,
+    })),
+    x: CHART_MARGIN.left + innerWidth + 12,
+    y: CHART_MARGIN.top,
+    onClick: (_label, _idx, item) => {
+      const cid = item._cid;
+      clusterVisible[cid] = !clusterVisible[cid];
+      g.select(`.cluster-${cid}`).style(
+        "display",
+        clusterVisible[cid] ? null : "none",
+      );
     },
   });
+
+  addExportButton(containerId, "layer-depth-cluster-fraction");
 }
 
 /**
@@ -453,6 +473,13 @@ function buildLayerChartScatter(filtered, showLines) {
  * @param {Array} filtered - family-filtered by_layer records
  */
 function buildLayerChartDistribution(filtered) {
+  const containerId = "layer-chart-container";
+  const { svg, g, innerWidth, innerHeight } = createChartSVG(
+    containerId,
+    CHART_MARGIN,
+  );
+  const tooltip = createTooltip(containerId);
+
   // Group by cluster
   /** @type {Object<number, Array<{depth:number, frac:number}>>} */
   const byCluster = {};
@@ -465,11 +492,39 @@ function buildLayerChartDistribution(filtered) {
     .map(Number)
     .sort((a, b) => a - b);
 
-  const datasets = [];
+  for (const cid of clusterIds) {
+    if (clusterVisible[cid] === undefined) clusterVisible[cid] = true;
+  }
+
+  const yMax =
+    d3.max(
+      clusterIds.flatMap((cid) => (byCluster[cid] || []).map((d) => d.frac)),
+    ) || 1;
+
+  const xScale = d3.scaleLinear().domain([-0.02, 1.02]).range([0, innerWidth]);
+  const yScale = d3
+    .scaleLinear()
+    .domain([0, yMax * 1.05])
+    .range([innerHeight, 0]);
+
+  createXAxis(g, xScale, {
+    height: innerHeight,
+    label: "Normalized Layer Depth",
+    gridHeight: innerHeight,
+  });
+  createYAxis(g, yScale, {
+    label: "Fraction of Heads",
+    gridWidth: innerWidth,
+  });
+
+  const curve = d3.curveCatmullRom.alpha(0.5);
 
   for (const cid of clusterIds) {
     const points = byCluster[cid];
-    // Group by depth -> collect frac values
+    const color = clusterColor(cid);
+    const fillColor = clusterColorAlpha(cid, 0.15);
+
+    // Group by depth
     /** @type {Object<string, number[]>} */
     const byDepth = {};
     for (const p of points) {
@@ -481,130 +536,124 @@ function buildLayerChartDistribution(filtered) {
     const depths = Object.keys(byDepth)
       .map(Number)
       .sort((a, b) => a - b);
-    const maxPts = depths.map((d) => {
+    const stats = depths.map((d) => {
       const vals = byDepth[d.toFixed(4)];
-      return { x: d, y: Math.max(...vals) };
-    });
-    const minPts = depths.map((d) => {
-      const vals = byDepth[d.toFixed(4)];
-      return { x: d, y: Math.min(...vals) };
-    });
-    const meanPts = depths.map((d) => {
-      const vals = byDepth[d.toFixed(4)];
-      return { x: d, y: vals.reduce((a, b) => a + b, 0) / vals.length };
+      return {
+        depth: d,
+        min: Math.min(...vals),
+        max: Math.max(...vals),
+        mean: vals.reduce((a, b) => a + b, 0) / vals.length,
+      };
     });
 
-    const color = clusterColor(cid);
-    const fillColor = clusterColorAlpha(cid, 0.15);
+    const clusterG = g
+      .append("g")
+      .attr("class", `cluster-group cluster-${cid}`)
+      .style("display", clusterVisible[cid] ? null : "none");
 
-    // Max line (fill down to next dataset = min line)
-    datasets.push({
-      label: clusterLegendLabel(cid),
-      data: maxPts,
-      borderColor: color,
-      borderWidth: 1,
-      borderDash: [4, 2],
-      pointRadius: 0,
-      showLine: true,
-      tension: 0.2,
-      fill: "+1",
-      backgroundColor: fillColor,
-      _clusterId: cid,
-      _role: "max",
-    });
-    // Min line
-    datasets.push({
-      label: "",
-      data: minPts,
-      borderColor: color,
-      borderWidth: 1,
-      borderDash: [4, 2],
-      pointRadius: 0,
-      showLine: true,
-      tension: 0.2,
-      fill: false,
-      _clusterId: cid,
-      _role: "min",
-    });
+    // Filled area between min and max
+    const area = d3
+      .area()
+      .x((d) => xScale(d.depth))
+      .y0((d) => yScale(d.min))
+      .y1((d) => yScale(d.max))
+      .curve(curve);
+
+    clusterG
+      .append("path")
+      .datum(stats)
+      .attr("fill", fillColor)
+      .attr("stroke", "none")
+      .attr("d", area);
+
+    // Max line (dashed)
+    const maxLine = d3
+      .line()
+      .x((d) => xScale(d.depth))
+      .y((d) => yScale(d.max))
+      .curve(curve);
+    clusterG
+      .append("path")
+      .datum(stats)
+      .attr("fill", "none")
+      .attr("stroke", color)
+      .attr("stroke-width", 1)
+      .attr("stroke-dasharray", "4,2")
+      .attr("d", maxLine);
+
+    // Min line (dashed)
+    const minLine = d3
+      .line()
+      .x((d) => xScale(d.depth))
+      .y((d) => yScale(d.min))
+      .curve(curve);
+    clusterG
+      .append("path")
+      .datum(stats)
+      .attr("fill", "none")
+      .attr("stroke", color)
+      .attr("stroke-width", 1)
+      .attr("stroke-dasharray", "4,2")
+      .attr("d", minLine);
+
     // Mean line (solid, thicker)
-    datasets.push({
-      label: "",
-      data: meanPts,
-      borderColor: color,
-      borderWidth: 2.5,
-      pointRadius: 1,
-      pointHoverRadius: 4,
-      showLine: true,
-      tension: 0.2,
-      fill: false,
-      _clusterId: cid,
-      _role: "mean",
-    });
+    const meanLine = d3
+      .line()
+      .x((d) => xScale(d.depth))
+      .y((d) => yScale(d.mean))
+      .curve(curve);
+    clusterG
+      .append("path")
+      .datum(stats)
+      .attr("fill", "none")
+      .attr("stroke", color)
+      .attr("stroke-width", 2.5)
+      .attr("d", meanLine);
+
+    // Mean line hover points
+    clusterG
+      .selectAll(null)
+      .data(stats.map((s) => ({ ...s, cid })))
+      .enter()
+      .append("circle")
+      .attr("cx", (d) => xScale(d.depth))
+      .attr("cy", (d) => yScale(d.mean))
+      .attr("r", 1)
+      .attr("fill", color)
+      .on("mouseover", (event, d) => {
+        d3.select(event.target).attr("r", 4);
+        const label = clusterLegendLabel(d.cid);
+        let html = `${label} (mean) | depth=${d.depth.toFixed(2)} frac=${d.mean.toFixed(3)}`;
+        const desc = clusterDesc(d.cid);
+        if (desc) html += `<br>${desc}`;
+        tooltip.show(event, html);
+      })
+      .on("mouseout", (event) => {
+        d3.select(event.target).attr("r", 1);
+        tooltip.hide();
+      });
   }
 
-  const ctx = document.getElementById("layer-chart").getContext("2d");
-  if (layerChart) layerChart.destroy();
-
-  layerChart = new Chart(ctx, {
-    type: "scatter",
-    data: { datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: "nearest", intersect: false },
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: "Normalized Layer Depth",
-            color: "#555",
-          },
-          min: -0.02,
-          max: 1.02,
-          ticks: { color: "#888" },
-          grid: { color: "rgba(0,0,0,0.08)" },
-        },
-        y: {
-          title: { display: true, text: "Fraction of Heads", color: "#555" },
-          min: 0,
-          ticks: { color: "#888" },
-          grid: { color: "rgba(0,0,0,0.08)" },
-        },
-      },
-      plugins: {
-        legend: {
-          display: true,
-          position: "right",
-          labels: {
-            color: "#555",
-            font: { size: 11 },
-            filter: (item) => item.text !== "",
-          },
-          onClick: (_e, legendItem, legend) => {
-            const cid =
-              legend.chart.data.datasets[legendItem.datasetIndex]._clusterId;
-            const isHidden = !legendItem.hidden;
-            for (let i = 0; i < legend.chart.data.datasets.length; i++) {
-              if (legend.chart.data.datasets[i]._clusterId === cid) {
-                legend.chart.setDatasetVisibility(i, isHidden);
-              }
-            }
-            legend.chart.update();
-          },
-        },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const ds = ctx.dataset;
-              const line = `${clusterLegendLabel(ds._clusterId)} (${ds._role}) | depth=${ctx.parsed.x.toFixed(2)} frac=${ctx.parsed.y.toFixed(3)}`;
-              const desc = clusterDesc(ds._clusterId);
-              return desc ? [line, desc] : line;
-            },
-          },
-        },
-      },
+  // Legend
+  createLegend(svg, {
+    items: clusterIds.map((cid) => ({
+      label: clusterLegendLabel(cid),
+      color: clusterColor(cid),
+      _cid: cid,
+    })),
+    x: CHART_MARGIN.left + innerWidth + 12,
+    y: CHART_MARGIN.top,
+    onClick: (_label, _idx, item) => {
+      const cid = item._cid;
+      clusterVisible[cid] = !clusterVisible[cid];
+      g.select(`.cluster-${cid}`).style(
+        "display",
+        clusterVisible[cid] ? null : "none",
+      );
     },
   });
+
+  addExportButton(containerId, "layer-depth-cluster-distribution");
 }
 
 // ── Chart 2: Model size x cluster fraction ──────────────────────
@@ -632,10 +681,17 @@ function formatParams(val) {
 }
 
 /**
- * Scatter mode for the size chart (original behavior).
+ * Scatter mode for the size chart.
  * @param {Array} filtered - family-filtered by_model records
  */
 function buildSizeChartScatter(filtered) {
+  const containerId = "size-chart-container";
+  const { svg, g, innerWidth, innerHeight } = createChartSVG(
+    containerId,
+    CHART_MARGIN,
+  );
+  const tooltip = createTooltip(containerId);
+
   // Group by cluster
   /** @type {Object<number, Array<{x:number, y:number, model:string}>>} */
   const byCluster = {};
@@ -654,66 +710,86 @@ function buildSizeChartScatter(filtered) {
     .map(Number)
     .sort((a, b) => a - b);
 
-  const datasets = clusterIds.map((cid) => {
+  for (const cid of clusterIds) {
+    if (clusterVisible[cid] === undefined) clusterVisible[cid] = true;
+  }
+
+  const allPoints = clusterIds.flatMap((cid) => byCluster[cid] || []);
+  const xExtent = d3.extent(allPoints, (d) => d.x);
+  const yMax = d3.max(allPoints, (d) => d.y) || 1;
+
+  const xScale = d3
+    .scaleLog()
+    .domain([xExtent[0] * 0.8, xExtent[1] * 1.2])
+    .range([0, innerWidth]);
+  const yScale = d3
+    .scaleLinear()
+    .domain([0, yMax * 1.05])
+    .range([innerHeight, 0]);
+
+  createXAxis(g, xScale, {
+    height: innerHeight,
+    label: "Parameters",
+    tickFormat: formatParams,
+    gridHeight: innerHeight,
+  });
+  createYAxis(g, yScale, {
+    label: "Fraction of Heads",
+    gridWidth: innerWidth,
+  });
+
+  for (const cid of clusterIds) {
     const pts = (byCluster[cid] || []).sort((a, b) => a.x - b.x);
     const color = clusterColor(cid);
-    return {
+
+    const clusterG = g
+      .append("g")
+      .attr("class", `cluster-group cluster-${cid}`)
+      .style("display", clusterVisible[cid] ? null : "none");
+
+    clusterG
+      .selectAll(null)
+      .data(pts.map((p) => ({ ...p, cid })))
+      .enter()
+      .append("circle")
+      .attr("cx", (d) => xScale(d.x))
+      .attr("cy", (d) => yScale(d.y))
+      .attr("r", 4)
+      .attr("fill", color)
+      .on("mouseover", (event, d) => {
+        d3.select(event.target).attr("r", 6);
+        const label = clusterLegendLabel(d.cid);
+        let html = `${d.model} | ${label} | frac=${d.y.toFixed(3)}`;
+        const desc = clusterDesc(d.cid);
+        if (desc) html += `<br>${desc}`;
+        tooltip.show(event, html);
+      })
+      .on("mouseout", (event) => {
+        d3.select(event.target).attr("r", 4);
+        tooltip.hide();
+      });
+  }
+
+  // Legend
+  createLegend(svg, {
+    items: clusterIds.map((cid) => ({
       label: clusterLegendLabel(cid),
-      data: pts,
-      backgroundColor: color,
-      borderColor: color,
-      borderWidth: 0,
-      pointRadius: 4,
-      pointHoverRadius: 6,
-      showLine: false,
-      _clusterId: cid,
-    };
-  });
-
-  const ctx = document.getElementById("size-chart").getContext("2d");
-  if (sizeChart) sizeChart.destroy();
-
-  sizeChart = new Chart(ctx, {
-    type: "scatter",
-    data: { datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: "nearest", intersect: true },
-      scales: {
-        x: {
-          type: "logarithmic",
-          title: { display: true, text: "Parameters", color: "#555" },
-          ticks: { color: "#888", callback: formatParams },
-          grid: { color: "rgba(0,0,0,0.08)" },
-        },
-        y: {
-          title: { display: true, text: "Fraction of Heads", color: "#555" },
-          min: 0,
-          ticks: { color: "#888" },
-          grid: { color: "rgba(0,0,0,0.08)" },
-        },
-      },
-      plugins: {
-        legend: {
-          display: true,
-          position: "right",
-          labels: { color: "#555", font: { size: 11 } },
-        },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const pt = ctx.raw;
-              const ds = ctx.dataset;
-              const line = `${pt.model} | ${clusterLegendLabel(ds._clusterId)} | frac=${pt.y.toFixed(3)}`;
-              const desc = clusterDesc(ds._clusterId);
-              return desc ? [line, desc] : line;
-            },
-          },
-        },
-      },
+      color: clusterColor(cid),
+      _cid: cid,
+    })),
+    x: CHART_MARGIN.left + innerWidth + 12,
+    y: CHART_MARGIN.top,
+    onClick: (_label, _idx, item) => {
+      const cid = item._cid;
+      clusterVisible[cid] = !clusterVisible[cid];
+      g.select(`.cluster-${cid}`).style(
+        "display",
+        clusterVisible[cid] ? null : "none",
+      );
     },
   });
+
+  addExportButton(containerId, "model-size-cluster-fraction");
 }
 
 /**
@@ -722,6 +798,13 @@ function buildSizeChartScatter(filtered) {
  * @param {Array} filtered - family-filtered by_model records
  */
 function buildSizeChartDistribution(filtered) {
+  const containerId = "size-chart-container";
+  const { svg, g, innerWidth, innerHeight } = createChartSVG(
+    containerId,
+    CHART_MARGIN,
+  );
+  const tooltip = createTooltip(containerId);
+
   // Group by cluster first
   /** @type {Object<number, Array<{size:number, frac:number}>>} */
   const byCluster = {};
@@ -736,11 +819,42 @@ function buildSizeChartDistribution(filtered) {
     .map(Number)
     .sort((a, b) => a - b);
 
-  const datasets = [];
+  for (const cid of clusterIds) {
+    if (clusterVisible[cid] === undefined) clusterVisible[cid] = true;
+  }
+
+  const allPoints = clusterIds.flatMap((cid) => byCluster[cid] || []);
+  const xExtent = d3.extent(allPoints, (d) => d.size);
+  const yMax = d3.max(allPoints, (d) => d.frac) || 1;
+
+  const xScale = d3
+    .scaleLog()
+    .domain([xExtent[0] * 0.8, xExtent[1] * 1.2])
+    .range([0, innerWidth]);
+  const yScale = d3
+    .scaleLinear()
+    .domain([0, yMax * 1.05])
+    .range([innerHeight, 0]);
+
+  createXAxis(g, xScale, {
+    height: innerHeight,
+    label: "Parameters",
+    tickFormat: formatParams,
+    gridHeight: innerHeight,
+  });
+  createYAxis(g, yScale, {
+    label: "Fraction of Heads",
+    gridWidth: innerWidth,
+  });
+
+  const curve = d3.curveCatmullRom.alpha(0.5);
 
   for (const cid of clusterIds) {
     const points = byCluster[cid];
-    // Group by model size -> collect frac values
+    const color = clusterColor(cid);
+    const fillColor = clusterColorAlpha(cid, 0.15);
+
+    // Group by model size
     /** @type {Object<string, number[]>} */
     const bySize = {};
     for (const p of points) {
@@ -752,131 +866,142 @@ function buildSizeChartDistribution(filtered) {
     const sizes = Object.keys(bySize)
       .map(Number)
       .sort((a, b) => a - b);
-    const maxPts = sizes.map((s) => ({
-      x: s,
-      y: Math.max(...bySize[String(s)]),
-    }));
-    const minPts = sizes.map((s) => ({
-      x: s,
-      y: Math.min(...bySize[String(s)]),
-    }));
-    const meanPts = sizes.map((s) => {
+    const stats = sizes.map((s) => {
       const vals = bySize[String(s)];
-      return { x: s, y: vals.reduce((a, b) => a + b, 0) / vals.length };
+      return {
+        size: s,
+        min: Math.min(...vals),
+        max: Math.max(...vals),
+        mean: vals.reduce((a, b) => a + b, 0) / vals.length,
+      };
     });
 
-    const color = clusterColor(cid);
-    const fillColor = clusterColorAlpha(cid, 0.15);
+    const clusterG = g
+      .append("g")
+      .attr("class", `cluster-group cluster-${cid}`)
+      .style("display", clusterVisible[cid] ? null : "none");
 
-    // Max line (fill down to next dataset = min line)
-    datasets.push({
-      label: clusterLegendLabel(cid),
-      data: maxPts,
-      borderColor: color,
-      borderWidth: 1,
-      borderDash: [4, 2],
-      pointRadius: 0,
-      showLine: true,
-      tension: 0.2,
-      fill: "+1",
-      backgroundColor: fillColor,
-      _clusterId: cid,
-      _role: "max",
-    });
-    // Min line
-    datasets.push({
-      label: "",
-      data: minPts,
-      borderColor: color,
-      borderWidth: 1,
-      borderDash: [4, 2],
-      pointRadius: 0,
-      showLine: true,
-      tension: 0.2,
-      fill: false,
-      _clusterId: cid,
-      _role: "min",
-    });
-    // Mean line (solid, thicker)
-    datasets.push({
-      label: "",
-      data: meanPts,
-      borderColor: color,
-      borderWidth: 2.5,
-      pointRadius: 1,
-      pointHoverRadius: 4,
-      showLine: true,
-      tension: 0.2,
-      fill: false,
-      _clusterId: cid,
-      _role: "mean",
-    });
+    // Filled area
+    const area = d3
+      .area()
+      .x((d) => xScale(d.size))
+      .y0((d) => yScale(d.min))
+      .y1((d) => yScale(d.max))
+      .curve(curve);
+    clusterG
+      .append("path")
+      .datum(stats)
+      .attr("fill", fillColor)
+      .attr("stroke", "none")
+      .attr("d", area);
+
+    // Max line (dashed)
+    clusterG
+      .append("path")
+      .datum(stats)
+      .attr("fill", "none")
+      .attr("stroke", color)
+      .attr("stroke-width", 1)
+      .attr("stroke-dasharray", "4,2")
+      .attr(
+        "d",
+        d3
+          .line()
+          .x((d) => xScale(d.size))
+          .y((d) => yScale(d.max))
+          .curve(curve),
+      );
+
+    // Min line (dashed)
+    clusterG
+      .append("path")
+      .datum(stats)
+      .attr("fill", "none")
+      .attr("stroke", color)
+      .attr("stroke-width", 1)
+      .attr("stroke-dasharray", "4,2")
+      .attr(
+        "d",
+        d3
+          .line()
+          .x((d) => xScale(d.size))
+          .y((d) => yScale(d.min))
+          .curve(curve),
+      );
+
+    // Mean line (solid)
+    clusterG
+      .append("path")
+      .datum(stats)
+      .attr("fill", "none")
+      .attr("stroke", color)
+      .attr("stroke-width", 2.5)
+      .attr(
+        "d",
+        d3
+          .line()
+          .x((d) => xScale(d.size))
+          .y((d) => yScale(d.mean))
+          .curve(curve),
+      );
+
+    // Hover points on mean
+    clusterG
+      .selectAll(null)
+      .data(stats.map((s) => ({ ...s, cid })))
+      .enter()
+      .append("circle")
+      .attr("cx", (d) => xScale(d.size))
+      .attr("cy", (d) => yScale(d.mean))
+      .attr("r", 1)
+      .attr("fill", color)
+      .on("mouseover", (event, d) => {
+        d3.select(event.target).attr("r", 4);
+        const label = clusterLegendLabel(d.cid);
+        let html = `${label} (mean) | ${formatParams(d.size)} | frac=${d.mean.toFixed(3)}`;
+        const desc = clusterDesc(d.cid);
+        if (desc) html += `<br>${desc}`;
+        tooltip.show(event, html);
+      })
+      .on("mouseout", (event) => {
+        d3.select(event.target).attr("r", 1);
+        tooltip.hide();
+      });
   }
 
-  const ctx = document.getElementById("size-chart").getContext("2d");
-  if (sizeChart) sizeChart.destroy();
-
-  sizeChart = new Chart(ctx, {
-    type: "scatter",
-    data: { datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: "nearest", intersect: false },
-      scales: {
-        x: {
-          type: "logarithmic",
-          title: { display: true, text: "Parameters", color: "#555" },
-          ticks: { color: "#888", callback: formatParams },
-          grid: { color: "rgba(0,0,0,0.08)" },
-        },
-        y: {
-          title: { display: true, text: "Fraction of Heads", color: "#555" },
-          min: 0,
-          ticks: { color: "#888" },
-          grid: { color: "rgba(0,0,0,0.08)" },
-        },
-      },
-      plugins: {
-        legend: {
-          display: true,
-          position: "right",
-          labels: {
-            color: "#555",
-            font: { size: 11 },
-            filter: (item) => item.text !== "",
-          },
-          onClick: (_e, legendItem, legend) => {
-            const cid =
-              legend.chart.data.datasets[legendItem.datasetIndex]._clusterId;
-            const isHidden = !legendItem.hidden;
-            for (let i = 0; i < legend.chart.data.datasets.length; i++) {
-              if (legend.chart.data.datasets[i]._clusterId === cid) {
-                legend.chart.setDatasetVisibility(i, isHidden);
-              }
-            }
-            legend.chart.update();
-          },
-        },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const ds = ctx.dataset;
-              const line = `${clusterLegendLabel(ds._clusterId)} (${ds._role}) | ${formatParams(ctx.parsed.x)} | frac=${ctx.parsed.y.toFixed(3)}`;
-              const desc = clusterDesc(ds._clusterId);
-              return desc ? [line, desc] : line;
-            },
-          },
-        },
-      },
+  // Legend
+  createLegend(svg, {
+    items: clusterIds.map((cid) => ({
+      label: clusterLegendLabel(cid),
+      color: clusterColor(cid),
+      _cid: cid,
+    })),
+    x: CHART_MARGIN.left + innerWidth + 12,
+    y: CHART_MARGIN.top,
+    onClick: (_label, _idx, item) => {
+      const cid = item._cid;
+      clusterVisible[cid] = !clusterVisible[cid];
+      g.select(`.cluster-${cid}`).style(
+        "display",
+        clusterVisible[cid] ? null : "none",
+      );
     },
   });
+
+  addExportButton(containerId, "model-size-cluster-distribution");
 }
 
 // ── Chart 3: Cluster entropy by layer ───────────────────────────
 
 function buildEntropyChart() {
+  const containerId = "entropy-chart-container";
   const records = currentRecords.entropy_by_layer;
+
+  const { svg, g, innerWidth, innerHeight } = createChartSVG(
+    containerId,
+    CHART_MARGIN,
+  );
+  const tooltip = createTooltip(containerId);
 
   // Group by model (filtered by family)
   /** @type {Object<string, Array<{x:number, y:number}>>} */
@@ -888,76 +1013,80 @@ function buildEntropyChart() {
   }
 
   const models = Object.keys(byModel).sort();
-  const datasets = models.map((m, i) => {
+  const yMax = d3.max(models.flatMap((m) => byModel[m].map((d) => d.y))) || 1;
+
+  const xScale = d3.scaleLinear().domain([-0.02, 1.02]).range([0, innerWidth]);
+  const yScale = d3
+    .scaleLinear()
+    .domain([0, yMax * 1.05])
+    .range([innerHeight, 0]);
+
+  createXAxis(g, xScale, {
+    height: innerHeight,
+    label: "Normalized Layer Depth",
+    gridHeight: innerHeight,
+  });
+  createYAxis(g, yScale, {
+    label: "Shannon Entropy (bits)",
+    gridWidth: innerWidth,
+  });
+
+  const curve = d3.curveCatmullRom.alpha(0.5);
+
+  models.forEach((m, i) => {
     const pts = byModel[m].sort((a, b) => a.x - b.x);
     const color = modelColor(i, models.length);
-    return {
+
+    const modelG = g.append("g").attr("class", "model-group");
+
+    // Line
+    const line = d3
+      .line()
+      .x((d) => xScale(d.x))
+      .y((d) => yScale(d.y))
+      .curve(curve);
+    modelG
+      .append("path")
+      .datum(pts)
+      .attr("fill", "none")
+      .attr("stroke", color)
+      .attr("stroke-width", 2)
+      .attr("d", line);
+
+    // Points
+    modelG
+      .selectAll(null)
+      .data(pts.map((p) => ({ ...p, model: m })))
+      .enter()
+      .append("circle")
+      .attr("cx", (d) => xScale(d.x))
+      .attr("cy", (d) => yScale(d.y))
+      .attr("r", 2)
+      .attr("fill", color)
+      .on("mouseover", (event, d) => {
+        d3.select(event.target).attr("r", 4);
+        tooltip.show(
+          event,
+          `${d.model} | depth=${d.x.toFixed(2)} entropy=${d.y.toFixed(3)}`,
+        );
+      })
+      .on("mouseout", (event) => {
+        d3.select(event.target).attr("r", 2);
+        tooltip.hide();
+      });
+  });
+
+  // Legend
+  createLegend(svg, {
+    items: models.map((m, i) => ({
       label: m,
-      data: pts,
-      backgroundColor: color,
-      borderColor: color,
-      borderWidth: 2,
-      pointRadius: 2,
-      pointHoverRadius: 4,
-      showLine: true,
-      tension: 0.2,
-      fill: false,
-    };
+      color: modelColor(i, models.length),
+    })),
+    x: CHART_MARGIN.left + innerWidth + 12,
+    y: CHART_MARGIN.top,
   });
 
-  const ctx = document.getElementById("entropy-chart").getContext("2d");
-  if (entropyChart) entropyChart.destroy();
-
-  entropyChart = new Chart(ctx, {
-    type: "scatter",
-    data: { datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: "nearest",
-        intersect: false,
-      },
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: "Normalized Layer Depth",
-            color: "#555",
-          },
-          min: -0.02,
-          max: 1.02,
-          ticks: { color: "#888" },
-          grid: { color: "rgba(0,0,0,0.08)" },
-        },
-        y: {
-          title: {
-            display: true,
-            text: "Shannon Entropy (bits)",
-            color: "#555",
-          },
-          min: 0,
-          ticks: { color: "#888" },
-          grid: { color: "rgba(0,0,0,0.08)" },
-        },
-      },
-      plugins: {
-        legend: {
-          display: true,
-          position: "right",
-          labels: { color: "#555", font: { size: 11 } },
-        },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const ds = ctx.dataset;
-              return `${ds.label} | depth=${ctx.parsed.x.toFixed(2)} entropy=${ctx.parsed.y.toFixed(3)}`;
-            },
-          },
-        },
-      },
-    },
-  });
+  addExportButton(containerId, "cluster-entropy-by-layer");
 }
 
 // ── Cluster chips ───────────────────────────────────────────────
