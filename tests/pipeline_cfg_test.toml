@@ -35,8 +35,7 @@ prompts_url = "../../patterns/tiny-stories-1M/prompts.jsonl"
 
 # ablation -- minimal config for test pipeline
 [ablation]
-heads = ["tiny-stories-1M:L0:H0"]
-n_clusters = 2
+all_heads = true
 output_dir = "tests/.temp/ablations"
 n_sequences = 2
 seq_length = 5
