@@ -46,15 +46,68 @@ def _serialize_results(
 	return {"models": models}
 
 
+def deploy_ablation_frontend(
+	output_dir: Path | str,
+	verbose: int = 1,
+) -> Path:
+	"""Copy bundled ablation HTML and libs to *output_dir*.
+
+	Fixes the ``chart.min.js`` path for the ablation deploy location
+	(depth 1 under ``data/``, not depth 2 like ``data/vis/X/``), and
+	copies the library file to ``output_dir.parent / "libs/"``.
+
+	Parameters
+	----------
+	output_dir
+	    Directory to write ``index.html`` into (e.g. ``data/ablations``).
+	verbose
+	    Print output paths when > 0.
+
+	Returns
+	-------
+	Path
+	    Path to the written ``index.html``.
+	"""
+	output_dir = Path(output_dir)
+	output_dir.mkdir(parents=True, exist_ok=True)
+
+	# Copy bundled HTML (fix chart.min.js path for runtime location)
+	# The bundler keeps ../../libs/chart.min.js (build-time path), but at
+	# runtime the HTML is at data/ablations/ (depth 1), not data/vis/X/ (depth 2),
+	# so the correct runtime path is ../libs/chart.min.js → data/libs/.
+	html: str = _get_bundled_html()
+	html = html.replace(
+		'src="../../libs/chart.min.js"',
+		'src="../libs/chart.min.js"',
+	)
+	html_path: Path = output_dir / "index.html"
+	html_path.write_text(html)
+
+	# Ensure chart.min.js is available at data/libs/
+	frontend_resources_path: Path = Path(
+		importlib.resources.files(attention_motifs).joinpath("frontend"),  # type: ignore[arg-type]
+	)
+	libs_src: Path = frontend_resources_path / "libs" / "chart.min.js"
+	libs_dst: Path = output_dir.parent / "libs" / "chart.min.js"
+	libs_dst.parent.mkdir(parents=True, exist_ok=True)
+	libs_dst.write_bytes(libs_src.read_bytes())
+
+	if verbose > 0:
+		print(f"Wrote ablation frontend to {html_path}")
+		print(f"Wrote chart.min.js to {libs_dst}")
+
+	return html_path
+
+
 def write_ablation_frontend(
 	all_results: dict[str, AblationResults],
 	output_dir: Path | str,
 ) -> Path:
 	"""Write ablation frontend HTML and results data to *output_dir*.
 
-	Copies the bundled ``index.html`` and writes serialized results as
-	a separate ``ablation_results.json`` file.  The frontend fetches
-	the JSON at runtime.
+	Copies the bundled ``index.html`` (with path fixes) and writes
+	serialized results as a separate ``ablation_results.json`` file.
+	The frontend fetches the JSON at runtime.
 
 	Parameters
 	----------
@@ -69,12 +122,9 @@ def write_ablation_frontend(
 	    Path to the written ``index.html``.
 	"""
 	output_dir = Path(output_dir)
-	output_dir.mkdir(parents=True, exist_ok=True)
 
-	# Copy bundled HTML
-	html: str = _get_bundled_html()
-	html_path: Path = output_dir / "index.html"
-	html_path.write_text(html)
+	# Deploy HTML + libs
+	html_path: Path = deploy_ablation_frontend(output_dir, verbose=0)
 
 	# Write data JSON
 	data: dict[str, Any] = _serialize_results(all_results)
