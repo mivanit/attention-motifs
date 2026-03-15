@@ -154,7 +154,9 @@ def run_ablation(cfg: PipelineConfig) -> None:
 
 	**Routing parameters** (consumed by this step):
 
-	- ``cut_height`` (float): dendrogram cut height
+	- ``all_heads`` (bool): if true, ablate ALL heads in all pipeline models
+	  (ignores cut_height, n_clusters, heads, cluster_ids)
+	- ``cut_height`` (float): dendrogram cut height (per-cluster mode)
 	- ``n_clusters`` (int): number of clusters (alternative to cut_height)
 	- ``heads`` (list[str]): head IDs to look up clusters for
 	  (e.g. ``["gpt2-small:L5:H5"]``)
@@ -176,25 +178,14 @@ def run_ablation(cfg: PipelineConfig) -> None:
 		print("[skip] s7_ablation: no [ablation] section in config")
 		return
 
-	cut_height: float | None = ablation_dict.get("cut_height")
-	n_clusters: int | None = ablation_dict.get("n_clusters")
-	if cut_height is None and n_clusters is None:
-		raise ValueError("[ablation] must specify either 'cut_height' or 'n_clusters'")
-
 	output_dir: Path = Path(ablation_dict.get("output_dir", "data/ablations"))
+	all_heads_mode: bool = bool(ablation_dict.get("all_heads", False))
 
-	# --- Load clustering and get assignments ---
+	# --- Load clustering ---
 	clustering_path: Path = cfg.data_path("clustering")
 	clustering: HierarchicalClusteringResult = HierarchicalClusteringResult.read(
 		clustering_path
 	)
-	assignments: dict[str, int] = clustering.get_clusters(
-		cut_height=cut_height,
-		n_clusters=n_clusters,
-	)
-
-	# --- Determine which clusters to run ---
-	cluster_map: dict[int, list[str]] = _resolve_cluster_ids(ablation_dict, assignments)
 
 	# --- Build AblationConfig ---
 	config: AblationConfig = _build_ablation_config(ablation_dict)
@@ -216,9 +207,45 @@ def run_ablation(cfg: PipelineConfig) -> None:
 				"skipping ICL evaluation"
 			)
 
+	# --- All-heads mode ---
+	if all_heads_mode:
+		print(f"Ablation (all heads): output → {output_dir}")
+
+		# Build candidates from all heads in the clustering result
+		candidates: CandidateHeads = CandidateHeads.all_from_cls_values(
+			clustering.cls_values
+		)
+		candidates = candidates.filter_models(cfg.models)
+
+		if candidates.n_heads == 0:
+			print("  No heads in pipeline models, skipping")
+			return
+
+		results: dict[str, AblationResults] = evaluate_induction_scores(
+			candidates=candidates,
+			config=config,
+			icl_prompts=icl_prompts,
+			device=cfg.device,
+			output_dir=output_dir,
+			show_progress=cfg.verbose > 0,
+		)
+
+		print(f"  All-heads ablation: completed {len(results)} model(s)")
+		return
+
+	# --- Per-cluster mode ---
+	cut_height: float | None = ablation_dict.get("cut_height")
+	n_clusters: int | None = ablation_dict.get("n_clusters")
+	if cut_height is None and n_clusters is None:
+		raise ValueError("[ablation] must specify either 'cut_height' or 'n_clusters'")
+
+	assignments: dict[str, int] = clustering.get_clusters(
+		cut_height=cut_height,
+		n_clusters=n_clusters,
+	)
+	cluster_map: dict[int, list[str]] = _resolve_cluster_ids(ablation_dict, assignments)
 	print(f"Ablation: {len(cluster_map)} cluster(s), output → {output_dir}")
 
-	# --- Iterate clusters ---
 	for cluster_id, seed_heads in sorted(cluster_map.items()):
 		if seed_heads:
 			print(
@@ -229,14 +256,14 @@ def run_ablation(cfg: PipelineConfig) -> None:
 			print(f"\n--- Ablating cluster {cluster_id} ---")
 
 		# Build candidates from assignments
-		candidates: CandidateHeads = CandidateHeads._from_assignments(
+		cluster_candidates: CandidateHeads = CandidateHeads._from_assignments(
 			assignments, cluster_id
 		)
 
 		# Filter to pipeline models only
-		candidates = candidates.filter_models(cfg.models)
+		cluster_candidates = cluster_candidates.filter_models(cfg.models)
 
-		if candidates.n_heads == 0:
+		if cluster_candidates.n_heads == 0:
 			print(f"  Cluster {cluster_id}: no heads in pipeline models, skipping")
 			continue
 
@@ -248,7 +275,7 @@ def run_ablation(cfg: PipelineConfig) -> None:
 		_write_cluster_info(
 			cluster_output,
 			cluster_id,
-			candidates,
+			cluster_candidates,
 			cut_height,
 			n_clusters,
 			seed_heads=seed_heads or None,
@@ -256,8 +283,8 @@ def run_ablation(cfg: PipelineConfig) -> None:
 
 		# Delegate to evaluate_induction_scores
 		# (handles per-model results, resume, frontend writing)
-		results: dict[str, AblationResults] = evaluate_induction_scores(
-			candidates=candidates,
+		cluster_results: dict[str, AblationResults] = evaluate_induction_scores(
+			candidates=cluster_candidates,
 			config=config,
 			icl_prompts=icl_prompts,
 			device=cfg.device,
@@ -265,7 +292,7 @@ def run_ablation(cfg: PipelineConfig) -> None:
 			show_progress=cfg.verbose > 0,
 		)
 
-		print(f"  Cluster {cluster_id}: completed {len(results)} model(s)")
+		print(f"  Cluster {cluster_id}: completed {len(cluster_results)} model(s)")
 
 
 if __name__ == "__main__":

@@ -242,6 +242,29 @@ class CandidateHeads:
 
 		return cls(heads_by_model=heads_by_model)
 
+	@classmethod
+	def all_from_cls_values(cls, cls_values: list[str]) -> CandidateHeads:
+		"""Build CandidateHeads with ALL heads from a cls_values list.
+
+		Parses each ``"model:Llayer:Hhead"`` string and groups by model.
+		Useful for running ablations on every head in the pipeline.
+
+		Parameters
+		----------
+		cls_values
+			List of head IDs (e.g. from ``HierarchicalClusteringResult.cls_values``).
+		"""
+		heads_by_model: dict[str, list[tuple[int, int]]] = {}
+		for head_id in cls_values:
+			model_name: str
+			layer: int
+			head: int
+			model_name, layer, head = parse_cls(head_id)
+			if model_name not in heads_by_model:
+				heads_by_model[model_name] = []
+			heads_by_model[model_name].append((layer, head))
+		return cls(heads_by_model=heads_by_model)
+
 	# --- Internal helpers ---
 
 	@classmethod

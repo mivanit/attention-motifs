@@ -183,19 +183,21 @@ dataFile = "../../../features/pca.csv"
 
 # ablation experiments (step s7)
 # ============================================================
-# Runs ablation on heads from clustering results (requires s4c).
-# Specify clusters via `heads` (look up each head's cluster) or `cluster_ids`.
-# Omit both to ablate all clusters at the given cut height.
+# Runs ablation experiments (requires s4c for clustering data).
+# all_heads = true: ablate every head in every pipeline model.
+# all_heads = false: per-cluster mode (specify cut_height + heads/cluster_ids).
 [ablation]
-cut_height = 5.0
-heads = ["gpt2-small:L5:H5"]
-# cluster_ids = [3, 7]       # alternative: explicit cluster indices
+all_heads = true
 output_dir = "data/ablations"
-# n_sequences = 100
-# seq_length = 25
-# n_repetitions = 4
-# seed = 42
-# micro_batch_size = 20
-# n_calibration_prompts = 50
-# icl_prompts_file = "data/text/pile_10k.jsonl"
+n_sequences = 100
+seq_length = 25
+n_repetitions = 4
+seed = 42
+micro_batch_size = 20
+calibration_prompts_file = "data/text/pile_10k.jsonl"
+icl_prompts_file = "data/text/pile_10k.jsonl"
+# --- Per-cluster mode (used when all_heads = false) ---
+# cut_height = 5.0
+# heads = ["gpt2-small:L5:H5"]
+# cluster_ids = [3, 7]
 
