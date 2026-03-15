@@ -67,6 +67,9 @@ const METRIC_DISPLAY_NAMES = {
   icl_degradation: "ICL Degradation",
 };
 
+// === Chart margins ===
+const ABLATION_CHART_MARGIN = { top: 28, right: 12, bottom: 40, left: 44 };
+
 // === State ===
 
 let allData = null;
@@ -81,9 +84,6 @@ let chartType = "histogram"; // "histogram" | "boxplot"
 let visibleGroups = new Set(DEFAULT_VISIBLE_GROUPS);
 let sortColumn = "loss_increase";
 let sortDescending = true;
-
-// Chart instances keyed by metric name
-const charts = {};
 
 // === Model family helpers ===
 
@@ -172,7 +172,7 @@ async function init() {
 
   // Initial render
   renderClusterChips();
-  createChartCanvases();
+  createChartContainers();
   renderCharts();
   renderConfigSummary();
   renderTable();
@@ -383,15 +383,15 @@ function extractValues(results, metric) {
   return results.map((r) => r[metric]).filter((v) => v != null && !isNaN(v));
 }
 
-// === Charts ===
+// === Charts (D3 SVG) ===
 
-function createChartCanvases() {
+function createChartContainers() {
   const grid = document.getElementById("charts-grid");
   grid.innerHTML = "";
   for (const metric of DISTRIBUTION_METRICS) {
     const div = document.createElement("div");
     div.className = "chart-cell";
-    div.innerHTML = `<canvas id="chart-${metric}"></canvas>`;
+    div.id = `chart-container-${metric}`;
     grid.appendChild(div);
   }
 }
@@ -413,9 +413,9 @@ function renderCharts() {
     const inValues = extractValues(inCluster, metric);
     const outValues = extractValues(outCluster, metric);
 
-    // Skip if no data at all
     if (inValues.length === 0 && outValues.length === 0) {
-      destroyChart(metric);
+      const container = document.getElementById(`chart-container-${metric}`);
+      if (container) container.innerHTML = "";
       continue;
     }
 
@@ -427,17 +427,13 @@ function renderCharts() {
   }
 }
 
-function destroyChart(metric) {
-  if (charts[metric]) {
-    charts[metric].destroy();
-    delete charts[metric];
-  }
-}
-
 function renderHistogram(metric, inValues, outValues) {
-  destroyChart(metric);
-  const canvas = document.getElementById(`chart-${metric}`);
-  if (!canvas) return;
+  const containerId = `chart-container-${metric}`;
+  const margin = ABLATION_CHART_MARGIN;
+  const { svg, g, innerWidth, innerHeight } = createChartSVG(
+    containerId,
+    margin,
+  );
 
   const allValues = [...inValues, ...outValues];
   if (allValues.length === 0) return;
@@ -446,12 +442,6 @@ function renderHistogram(metric, inValues, outValues) {
   const max = Math.max(...allValues);
   const nBins = 20;
   const binWidth = (max - min) / nBins || 1;
-
-  const binEdges = Array.from(
-    { length: nBins + 1 },
-    (_, i) => min + i * binWidth,
-  );
-  const labels = binEdges.slice(0, nBins).map((e) => e.toFixed(2));
 
   function histogram(values) {
     const counts = new Array(nBins).fill(0);
@@ -466,103 +456,217 @@ function renderHistogram(metric, inValues, outValues) {
 
   const inCounts = histogram(inValues);
   const outCounts = histogram(outValues);
+  const maxCount = Math.max(...inCounts, ...outCounts, 1);
 
-  const clusterColor =
+  const xScale = d3.scaleLinear().domain([min, max]).range([0, innerWidth]);
+  const yScale = d3
+    .scaleLinear()
+    .domain([0, maxCount * 1.1])
+    .range([innerHeight, 0]);
+
+  createXAxis(g, xScale, {
+    height: innerHeight,
+    label: metric,
+    ticks: 6,
+  });
+  createYAxis(g, yScale, {
+    label: "Count",
+    ticks: 5,
+  });
+
+  const barWidth = innerWidth / nBins;
+  const halfBar = barWidth / 2 - 1;
+
+  const clusterColorStr =
     selectedCluster !== null
       ? clustering.getClusterColor(selectedCluster)
       : "hsl(210, 70%, 50%)";
   const clusterLabel = getClusterChipLabel();
 
-  charts[metric] = new Chart(canvas, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: clusterLabel + ` (${inValues.length})`,
-          data: inCounts,
-          backgroundColor: clusterColorToRGBA(clusterColor, 0.6),
-          borderColor: clusterColorToRGBA(clusterColor, 1),
-          borderWidth: 1,
-        },
-        {
-          label: `Other (${outValues.length})`,
-          data: outCounts,
-          backgroundColor: "rgba(150, 150, 150, 0.35)",
-          borderColor: "rgba(150, 150, 150, 0.7)",
-          borderWidth: 1,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        title: {
-          display: true,
-          text: METRIC_DISPLAY_NAMES[metric] || metric,
-          font: { size: 13, weight: "bold" },
-        },
-        legend: { labels: { font: { size: 11 } } },
-      },
-      scales: {
-        x: { title: { display: true, text: metric, font: { size: 11 } } },
-        y: { title: { display: true, text: "Count", font: { size: 11 } } },
-      },
-    },
-  });
+  // In-cluster bars (left half of each bin)
+  g.selectAll(".bar-in")
+    .data(inCounts)
+    .enter()
+    .append("rect")
+    .attr("class", "bar-in")
+    .attr("x", (_, i) => xScale(min + i * binWidth))
+    .attr("y", (d) => yScale(d))
+    .attr("width", halfBar)
+    .attr("height", (d) => innerHeight - yScale(d))
+    .attr("fill", clusterColorToRGBA(clusterColorStr, 0.6))
+    .attr("stroke", clusterColorToRGBA(clusterColorStr, 1))
+    .attr("stroke-width", 1);
+
+  // Out-cluster bars (right half of each bin)
+  g.selectAll(".bar-out")
+    .data(outCounts)
+    .enter()
+    .append("rect")
+    .attr("class", "bar-out")
+    .attr("x", (_, i) => xScale(min + i * binWidth) + halfBar + 1)
+    .attr("y", (d) => yScale(d))
+    .attr("width", halfBar)
+    .attr("height", (d) => innerHeight - yScale(d))
+    .attr("fill", "rgba(150, 150, 150, 0.35)")
+    .attr("stroke", "rgba(150, 150, 150, 0.7)")
+    .attr("stroke-width", 1);
+
+  // Title
+  svg
+    .append("text")
+    .attr("x", margin.left + innerWidth / 2)
+    .attr("y", 16)
+    .attr("text-anchor", "middle")
+    .attr("font-size", CHART_STYLES.titleFontSize)
+    .attr("font-weight", "bold")
+    .attr("fill", "#333")
+    .text(METRIC_DISPLAY_NAMES[metric] || metric);
+
+  // Legend
+  const legendG = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left + 8},${margin.top + 4})`);
+
+  // In-cluster legend item
+  legendG
+    .append("rect")
+    .attr("width", 10)
+    .attr("height", 10)
+    .attr("rx", 2)
+    .attr("fill", clusterColorToRGBA(clusterColorStr, 0.6));
+  legendG
+    .append("text")
+    .attr("x", 14)
+    .attr("y", 9)
+    .attr("font-size", CHART_STYLES.legendFontSize)
+    .attr("fill", CHART_STYLES.labelColor)
+    .text(`${clusterLabel} (${inValues.length})`);
+
+  // Other legend item
+  legendG
+    .append("rect")
+    .attr("y", 14)
+    .attr("width", 10)
+    .attr("height", 10)
+    .attr("rx", 2)
+    .attr("fill", "rgba(150, 150, 150, 0.35)");
+  legendG
+    .append("text")
+    .attr("x", 14)
+    .attr("y", 23)
+    .attr("font-size", CHART_STYLES.legendFontSize)
+    .attr("fill", CHART_STYLES.labelColor)
+    .text(`Other (${outValues.length})`);
+
+  addExportButton(containerId, `ablation-histogram-${metric}`);
 }
 
 function renderBoxPlot(metric, inValues, outValues) {
-  destroyChart(metric);
-  const canvas = document.getElementById(`chart-${metric}`);
-  if (!canvas) return;
+  const containerId = `chart-container-${metric}`;
+  const margin = ABLATION_CHART_MARGIN;
+  const { svg, g, innerWidth, innerHeight } = createChartSVG(
+    containerId,
+    margin,
+  );
 
   if (inValues.length === 0 && outValues.length === 0) return;
 
-  const clusterColor =
+  const inStats = computeBoxplotStats(inValues);
+  const outStats = computeBoxplotStats(outValues);
+
+  // Compute Y domain from combined data
+  const allVals = [...inValues, ...outValues];
+  const yMin = Math.min(...allVals);
+  const yMax = Math.max(...allVals);
+  const yPad = (yMax - yMin) * 0.1 || 1;
+
+  const yScale = d3
+    .scaleLinear()
+    .domain([yMin - yPad, yMax + yPad])
+    .range([innerHeight, 0]);
+
+  createYAxis(g, yScale, { ticks: 6 });
+
+  const clusterColorStr =
     selectedCluster !== null
       ? clustering.getClusterColor(selectedCluster)
       : "hsl(210, 70%, 50%)";
   const clusterLabel = getClusterChipLabel();
 
-  charts[metric] = new Chart(canvas, {
-    type: "boxplot",
-    data: {
-      labels: [METRIC_DISPLAY_NAMES[metric] || metric],
-      datasets: [
-        {
-          label: clusterLabel + ` (${inValues.length})`,
-          data: [inValues],
-          backgroundColor: clusterColorToRGBA(clusterColor, 0.4),
-          borderColor: clusterColorToRGBA(clusterColor, 1),
-          borderWidth: 1,
-          outlierRadius: 2,
-        },
-        {
-          label: `Other (${outValues.length})`,
-          data: [outValues],
-          backgroundColor: "rgba(150, 150, 150, 0.25)",
-          borderColor: "rgba(150, 150, 150, 0.7)",
-          borderWidth: 1,
-          outlierRadius: 2,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      indexAxis: "x",
-      plugins: {
-        title: {
-          display: true,
-          text: METRIC_DISPLAY_NAMES[metric] || metric,
-          font: { size: 13, weight: "bold" },
-        },
-        legend: { labels: { font: { size: 11 } } },
-      },
-    },
-  });
+  const boxWidth = Math.min(innerWidth * 0.3, 60);
+  const centerX = innerWidth / 2;
+  const gap = 10;
+
+  // In-cluster boxplot (left)
+  if (inValues.length > 0) {
+    drawBoxplot(g, {
+      stats: inStats,
+      x: centerX - boxWidth - gap / 2,
+      width: boxWidth,
+      yScale,
+      fillColor: clusterColorToRGBA(clusterColorStr, 0.4),
+      strokeColor: clusterColorToRGBA(clusterColorStr, 1),
+    });
+  }
+
+  // Out-cluster boxplot (right)
+  if (outValues.length > 0) {
+    drawBoxplot(g, {
+      stats: outStats,
+      x: centerX + gap / 2,
+      width: boxWidth,
+      yScale,
+      fillColor: "rgba(150, 150, 150, 0.25)",
+      strokeColor: "rgba(150, 150, 150, 0.7)",
+    });
+  }
+
+  // Title
+  svg
+    .append("text")
+    .attr("x", margin.left + innerWidth / 2)
+    .attr("y", 16)
+    .attr("text-anchor", "middle")
+    .attr("font-size", CHART_STYLES.titleFontSize)
+    .attr("font-weight", "bold")
+    .attr("fill", "#333")
+    .text(METRIC_DISPLAY_NAMES[metric] || metric);
+
+  // Legend
+  const legendG = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left + 8},${margin.top + 4})`);
+
+  legendG
+    .append("rect")
+    .attr("width", 10)
+    .attr("height", 10)
+    .attr("rx", 2)
+    .attr("fill", clusterColorToRGBA(clusterColorStr, 0.4));
+  legendG
+    .append("text")
+    .attr("x", 14)
+    .attr("y", 9)
+    .attr("font-size", CHART_STYLES.legendFontSize)
+    .attr("fill", CHART_STYLES.labelColor)
+    .text(`${clusterLabel} (${inValues.length})`);
+
+  legendG
+    .append("rect")
+    .attr("y", 14)
+    .attr("width", 10)
+    .attr("height", 10)
+    .attr("rx", 2)
+    .attr("fill", "rgba(150, 150, 150, 0.25)");
+  legendG
+    .append("text")
+    .attr("x", 14)
+    .attr("y", 23)
+    .attr("font-size", CHART_STYLES.legendFontSize)
+    .attr("fill", CHART_STYLES.labelColor)
+    .text(`Other (${outValues.length})`);
+
+  addExportButton(containerId, `ablation-boxplot-${metric}`);
 }
 
 function getClusterChipLabel() {
