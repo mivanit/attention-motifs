@@ -331,10 +331,14 @@ def run_ablation_experiment(
 		baseline_icl=baseline_icl,
 	)
 
-	# Combine candidate and control heads
+	# Combine candidate and control heads (deduplicate, candidates first)
+	seen: set[tuple[int, int]] = set(candidate_heads_int)
 	all_heads: list[tuple[int, int]] = list(candidate_heads_int)
 	if control_heads_int:
-		all_heads.extend(control_heads_int)
+		for h in control_heads_int:
+			if h not in seen:
+				all_heads.append(h)
+				seen.add(h)
 
 	# Run ablation for each head and method
 	heads_to_ablate: Iterable[tuple[int, int]] = all_heads

@@ -9,7 +9,9 @@ Implements key metrics from the literature:
 6. OV copying score (paper-style) - general OV-circuit copying tendency
 """
 
-from typing import Sequence
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Sequence
 
 from muutils.json_serialize import (
 	SerializableDataclass,
@@ -30,7 +32,8 @@ from attention_motifs.ablation.data import (
 )
 from attention_motifs.ablation.ablate import AblationMethod
 
-from transformer_lens import HookedTransformer
+if TYPE_CHECKING:
+	from transformer_lens import HookedTransformer
 
 
 @serializable_dataclass
@@ -100,7 +103,7 @@ class AblationResult(SerializableDataclass):
 
 
 def repeated_sequence_loss(
-	model: "HookedTransformer",
+	model: HookedTransformer,
 	sequences: Sequence[RepeatedSequence] | None = None,
 	seq_length: int = 25,
 	n_repetitions: int = 4,
@@ -212,7 +215,7 @@ def repeated_sequence_loss(
 
 
 def _prefix_score_impl(
-	model: "HookedTransformer",
+	model: HookedTransformer,
 	layer: int,
 	head: int,
 	sequences: Sequence[RepeatedSequence],
@@ -298,7 +301,7 @@ def _prefix_score_impl(
 
 
 def prefix_matching_score(
-	model: "HookedTransformer",
+	model: HookedTransformer,
 	layer: int,
 	head: int,
 	sequences: Sequence[RepeatedSequence] | None = None,
@@ -380,7 +383,7 @@ def prefix_matching_score(
 
 
 def preceding_token_score(
-	model: "HookedTransformer",
+	model: HookedTransformer,
 	layer: int,
 	head: int,
 	sequences: Sequence[RepeatedSequence] | None = None,
@@ -441,7 +444,7 @@ def preceding_token_score(
 
 
 def icl_score(
-	model: "HookedTransformer",
+	model: HookedTransformer,
 	prompts: list[str] | list[Tensor],
 	early_pos: int = 50,
 	late_pos: int = 500,
@@ -534,7 +537,7 @@ def icl_score(
 
 
 def compute_all_metrics(
-	model: "HookedTransformer",
+	model: HookedTransformer,
 	layer: int,
 	head: int,
 	repeated_sequences: Sequence[RepeatedSequence] | None = None,
@@ -595,7 +598,7 @@ def compute_all_metrics(
 
 
 def copying_score(
-	model: "HookedTransformer",
+	model: HookedTransformer,
 	layer: int,
 	head: int,
 	sequences: Sequence[RepeatedSequence] | None = None,
@@ -699,7 +702,7 @@ def copying_score(
 
 
 def ov_copying_score(
-	model: "HookedTransformer",
+	model: HookedTransformer,
 	layer: int,
 	head: int,
 	sequences: Sequence[RepeatedSequence] | None = None,

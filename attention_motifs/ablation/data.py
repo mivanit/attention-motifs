@@ -10,7 +10,7 @@ import json
 import random
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 
 import torch
 from torch import Tensor
@@ -73,7 +73,7 @@ class RepeatedSequence:
 
 
 def generate_repeated_sequences(
-	tokenizer,
+	tokenizer: Any,
 	n_sequences: int = 100,
 	seq_length: int = 25,
 	n_repetitions: int = 4,
@@ -354,7 +354,7 @@ def get_induction_mask(
 
 
 def generate_long_context_prompts(
-	tokenizer,
+	tokenizer: Any,
 	source_texts: list[str],
 	target_length: int = 512,
 	device: str = "cpu",

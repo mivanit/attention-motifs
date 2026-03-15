@@ -18,6 +18,7 @@ from attention_motifs.ablation.ablate import (
 )
 from attention_motifs.attnpedia import heads_from_strings
 from attention_motifs.ablation.candidates import (
+	CandidateHeads,
 	get_known_induction_heads,
 	DistanceCandidates,
 )
@@ -503,6 +504,45 @@ class TestDistanceCandidatesRoundtrip:
 
 
 # ============================================================
+# Tests for candidates.py - CandidateHeads
+# ============================================================
+
+
+class TestCandidateHeads:
+	"""Tests for CandidateHeads factory methods."""
+
+	def test_all_from_cls_values(self) -> None:
+		"""Test that all_from_cls_values parses and groups correctly."""
+		cls_values: list[str] = [
+			"modelA:L0:H0",
+			"modelA:L0:H1",
+			"modelA:L1:H0",
+			"modelB:L0:H0",
+			"modelB:L2:H3",
+		]
+		candidates: CandidateHeads = CandidateHeads.all_from_cls_values(cls_values)
+
+		assert set(candidates.models) == {"modelA", "modelB"}
+		assert sorted(candidates.heads_by_model["modelA"]) == [(0, 0), (0, 1), (1, 0)]
+		assert sorted(candidates.heads_by_model["modelB"]) == [(0, 0), (2, 3)]
+		assert candidates.n_heads == 5
+
+	def test_all_from_cls_values_empty(self) -> None:
+		"""Test that empty input produces empty candidates."""
+		candidates: CandidateHeads = CandidateHeads.all_from_cls_values([])
+		assert candidates.n_heads == 0
+		assert candidates.models == []
+
+	def test_filter_models(self) -> None:
+		"""Test that filter_models keeps only specified models."""
+		cls_values: list[str] = ["modelA:L0:H0", "modelB:L0:H0", "modelC:L0:H0"]
+		candidates: CandidateHeads = CandidateHeads.all_from_cls_values(cls_values)
+		filtered: CandidateHeads = candidates.filter_models(["modelA", "modelC"])
+		assert set(filtered.models) == {"modelA", "modelC"}
+		assert filtered.n_heads == 2
+
+
+# ============================================================
 # Tests for metrics.py - AblationResult
 # ============================================================
 
@@ -964,12 +1004,13 @@ class TestAblationFrontend:
 		from attention_motifs.ablation.frontend import write_ablation_frontend
 
 		all_results: dict[str, AblationResults] = self._make_results()
-		output_path: Path = write_ablation_frontend(all_results, tmp_path)
+		output_dir: Path = tmp_path / "ablations"
+		output_path: Path = write_ablation_frontend(all_results, output_dir)
 
 		assert output_path.exists()
 		assert output_path.name == "index.html"
 
-		data_path: Path = tmp_path / "ablation_results.json"
+		data_path: Path = output_dir / "ablation_results.json"
 		assert data_path.exists()
 
 		import json
@@ -977,6 +1018,37 @@ class TestAblationFrontend:
 		data: dict = json.loads(data_path.read_text())
 		assert "test-model" in data["models"]
 		assert data["models"]["test-model"]["results"][0]["head"] == "test-model:L0:H0"
+
+		# d3.min.js path is rewritten in HTML (depth 1 fix)
+		html: str = output_path.read_text()
+		assert "../../libs/d3.min.js" not in html
+
+		# d3.min.js is copied to parent/libs/
+		libs_path: Path = tmp_path / "libs" / "d3.min.js"
+		assert libs_path.exists()
+
+	def test_deploy_ablation_frontend(self, tmp_path: Path) -> None:
+		"""Test that deploy_ablation_frontend writes HTML and copies libs."""
+		from attention_motifs.ablation.frontend import deploy_ablation_frontend
+
+		output_dir: Path = tmp_path / "ablations"
+		html_path: Path = deploy_ablation_frontend(output_dir, verbose=0)
+
+		# Writes index.html
+		assert html_path == output_dir / "index.html"
+		assert html_path.exists()
+
+		# Path rewrite: ../../libs/d3.min.js → ../libs/d3.min.js
+		html: str = html_path.read_text()
+		assert "../../libs/d3.min.js" not in html
+
+		# d3.min.js copied to parent/libs/
+		libs_path: Path = tmp_path / "libs" / "d3.min.js"
+		assert libs_path.exists()
+		assert libs_path.stat().st_size > 0
+
+		# Does NOT write ablation_results.json
+		assert not (output_dir / "ablation_results.json").exists()
 
 	def test_serialize_results_structure(self) -> None:
 		"""Test that _serialize_results produces correct structure."""

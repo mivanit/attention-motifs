@@ -14,8 +14,10 @@ FRONTEND_PAGES: list[tuple[str, str]] = [
 	("vis/embeds/patterns/index.html", "Pattern embeddings"),
 	("vis/embeds/heads/index.html", "Head embeddings"),
 	("vis/clustering/index.html", "Clustering visualization"),
+	("vis/cluster_trends/index.html", "Cluster trends"),
 	("figures/head_embed_table.html", "Head embedding table"),
 	("figures/classifications.html", "Classifications page"),
+	("ablations/n2_c0/index.html", "Ablation results"),
 ]
 
 
