@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ablation Results</title>
     <link rel="stylesheet" href="style.css" />
+    <script src="../../libs/chart.min.js"></script>
+    <script src="../../libs/chartjs-chart-boxplot.min.js"></script>
+    <script src="../../shared/clustering_config.js"></script>
+    <script src="../../shared/cluster_utils.js"></script>
+    <script src="../../attnpedia/src/clustering.js"></script>
+    <script src="../../attnpedia/src/AttentionPedia.js"></script>
   </head>
   <body>
     <nav class="nav-bar">
@@ -19,19 +25,53 @@
     </nav>
 
     <div class="container">
-      <h1>Ablation Experiment Results</h1>
+      <h1>Ablation Results</h1>
 
-      <div class="config-summary" id="config-summary"></div>
-
-      <div class="model-tabs" id="model-tabs"></div>
-
-      <div class="model-summary" id="model-summary"></div>
-
-      <div class="controls" id="controls">
+      <!-- Controls row -->
+      <div class="controls-row">
+        <div class="control-group">
+          <label>Cut height:</label>
+          <input
+            type="range"
+            id="cut-height-slider"
+            min="0"
+            max="100"
+            step="0.01"
+            value="5"
+          />
+          <span id="cut-height-value">5.00</span>
+          <span id="n-clusters-label">(-- clusters)</span>
+        </div>
+        <div class="control-group">
+          <label>Models:</label>
+          <span id="model-family-buttons"></span>
+        </div>
         <div class="control-group">
           <label>Method:</label>
-          <span id="method-filters"></span>
+          <select id="method-select"></select>
         </div>
+        <div class="control-group">
+          <label>Chart:</label>
+          <span id="chart-type-buttons"></span>
+        </div>
+      </div>
+
+      <!-- Cluster chips -->
+      <div class="cluster-chips-container">
+        <div class="cluster-chips" id="cluster-chips"></div>
+      </div>
+
+      <!-- Distribution charts -->
+      <div class="charts-grid" id="charts-grid"></div>
+
+      <!-- Config summary (collapsible) -->
+      <details class="config-details">
+        <summary>Experiment Config</summary>
+        <div class="config-summary" id="config-summary"></div>
+      </details>
+
+      <!-- Head table -->
+      <div class="controls" id="table-controls">
         <div class="control-group">
           <label>Columns:</label>
           <span id="column-toggles"></span>

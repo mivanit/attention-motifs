@@ -44,11 +44,9 @@
     }
     
     .container {
+      max-width: 1400px;
       margin: 20px auto;
-      background-color: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 0 16px;
     }
     
     h1 {
@@ -57,15 +55,175 @@
       margin-bottom: 16px;
     }
     
-    /* Config summary */
+    /* === Controls row === */
+    
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      background: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      margin-bottom: 12px;
+    }
+    
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+    }
+    
+    .control-group > label {
+      font-weight: bold;
+      color: #495057;
+      white-space: nowrap;
+    }
+    
+    #cut-height-slider {
+      width: 180px;
+    }
+    
+    #cut-height-value {
+      font-family: "Menlo", "Consolas", monospace;
+      font-size: 12px;
+      min-width: 40px;
+    }
+    
+    #n-clusters-label {
+      color: #888;
+      font-size: 12px;
+    }
+    
+    #method-select {
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 12px;
+    }
+    
+    /* Family & chart type buttons */
+    
+    .family-btn,
+    .chart-type-btn {
+      padding: 4px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #f8f9fa;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    
+    .family-btn:hover,
+    .chart-type-btn:hover {
+      background: #e9ecef;
+    }
+    
+    .family-btn.active,
+    .chart-type-btn.active {
+      background: #3498db;
+      color: white;
+      border-color: #3498db;
+    }
+    
+    /* === Cluster chips === */
+    
+    .cluster-chips-container {
+      background: white;
+      padding: 10px 16px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      margin-bottom: 12px;
+      overflow-x: auto;
+    }
+    
+    .cluster-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    
+    .cluster-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border: 2px solid transparent;
+      border-radius: 16px;
+      background: color-mix(in srgb, var(--chip-color) 20%, white);
+      color: #333;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    
+    .cluster-chip:hover {
+      background: color-mix(in srgb, var(--chip-color) 35%, white);
+    }
+    
+    .cluster-chip.selected {
+      border-color: var(--chip-color);
+      background: color-mix(in srgb, var(--chip-color) 30%, white);
+      font-weight: 700;
+    }
+    
+    .chip-count {
+      font-size: 10px;
+      color: #666;
+      background: rgba(0, 0, 0, 0.06);
+      padding: 1px 5px;
+      border-radius: 8px;
+    }
+    
+    /* === Distribution charts === */
+    
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .chart-cell {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      padding: 12px;
+      height: 250px;
+    }
+    
+    .chart-cell canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+    
+    /* === Config summary === */
+    
+    .config-details {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      margin-bottom: 12px;
+      padding: 0;
+    }
+    
+    .config-details summary {
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: bold;
+      color: #495057;
+    }
+    
     .config-summary {
       display: flex;
       flex-wrap: wrap;
       gap: 6px 18px;
-      background: #f8f9fa;
-      padding: 10px 14px;
-      border-radius: 6px;
-      margin-bottom: 14px;
+      padding: 0 16px 12px;
       font-size: 13px;
     }
     
@@ -74,74 +232,18 @@
       color: #495057;
     }
     
-    /* Model tabs */
-    .model-tabs {
-      display: flex;
-      gap: 4px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
+    /* === Table controls === */
     
-    .model-tab {
-      padding: 5px 12px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      cursor: pointer;
-      background: #f8f9fa;
-      font-size: 13px;
-    }
-    
-    .model-tab:hover {
-      background: #e9ecef;
-    }
-    
-    .model-tab.active {
-      background: #3498db;
-      color: white;
-      border-color: #3498db;
-    }
-    
-    /* Model summary */
-    .model-summary {
-      display: flex;
-      gap: 24px;
-      margin-bottom: 14px;
-      padding: 10px 14px;
-      background: #eaf2f8;
-      border-radius: 6px;
-    }
-    
-    .summary-stat {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    
-    .summary-label {
-      font-size: 11px;
-      color: #666;
-      text-transform: uppercase;
-    }
-    
-    .summary-value {
-      font-size: 18px;
-      font-weight: bold;
-      color: #2c3e50;
-    }
-    
-    /* Controls */
     .controls {
       display: flex;
       gap: 20px;
-      margin-bottom: 14px;
+      margin-bottom: 8px;
       flex-wrap: wrap;
       font-size: 13px;
-    }
-    
-    .control-group > label {
-      font-weight: bold;
-      color: #495057;
-      margin-right: 4px;
+      background: white;
+      padding: 8px 16px;
+      border-radius: 8px 8px 0 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
     
     .chip {
@@ -161,11 +263,15 @@
       background: #e0e0e0;
     }
     
-    /* Table */
+    /* === Head table === */
+    
     .table-container {
       overflow-x: auto;
-      max-height: 80vh;
+      max-height: 70vh;
       overflow-y: auto;
+      background: white;
+      border-radius: 0 0 8px 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
     
     #results-table {
@@ -190,7 +296,9 @@
     }
     
     #results-table th:first-child,
-    #results-table th:nth-child(2) {
+    #results-table th:nth-child(2),
+    #results-table th:nth-child(3),
+    #results-table th:nth-child(4) {
       text-align: left;
     }
     
@@ -212,28 +320,65 @@
       white-space: nowrap;
     }
     
-    #results-table td:first-child {
-      text-align: left;
-      font-family: Arial, sans-serif;
+    .cell-head {
+      text-align: left !important;
+      font-family: Arial, sans-serif !important;
       font-weight: 500;
     }
     
-    #results-table td:first-child a {
+    .cell-head a {
       color: #1565c0;
       text-decoration: none;
     }
     
-    #results-table td:first-child a:hover {
+    .cell-head a:hover {
       text-decoration: underline;
     }
     
-    #results-table td:nth-child(2) {
-      text-align: left;
-      font-family: Arial, sans-serif;
+    .cell-cluster {
+      text-align: left !important;
+      font-family: Arial, sans-serif !important;
+    }
+    
+    .cell-class {
+      text-align: left !important;
+      font-family: Arial, sans-serif !important;
     }
     
     #results-table tbody tr:hover {
       background: #f5f8ff;
+    }
+    
+    /* Highlight rows in selected cluster */
+    .row-in-cluster {
+      background: rgba(52, 152, 219, 0.06);
+    }
+    
+    .row-in-cluster:hover {
+      background: rgba(52, 152, 219, 0.12) !important;
+    }
+    
+    /* Cluster badge */
+    .cluster-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* Classification badge */
+    .class-badge {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 3px;
+      background: #e8eaf6;
+      color: #3949ab;
+      font-size: 10px;
+      font-weight: 500;
+      margin: 0 1px;
     }
     
     /* Cell color coding */
@@ -252,6 +397,753 @@
     
     </style>
     <!-- end 'style.css' -->
+    <script src="../../libs/chart.min.js"></script>
+        <!-- begin '../../libs/chartjs-chart-boxplot.min.js' -->
+    <script>
+    !function(t,e){"object"==typeof exports&&"undefined"!=typeof module?e(exports,require("chart.js"),require("chart.js/helpers")):"function"==typeof define&&define.amd?define(["exports","chart.js","chart.js/helpers"],e):e((t="undefined"!=typeof globalThis?globalThis:t||self).ChartBoxPlot={},t.Chart,t.Chart.helpers)}(this,function(t,e,r){"use strict";const i=Math.sqrt(2*Math.PI);function o(t){return Math.exp(-.5*t*t)/i}function n(t){const e=t.items.length,r=function(t,e,r){let i=Math.sqrt(function(t,e){return t*e/(e-1)}(e,r));return"number"==typeof t&&(i=Math.min(i,t/1.34)),1.06*i*Math.pow(r,-.2)}(t.iqr,t.variance,e);return i=>{let n=0,s=0;for(n=0;n<e;n++){s+=o((i-t.items[n])/r)}return s/r/e}}function s(t,e,r){const i=e-1,o=e=>{const o=e*i,n=Math.floor(o),s=o-n,a=t[n];return 0===s?a:r(a,t[Math.min(n+1,i)],s)};return{q1:o(.25),median:o(.5),q3:o(.75)}}function a(t,e=t.length){return s(t,e,(t,e,r)=>t+r*(e-t))}function l(t,e=t.length){return s(t,e,(t,e,r)=>t+(e-t)*r)}function d(t,e=t.length){return s(t,e,t=>t)}function u(t,e=t.length){return s(t,e,(t,e)=>e)}function h(t,e=t.length){return s(t,e,(t,e,r)=>r<.5?t:e)}function m(t,e=t.length){return s(t,e,(t,e)=>.5*(t+e))}function c(t,e=t.length){const r=e,i=Math.floor((r+3)/2)/2,o=e=>.5*(t[Math.floor(e)-1]+t[Math.ceil(e)-1]);return{q1:o(i),median:o((r+1)/2),q3:o(r+1-i)}}function f(t,e=t.length){return c(t,e)}function g(t,e,r,i,{eps:o,quantiles:n,coef:s,whiskersMode:a}){const l=(t,e)=>Math.abs(t-e)<o,{median:d,q1:u,q3:h}=n(t,e),m=h-u,c="number"==typeof s&&s>0;let f=c?Math.max(r,u-s*m):r,g=c?Math.min(i,h+s*m):i;const x=[];for(let r=0;r<e;r+=1){const e=t[r];if(e>=f||l(e,f)){"nearest"===a&&(f=e);break}0!==x.length&&l(x[x.length-1],e)||x.push(e)}const p=[];for(let r=e-1;r>=0;r-=1){const e=t[r];if(e<=g||l(e,g)){"nearest"===a&&(g=e);break}0!==p.length&&l(p[p.length-1],e)||0!==x.length&&l(x[x.length-1],e)||p.push(e)}return{median:d,q1:u,q3:h,iqr:m,outlier:x.concat(p.reverse()),whiskerHigh:g,whiskerLow:f}}function x(t,e){let r=0;for(let i=0;i<e;i++){r+=t[i]}r/=e;let i=0;for(let o=0;o<e;o++){const e=t[o];i+=(e-r)*(e-r)}return i/=e,{mean:r,variance:i}}function p(t,e={}){const r={coef:1.5,eps:.01,quantiles:a,validAndSorted:!1,whiskersMode:"nearest",...e},{missing:i,s:o,min:s,max:l}=r.validAndSorted?function(t){return 0===t.length?{min:Number.NaN,max:Number.NaN,missing:0,s:[]}:{min:t[0],max:t[t.length-1],missing:0,s:t}}(t):function(t){let e=0;const{length:r}=t,i=t instanceof Float64Array?new Float64Array(r):new Float32Array(r);for(let o=0;o<r;o+=1){const r=t[o];null==r||Number.isNaN(r)||(i[e]=r,e+=1)}const o=r-e;if(0===e)return{min:Number.NaN,max:Number.NaN,missing:o,s:[]};const n=e===r?i:i.subarray(0,e);return n.sort((t,e)=>t===e?0:t<e?-1:1),{min:n[0],max:n[n.length-1],missing:o,s:n}}(t),d={min:Number.NaN,max:Number.NaN,mean:Number.NaN,missing:i,iqr:Number.NaN,count:t.length,whiskerHigh:Number.NaN,whiskerLow:Number.NaN,outlier:[],median:Number.NaN,q1:Number.NaN,q3:Number.NaN,variance:0,items:[],kde:()=>0},u=t.length-i;if(0===u)return d;const h={min:s,max:l,count:t.length,missing:i,items:o,...x(o,u),...g(o,u,s,l,r)};return{...h,kde:n(h)}}const y={coef:1.5,quantiles:7,whiskersMode:"nearest"};function w(t){const e=null==t||"number"!=typeof t.coef?y.coef:t.coef,r=function(t){return"function"==typeof t?t:{hinges:f,fivenum:c,7:a,quantiles:a,linear:l,lower:d,higher:u,nearest:h,midpoint:m}[t]||a}(null==t||null==t.quantiles?a:t.quantiles);return{coef:e,quantiles:r,whiskersMode:null==t||"string"!=typeof t.whiskersMode?y.whiskersMode:t.whiskersMode}}function b(t,e){if(t){if("number"==typeof t.median&&"number"==typeof t.q1&&"number"==typeof t.q3){if(void 0===t.whiskerMin){const{coef:r}=w(e),{whiskerMin:i,whiskerMax:o}=function(t,e,r=1.5){const i=t.q3-t.q1,o="number"==typeof r&&r>0;let n=o?Math.max(t.min,t.q1-r*i):t.min,s=o?Math.min(t.max,t.q3+r*i):t.max;if(Array.isArray(e)){for(let t=0;t<e.length;t+=1){const r=e[t];if(r>=n){n=r;break}}for(let t=e.length-1;t>=0;t-=1){const r=e[t];if(r<=s){s=r;break}}}return{whiskerMin:n,whiskerMax:s}}(t,Array.isArray(t.items)?t.items.slice().sort((t,e)=>t-e):null,r);t.whiskerMin=i,t.whiskerMax=o}return t}if(Array.isArray(t))return function(t,e){const r=p("undefined"==typeof Float64Array||t instanceof Float32Array||t instanceof Float64Array?t:Float64Array.from(t),w(e));return{items:Array.from(r.items),outliers:r.outlier,whiskerMax:r.whiskerHigh,whiskerMin:r.whiskerLow,max:r.max,median:r.median,mean:r.mean,min:r.min,q1:r.q1,q3:r.q3}}(t,e)}}function k(t,e){if(t){if("number"==typeof t.median&&Array.isArray(t.coords))return t;if(Array.isArray(t))return function(t,e){if(0===t.length)return;const r=p("undefined"==typeof Float64Array||t instanceof Float32Array||t instanceof Float64Array?t:Float64Array.from(t),w(e)),i=function(t,e,r){const i=[],o=(e-t)/r;for(let r=t;r<=e&&o>0;r+=o)i.push(r);return i[i.length-1]!==e&&i.push(e),i}(r.min,r.max,e.points).map(t=>({v:t,estimate:r.kde(t)})),o=i.reduce((t,e)=>Math.max(t,e.estimate),Number.NEGATIVE_INFINITY);return{max:r.max,min:r.min,mean:r.mean,median:r.median,q1:r.q1,q3:r.q3,items:Array.from(r.items),coords:i,outliers:[],maxEstimate:o}}(t,e)}}function q(t=Date.now()){let e=t;return()=>(e=(9301*e+49297)%233280,e/233280)}const M={number:(t,e,r)=>t===e||null==t?e:null==e?t:t+(e-t)*r};function C(t,e,r){return"number"==typeof t&&"number"==typeof e?M.number(t,e,r):Array.isArray(t)&&Array.isArray(e)?e.map((e,i)=>M.number(t[i],e,r)):e}function _(t){const e=t.formattedValue,r=this;e&&null!=r._tooltipOutlier&&t.datasetIndex===r._tooltipOutlier.datasetIndex&&(e.hoveredOutlierIndex=r._tooltipOutlier.index),e&&null!=r._tooltipItem&&t.datasetIndex===r._tooltipItem.datasetIndex&&(e.hoveredItemIndex=r._tooltipItem.index)}function v(t,e){if(!t.length)return!1;let r=0,i=0,o=0;for(let n=0;n<t.length;n+=1){const s=t[n].element;if(s&&s.hasValue()){const t=s.tooltipPosition(e,this);r+=t.x,i+=t.y,o+=1}}return{x:r/o,y:i/o}}function N(t){const e=["borderColor","backgroundColor"].concat(t.filter(t=>t.endsWith("Color")));return{animations:{numberArray:{fn:C,properties:["outliers","items"]},colors:{type:"color",properties:e}},transitions:{show:{animations:{colors:{type:"color",properties:e,from:"transparent"}}},hide:{animations:{colors:{type:"color",properties:e,to:"transparent"}}}},minStats:"min",maxStats:"max",...y}}function B(){return{plugins:{tooltip:{position:v.register().id,callbacks:{beforeLabel:_}}}}}v.id="average",v.register=()=>(e.Tooltip.positioners.average=v,v);let S=class extends e.BarController{_transformStats(t,e,r){for(const i of["min","max","median","q3","q1","mean"]){const o=e[i];"number"==typeof o&&(t[i]=r(o))}for(const i of["outliers","items"])Array.isArray(e[i])&&(t[i]=e[i].map(r))}getMinMax(t,e){const r=t.axis,i=this.options;t.axis=i.minStats;const{min:o}=super.getMinMax(t,e);t.axis=i.maxStats;const{max:n}=super.getMinMax(t,e);return t.axis=r,{min:o,max:n}}parsePrimitiveData(t,e,r,i){const o=t.vScale,n=t.iScale,s=n.getLabels(),a=[];for(let t=0;t<i;t+=1){const i=t+r,l={};l[n.axis]=n.parse(s[i],i);const d=this._parseStats(null==e?null:e[i],this.options);d&&(Object.assign(l,d),l[o.axis]=d.median),a.push(l)}return a}parseArrayData(t,e,r,i){return this.parsePrimitiveData(t,e,r,i)}parseObjectData(t,e,r,i){return this.parsePrimitiveData(t,e,r,i)}getLabelAndValue(t){const e=super.getLabelAndValue(t),{vScale:r}=this._cachedMeta,i=this.getParsed(t);if(!r||!i||"NaN"===e.value)return e;e.value={raw:i,hoveredOutlierIndex:-1,hoveredItemIndex:-1},this._transformStats(e.value,i,t=>r.getLabelForValue(t));const o=this._toStringStats(e.value.raw);return e.value.toString=function(){return this.hoveredOutlierIndex>=0?`(outlier: ${this.outliers[this.hoveredOutlierIndex]})`:this.hoveredItemIndex>=0?`(item: ${this.items[this.hoveredItemIndex]})`:o},e}_toStringStats(t){const e=t=>null==t?"NaN":r.formatNumber(t,this.chart.options.locale,{});return`(min: ${e(t.min)}, 25% quantile: ${e(t.q1)}, median: ${e(t.median)}, mean: ${e(t.mean)}, 75% quantile: ${e(t.q3)}, max: ${e(t.max)})`}updateElement(t,e,r,i){const o="reset"===i,n=this._cachedMeta.vScale,s=this.getParsed(e),a=n.getBasePixel();r._datasetIndex=this.index,r._index=e,this._transformStats(r,s,t=>o?a:n.getPixelForValue(t,e)),super.updateElement(t,e,r,i)}};const P={borderWidth:1,outlierStyle:"circle",outlierRadius:2,outlierBorderWidth:1,itemStyle:"circle",itemRadius:0,itemBorderWidth:0,itemHitRadius:0,meanStyle:"circle",meanRadius:3,meanBorderWidth:1,hitPadding:2,outlierHitRadius:4},I={outlierBackgroundColor:"backgroundColor",outlierBorderColor:"borderColor",itemBackgroundColor:"backgroundColor",itemBorderColor:"borderColor",meanBackgroundColor:"backgroundColor",meanBorderColor:"borderColor"},A=Object.keys(P).concat(Object.keys(I));class R extends e.Element{isVertical(){return!this.horizontal}_drawItems(t){const e=this.isVertical(),i=this.getProps(["x","y","items","width","height","outliers"]),{options:o}=this;if(o.itemRadius<=0||!i.items||i.items.length<=0)return;t.save(),t.strokeStyle=o.itemBorderColor,t.fillStyle=o.itemBackgroundColor,t.lineWidth=o.itemBorderWidth;const n=q(1e3*this._datasetIndex+this._index),s={pointStyle:o.itemStyle,radius:o.itemRadius,borderWidth:o.itemBorderWidth},a=new Set(i.outliers||[]);e?i.items.forEach(e=>{a.has(e)||r.drawPoint(t,s,i.x-i.width/2+n()*i.width,e)}):i.items.forEach(e=>{a.has(e)||r.drawPoint(t,s,e,i.y-i.height/2+n()*i.height)}),t.restore()}_drawOutliers(t){const e=this.isVertical(),i=this.getProps(["x","y","outliers"]),{options:o}=this;if(o.outlierRadius<=0||!i.outliers||0===i.outliers.length)return;t.save(),t.fillStyle=o.outlierBackgroundColor,t.strokeStyle=o.outlierBorderColor,t.lineWidth=o.outlierBorderWidth;const n={pointStyle:o.outlierStyle,radius:o.outlierRadius,borderWidth:o.outlierBorderWidth};e?i.outliers.forEach(e=>{r.drawPoint(t,n,i.x,e)}):i.outliers.forEach(e=>{r.drawPoint(t,n,e,i.y)}),t.restore()}_drawMeanDot(t){const e=this.isVertical(),i=this.getProps(["x","y","mean"]),{options:o}=this;if(o.meanRadius<=0||null==i.mean||Number.isNaN(i.mean))return;t.save(),t.fillStyle=o.meanBackgroundColor,t.strokeStyle=o.meanBorderColor,t.lineWidth=o.meanBorderWidth;const n={pointStyle:o.meanStyle,radius:o.meanRadius,borderWidth:o.meanBorderWidth};e?r.drawPoint(t,n,i.x,i.mean):r.drawPoint(t,n,i.mean,i.y),t.restore()}_getBounds(t){return{left:0,top:0,right:0,bottom:0}}_getHitBounds(t){const e=this.options.hitPadding,r=this._getBounds(t);return{left:r.left-e,top:r.top-e,right:r.right+e,bottom:r.bottom+e}}inRange(t,e,r){return(!Number.isNaN(this.x)||!Number.isNaN(this.y))&&(this._boxInRange(t,e,r)||null!=this._outlierIndexInRange(t,e,r)||null!=this._itemIndexInRange(t,e,r))}inXRange(t,e){const r=this._getHitBounds(e);return t>=r.left&&t<=r.right}inYRange(t,e){const r=this._getHitBounds(e);return t>=r.top&&t<=r.bottom}_outlierIndexInRange(t,e,r){const i=this.getProps(["x","y"],r),o=this.options.outlierHitRadius,n=this._getOutliers(r),s=this.isVertical();if(s&&Math.abs(t-i.x)>o||!s&&Math.abs(e-i.y)>o)return null;const a=s?e:t;for(let t=0;t<n.length;t+=1)if(Math.abs(n[t]-a)<=o)return s?{index:t,x:i.x,y:n[t]}:{index:t,x:n[t],y:i.y};return null}_itemIndexInRange(t,e,r){const i=this.options.itemHitRadius;if(i<=0)return null;const o=this.getProps(["x","y","items","width","height","outliers"],r),n=this.isVertical(),{options:s}=this;if(s.itemRadius<=0||!o.items||o.items.length<=0)return null;const a=q(1e3*this._datasetIndex+this._index),l=new Set(o.outliers||[]);if(n)for(let r=0;r<o.items.length;r++){const n=o.items[r];if(!l.has(n)){const s=o.x-o.width/2+a()*o.width;if(Math.abs(s-t)<=i&&Math.abs(n-e)<=i)return{index:r,x:s,y:n}}}else for(let r=0;r<o.items.length;r++){const n=o.items[r];if(!l.has(n)){const s=o.y-o.height/2+a()*o.height;if(Math.abs(n-t)<=i&&Math.abs(s-e)<=i)return{index:r,x:n,y:s}}}return null}_boxInRange(t,e,r){const i=this._getHitBounds(r);return t>=i.left&&t<=i.right&&e>=i.top&&e<=i.bottom}getCenterPoint(t){const e=this.getProps(["x","y"],t);return{x:e.x,y:e.y}}_getOutliers(t){return this.getProps(["outliers"],t).outliers||[]}tooltipPosition(t,e){if(!t||"boolean"==typeof t)return this.getCenterPoint();e&&(delete e._tooltipOutlier,delete e._tooltipItem);const r=this._outlierIndexInRange(t.x,t.y);if(null!=r&&e)return e._tooltipOutlier={index:r.index,datasetIndex:this._datasetIndex},{x:r.x,y:r.y};const i=this._itemIndexInRange(t.x,t.y);return null!=i&&e?(e._tooltipItem={index:i.index,datasetIndex:this._datasetIndex},{x:i.x,y:i.y}):this.getCenterPoint()}}const T=A.concat(["medianColor","lowerBackgroundColor"]);class E extends R{draw(t){t.save(),t.fillStyle=this.options.backgroundColor,t.strokeStyle=this.options.borderColor,t.lineWidth=this.options.borderWidth,this._drawBoxPlot(t),this._drawOutliers(t),this._drawMeanDot(t),t.restore(),this._drawItems(t)}_drawBoxPlot(t){this.isVertical()?this._drawBoxPlotVertical(t):this._drawBoxPlotHorizontal(t)}_drawBoxPlotVertical(t){const{options:e}=this,r=this.getProps(["x","width","q1","q3","median","whiskerMin","whiskerMax"]),{x:i}=r,{width:o}=r,n=i-o/2;r.q3>r.q1?t.fillRect(n,r.q1,o,r.q3-r.q1):t.fillRect(n,r.q3,o,r.q1-r.q3),t.save(),e.medianColor&&"transparent"!==e.medianColor&&"#0000"!==e.medianColor&&(t.strokeStyle=e.medianColor),t.beginPath(),t.moveTo(n,r.median),t.lineTo(n+o,r.median),t.closePath(),t.stroke(),t.restore(),t.save(),e.lowerBackgroundColor&&"transparent"!==e.lowerBackgroundColor&&"#0000"!==e.lowerBackgroundColor&&(t.fillStyle=e.lowerBackgroundColor,r.q3>r.q1?t.fillRect(n,r.median,o,r.q3-r.median):t.fillRect(n,r.median,o,r.q1-r.median)),t.restore(),r.q3>r.q1?t.strokeRect(n,r.q1,o,r.q3-r.q1):t.strokeRect(n,r.q3,o,r.q1-r.q3),t.beginPath(),t.moveTo(n,r.whiskerMin),t.lineTo(n+o,r.whiskerMin),t.moveTo(i,r.whiskerMin),t.lineTo(i,r.q1),t.moveTo(n,r.whiskerMax),t.lineTo(n+o,r.whiskerMax),t.moveTo(i,r.whiskerMax),t.lineTo(i,r.q3),t.closePath(),t.stroke()}_drawBoxPlotHorizontal(t){const{options:e}=this,r=this.getProps(["y","height","q1","q3","median","whiskerMin","whiskerMax"]),{y:i}=r,{height:o}=r,n=i-o/2;r.q3>r.q1?t.fillRect(r.q1,n,r.q3-r.q1,o):t.fillRect(r.q3,n,r.q1-r.q3,o),t.save(),e.medianColor&&"transparent"!==e.medianColor&&(t.strokeStyle=e.medianColor),t.beginPath(),t.moveTo(r.median,n),t.lineTo(r.median,n+o),t.closePath(),t.stroke(),t.restore(),t.save(),e.lowerBackgroundColor&&"transparent"!==e.lowerBackgroundColor&&(t.fillStyle=e.lowerBackgroundColor,r.q3>r.q1?t.fillRect(r.median,n,r.q3-r.median,o):t.fillRect(r.median,n,r.q1-r.median,o)),t.restore(),r.q3>r.q1?t.strokeRect(r.q1,n,r.q3-r.q1,o):t.strokeRect(r.q3,n,r.q1-r.q3,o),t.beginPath(),t.moveTo(r.whiskerMin,n),t.lineTo(r.whiskerMin,n+o),t.moveTo(r.whiskerMin,i),t.lineTo(r.q1,i),t.moveTo(r.whiskerMax,n),t.lineTo(r.whiskerMax,n+o),t.moveTo(r.whiskerMax,i),t.lineTo(r.q3,i),t.closePath(),t.stroke()}_getBounds(t){const e=this.isVertical();if(null==this.x)return{left:0,top:0,right:0,bottom:0};if(e){const{x:e,width:r,whiskerMax:i,whiskerMin:o}=this.getProps(["x","width","whiskerMin","whiskerMax"],t),n=e-r/2;return{left:n,top:i,right:n+r,bottom:o}}const{y:r,height:i,whiskerMax:o,whiskerMin:n}=this.getProps(["y","height","whiskerMin","whiskerMax"],t),s=r-i/2;return{left:n,top:s,right:o,bottom:s+i}}}E.id="boxandwhiskers",E.defaults={...e.BarElement.defaults,...P,medianColor:"transparent",lowerBackgroundColor:"transparent"},E.defaultRoutes={...e.BarElement.defaultRoutes,...I};class W extends R{draw(t){t.save(),t.fillStyle=this.options.backgroundColor,t.strokeStyle=this.options.borderColor,t.lineWidth=this.options.borderWidth;const e=this.getProps(["x","y","median","width","height","min","max","coords","maxEstimate"]);null!=e.median&&r.drawPoint(t,{pointStyle:"rectRot",radius:5,borderWidth:this.options.borderWidth},e.x,e.y),e.coords&&e.coords.length>0&&this._drawCoords(t,e),this._drawOutliers(t),this._drawMeanDot(t),t.restore(),this._drawItems(t)}_drawCoords(t,e){let r;if(r=null==e.maxEstimate?e.coords.reduce((t,e)=>Math.max(t,e.estimate),Number.NEGATIVE_INFINITY):e.maxEstimate,t.beginPath(),this.isVertical()){const{x:i,width:o}=e,n=o/2/r;e.coords.forEach(e=>{t.lineTo(i-e.estimate*n,e.v)}),e.coords.slice().reverse().forEach(e=>{t.lineTo(i+e.estimate*n,e.v)})}else{const{y:i,height:o}=e,n=o/2/r;e.coords.forEach(e=>{t.lineTo(e.v,i-e.estimate*n)}),e.coords.slice().reverse().forEach(e=>{t.lineTo(e.v,i+e.estimate*n)})}t.closePath(),t.stroke(),t.fill()}_getBounds(t){if(this.isVertical()){const{x:e,width:r,min:i,max:o}=this.getProps(["x","width","min","max"],t),n=e-r/2;return{left:n,top:o,right:n+r,bottom:i}}const{y:e,height:r,min:i,max:o}=this.getProps(["y","height","min","max"],t),n=e-r/2;return{left:i,top:n,right:o,bottom:n+r}}}function V(t,r,i,o=[],n=[]){e.registry.addControllers(i),Array.isArray(o)?e.registry.addElements(...o):e.registry.addElements(o),Array.isArray(n)?e.registry.addScales(...n):e.registry.addScales(n);const s=r;return s.type=t,s}W.id="violin",W.defaults={...e.BarElement.defaults,...P},W.defaultRoutes={...e.BarElement.defaultRoutes,...I};class O extends S{_parseStats(t,e){return b(t,e)}_transformStats(t,e,r){super._transformStats(t,e,r);for(const i of["whiskerMin","whiskerMax"])t[i]=r(e[i])}}O.id="boxplot",O.defaults=r.merge({},[e.BarController.defaults,N(T),{animations:{numbers:{type:"number",properties:e.BarController.defaults.animations.numbers.properties.concat(["q1","q3","min","max","median","whiskerMin","whiskerMax","mean"],T.filter(t=>!t.endsWith("Color")))}},dataElementType:E.id}]),O.overrides=r.merge({},[e.BarController.overrides,B()]);class F extends e.Chart{constructor(t,r){super(t,V("boxplot",r,O,E,[e.LinearScale,e.CategoryScale]))}}F.id=O.id;class H extends S{_parseStats(t,e){return k(t,e)}_transformStats(t,e,r){super._transformStats(t,e,r),t.maxEstimate=e.maxEstimate,Array.isArray(e.coords)&&(t.coords=e.coords.map(t=>({...t,v:r(t.v)})))}}H.id="violin",H.defaults=r.merge({},[e.BarController.defaults,N(A),{points:100,animations:{numbers:{type:"number",properties:e.BarController.defaults.animations.numbers.properties.concat(["q1","q3","min","max","median","maxEstimate"],A.filter(t=>!t.endsWith("Color")))},kdeCoords:{fn:function(t,e,r){return Array.isArray(t)&&Array.isArray(e)?e.map((e,i)=>({v:M.number(t[i]?t[i].v:null,e.v,r),estimate:M.number(t[i]?t[i].estimate:null,e.estimate,r)})):e},properties:["coords"]}},dataElementType:W.id}]),H.overrides=r.merge({},[e.BarController.overrides,B()]);class L extends e.Chart{constructor(t,r){super(t,V("violin",r,H,W,[e.LinearScale,e.CategoryScale]))}}L.id=H.id,e.registry.addControllers(O,H),e.registry.addElements(E,W),t.BoxAndWiskers=E,t.BoxPlotChart=F,t.BoxPlotController=O,t.StatsBase=R,t.Violin=W,t.ViolinChart=L,t.ViolinController=H});
+    //# sourceMappingURL=index.umd.min.js.map
+    
+    </script>
+    <!-- end '../../libs/chartjs-chart-boxplot.min.js' -->
+        <!-- begin '../../shared/clustering_config.js' -->
+    <script>
+    /**
+     * Shared clustering configuration state.
+     *
+     * Persists clustering UI state (cut height, highlighted cluster, etc.)
+     * to localStorage so it can be shared across cluster_trends and clustering
+     * pages without URL parameters.
+     */
+    
+    const CLUSTERING_CONFIG_KEY = "clustering_config";
+    
+    const ClusteringConfig = {
+      /**
+       * Load full state from localStorage.
+       * @returns {Object} parsed state (empty object if nothing stored)
+       */
+      load() {
+        try {
+          return JSON.parse(localStorage.getItem(CLUSTERING_CONFIG_KEY)) || {};
+        } catch {
+          return {};
+        }
+      },
+    
+      /**
+       * Merge partial state into localStorage.
+       * @param {Object} partial - key/value pairs to merge
+       */
+      save(partial) {
+        const current = this.load();
+        localStorage.setItem(
+          CLUSTERING_CONFIG_KEY,
+          JSON.stringify({ ...current, ...partial }),
+        );
+      },
+    
+      /** @returns {number|null} */
+      getCutHeight() {
+        return this.load().cutHeight ?? null;
+      },
+    
+      /** @param {number} h */
+      setCutHeight(h) {
+        this.save({ cutHeight: h });
+      },
+    
+      /** @returns {number|null} */
+      getHighlightCluster() {
+        return this.load().highlightCluster ?? null;
+      },
+    
+      /** @param {number} id */
+      setHighlightCluster(id) {
+        this.save({ highlightCluster: id });
+      },
+    
+      clearHighlightCluster() {
+        const s = this.load();
+        delete s.highlightCluster;
+        localStorage.setItem(CLUSTERING_CONFIG_KEY, JSON.stringify(s));
+      },
+    };
+    
+    </script>
+    <!-- end '../../shared/clustering_config.js' -->
+        <!-- begin '../../shared/cluster_utils.js' -->
+    <script>
+    /**
+     * Shared clustering visualization utilities.
+     *
+     * Used by cluster_trends and potentially other frontends that need
+     * cluster coloring and toggle buttons.
+     */
+    
+    // ── Cluster colors (golden angle) ──────────────────────────────
+    
+    const GOLDEN_ANGLE = 137.508;
+    
+    /**
+     * Generate a distinct opaque color for a cluster index.
+     * @param {number} idx
+     * @returns {string} CSS hsl color
+     */
+    function clusterColor(idx) {
+      const hue = (idx * GOLDEN_ANGLE) % 360;
+      const sat = 65 + (idx % 3) * 10;
+      const lit = 50 + (idx % 2) * 8;
+      return `hsl(${hue}, ${sat}%, ${lit}%)`;
+    }
+    
+    /**
+     * Generate a distinct color with alpha for a cluster index.
+     * @param {number} idx
+     * @param {number} alpha - opacity 0..1
+     * @returns {string} CSS hsla color
+     */
+    function clusterColorAlpha(idx, alpha) {
+      const hue = (idx * GOLDEN_ANGLE) % 360;
+      const sat = 65 + (idx % 3) * 10;
+      const lit = 50 + (idx % 2) * 8;
+      return `hsla(${hue}, ${sat}%, ${lit}%, ${alpha})`;
+    }
+    
+    // ── Toggle buttons ─────────────────────────────────────────────
+    
+    /**
+     * Build toggle buttons inside a container element.
+     * Each button toggles a boolean in the shared enabledState object.
+     *
+     * @param {string} containerId - DOM element ID for the container
+     * @param {string[]} items - sorted list of item labels
+     * @param {Object<string, boolean>} enabledState - shared state (mutated in place)
+     * @param {string} cssClass - CSS class for each button (e.g. "family-toggle")
+     * @param {() => void} onChange - callback when any toggle changes
+     */
+    function buildToggleButtons(
+      containerId,
+      items,
+      enabledState,
+      cssClass,
+      onChange,
+    ) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+      for (const item of items) {
+        const btn = document.createElement("span");
+        btn.className = cssClass;
+        btn.textContent = item;
+        if (!enabledState[item]) btn.classList.add("disabled");
+        btn.addEventListener("click", () => {
+          enabledState[item] = !enabledState[item];
+          btn.classList.toggle("disabled", !enabledState[item]);
+          onChange();
+        });
+        container.appendChild(btn);
+      }
+    }
+    
+    // ── Cluster labels ──────────────────────────────────────────────
+    
+    const CLUSTER_LABELS_STORAGE_KEY = "clustering_labels";
+    
+    /**
+     * Load cluster labels from localStorage and optionally from a server URL.
+     * localStorage labels override server labels on merge.
+     *
+     * @param {string|null} [serverUrl] - URL to fetch server-side labels JSON
+     * @returns {Promise<Object>} Merged labels: { cutHeightKey: { clusterIdx: { name, desc, heads } } }
+     */
+    async function loadClusterLabels(serverUrl) {
+      // Load from localStorage
+      let localLabels = {};
+      try {
+        const raw = localStorage.getItem(CLUSTER_LABELS_STORAGE_KEY);
+        if (raw) localLabels = JSON.parse(raw);
+      } catch (e) {
+        console.warn("Failed to load cluster labels from localStorage:", e);
+      }
+    
+      // Load from server (optional)
+      let serverLabels = {};
+      if (serverUrl) {
+        try {
+          const resp = await fetch(serverUrl);
+          if (resp.ok) {
+            serverLabels = await resp.json();
+          } else {
+            console.warn(
+              `Cluster labels not found at ${serverUrl} (${resp.status})`,
+            );
+          }
+        } catch (e) {
+          console.warn("Failed to fetch cluster labels:", e);
+        }
+      }
+    
+      // Merge: server as base, localStorage overrides
+      const merged = {};
+      const allKeys = new Set([
+        ...Object.keys(serverLabels),
+        ...Object.keys(localLabels),
+      ]);
+      for (const heightKey of allKeys) {
+        merged[heightKey] = {
+          ...(serverLabels[heightKey] || {}),
+          ...(localLabels[heightKey] || {}),
+        };
+      }
+      return merged;
+    }
+    
+    /**
+     * Resolve stored labels against current cluster assignments.
+     * Matches each label's heads list to the current cluster with the
+     * highest overlap, returning a map of clusterId -> {name, desc}.
+     *
+     * @param {Object} allLabels - Full labels object keyed by cut height
+     * @param {number} cutHeight - Current cut height
+     * @param {Object<string, number>} assignments - headId -> clusterId
+     * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+     */
+    function resolveClusterLabels(allLabels, cutHeight, assignments) {
+      const heightKey = cutHeight.toFixed(3);
+      const labelsForHeight = allLabels[heightKey];
+      if (!labelsForHeight) return {};
+    
+      const resolvedCounts = {};
+      const resolved = {};
+    
+      for (const [_origIdx, entry] of Object.entries(labelsForHeight)) {
+        if (!entry || !entry.name) continue;
+        const heads = entry.heads || [];
+    
+        // Count overlap with each current cluster
+        const clusterOverlap = {};
+        for (const headId of heads) {
+          const cid = assignments[headId];
+          if (cid !== undefined) {
+            clusterOverlap[cid] = (clusterOverlap[cid] || 0) + 1;
+          }
+        }
+    
+        // Find cluster with most overlap
+        let bestCluster = null;
+        let bestCount = 0;
+        for (const [cid, count] of Object.entries(clusterOverlap)) {
+          if (count > bestCount) {
+            bestCount = count;
+            bestCluster = parseInt(cid);
+          }
+        }
+    
+        if (bestCluster !== null && bestCount > 0) {
+          if (!resolved[bestCluster] || bestCount > resolvedCounts[bestCluster]) {
+            resolved[bestCluster] = { name: entry.name, desc: entry.desc || null };
+            resolvedCounts[bestCluster] = bestCount;
+          }
+        }
+      }
+    
+      return resolved;
+    }
+    
+    /**
+     * Get a short display name for a cluster, using name if available.
+     *
+     * @param {number} clusterId
+     * @param {Object<number, {name: string, desc: string|null}>} resolvedLabels
+     * @returns {string} e.g. "Cluster 3: Induction" or "Cluster 3"
+     */
+    function clusterDisplayName(clusterId, resolvedLabels) {
+      if (clusterId === -1) return "misc";
+      const label = resolvedLabels[clusterId];
+      if (label && label.name) return `Cluster ${clusterId}: ${label.name}`;
+      return `Cluster ${clusterId}`;
+    }
+    
+    </script>
+    <!-- end '../../shared/cluster_utils.js' -->
+        <!-- begin '../../attnpedia/src/clustering.js' -->
+    <script>
+    /**
+     * ClusteringLoader - Loads hierarchical clustering data for AttentionPedia
+     *
+     * Loads the linkage matrix and computes cluster assignments client-side,
+     * allowing dynamic adjustment of the number of clusters, cut height,
+     * and minimum cluster size.
+     */
+    class ClusteringLoader {
+      constructor() {
+        this._meta = null;
+        this._linkage = null;
+        this._is_loaded = false;
+        this._load_promise = null;
+        this._assignments = {};
+        this._rawAssignments = {}; // before min-size filtering
+        this._nClusters = 10;
+        this._cutHeight = null;
+        this._maxCutHeight = null;
+        this._minClusterSize = 0;
+    
+        // Cluster labels (loaded from localStorage + server)
+        this._labels = {};
+        this._resolvedLabels = {};
+    
+        // Generate distinct colors using golden angle
+        this._colors = this._generateColors(50);
+      }
+    
+      /**
+       * Generate n distinct colors
+       */
+      _generateColors(n) {
+        const colors = [];
+        const goldenAngle = 137.508;
+        for (let i = 0; i < n; i++) {
+          const hue = (i * goldenAngle) % 360;
+          const saturation = 65 + (i % 3) * 10;
+          const lightness = 45 + (i % 2) * 10;
+          colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+        }
+        return colors;
+      }
+    
+      /**
+       * Ensure clustering data is loaded
+       */
+      async _ensureLoaded() {
+        if (this._is_loaded) return;
+        if (this._load_promise) {
+          await this._load_promise;
+          return;
+        }
+    
+        this._load_promise = this._load();
+        await this._load_promise;
+      }
+    
+      async _load() {
+        try {
+          const metaUrl =
+            CONFIG.clustering_meta_url ||
+            "../../features/clustering/clustering_meta.json";
+          const linkageUrl =
+            CONFIG.clustering_linkage_url ||
+            "../../features/clustering/linkage.json";
+    
+          const [metaResp, linkageResp] = await Promise.all([
+            fetch(metaUrl),
+            fetch(linkageUrl),
+          ]);
+    
+          if (!metaResp.ok || !linkageResp.ok) {
+            console.warn("Clustering data not available");
+            this._is_loaded = true;
+            return;
+          }
+    
+          this._meta = await metaResp.json();
+          this._linkage = await linkageResp.json();
+          this._is_loaded = true;
+    
+          // Compute max cut height from linkage
+          if (this._linkage && this._linkage.length > 0) {
+            this._maxCutHeight = Math.max(...this._linkage.map((row) => row[2]));
+          }
+    
+          // Load cluster labels (uses shared loadClusterLabels from cluster_utils.js)
+          const labelsUrl =
+            CONFIG.cluster_labels_url ||
+            "../../features/clustering/cluster_labels.json";
+          this._labels = await loadClusterLabels(labelsUrl);
+    
+          // Compute initial assignments
+          this._computeAssignmentsByNClusters(this._nClusters);
+        } catch (e) {
+          console.warn("Failed to load clustering data:", e);
+          this._is_loaded = true;
+        }
+      }
+    
+      /**
+       * Check if clustering data is available
+       */
+      async isAvailable() {
+        await this._ensureLoaded();
+        return this._meta !== null && this._linkage !== null;
+      }
+    
+      /**
+       * Core: compute raw cluster assignments by cutting at a given height.
+       * Returns raw assignments before min-size filtering.
+       */
+      _computeByHeight(cutHeight) {
+        if (!this._linkage || !this._meta) return {};
+    
+        const linkage = this._linkage;
+        const clsValues = this._meta.cls_values;
+        const n = clsValues.length;
+    
+        // Union-find for cluster membership
+        const parent = Array.from({ length: 2 * n - 1 }, (_, i) => i);
+    
+        const find = (x) => {
+          if (parent[x] !== x) parent[x] = find(parent[x]);
+          return parent[x];
+        };
+    
+        const union = (x, y, newParent) => {
+          parent[find(x)] = newParent;
+          parent[find(y)] = newParent;
+        };
+    
+        // Process merges below cut height
+        for (let i = 0; i < linkage.length; i++) {
+          const [idx1, idx2, distance] = linkage[i];
+          if (distance <= cutHeight) {
+            union(Math.floor(idx1), Math.floor(idx2), n + i);
+          }
+        }
+    
+        // Assign cluster IDs
+        const rootToCluster = {};
+        let nextCluster = 0;
+        const raw = {};
+    
+        for (let i = 0; i < n; i++) {
+          const root = find(i);
+          if (!(root in rootToCluster)) {
+            rootToCluster[root] = nextCluster++;
+          }
+          raw[clsValues[i]] = rootToCluster[root];
+        }
+    
+        return raw;
+      }
+    
+      /**
+       * Apply min-size filtering: clusters smaller than minSize get id = -1 (misc).
+       * Renumbers remaining clusters contiguously.
+       */
+      _applyMinSizeFilter(raw) {
+        if (this._minClusterSize <= 0) return { ...raw };
+    
+        // Count sizes
+        const sizes = {};
+        for (const cid of Object.values(raw)) {
+          sizes[cid] = (sizes[cid] || 0) + 1;
+        }
+    
+        // Build remap: small clusters -> -1, others renumbered
+        const remap = {};
+        let nextId = 0;
+        for (const [cid, size] of Object.entries(sizes)) {
+          if (size >= this._minClusterSize) {
+            remap[cid] = nextId++;
+          } else {
+            remap[cid] = -1;
+          }
+        }
+    
+        const filtered = {};
+        for (const [headId, cid] of Object.entries(raw)) {
+          filtered[headId] = remap[cid];
+        }
+        return filtered;
+      }
+    
+      /**
+       * Compute assignments by target number of clusters
+       */
+      _computeAssignmentsByNClusters(nClusters) {
+        if (!this._linkage || !this._meta) return;
+    
+        const clsValues = this._meta.cls_values;
+        const n = clsValues.length;
+    
+        if (nClusters >= n) {
+          this._rawAssignments = {};
+          clsValues.forEach((cls, i) => {
+            this._rawAssignments[cls] = i;
+          });
+          this._cutHeight = this._maxCutHeight;
+          this._nClusters = nClusters;
+          this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+          return;
+        }
+    
+        // Find cut height for desired clusters
+        const heights = this._linkage.map((row) => row[2]).sort((a, b) => b - a);
+        const cutHeight = heights[n - nClusters - 1] + 1e-10;
+    
+        this._cutHeight = cutHeight;
+        this._rawAssignments = this._computeByHeight(cutHeight);
+        this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+        this._nClusters = nClusters;
+        this._resolveLabels();
+      }
+    
+      /**
+       * Compute assignments by cut height
+       */
+      _computeAssignmentsByCutHeight(cutHeight) {
+        if (!this._linkage || !this._meta) return;
+    
+        this._cutHeight = cutHeight;
+        this._rawAssignments = this._computeByHeight(cutHeight);
+        this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+    
+        // Count actual clusters (excluding -1)
+        const clusterIds = new Set(
+          Object.values(this._assignments).filter((c) => c !== -1),
+        );
+        this._nClusters = clusterIds.size;
+        this._resolveLabels();
+      }
+    
+      /**
+       * Resolve cluster labels against current assignments
+       */
+      _resolveLabels() {
+        if (this._cutHeight !== null && Object.keys(this._labels).length > 0) {
+          this._resolvedLabels = resolveClusterLabels(
+            this._labels,
+            this._cutHeight,
+            this._assignments,
+          );
+        } else {
+          this._resolvedLabels = {};
+        }
+      }
+    
+      /**
+       * Set number of clusters and recompute assignments
+       */
+      async setNClusters(n) {
+        await this._ensureLoaded();
+        this._computeAssignmentsByNClusters(n);
+      }
+    
+      /**
+       * Set cut height and recompute assignments
+       */
+      async setCutHeight(h) {
+        await this._ensureLoaded();
+        this._computeAssignmentsByCutHeight(h);
+      }
+    
+      /**
+       * Set minimum cluster size and reapply filtering
+       */
+      async setMinClusterSize(n) {
+        await this._ensureLoaded();
+        this._minClusterSize = Math.max(0, n);
+        this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+        // Recount actual clusters
+        const clusterIds = new Set(
+          Object.values(this._assignments).filter((c) => c !== -1),
+        );
+        this._nClusters = clusterIds.size;
+        this._resolveLabels();
+      }
+    
+      /**
+       * Get current cut height
+       */
+      getCutHeight() {
+        return this._cutHeight;
+      }
+    
+      /**
+       * Get max possible cut height (max merge distance)
+       */
+      getMaxCutHeight() {
+        return this._maxCutHeight;
+      }
+    
+      /**
+       * Get current min cluster size
+       */
+      getMinClusterSize() {
+        return this._minClusterSize;
+      }
+    
+      /**
+       * Get cluster color for a head
+       */
+      async getColor(headId) {
+        await this._ensureLoaded();
+        const clusterId = this._assignments[headId];
+        if (clusterId === undefined || clusterId === -1) return "transparent";
+        return this._colors[clusterId % this._colors.length];
+      }
+    
+      /**
+       * Get color for a cluster ID (synchronous, for use after loading)
+       */
+      getClusterColor(clusterId) {
+        if (clusterId === undefined || clusterId === -1) return "#888888";
+        return this._colors[clusterId % this._colors.length];
+      }
+    
+      /**
+       * Get cluster color as {r, g, b} in 0-1 range (for use with js-embedding-vis color override)
+       */
+      getClusterColorRGB(clusterId) {
+        if (clusterId === undefined || clusterId === -1) return null;
+        const hslStr = this._colors[clusterId % this._colors.length];
+        // Parse "hsl(H, S%, L%)"
+        const m = hslStr.match(/hsl\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/);
+        if (!m) return null;
+        const h = parseFloat(m[1]) / 360,
+          s = parseFloat(m[2]) / 100,
+          l = parseFloat(m[3]) / 100;
+        // HSL to RGB conversion
+        const a = s * Math.min(l, 1 - l);
+        const f = (n) => {
+          const k = (n + h * 12) % 12;
+          return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+        };
+        return { r: f(0), g: f(8), b: f(4) };
+      }
+    
+      /**
+       * Get cluster ID for a head
+       */
+      async getClusterId(headId) {
+        await this._ensureLoaded();
+        return this._assignments[headId];
+      }
+    
+      /**
+       * Get all heads in a cluster
+       */
+      async getHeadsInCluster(clusterId) {
+        await this._ensureLoaded();
+        return Object.entries(this._assignments)
+          .filter(([_, cid]) => cid === clusterId)
+          .map(([headId, _]) => headId);
+      }
+    
+      /**
+       * Get current number of clusters (excluding misc/-1)
+       */
+      getNClusters() {
+        return this._nClusters;
+      }
+    
+      /**
+       * Get actual cluster count (excluding -1 misc cluster)
+       */
+      getNClustersActual() {
+        const clusterIds = new Set(
+          Object.values(this._assignments).filter((c) => c !== -1),
+        );
+        return clusterIds.size;
+      }
+    
+      /**
+       * Get cluster sizes (excluding -1 misc cluster)
+       */
+      async getClusterSizes() {
+        await this._ensureLoaded();
+        const sizes = {};
+        for (const clusterId of Object.values(this._assignments)) {
+          if (clusterId === -1) continue;
+          sizes[clusterId] = (sizes[clusterId] || 0) + 1;
+        }
+        return sizes;
+      }
+    
+      /**
+       * Get number of unclustered heads (cluster -1, from min-size filtering)
+       */
+      getUnclusteredCount() {
+        let count = 0;
+        for (const cid of Object.values(this._assignments)) {
+          if (cid === -1) count++;
+        }
+        return count;
+      }
+    
+      /**
+       * Get cluster label for a cluster ID (synchronous, for use after loading)
+       * @param {number} clusterId
+       * @returns {{name: string, desc: string|null}|null}
+       */
+      getClusterLabel(clusterId) {
+        return this._resolvedLabels[clusterId] || null;
+      }
+    
+      /**
+       * Get top N clusters sorted by size descending
+       * @param {number} n - how many to return
+       * @returns {Array<{id: number, size: number, color: string, label: {name: string, desc: string|null}|null}>}
+       */
+      async getTopClusters(n) {
+        const sizes = await this.getClusterSizes();
+        const sorted = Object.entries(sizes)
+          .map(([id, size]) => ({
+            id: parseInt(id),
+            size,
+            color: this.getClusterColor(parseInt(id)),
+            label: this.getClusterLabel(parseInt(id)),
+          }))
+          .sort((a, b) => b.size - a.size);
+        return sorted.slice(0, n);
+      }
+    }
+    
+    </script>
+    <!-- end '../../attnpedia/src/clustering.js' -->
+        <!-- begin '../../attnpedia/src/AttentionPedia.js' -->
+    <script>
+    // TODO: fallback to getting from github?
+    // || "https://raw.githubusercontent.com/<TODO>";
+    
+    async function load_attnpedia() {
+      const r = await fetch(CONFIG.attnpedia_url);
+      if (r.ok) {
+        const loaded = await r.json();
+        return loaded;
+      } else {
+        throw new Error(`Failed to load AttentionPedia data from ${path}`);
+      }
+    }
+    
+    class AttentionPedia {
+      constructor() {
+        this._data = null;
+        this._loaded = false;
+      }
+    
+      async _ensureLoaded() {
+        if (!this._loaded) {
+          this._data = await load_attnpedia();
+          this._loaded = true;
+        }
+      }
+    
+      async get_head_types(head_id) {
+        await this._ensureLoaded();
+        return this._data?.head_to_types?.[head_id] || [];
+      }
+    
+      async get_type_heads(type) {
+        await this._ensureLoaded();
+        return this._data?.type_to_heads?.[type] || [];
+      }
+    
+      async get_type_meta(type) {
+        await this._ensureLoaded();
+        return this._data?.type_metadata?.[type] || {};
+      }
+    }
+    
+    </script>
+    <!-- end '../../attnpedia/src/AttentionPedia.js' -->
   </head>
   <body>
     <nav class="nav-bar">
@@ -266,19 +1158,53 @@
     </nav>
 
     <div class="container">
-      <h1>Ablation Experiment Results</h1>
+      <h1>Ablation Results</h1>
 
-      <div class="config-summary" id="config-summary"></div>
-
-      <div class="model-tabs" id="model-tabs"></div>
-
-      <div class="model-summary" id="model-summary"></div>
-
-      <div class="controls" id="controls">
+      <!-- Controls row -->
+      <div class="controls-row">
+        <div class="control-group">
+          <label>Cut height:</label>
+          <input
+            type="range"
+            id="cut-height-slider"
+            min="0"
+            max="100"
+            step="0.01"
+            value="5"
+          />
+          <span id="cut-height-value">5.00</span>
+          <span id="n-clusters-label">(-- clusters)</span>
+        </div>
+        <div class="control-group">
+          <label>Models:</label>
+          <span id="model-family-buttons"></span>
+        </div>
         <div class="control-group">
           <label>Method:</label>
-          <span id="method-filters"></span>
+          <select id="method-select"></select>
         </div>
+        <div class="control-group">
+          <label>Chart:</label>
+          <span id="chart-type-buttons"></span>
+        </div>
+      </div>
+
+      <!-- Cluster chips -->
+      <div class="cluster-chips-container">
+        <div class="cluster-chips" id="cluster-chips"></div>
+      </div>
+
+      <!-- Distribution charts -->
+      <div class="charts-grid" id="charts-grid"></div>
+
+      <!-- Config summary (collapsible) -->
+      <details class="config-details">
+        <summary>Experiment Config</summary>
+        <div class="config-summary" id="config-summary"></div>
+      </details>
+
+      <!-- Head table -->
+      <div class="controls" id="table-controls">
         <div class="control-group">
           <label>Columns:</label>
           <span id="column-toggles"></span>
@@ -295,22 +1221,24 @@
 
         <!-- begin 'app.js' -->
     <script>
-    // === Config ===
+    // === Configuration ===
     
     const urlParams = new URLSearchParams(window.location.search);
+    
+    // CONFIG object used by ClusteringLoader and AttentionPedia
     const CONFIG = {
       dataUrl: urlParams.get("data") || "ablation_results.json",
+      clustering_meta_url: "../features/clustering/clustering_meta.json",
+      clustering_linkage_url: "../features/clustering/linkage.json",
+      cluster_labels_url: "../features/clustering/cluster_labels.json",
+      attnpedia_url: "../vis/attnpedia/ap.json",
     };
     
-    // === Data ===
+    const DEFAULT_HEAD = "gpt2-small:L5:H5";
+    const DEFAULT_CUT_HEIGHT = 5.0;
     
-    let allData = null;
-    let currentModel = null;
-    let sortColumn = "loss_increase";
-    let sortDescending = true;
-    let methodFilters = new Set();
+    // === Metric definitions ===
     
-    // Column definitions grouped by metric family
     const METRIC_GROUPS = {
       Loss: ["baseline_repeated_loss", "ablated_repeated_loss", "loss_increase"],
       "Induction Scores": ["prefix_score", "copying_score", "ov_copying_score"],
@@ -318,27 +1246,29 @@
       ICL: ["baseline_icl_score", "ablated_icl_score", "icl_degradation"],
     };
     
-    // Which groups are visible by default
     const DEFAULT_VISIBLE_GROUPS = new Set(["Loss", "Induction Scores", "ICL"]);
     
-    let visibleGroups = new Set(DEFAULT_VISIBLE_GROUPS);
+    const DISTRIBUTION_METRICS = [
+      "loss_increase",
+      "prefix_score",
+      "copying_score",
+      "ov_copying_score",
+      "icl_degradation",
+    ];
     
-    // Columns with color semantics
-    // "higher_is_worse" means a large positive value gets red coloring
-    // "higher_is_worse: false" means a large positive value gets green coloring
     const DELTA_COLUMNS = {
       loss_increase: { higher_is_worse: true, thresholds: [0.1, 0.5] },
       icl_degradation: { higher_is_worse: true, thresholds: [0.05, 0.2] },
-      // Head characterization scores: higher = more induction-like
       prefix_score: { higher_is_worse: false, thresholds: [0.1, 0.3] },
       prefix_score_legacy: { higher_is_worse: false, thresholds: [0.1, 0.3] },
       copying_score: { higher_is_worse: false, thresholds: [0.5, 2.0] },
       ov_copying_score: { higher_is_worse: false, thresholds: [0.05, 0.2] },
     };
     
-    // Human-readable short labels for column headers
     const COLUMN_LABELS = {
       head: "Head",
+      cluster: "Cluster",
+      classifications: "Class",
       ablation_method: "Method",
       baseline_repeated_loss: "Base Loss",
       ablated_repeated_loss: "Abl. Loss",
@@ -352,112 +1282,227 @@
       icl_degradation: "\u0394 ICL",
     };
     
-    // === Init ===
+    const METRIC_DISPLAY_NAMES = {
+      loss_increase: "Loss Increase (\u0394 Loss)",
+      prefix_score: "Prefix Matching Score",
+      copying_score: "Copying Score",
+      ov_copying_score: "OV Copying Score",
+      icl_degradation: "ICL Degradation",
+    };
+    
+    // === State ===
+    
+    let allData = null;
+    let clustering = null;
+    let attnpedia = null;
+    let apData = null;
+    
+    let selectedCluster = null;
+    let modelFilter = "all"; // "all" | "gpt2" | "pythia"
+    let selectedMethod = null; // null = first available
+    let chartType = "histogram"; // "histogram" | "boxplot"
+    let visibleGroups = new Set(DEFAULT_VISIBLE_GROUPS);
+    let sortColumn = "loss_increase";
+    let sortDescending = true;
+    
+    // Chart instances keyed by metric name
+    const charts = {};
+    
+    // === Model family helpers ===
+    
+    function getModelFamily(modelName) {
+      if (modelName.startsWith("gpt2") || modelName === "distillgpt2")
+        return "gpt2";
+      if (modelName.startsWith("pythia")) return "pythia";
+      return "other";
+    }
+    
+    function matchesModelFilter(modelName) {
+      if (modelFilter === "all") return true;
+      return getModelFamily(modelName) === modelFilter;
+    }
+    
+    // === Initialization ===
     
     async function init() {
-      let resp;
+      // Load data sources in parallel
+      clustering = new ClusteringLoader();
+    
+      let ablationResp;
       try {
-        resp = await fetch(CONFIG.dataUrl);
+        ablationResp = await fetch(CONFIG.dataUrl);
       } catch {
-        document.querySelector(".container").innerHTML =
-          '<p style="color:#999;text-align:center;padding:60px;">Failed to load data. Serve this directory over HTTP to view results.</p>';
+        showError("Failed to load data. Serve this directory over HTTP.");
         return;
       }
-      if (!resp.ok) {
-        document.querySelector(".container").innerHTML =
-          `<p style="color:#999;text-align:center;padding:60px;">No data found at <code>${CONFIG.dataUrl}</code>.</p>`;
+      if (!ablationResp.ok) {
+        showError(`No data found at ${CONFIG.dataUrl}.`);
         return;
       }
-      allData = await resp.json();
-      const modelNames = Object.keys(allData.models);
-      if (modelNames.length === 0) return;
     
-      currentModel = modelNames[0];
+      // Load ablation data and clustering in parallel
+      const [ablationData, clusteringReady, apResp] = await Promise.all([
+        ablationResp.json(),
+        clustering._ensureLoaded().then(() => clustering.isAvailable()),
+        fetch(CONFIG.attnpedia_url)
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null),
+      ]);
     
-      // Collect all methods across all models
-      for (const name of modelNames) {
-        for (const r of allData.models[name].results) {
-          methodFilters.add(r.ablation_method);
+      allData = ablationData;
+      apData = apResp;
+    
+      if (!allData.models || Object.keys(allData.models).length === 0) {
+        showError("No model results found in data.");
+        return;
+      }
+    
+      // Set up initial clustering state
+      const savedCutHeight = ClusteringConfig.getCutHeight();
+      const initialCutHeight = savedCutHeight || DEFAULT_CUT_HEIGHT;
+    
+      if (clusteringReady) {
+        await clustering.setCutHeight(initialCutHeight);
+        setupCutHeightSlider(initialCutHeight);
+      }
+    
+      // Collect all methods
+      const methods = new Set();
+      for (const modelData of Object.values(allData.models)) {
+        for (const r of modelData.results) {
+          methods.add(r.ablation_method);
+        }
+      }
+      selectedMethod = [...methods].sort()[0] || null;
+      setupMethodSelect([...methods].sort());
+    
+      // Set up UI
+      setupModelFamilyButtons();
+      setupChartTypeButtons();
+      setupColumnToggles();
+    
+      // Find default cluster (containing DEFAULT_HEAD)
+      if (clusteringReady) {
+        const defaultClusterId = clustering._assignments[DEFAULT_HEAD];
+        selectedCluster = defaultClusterId !== undefined ? defaultClusterId : null;
+        if (selectedCluster === null) {
+          // Fall back to largest cluster
+          const sizes = await clustering.getClusterSizes();
+          const sorted = Object.entries(sizes).sort((a, b) => b[1] - a[1]);
+          if (sorted.length > 0) selectedCluster = parseInt(sorted[0][0]);
         }
       }
     
-      renderModelTabs(modelNames);
-      renderControls();
-      renderCurrentModel();
+      // Initial render
+      renderClusterChips();
+      createChartCanvases();
+      renderCharts();
+      renderConfigSummary();
+      renderTable();
     }
     
-    // === Rendering ===
-    
-    function renderCurrentModel() {
-      const m = allData.models[currentModel];
-      renderConfigSummary(m);
-      renderModelSummary(m);
-      renderTable(m);
+    function showError(msg) {
+      document.querySelector(".container").innerHTML =
+        `<p style="color:#999;text-align:center;padding:60px;">${msg}</p>`;
     }
     
-    function renderModelTabs(modelNames) {
-      const container = document.getElementById("model-tabs");
-      if (modelNames.length <= 1) {
-        container.style.display = "none";
-        return;
-      }
-      container.innerHTML = modelNames
-        .map(
-          (name) =>
-            `<button class="model-tab${name === currentModel ? " active" : ""}" onclick="switchModel('${name}')">${name}</button>`,
-        )
-        .join("");
+    // === UI Setup ===
+    
+    function setupCutHeightSlider(initialValue) {
+      const slider = document.getElementById("cut-height-slider");
+      const maxH = clustering.getMaxCutHeight() || 20;
+      slider.min = 0;
+      slider.max = maxH;
+      slider.step = (maxH / 1000).toFixed(4);
+      slider.value = initialValue;
+      document.getElementById("cut-height-value").textContent =
+        initialValue.toFixed(2);
+      document.getElementById("n-clusters-label").textContent =
+        `(${clustering.getNClusters()} clusters)`;
+    
+      slider.addEventListener("input", async () => {
+        const h = parseFloat(slider.value);
+        document.getElementById("cut-height-value").textContent = h.toFixed(2);
+        await clustering.setCutHeight(h);
+        ClusteringConfig.setCutHeight(h);
+        document.getElementById("n-clusters-label").textContent =
+          `(${clustering.getNClusters()} clusters)`;
+    
+        // Update selected cluster to follow DEFAULT_HEAD
+        const newClusterId = clustering._assignments[DEFAULT_HEAD];
+        if (newClusterId !== undefined) selectedCluster = newClusterId;
+    
+        renderClusterChips();
+        renderCharts();
+        renderTable();
+      });
     }
     
-    function switchModel(name) {
-      currentModel = name;
-      renderModelTabs(Object.keys(allData.models));
-      renderCurrentModel();
-    }
-    
-    function renderConfigSummary(modelData) {
-      const cfg = modelData.config;
-      const items = [
-        ["sequences", cfg.n_sequences],
-        ["seq length", cfg.seq_length],
-        ["repetitions", cfg.n_repetitions],
-        ["methods", cfg.ablation_methods.join(", ")],
-        ["calibration", cfg.n_calibration_prompts],
-        ["seed", cfg.seed],
-      ];
-      document.getElementById("config-summary").innerHTML = items
-        .map(
-          ([k, v]) =>
-            `<span class="config-item"><span class="config-key">${k}:</span> ${v}</span>`,
-        )
-        .join("");
-    }
-    
-    function renderModelSummary(modelData) {
-      const stats = [
-        ["Baseline Loss", modelData.baseline_loss],
-        ["Baseline ICL", modelData.baseline_icl],
-        ["Heads", new Set(modelData.results.map((r) => r.head)).size],
-      ];
-      document.getElementById("model-summary").innerHTML = stats
-        .map(
-          ([label, value]) =>
-            `<div class="summary-stat"><span class="summary-label">${label}</span><span class="summary-value">${value == null ? "N/A" : typeof value === "number" ? value.toFixed(4) : value}</span></div>`,
-        )
-        .join("");
-    }
-    
-    function renderControls() {
-      // Method filters
-      const methods = [...methodFilters].sort();
-      document.getElementById("method-filters").innerHTML = methods
+    function setupMethodSelect(methods) {
+      const select = document.getElementById("method-select");
+      select.innerHTML = methods
         .map(
           (m) =>
-            `<label class="chip"><input type="checkbox" checked onchange="toggleMethod('${m}')"> ${m}</label>`,
+            `<option value="${m}" ${m === selectedMethod ? "selected" : ""}>${m}</option>`,
         )
         .join("");
+      select.addEventListener("change", () => {
+        selectedMethod = select.value;
+        renderCharts();
+        renderTable();
+      });
+    }
     
-      // Column group toggles
+    function setupModelFamilyButtons() {
+      const container = document.getElementById("model-family-buttons");
+      const families = ["all", "gpt2", "pythia"];
+      const labels = { all: "All", gpt2: "GPT-2", pythia: "Pythia" };
+      container.innerHTML = families
+        .map(
+          (f) =>
+            `<button class="family-btn${f === modelFilter ? " active" : ""}" data-family="${f}">${labels[f]}</button>`,
+        )
+        .join("");
+      container.addEventListener("click", (e) => {
+        const btn = e.target.closest(".family-btn");
+        if (!btn) return;
+        modelFilter = btn.dataset.family;
+        container
+          .querySelectorAll(".family-btn")
+          .forEach((b) =>
+            b.classList.toggle("active", b.dataset.family === modelFilter),
+          );
+        renderCharts();
+        renderTable();
+      });
+    }
+    
+    function setupChartTypeButtons() {
+      const container = document.getElementById("chart-type-buttons");
+      const types = [
+        { id: "histogram", label: "Histogram" },
+        { id: "boxplot", label: "Box Plot" },
+      ];
+      container.innerHTML = types
+        .map(
+          (t) =>
+            `<button class="chart-type-btn${t.id === chartType ? " active" : ""}" data-type="${t.id}">${t.label}</button>`,
+        )
+        .join("");
+      container.addEventListener("click", (e) => {
+        const btn = e.target.closest(".chart-type-btn");
+        if (!btn) return;
+        chartType = btn.dataset.type;
+        container
+          .querySelectorAll(".chart-type-btn")
+          .forEach((b) =>
+            b.classList.toggle("active", b.dataset.type === chartType),
+          );
+        renderCharts();
+      });
+    }
+    
+    function setupColumnToggles() {
       const groups = Object.keys(METRIC_GROUPS);
       document.getElementById("column-toggles").innerHTML = groups
         .map(
@@ -467,43 +1512,368 @@
         .join("");
     }
     
-    function toggleMethod(method) {
-      if (methodFilters.has(method)) {
-        methodFilters.delete(method);
-      } else {
-        methodFilters.add(method);
-      }
-      renderTable(allData.models[currentModel]);
-    }
-    
     function toggleGroup(group) {
-      if (visibleGroups.has(group)) {
-        visibleGroups.delete(group);
-      } else {
-        visibleGroups.add(group);
-      }
-      renderTable(allData.models[currentModel]);
+      if (visibleGroups.has(group)) visibleGroups.delete(group);
+      else visibleGroups.add(group);
+      renderTable();
     }
     
-    // === Table ===
+    // === Cluster Chips ===
+    
+    function renderClusterChips() {
+      const container = document.getElementById("cluster-chips");
+      if (!clustering || !clustering._is_loaded || !clustering._meta) {
+        container.innerHTML =
+          '<span style="color:#999">Clustering data not available</span>';
+        return;
+      }
+    
+      // Get cluster sizes
+      const sizes = {};
+      for (const [headId, cid] of Object.entries(clustering._assignments)) {
+        if (cid === -1) continue;
+        sizes[cid] = (sizes[cid] || 0) + 1;
+      }
+    
+      // Sort by size descending
+      const sorted = Object.entries(sizes).sort((a, b) => b[1] - a[1]);
+    
+      container.innerHTML = sorted
+        .map(([cid, size]) => {
+          const id = parseInt(cid);
+          const color = clustering.getClusterColor(id);
+          const label = clustering.getClusterLabel(id);
+          const name = label && label.name ? label.name : `${id}`;
+          const isSelected = id === selectedCluster;
+          return `<button class="cluster-chip${isSelected ? " selected" : ""}" data-cluster="${id}" style="--chip-color: ${color}" title="Cluster ${id}: ${size} heads">${name} <span class="chip-count">${size}</span></button>`;
+        })
+        .join("");
+    
+      container.addEventListener("click", (e) => {
+        const btn = e.target.closest(".cluster-chip");
+        if (!btn) return;
+        selectedCluster = parseInt(btn.dataset.cluster);
+        // Re-render chips to update selection
+        renderClusterChips();
+        renderCharts();
+        renderTable();
+      });
+    }
+    
+    // === Data helpers ===
+    
+    /**
+     * Get all results as flat array of {head, model, ...metrics},
+     * filtered by model family and method.
+     */
+    function getFilteredResults() {
+      if (!allData) return [];
+      const results = [];
+      for (const [modelName, modelData] of Object.entries(allData.models)) {
+        if (!matchesModelFilter(modelName)) continue;
+        for (const r of modelData.results) {
+          if (selectedMethod && r.ablation_method !== selectedMethod) continue;
+          results.push({ ...r, model: modelName });
+        }
+      }
+      return results;
+    }
+    
+    /**
+     * Split results into in-cluster and out-of-cluster arrays.
+     */
+    function splitByCluster(results) {
+      if (selectedCluster === null || !clustering || !clustering._is_loaded) {
+        return { inCluster: [], outCluster: results };
+      }
+      const inCluster = [];
+      const outCluster = [];
+      for (const r of results) {
+        const cid = clustering._assignments[r.head];
+        if (cid === selectedCluster) {
+          inCluster.push(r);
+        } else {
+          outCluster.push(r);
+        }
+      }
+      return { inCluster, outCluster };
+    }
+    
+    /**
+     * Extract numeric values for a metric from results, skipping null/undefined.
+     */
+    function extractValues(results, metric) {
+      return results.map((r) => r[metric]).filter((v) => v != null && !isNaN(v));
+    }
+    
+    // === Charts ===
+    
+    function createChartCanvases() {
+      const grid = document.getElementById("charts-grid");
+      grid.innerHTML = "";
+      for (const metric of DISTRIBUTION_METRICS) {
+        const div = document.createElement("div");
+        div.className = "chart-cell";
+        div.innerHTML = `<canvas id="chart-${metric}"></canvas>`;
+        grid.appendChild(div);
+      }
+    }
+    
+    function renderCharts() {
+      const results = getFilteredResults();
+      // Deduplicate by head (one entry per head, using first matching method)
+      const seenHeads = new Set();
+      const uniqueResults = [];
+      for (const r of results) {
+        if (!seenHeads.has(r.head)) {
+          seenHeads.add(r.head);
+          uniqueResults.push(r);
+        }
+      }
+      const { inCluster, outCluster } = splitByCluster(uniqueResults);
+    
+      for (const metric of DISTRIBUTION_METRICS) {
+        const inValues = extractValues(inCluster, metric);
+        const outValues = extractValues(outCluster, metric);
+    
+        // Skip if no data at all
+        if (inValues.length === 0 && outValues.length === 0) {
+          destroyChart(metric);
+          continue;
+        }
+    
+        if (chartType === "histogram") {
+          renderHistogram(metric, inValues, outValues);
+        } else {
+          renderBoxPlot(metric, inValues, outValues);
+        }
+      }
+    }
+    
+    function destroyChart(metric) {
+      if (charts[metric]) {
+        charts[metric].destroy();
+        delete charts[metric];
+      }
+    }
+    
+    function renderHistogram(metric, inValues, outValues) {
+      destroyChart(metric);
+      const canvas = document.getElementById(`chart-${metric}`);
+      if (!canvas) return;
+    
+      const allValues = [...inValues, ...outValues];
+      if (allValues.length === 0) return;
+    
+      const min = Math.min(...allValues);
+      const max = Math.max(...allValues);
+      const nBins = 20;
+      const binWidth = (max - min) / nBins || 1;
+    
+      const binEdges = Array.from(
+        { length: nBins + 1 },
+        (_, i) => min + i * binWidth,
+      );
+      const labels = binEdges.slice(0, nBins).map((e) => e.toFixed(2));
+    
+      function histogram(values) {
+        const counts = new Array(nBins).fill(0);
+        for (const v of values) {
+          let bin = Math.floor((v - min) / binWidth);
+          if (bin >= nBins) bin = nBins - 1;
+          if (bin < 0) bin = 0;
+          counts[bin]++;
+        }
+        return counts;
+      }
+    
+      const inCounts = histogram(inValues);
+      const outCounts = histogram(outValues);
+    
+      const clusterColor =
+        selectedCluster !== null
+          ? clustering.getClusterColor(selectedCluster)
+          : "hsl(210, 70%, 50%)";
+      const clusterLabel = getClusterChipLabel();
+    
+      charts[metric] = new Chart(canvas, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: clusterLabel + ` (${inValues.length})`,
+              data: inCounts,
+              backgroundColor: clusterColorToRGBA(clusterColor, 0.6),
+              borderColor: clusterColorToRGBA(clusterColor, 1),
+              borderWidth: 1,
+            },
+            {
+              label: `Other (${outValues.length})`,
+              data: outCounts,
+              backgroundColor: "rgba(150, 150, 150, 0.35)",
+              borderColor: "rgba(150, 150, 150, 0.7)",
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: METRIC_DISPLAY_NAMES[metric] || metric,
+              font: { size: 13, weight: "bold" },
+            },
+            legend: { labels: { font: { size: 11 } } },
+          },
+          scales: {
+            x: { title: { display: true, text: metric, font: { size: 11 } } },
+            y: { title: { display: true, text: "Count", font: { size: 11 } } },
+          },
+        },
+      });
+    }
+    
+    function renderBoxPlot(metric, inValues, outValues) {
+      destroyChart(metric);
+      const canvas = document.getElementById(`chart-${metric}`);
+      if (!canvas) return;
+    
+      if (inValues.length === 0 && outValues.length === 0) return;
+    
+      const clusterColor =
+        selectedCluster !== null
+          ? clustering.getClusterColor(selectedCluster)
+          : "hsl(210, 70%, 50%)";
+      const clusterLabel = getClusterChipLabel();
+    
+      charts[metric] = new Chart(canvas, {
+        type: "boxplot",
+        data: {
+          labels: [METRIC_DISPLAY_NAMES[metric] || metric],
+          datasets: [
+            {
+              label: clusterLabel + ` (${inValues.length})`,
+              data: [inValues],
+              backgroundColor: clusterColorToRGBA(clusterColor, 0.4),
+              borderColor: clusterColorToRGBA(clusterColor, 1),
+              borderWidth: 1,
+              outlierRadius: 2,
+            },
+            {
+              label: `Other (${outValues.length})`,
+              data: [outValues],
+              backgroundColor: "rgba(150, 150, 150, 0.25)",
+              borderColor: "rgba(150, 150, 150, 0.7)",
+              borderWidth: 1,
+              outlierRadius: 2,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: "x",
+          plugins: {
+            title: {
+              display: true,
+              text: METRIC_DISPLAY_NAMES[metric] || metric,
+              font: { size: 13, weight: "bold" },
+            },
+            legend: { labels: { font: { size: 11 } } },
+          },
+        },
+      });
+    }
+    
+    function getClusterChipLabel() {
+      if (selectedCluster === null) return "Selected";
+      const label = clustering.getClusterLabel(selectedCluster);
+      if (label && label.name) return `Cluster ${selectedCluster}: ${label.name}`;
+      return `Cluster ${selectedCluster}`;
+    }
+    
+    /**
+     * Convert an HSL/HSLA CSS string to rgba with given alpha.
+     */
+    function clusterColorToRGBA(hslStr, alpha) {
+      const m = hslStr.match(
+        /hsla?\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%(?:,\s*([\d.]+))?\)/,
+      );
+      if (!m) return `rgba(100, 100, 200, ${alpha})`;
+      const h = parseFloat(m[1]) / 360;
+      const s = parseFloat(m[2]) / 100;
+      const l = parseFloat(m[3]) / 100;
+      const a2 = s * Math.min(l, 1 - l);
+      const f = (n) => {
+        const k = (n + h * 12) % 12;
+        return l - a2 * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+      };
+      const r = Math.round(f(0) * 255);
+      const g = Math.round(f(8) * 255);
+      const b = Math.round(f(4) * 255);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    
+    // === Config Summary ===
+    
+    function renderConfigSummary() {
+      // Use first model's config
+      const firstModel = Object.values(allData.models)[0];
+      if (!firstModel || !firstModel.config) return;
+      const cfg = firstModel.config;
+      const items = [
+        ["sequences", cfg.n_sequences],
+        ["seq length", cfg.seq_length],
+        ["repetitions", cfg.n_repetitions],
+        ["methods", (cfg.ablation_methods || []).join(", ")],
+        ["calibration", cfg.n_calibration_prompts],
+        ["seed", cfg.seed],
+        ["models", Object.keys(allData.models).length],
+        [
+          "total heads",
+          new Set(
+            Object.values(allData.models).flatMap((m) =>
+              m.results.map((r) => r.head),
+            ),
+          ).size,
+        ],
+      ];
+      document.getElementById("config-summary").innerHTML = items
+        .map(
+          ([k, v]) =>
+            `<span class="config-item"><span class="config-key">${k}:</span> ${v}</span>`,
+        )
+        .join("");
+    }
+    
+    // === Head Table ===
     
     function getVisibleColumns() {
-      const cols = ["head", "ablation_method"];
+      const cols = ["head", "cluster"];
+      // Only add classifications column if any visible head has classifications
+      if (hasAnyClassifications()) cols.push("classifications");
+      cols.push("ablation_method");
       for (const [group, fields] of Object.entries(METRIC_GROUPS)) {
-        if (visibleGroups.has(group)) {
-          cols.push(...fields);
-        }
+        if (visibleGroups.has(group)) cols.push(...fields);
       }
       return cols;
     }
     
-    function renderTable(modelData) {
-      const columns = getVisibleColumns();
+    function hasAnyClassifications() {
+      if (!apData || !apData.head_to_types) return false;
+      const results = getFilteredResults();
+      for (const r of results) {
+        if (apData.head_to_types[r.head]?.length > 0) return true;
+      }
+      return false;
+    }
     
-      // Filter by method
-      let rows = modelData.results.filter((r) =>
-        methodFilters.has(r.ablation_method),
-      );
+    function renderTable() {
+      const columns = getVisibleColumns();
+      let rows = getFilteredResults();
     
       // Sort
       rows = sortResults(rows, sortColumn, sortDescending);
@@ -526,53 +1896,87 @@
       // Tbody
       const tbody = document.getElementById("results-tbody");
       if (rows.length === 0) {
-        tbody.innerHTML =
-          '<tr><td colspan="' +
-          columns.length +
-          '" style="text-align:center;color:#999;padding:30px;">No results match filters.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="${columns.length}" style="text-align:center;color:#999;padding:30px;">No results match filters.</td></tr>`;
         return;
       }
     
       tbody.innerHTML = rows
-        .map(
-          (row) =>
-            "<tr>" +
-            columns
-              .map((col) => {
-                const val = row[col];
-                const cls = getCellClass(col, val);
-                const display =
-                  val == null
-                    ? "\u2014"
-                    : typeof val === "number"
-                      ? formatNumber(val)
-                      : val || "";
-                if (col === "head" && val) {
-                  const encoded = val.replace(/:/g, "~");
-                  return `<td class="${cls}"><a href="../vis/attnpedia/index.html?head_viewing=${encoded}" target="_blank">${display}</a></td>`;
-                }
-                return `<td class="${cls}">${display}</td>`;
-              })
-              .join("") +
-            "</tr>",
-        )
+        .map((row) => {
+          const clusterId =
+            clustering && clustering._is_loaded
+              ? clustering._assignments[row.head]
+              : undefined;
+          const isInSelected = clusterId === selectedCluster;
+          const rowClass = isInSelected ? ' class="row-in-cluster"' : "";
+    
+          return (
+            `<tr${rowClass}>` +
+            columns.map((col) => renderCell(col, row, clusterId)).join("") +
+            "</tr>"
+          );
+        })
         .join("");
     }
     
+    function renderCell(col, row, clusterId) {
+      if (col === "head") {
+        const encoded = row.head.replace(/:/g, "~");
+        return `<td class="cell-head"><a href="../vis/attnpedia/index.html?head_viewing=${encoded}" target="_blank">${row.head}</a></td>`;
+      }
+    
+      if (col === "cluster") {
+        if (clusterId === undefined || clusterId === null) {
+          return '<td class="cell-cluster">\u2014</td>';
+        }
+        const color = clustering.getClusterColor(clusterId);
+        const label = clustering.getClusterLabel(clusterId);
+        const name =
+          label && label.name ? `${clusterId}: ${label.name}` : `${clusterId}`;
+        return `<td class="cell-cluster"><span class="cluster-badge" style="background:${color}">${name}</span></td>`;
+      }
+    
+      if (col === "classifications") {
+        const types =
+          apData && apData.head_to_types
+            ? apData.head_to_types[row.head] || []
+            : [];
+        if (types.length === 0) return "<td></td>";
+        return `<td class="cell-class">${types.map((t) => `<span class="class-badge">${t}</span>`).join(" ")}</td>`;
+      }
+    
+      const val = row[col];
+      const cls = getCellClass(col, val);
+      const display =
+        val == null
+          ? "\u2014"
+          : typeof val === "number"
+            ? formatNumber(val)
+            : val || "";
+      return `<td class="${cls}">${display}</td>`;
+    }
+    
     function sortBy(column) {
+      if (column === "cluster" || column === "classifications") return;
       if (sortColumn === column) {
         sortDescending = !sortDescending;
       } else {
         sortColumn = column;
         sortDescending = true;
       }
-      renderTable(allData.models[currentModel]);
+      renderTable();
     }
     
     function sortResults(results, column, descending) {
       return [...results].sort((a, b) => {
-        const va = a[column];
-        const vb = b[column];
+        let va = a[column];
+        let vb = b[column];
+    
+        // Special sort for cluster column
+        if (column === "cluster" && clustering && clustering._is_loaded) {
+          va = clustering._assignments[a.head] ?? -999;
+          vb = clustering._assignments[b.head] ?? -999;
+        }
+    
         if (typeof va === "string" && typeof vb === "string") {
           return descending ? vb.localeCompare(va) : va.localeCompare(vb);
         }
@@ -593,19 +1997,12 @@
     function getCellClass(column, value) {
       const spec = DELTA_COLUMNS[column];
       if (!spec || typeof value !== "number") return "";
-    
       const abs = Math.abs(value);
       if (abs < spec.thresholds[0]) return "";
-    
       const isStrong = abs >= spec.thresholds[1];
-      // For "higher_is_worse" columns: positive values are "bad" (red)
-      // For other columns: positive values are "good" (green)
       const isPositive = value > 0;
       const isBad = spec.higher_is_worse ? isPositive : !isPositive;
-    
-      if (isBad) {
-        return isStrong ? "cell-bad-strong" : "cell-bad-mild";
-      }
+      if (isBad) return isStrong ? "cell-bad-strong" : "cell-bad-mild";
       return isStrong ? "cell-good-strong" : "cell-good-mild";
     }
     
