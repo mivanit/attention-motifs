@@ -854,8 +854,7 @@ _am-frontend-fetch-libs:
 	curl -sL $(JS_DEV_TOOLKIT_URL)/array.js -o $(FRONTEND_DIR)/libs/array.js
 	curl -sL $(JS_DEV_TOOLKIT_URL)/notif.js -o $(FRONTEND_DIR)/libs/notif.js
 	curl -sL $(JS_DEV_TOOLKIT_URL)/notif.css -o $(FRONTEND_DIR)/libs/notif.css
-	curl -sL https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js -o $(FRONTEND_DIR)/libs/chart.min.js
-	curl -sL https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4/build/index.umd.min.js -o $(FRONTEND_DIR)/libs/chartjs-chart-boxplot.min.js
+	curl -sL https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js -o $(FRONTEND_DIR)/libs/d3.min.js
 
 
 # --- Frontend (user-facing) ---
