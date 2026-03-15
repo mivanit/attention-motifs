@@ -57,7 +57,9 @@ from attention_motifs.ablation.metrics import (
 )
 
 import torch
+import torch.nn.functional as F
 from torch import Tensor
+from jaxtyping import Float, Int
 from transformer_lens import HookedTransformer
 
 
@@ -202,6 +204,78 @@ def _batched_metric(
 		count += len(chunk)
 		torch.cuda.empty_cache()
 	return total / count
+
+
+def _icl_score_pattern_preserving(
+	model: HookedTransformer,
+	ablator: HeadAblator,
+	prompts: list[str] | list[Tensor],
+	heads: list[tuple[int, int]],
+	early_pos: int = 50,
+	late_pos: int = 500,
+) -> float:
+	"""Compute ICL score under pattern-preserving ablation.
+
+	Pattern-preserving ablation freezes attention patterns to cached clean
+	values (Olsson et al. 2022).  The cached patterns must match the input
+	sequence length, so we cannot reuse patterns cached from short repeated
+	sequences.  This helper caches fresh clean patterns for each ICL prompt,
+	then enters ``ablate_heads`` to run the ablated forward pass.
+
+	Must be called **outside** any ``ablate_heads`` context.
+	"""
+	early_losses: list[float] = []
+	late_losses: list[float] = []
+
+	with torch.no_grad():
+		for prompt in prompts:
+			if isinstance(prompt, str):
+				tokens: Int[Tensor, "1 seq"] = model.to_tokens(prompt)
+			else:
+				tokens = prompt.unsqueeze(0) if prompt.dim() == 1 else prompt
+				if model.cfg.default_prepend_bos:
+					bos_id: int = getattr(model.tokenizer, "bos_token_id", None) or 0
+					if tokens.shape[1] == 0 or tokens[0, 0].item() != bos_id:
+						bos_tensor: Int[Tensor, "batch 1"] = torch.full(
+							(tokens.shape[0], 1),
+							bos_id,
+							dtype=tokens.dtype,
+							device=tokens.device,
+						)
+						tokens = torch.cat([bos_tensor, tokens], dim=1)
+
+			tokens = tokens.to(model.cfg.device)
+
+			if tokens.shape[1] <= late_pos:
+				continue
+
+			# Cache clean patterns at this prompt's seq length, then ablate
+			ablator.set_clean_patterns(tokens)
+			with ablator.ablate_heads(heads, AblationMethod.PATTERN_PRESERVING):
+				logits: Float[Tensor, "1 seq vocab"] = model(tokens)
+
+			if early_pos < tokens.shape[1] - 1:
+				early_logits: Float[Tensor, "1 vocab"] = logits[:, early_pos, :]
+				early_target: Int[Tensor, " 1"] = tokens[:, early_pos + 1]
+				early_loss: Float[Tensor, ""] = F.cross_entropy(
+					early_logits, early_target
+				)
+				early_losses.append(early_loss.item())
+
+			if late_pos < tokens.shape[1] - 1:
+				late_logits: Float[Tensor, "1 vocab"] = logits[:, late_pos, :]
+				late_target: Int[Tensor, " 1"] = tokens[:, late_pos + 1]
+				late_loss: Float[Tensor, ""] = F.cross_entropy(
+					late_logits, late_target
+				)
+				late_losses.append(late_loss.item())
+
+	if not early_losses or not late_losses:
+		return 0.0
+
+	mean_early: float = sum(early_losses) / len(early_losses)
+	mean_late: float = sum(late_losses) / len(late_losses)
+	return mean_late - mean_early
 
 
 def run_ablation_experiment(
@@ -392,9 +466,29 @@ def run_ablation_experiment(
 						mbs,
 						model=model,
 					)
+					# For non-PATTERN_PRESERVING, ICL runs inside
+					# the ablation context (patterns are not frozen).
 					ablated_icl: float | None = (
-						icl_score(model, icl_prompts) if icl_prompts else None
+						icl_score(model, icl_prompts)
+						if icl_prompts
+						and method != AblationMethod.PATTERN_PRESERVING
+						else None
 					)
+
+				# For PATTERN_PRESERVING, ICL needs per-prompt pattern
+				# caching: each prompt has a different seq length, so we
+				# must re-cache clean patterns and re-enter ablate_heads
+				# for each one (Olsson et al. 2022).
+				if (
+					icl_prompts
+					and method == AblationMethod.PATTERN_PRESERVING
+				):
+					saved_patterns: dict | None = ablator._clean_patterns
+					ablated_icl = _icl_score_pattern_preserving(
+						model, ablator, icl_prompts, [(layer, head)],
+					)
+					# Restore repeated-sequence patterns for next head
+					ablator._clean_patterns = saved_patterns
 
 				result: AblationResult = AblationResult(
 					head=head_str,

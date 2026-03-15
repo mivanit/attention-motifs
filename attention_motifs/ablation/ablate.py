@@ -107,6 +107,10 @@ class HeadAblator:
 	) -> dict[str, Float[Tensor, "batch n_heads dest src"]]:
 		"""Run a clean forward pass and cache all attention patterns.
 
+		.. warning:: Must be called **outside** any ``ablate_heads``
+		   context — the model must have no active hooks so the forward
+		   pass is genuinely clean.
+
 		Parameters
 		----------
 		tokens
