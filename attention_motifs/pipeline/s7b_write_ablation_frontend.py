@@ -8,15 +8,19 @@ from attention_motifs.pipeline.cfg import PipelineConfig, pipeline_step_major
 
 
 def write_ablation_frontend(cfg: PipelineConfig) -> None:
-	"""Copy ablation frontend HTML and chart.min.js to the ablation output dir.
+	"""Copy ablation frontend HTML and d3.min.js to the ablation output dir.
 
-	Reads ``output_dir`` from ``cfg.raw_cfg["ablation"]`` (default
-	``data/ablations``).  Fixes the ``chart.min.js`` script path for the
+	Reads ``output_dir`` from ``cfg.ablation`` (default
+	``data/ablations``).  Fixes the ``d3.min.js`` script path for the
 	ablation deploy location and copies the library to ``data/libs/``.
 	"""
 	pipeline_step_major("pipeline step 7b: write ablation frontend")
 
 	ablation_dict: dict = cfg.ablation
+	if not ablation_dict:
+		print("[skip] s7b_write_ablation_frontend: no [ablation] section in config")
+		return
+
 	output_dir: Path = Path(ablation_dict.get("output_dir", "data/ablations"))
 
 	deploy_ablation_frontend(output_dir, verbose=cfg.verbose)

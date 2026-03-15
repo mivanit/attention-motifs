@@ -14,7 +14,7 @@ def write_cluster_frontend(cfg: PipelineConfig) -> None:
 	Writes:
 	- clustering/index.html  → cfg.vis_dir / "clustering/"
 	- cluster_trends/index.html → cfg.vis_dir / "cluster_trends/"
-	- libs/chart.min.js → cfg.vis_dir.parent / "libs/"
+	- libs/d3.min.js → cfg.vis_dir.parent / "libs/"
 	"""
 	pipeline_step_major("pipeline step 6c: write cluster frontends")
 
@@ -38,16 +38,16 @@ def write_cluster_frontend(cfg: PipelineConfig) -> None:
 	trends_dir.mkdir(parents=True, exist_ok=True)
 	(trends_dir / "index.html").write_text(trends_html)
 
-	# chart.min.js (too large for bundler to inline)
-	libs_src: Path = frontend_resources_path / "libs" / "chart.min.js"
-	libs_dst: Path = cfg.vis_dir.parent / "libs" / "chart.min.js"
+	# d3.min.js (too large for bundler to inline)
+	libs_src: Path = frontend_resources_path / "libs" / "d3.min.js"
+	libs_dst: Path = cfg.vis_dir.parent / "libs" / "d3.min.js"
 	libs_dst.parent.mkdir(parents=True, exist_ok=True)
 	libs_dst.write_bytes(libs_src.read_bytes())
 
 	if cfg.verbose > 0:
 		print(f"Wrote clustering frontend to {clustering_dir}")
 		print(f"Wrote cluster_trends frontend to {trends_dir}")
-		print(f"Wrote chart.min.js to {libs_dst}")
+		print(f"Wrote d3.min.js to {libs_dst}")
 
 
 if __name__ == "__main__":
