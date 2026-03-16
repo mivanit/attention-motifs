@@ -86,6 +86,7 @@ let allData = null;
 let clustering = null;
 let attnpedia = null;
 let apData = null;
+let clusteringAvailable = false;
 
 let selectedCluster = null;
 let modelFilter = "all"; // "all" | "gpt2" | "pythia"
