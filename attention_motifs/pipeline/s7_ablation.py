@@ -201,12 +201,6 @@ def run_ablation(cfg: PipelineConfig) -> None:
 	output_dir: Path = Path(ablation_dict.get("output_dir", "data/ablations"))
 	all_heads_mode: bool = bool(ablation_dict.get("all_heads", False))
 
-	# --- Load clustering ---
-	clustering_path: Path = cfg.data_path("clustering")
-	clustering: HierarchicalClusteringResult = HierarchicalClusteringResult.read(
-		clustering_path
-	)
-
 	# --- Build AblationConfig ---
 	config: AblationConfig = _build_ablation_config(ablation_dict)
 
@@ -227,15 +221,12 @@ def run_ablation(cfg: PipelineConfig) -> None:
 				"skipping ICL evaluation"
 			)
 
-	# --- All-heads mode ---
+	# --- All-heads mode (no clustering dependency) ---
 	if all_heads_mode:
 		print(f"Ablation (all heads): output → {output_dir}")
 
-		# Build candidates from all heads in the clustering result
-		candidates: CandidateHeads = CandidateHeads.all_from_cls_values(
-			clustering.cls_values
-		)
-		candidates = candidates.filter_models(cfg.models)
+		# Build candidates directly from model architecture info
+		candidates: CandidateHeads = CandidateHeads.all_from_models(cfg.models)
 
 		if candidates.n_heads == 0:
 			print("  No heads in pipeline models, skipping")
@@ -253,7 +244,12 @@ def run_ablation(cfg: PipelineConfig) -> None:
 		print(f"  All-heads ablation: completed {len(results)} model(s)")
 		return
 
-	# --- Per-cluster mode ---
+	# --- Per-cluster mode (requires clustering from s4c) ---
+	clustering_path: Path = cfg.data_path("clustering")
+	clustering: HierarchicalClusteringResult = HierarchicalClusteringResult.read(
+		clustering_path
+	)
+
 	cut_height: float | None = ablation_dict.get("cut_height")
 	n_clusters: int | None = ablation_dict.get("n_clusters")
 	if cut_height is None and n_clusters is None:

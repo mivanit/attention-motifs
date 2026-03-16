@@ -243,6 +243,38 @@ class CandidateHeads:
 		return cls(heads_by_model=heads_by_model)
 
 	@classmethod
+	def all_from_models(cls, model_names: list[str]) -> CandidateHeads:
+		"""Build CandidateHeads with ALL heads for the given models.
+
+		Uses the TransformerLens model table to look up ``n_layers`` and
+		``n_heads`` per model, avoiding any dependency on clustering or
+		pipeline outputs.
+
+		Parameters
+		----------
+		model_names
+			List of model names (e.g. ``["gpt2-small", "pythia-14m"]``).
+		"""
+		from attention_motifs.pipeline.model_table import ModelInfo, fetch_model_table
+
+		table: dict[str, ModelInfo] = fetch_model_table()
+		heads_by_model: dict[str, list[tuple[int, int]]] = {}
+		for model_name in model_names:
+			sanitized: str = cached_sanitize_model_name(model_name)
+			if sanitized not in table:
+				raise KeyError(
+					f"Model {model_name!r} (sanitized: {sanitized!r}) not found "
+					f"in TransformerLens model table. Cannot determine n_layers/n_heads."
+				)
+			info: ModelInfo = table[sanitized]
+			heads_by_model[sanitized] = [
+				(layer, head)
+				for layer in range(info.n_layers)
+				for head in range(info.n_heads)
+			]
+		return cls(heads_by_model=heads_by_model)
+
+	@classmethod
 	def all_from_cls_values(cls, cls_values: list[str]) -> CandidateHeads:
 		"""Build CandidateHeads with ALL heads from a cls_values list.
 
