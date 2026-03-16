@@ -11,6 +11,7 @@ Implements key metrics from the literature:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Sequence
 
 from muutils.json_serialize import (
@@ -448,6 +449,7 @@ def icl_score(
 	prompts: list[str] | list[Tensor],
 	early_pos: int = 50,
 	late_pos: int = 500,
+	forward_fn: Callable[[HookedTransformer, Tensor], Tensor] | None = None,
 ) -> float:
 	"""Compute in-context learning score.
 
@@ -472,12 +474,21 @@ def icl_score(
 	    Position for early loss measurement.
 	late_pos
 	    Position for late loss measurement.
+	forward_fn
+	    Optional callable ``(model, tokens) -> logits`` that replaces the
+	    default ``model(tokens)`` call.  Used by pattern-preserving
+	    ablation to cache clean patterns and enter an ``ablate_heads``
+	    context per prompt.
 
 	Returns
 	-------
 	float
 	    Late loss minus early loss (negative = model learns from context).
 	"""
+	run_forward: Callable[[HookedTransformer, Tensor], Tensor] = (
+		forward_fn if forward_fn is not None else lambda m, t: m(t)
+	)
+
 	early_losses: list[float] = []
 	late_losses: list[float] = []
 
@@ -509,7 +520,7 @@ def icl_score(
 			if tokens.shape[1] <= late_pos:
 				continue
 
-			logits: Float[Tensor, "1 seq vocab"] = model(tokens)
+			logits: Float[Tensor, "1 seq vocab"] = run_forward(model, tokens)
 
 			# Compute loss at specific positions
 			# Loss at position i predicts token i+1
