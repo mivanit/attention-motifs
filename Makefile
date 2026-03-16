@@ -873,6 +873,7 @@ am-frontend-bundle: _am-frontend-format _am-frontend-gen-ap _am-frontend-fetch-l
 .PHONY: am-frontend-deploy
 am-frontend-deploy: am-frontend-bundle
 	@echo "bundle frontend and deploy to data/ using $(PIPELINE_CFG_PATH)"
+	mkdir -p data/patterns data/figures
 	$(PYTHON) attention_motifs/pipeline/s1c_write_idxs.py $(PIPELINE_CFG_PATH)
 	$(PYTHON) attention_motifs/pipeline/s4b_write_frontend.py $(PIPELINE_CFG_PATH)
 	$(PYTHON) attention_motifs/pipeline/s6c_write_cluster_frontend.py $(PIPELINE_CFG_PATH)
