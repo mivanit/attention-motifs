@@ -28,9 +28,15 @@ pythia-2.8b,2500000000,32,32,ignored
 """
 
 SAMPLE_TABLE: dict[str, ModelInfo] = {
-	"gpt2-small": ModelInfo(name="gpt2-small", n_params=85_000_000, n_layers=12, n_heads=12),
-	"pythia-14m": ModelInfo(name="pythia-14m", n_params=14_000_000, n_layers=6, n_heads=8),
-	"pythia-2.8b": ModelInfo(name="pythia-2.8b", n_params=2_500_000_000, n_layers=32, n_heads=32),
+	"gpt2-small": ModelInfo(
+		name="gpt2-small", n_params=85_000_000, n_layers=12, n_heads=12
+	),
+	"pythia-14m": ModelInfo(
+		name="pythia-14m", n_params=14_000_000, n_layers=6, n_heads=8
+	),
+	"pythia-2.8b": ModelInfo(
+		name="pythia-2.8b", n_params=2_500_000_000, n_layers=32, n_heads=32
+	),
 }
 
 
