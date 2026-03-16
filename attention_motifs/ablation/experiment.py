@@ -400,8 +400,7 @@ def run_ablation_experiment(
 					# the ablation context (patterns are not frozen).
 					ablated_icl: float | None = (
 						icl_score(model, icl_prompts)
-						if icl_prompts
-						and method != AblationMethod.PATTERN_PRESERVING
+						if icl_prompts and method != AblationMethod.PATTERN_PRESERVING
 						else None
 					)
 
@@ -409,10 +408,7 @@ def run_ablation_experiment(
 				# caching: each prompt has a different seq length, so we
 				# must re-cache clean patterns and re-enter ablate_heads
 				# for each one (Olsson et al. 2022).
-				if (
-					icl_prompts
-					and method == AblationMethod.PATTERN_PRESERVING
-				):
+				if icl_prompts and method == AblationMethod.PATTERN_PRESERVING:
 					heads_to_ablate: list[tuple[int, int]] = [(layer, head)]
 					saved_patterns: dict | None = ablator._clean_patterns
 

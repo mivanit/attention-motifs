@@ -435,4 +435,3 @@ class HeadAblator:
 
 		with self.ablate_heads(heads, method), torch.no_grad():
 			return self.model(tokens, return_type=return_type, prepend_bos=prepend_bos)
-
