@@ -1527,7 +1527,9 @@ class TestGenerateActivationsParallel:
 		cfg.batch_size = 16
 
 		mock_table: dict[str, ModelInfo] = {
-			"gpt2-small": ModelInfo(name="gpt2-small", n_params=85_000_000, n_layers=12, n_heads=12),
+			"gpt2-small": ModelInfo(
+				name="gpt2-small", n_params=85_000_000, n_layers=12, n_heads=12
+			),
 		}
 		mock_scheduler_instance: MagicMock = MagicMock()
 
