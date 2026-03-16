@@ -36,12 +36,32 @@ from attention_motifs.pipeline.cfg import PipelineConfig, pipeline_step_major
 _ABLATION_CONFIG_KEYS: set[str] = {f.name for f in fields(AblationConfig)}
 
 
+_PIPELINE_LEVEL_KEYS: set[str] = {
+	"all_heads",
+	"output_dir",
+	"heads",
+	"cluster_ids",
+	"cut_height",
+	"n_clusters",
+}
+
+
 def _build_ablation_config(ablation_dict: dict[str, Any]) -> AblationConfig:
 	"""Build AblationConfig from the [ablation] TOML section.
 
 	Only passes through keys that AblationConfig accepts,
 	ignoring pipeline-level keys like cluster_ids, cut_height, etc.
+	Warns on unrecognized keys that are neither AblationConfig fields
+	nor known pipeline-level keys (likely typos).
 	"""
+	unknown_keys: set[str] = (
+		set(ablation_dict) - _ABLATION_CONFIG_KEYS - _PIPELINE_LEVEL_KEYS
+	)
+	if unknown_keys:
+		print(
+			f"Warning: unknown [ablation] config keys (ignored): "
+			f"{', '.join(sorted(unknown_keys))}"
+		)
 	config_kwargs: dict[str, Any] = {
 		k: v for k, v in ablation_dict.items() if k in _ABLATION_CONFIG_KEYS
 	}
