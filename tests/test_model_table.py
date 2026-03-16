@@ -21,16 +21,16 @@ from attention_motifs.pipeline.model_table import (
 # ---------------------------------------------------------------------------
 
 SAMPLE_CSV: str = """\
-name.default_alias,n_params.as_int,something_else
-gpt2-small,85000000,ignored
-pythia-14m,14000000,ignored
-pythia-2.8b,2500000000,ignored
+name.default_alias,n_params.as_int,cfg.n_layers,cfg.n_heads,something_else
+gpt2-small,85000000,12,12,ignored
+pythia-14m,14000000,6,8,ignored
+pythia-2.8b,2500000000,32,32,ignored
 """
 
 SAMPLE_TABLE: dict[str, ModelInfo] = {
-	"gpt2-small": ModelInfo(name="gpt2-small", n_params=85_000_000),
-	"pythia-14m": ModelInfo(name="pythia-14m", n_params=14_000_000),
-	"pythia-2.8b": ModelInfo(name="pythia-2.8b", n_params=2_500_000_000),
+	"gpt2-small": ModelInfo(name="gpt2-small", n_params=85_000_000, n_layers=12, n_heads=12),
+	"pythia-14m": ModelInfo(name="pythia-14m", n_params=14_000_000, n_layers=6, n_heads=8),
+	"pythia-2.8b": ModelInfo(name="pythia-2.8b", n_params=2_500_000_000, n_layers=32, n_heads=32),
 }
 
 

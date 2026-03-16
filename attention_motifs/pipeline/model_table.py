@@ -31,6 +31,8 @@ class ModelInfo:
 
 	name: str
 	n_params: int
+	n_layers: int
+	n_heads: int
 
 
 def _download_csv(url: str, cache_path: Path) -> str:
@@ -75,13 +77,15 @@ def fetch_model_table(force_refresh: bool = False) -> dict[str, ModelInfo]:
 	Pass ``force_refresh=True`` to re-download.
 	"""
 	df: pl.DataFrame = fetch_model_table_df(force_refresh=force_refresh)
-	df = df.drop_nulls(subset=["name.default_alias", "n_params.as_int"]).filter(
-		pl.col("name.default_alias") != ""
-	)
+	df = df.drop_nulls(
+		subset=["name.default_alias", "n_params.as_int", "cfg.n_layers", "cfg.n_heads"],
+	).filter(pl.col("name.default_alias") != "")
 	return {
 		row["name.default_alias"]: ModelInfo(
 			name=row["name.default_alias"],
 			n_params=int(row["n_params.as_int"]),
+			n_layers=int(row["cfg.n_layers"]),
+			n_heads=int(row["cfg.n_heads"]),
 		)
 		for row in df.iter_rows(named=True)
 	}
