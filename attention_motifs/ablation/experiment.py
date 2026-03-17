@@ -410,14 +410,20 @@ def run_ablation_experiment(
 				# must re-cache clean patterns and re-enter ablate_heads
 				# for each one (Olsson et al. 2022).
 				if icl_prompts and method == AblationMethod.PATTERN_PRESERVING:
-					saved_patterns: dict[str, Float[Tensor, "batch n_heads dest src"]] | None = ablator._clean_patterns
+					saved_patterns: (
+						dict[str, Float[Tensor, "batch n_heads dest src"]] | None
+					) = ablator._clean_patterns
 
 					def _pattern_preserving_forward(
-						m: HookedTransformer, tokens: Tensor
+						m: HookedTransformer,
+						tokens: Tensor,
+						_ablator: HeadAblator = ablator,
+						_layer: int = layer,
+						_head: int = head,
 					) -> Tensor:
-						ablator.set_clean_patterns(tokens)
-						with ablator.ablate_heads(
-							[(layer, head)], AblationMethod.PATTERN_PRESERVING
+						_ablator.set_clean_patterns(tokens)
+						with _ablator.ablate_heads(
+							[(_layer, _head)], AblationMethod.PATTERN_PRESERVING
 						):
 							return m(tokens)
 
