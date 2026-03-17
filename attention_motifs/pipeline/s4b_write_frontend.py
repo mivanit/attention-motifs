@@ -61,7 +61,13 @@ def write_frontend(cfg: PipelineConfig) -> None:
 		frontend_resources_path / "shared/embed_clustering_setup.js"
 	).read_text()
 	hooks_js: str = (
-		cluster_engine_js + "\n" + cluster_utils_js + "\n" + clustering_js + "\n" + setup_js
+		cluster_engine_js
+		+ "\n"
+		+ cluster_utils_js
+		+ "\n"
+		+ clustering_js
+		+ "\n"
+		+ setup_js
 	)
 
 	# Inject hooks into jev HTML
