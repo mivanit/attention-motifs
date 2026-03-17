@@ -1590,13 +1590,8 @@ function renderMiniDendrogram() {
     }
 
     if (node.isLeaf) {
-      const color =
-        window.CLUSTER_STATE.colors[
-          node.clusterId >= 0
-            ? node.clusterId % window.CLUSTER_STATE.colors.length
-            : 0
-        ];
-      const displayColor = node.clusterId === -1 ? "#666" : color;
+      const displayColor =
+        node.clusterId === -1 ? "#666" : clusterColor(node.clusterId);
       const size = sizes[node.clusterId] || node.count;
 
       // Create circle
@@ -1693,12 +1688,7 @@ function renderClusterLabels() {
     <div class="cluster-labels-grid">
       ${sortedClusters
         .map(({ clusterId, size }) => {
-          const color =
-            clusterId === -1
-              ? "#666"
-              : window.CLUSTER_STATE.colors[
-                  clusterId % window.CLUSTER_STATE.colors.length
-                ];
+          const color = clusterId === -1 ? "#666" : clusterColor(clusterId);
           const label = resolved[clusterId];
           const name = (label && label.name) || "";
           const desc = (label && label.desc) || "";
@@ -1765,10 +1755,7 @@ function renderTopClusters() {
     <span class="top-clusters-label">Top ${sortedClusters.length} clusters:</span>
     ${sortedClusters
       .map(({ clusterId, size }) => {
-        const color =
-          window.CLUSTER_STATE.colors[
-            clusterId % window.CLUSTER_STATE.colors.length
-          ];
+        const color = clusterColor(clusterId);
         const heads = window.CLUSTER_STATE.getHeadsInCluster(clusterId);
         const allSelected =
           heads.length > 0 &&

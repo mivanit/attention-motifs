@@ -464,7 +464,7 @@ function updateLegend(assignments) {
     .map(
       ([clusterId, count]) => `
       <div class="legend-item" onclick="highlightCluster(${clusterId})">
-        <div class="legend-swatch" style="background: ${window.CLUSTER_STATE.colors[clusterId]}"></div>
+        <div class="legend-swatch" style="background: ${clusterColor(clusterId)}"></div>
         <span>Cluster ${clusterId}</span>
         <span class="legend-count">(${count})</span>
       </div>
