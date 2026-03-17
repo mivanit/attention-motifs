@@ -97,4 +97,39 @@ HOOKS.onReady = async (pointCloud, uiManager) => {
   // Initial render
   updateStats();
   rebuildAndRefresh();
+
+  // --- Middle-click: show patterns + links for head ---
+
+  // Determine a model to fetch prompts from (all models share the same prompts)
+  const firstModel = pointCloud.model.row(0).model;
+  const patternsBase = "../../../patterns/";
+  const promptsUrl = `${patternsBase}${firstModel}/prompts.jsonl`;
+  const N_PATTERNS = 6;
+
+  try {
+    const resp = await fetch(promptsUrl);
+    if (!resp.ok) throw new Error(`${resp.status}`);
+    const lines = (await resp.text()).trim().split("\n");
+    const hashes = lines.slice(0, N_PATTERNS).map((l) => JSON.parse(l).hash);
+
+    const imgs = hashes
+      .map(
+        (h) =>
+          `<img src="${patternsBase}{model}/prompts/${h}/L{layer}/H{head}/attn.png" ` +
+          `style="width:80px;height:80px;image-rendering:pixelated;background:#111;" />`,
+      )
+      .join("");
+
+    CONFIG.middleClick.content =
+      `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;">` +
+      imgs +
+      `</div>` +
+      `<div style="margin-top:6px;font-size:11px;">` +
+      `<span style="color:#aaa;">{type.group}</span><br>` +
+      `<a href="../../attnpedia/index.html?head_viewing={cls}" target="_blank" style="color:#0af;">attentionpedia</a> · ` +
+      `<a href="../../clustering/index.html?heads={cls}" target="_blank" style="color:#0af;">clustering</a>` +
+      `</div>`;
+  } catch (e) {
+    console.warn("Could not load prompts for middle-click patterns:", e);
+  }
 };

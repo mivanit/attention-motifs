@@ -166,6 +166,11 @@ DEFAULT_VIS_CONFIGS: dict[str, dict[str, Any]] = dict(
 				"mode": "url",
 				"url": {"template": "../../attnpedia/index.html?head_viewing={cls}"},
 			},
+			"middleClick": {
+				"enabled": True,
+				"title": "{cls}",
+				"content": '<pre style="margin:0;white-space:pre-wrap;">{cls}</pre>',
+			},
 			"customPanels": [
 				{
 					"id": "clustering",
