@@ -36,8 +36,8 @@ jobs:
       - name: Check formatting
         run: make format-check
         
-      - name: Install Playwright browsers
-        run: make am-setup-playwright
+      - name: Install playwright, fetch libs, other setup
+        run: make am-setup
 
       - name: Run tests
         run: make test
