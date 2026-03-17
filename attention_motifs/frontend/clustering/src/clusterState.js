@@ -9,28 +9,6 @@ class ClusterState {
     this.assignments = {}; // headId -> clusterId (0-indexed)
     this.nClusters = 10;
     this.listeners = [];
-
-    // Generate a palette of distinct colors using golden angle for even distribution
-    this.colors = this._generateColors(50);
-  }
-
-  /**
-   * Generate n distinct colors using golden angle hue distribution
-   * @param {number} n - Number of colors to generate
-   * @returns {string[]} Array of HSL color strings
-   */
-  _generateColors(n) {
-    const colors = [];
-    const goldenAngle = 137.508; // degrees
-
-    for (let i = 0; i < n; i++) {
-      const hue = (i * goldenAngle) % 360;
-      // Vary saturation and lightness slightly for better distinction
-      const saturation = 65 + (i % 3) * 10;
-      const lightness = 45 + (i % 2) * 10;
-      colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
-    }
-    return colors;
   }
 
   /**
@@ -57,7 +35,7 @@ class ClusterState {
     if (clusterId === -1) {
       return "#666666"; // Dark gray for misc cluster
     }
-    return this.colors[clusterId % this.colors.length];
+    return clusterColor(clusterId);
   }
 
   /**

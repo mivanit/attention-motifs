@@ -88,50 +88,7 @@ async function loadClusteringData() {
 }
 
 // ── Cut-height clustering ───────────────────────────────────────
-
-/**
- * Compute cluster assignments by cutting the dendrogram at a given height.
- * Same union-find algorithm as ClusteringLoader / gridView.
- * @param {number} cutHeight
- * @returns {Object<string, number>} head ID -> cluster ID
- */
-function computeAssignmentsByCutHeight(cutHeight) {
-  if (!linkageData || !clsValues) return {};
-
-  const n = clsValues.length;
-  const parent = Array.from({ length: 2 * n - 1 }, (_, i) => i);
-
-  function find(x) {
-    if (parent[x] !== x) parent[x] = find(parent[x]);
-    return parent[x];
-  }
-
-  function union(x, y, newParent) {
-    parent[find(x)] = newParent;
-    parent[find(y)] = newParent;
-  }
-
-  for (let i = 0; i < linkageData.length; i++) {
-    const [idx1, idx2, distance] = linkageData[i];
-    if (distance <= cutHeight) {
-      union(Math.floor(idx1), Math.floor(idx2), n + i);
-    }
-  }
-
-  const rootToCluster = {};
-  let nextCluster = 0;
-  const assignments = {};
-
-  for (let i = 0; i < n; i++) {
-    const root = find(i);
-    if (!(root in rootToCluster)) {
-      rootToCluster[root] = nextCluster++;
-    }
-    assignments[clsValues[i]] = rootToCluster[root];
-  }
-
-  return assignments;
-}
+// Uses shared computeClustersByHeight() from cluster_engine.js
 
 /**
  * Shannon entropy from a list of counts.
@@ -274,7 +231,11 @@ function clusterDesc(cid) {
 function updateFromCutHeight(cutHeight) {
   gridState.currentCutHeight = cutHeight;
   ClusteringConfig.setCutHeight(cutHeight);
-  const assignments = computeAssignmentsByCutHeight(cutHeight);
+  const assignments = computeClustersByHeight(
+    linkageData,
+    clsValues,
+    cutHeight,
+  );
   resolvedLabels = resolveClusterLabels(
     allClusterLabels,
     cutHeight,

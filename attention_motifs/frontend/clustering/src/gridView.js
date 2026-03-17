@@ -42,7 +42,6 @@ let gridState = {
   modelOrder: "data",
   originalModelOrder: [],
   modelDataFrame: null,
-  selectionNote: "",
   clusterLabels: {}, // merged labels: cutHeightKey -> { clusterIdx: { name, desc, heads } }
   resolvedLabels: {}, // current cut height resolved: clusterId -> {name, desc}
   dendrogramFull: false,
@@ -102,59 +101,19 @@ function getCurrentLabels() {
 }
 
 /**
- * Resolve stored labels against current cluster assignments.
- * Matches each label's heads list to the current cluster that has
- * the highest overlap, returning a map of clusterId -> {name, desc}.
- * @param {Object} labelsForHeight - { clusterIdx: { name, desc, heads } }
- * @returns {Object.<number, {name: string, desc: string|null}>} Map of current clusterId -> label info
- */
-function resolveLabelsToCurrentClusters(labelsForHeight) {
-  const assignments = window.CLUSTER_STATE.getAssignments();
-  // Track best overlap count per cluster to resolve conflicts
-  const resolvedCounts = {}; // clusterId -> best overlap count
-  const resolved = {}; // clusterId -> {name, desc}
-
-  for (const [_origIdx, entry] of Object.entries(labelsForHeight)) {
-    if (!entry || !entry.name) continue;
-    const heads = entry.heads || [];
-
-    // Count how many of this label's heads fall into each current cluster
-    const clusterOverlap = {};
-    for (const headId of heads) {
-      const cid = assignments[headId];
-      if (cid !== undefined) {
-        clusterOverlap[cid] = (clusterOverlap[cid] || 0) + 1;
-      }
-    }
-
-    // Find the cluster with the most overlap
-    let bestCluster = null;
-    let bestCount = 0;
-    for (const [cid, count] of Object.entries(clusterOverlap)) {
-      if (count > bestCount) {
-        bestCount = count;
-        bestCluster = parseInt(cid);
-      }
-    }
-
-    if (bestCluster !== null && bestCount > 0) {
-      // Only assign if this cluster doesn't already have a better match
-      if (!resolved[bestCluster] || bestCount > resolvedCounts[bestCluster]) {
-        resolved[bestCluster] = { name: entry.name, desc: entry.desc || null };
-        resolvedCounts[bestCluster] = bestCount;
-      }
-    }
-  }
-
-  return resolved;
-}
-
-/**
- * Update resolved labels for the current cut height and store in gridState
+ * Update resolved labels for the current cut height and store in gridState.
+ * Uses shared resolveClusterLabels() from cluster_utils.js.
  */
 function updateResolvedLabels() {
-  const labels = getCurrentLabels();
-  gridState.resolvedLabels = resolveLabelsToCurrentClusters(labels);
+  if (gridState.currentCutHeight === null) {
+    gridState.resolvedLabels = {};
+    return;
+  }
+  gridState.resolvedLabels = resolveClusterLabels(
+    gridState.clusterLabels,
+    gridState.currentCutHeight,
+    window.CLUSTER_STATE.getAssignments(),
+  );
 }
 
 /**
@@ -662,11 +621,6 @@ function setupSidePane() {
     updateSidePane();
   });
 
-  // Selection note textarea
-  document.getElementById("selection-note").addEventListener("input", (e) => {
-    gridState.selectionNote = e.target.value;
-  });
-
   // Initial empty state
   updateSidePane();
 }
@@ -757,102 +711,6 @@ function getModelDataYaml(modelName) {
 }
 
 /**
- * Compute cluster assignments by cutting at a specific height
- * @param {number} cutHeight - Height at which to cut
- * @returns {Object.<string, number>} Map of head ID to cluster ID
- */
-function computeClustersByHeightInternal(cutHeight) {
-  const linkage = gridState.linkage;
-  const clsValues = gridState.clsValues;
-  const n = clsValues.length;
-
-  // Union-find
-  const parent = Array.from({ length: 2 * n - 1 }, (_, i) => i);
-
-  function find(x) {
-    if (parent[x] !== x) {
-      parent[x] = find(parent[x]);
-    }
-    return parent[x];
-  }
-
-  function union(x, y, newParent) {
-    parent[find(x)] = newParent;
-    parent[find(y)] = newParent;
-  }
-
-  for (let i = 0; i < linkage.length; i++) {
-    const [idx1, idx2, distance] = linkage[i];
-    if (distance <= cutHeight) {
-      union(Math.floor(idx1), Math.floor(idx2), n + i);
-    }
-  }
-
-  const rootToCluster = {};
-  let nextCluster = 0;
-  const assignments = {};
-
-  for (let i = 0; i < n; i++) {
-    const root = find(i);
-    if (!(root in rootToCluster)) {
-      rootToCluster[root] = nextCluster++;
-    }
-    assignments[clsValues[i]] = rootToCluster[root];
-  }
-
-  return assignments;
-}
-
-/**
- * Apply min-cluster-size merging to assignments
- * @param {Object.<string, number>} assignments - Original cluster assignments
- * @returns {Object} Object with merged assignments, small cluster IDs, and final cluster count
- */
-function applyMinClusterSize(assignments) {
-  const minSize = gridState.minClusterSize;
-  if (minSize <= 0) {
-    return {
-      assignments: assignments,
-      smallClusters: new Set(),
-      nClusters: new Set(Object.values(assignments)).size,
-    };
-  }
-
-  // Count cluster sizes
-  const clusterCounts = {};
-  for (const cid of Object.values(assignments)) {
-    clusterCounts[cid] = (clusterCounts[cid] || 0) + 1;
-  }
-
-  // Find small clusters
-  const smallClusters = new Set();
-  for (const [cid, count] of Object.entries(clusterCounts)) {
-    if (count < minSize) {
-      smallClusters.add(parseInt(cid));
-    }
-  }
-
-  // Reassign small cluster heads to misc (-1)
-  if (smallClusters.size > 0) {
-    const merged = {};
-    for (const [headId, cid] of Object.entries(assignments)) {
-      merged[headId] = smallClusters.has(cid) ? -1 : cid;
-    }
-    return {
-      assignments: merged,
-      smallClusters: smallClusters,
-      nClusters: new Set(Object.values(merged)).size,
-    };
-  }
-
-  return {
-    assignments: assignments,
-    smallClusters: smallClusters,
-    nClusters: new Set(Object.values(assignments)).size,
-  };
-}
-
-/**
  * Reapply current clustering with updated min-cluster-size
  */
 function reapplyCurrentClustering() {
@@ -862,19 +720,24 @@ function reapplyCurrentClustering() {
 }
 
 /**
- * Update visualization for a given cut height
+ * Update visualization for a given cut height.
+ * Uses shared computeClustersByHeight() and applyMinSizeFilter() from cluster_engine.js.
  * @param {number} cutHeight - Height at which to cut
  */
 function updateClustersByHeight(cutHeight) {
   gridState.currentCutHeight = cutHeight;
   ClusteringConfig.setCutHeight(cutHeight);
 
-  const rawAssignments = computeClustersByHeightInternal(cutHeight);
+  const rawAssignments = computeClustersByHeight(
+    gridState.linkage,
+    gridState.clsValues,
+    cutHeight,
+  );
   const {
     assignments,
     smallClusters,
     nClusters: finalNClusters,
-  } = applyMinClusterSize(rawAssignments);
+  } = applyMinSizeFilter(rawAssignments, gridState.minClusterSize);
 
   window.CLUSTER_STATE.setAssignments(assignments, finalNClusters);
   renderModelGrids();
@@ -922,7 +785,6 @@ function exportPatternTypes() {
     assignments: assignments,
     selection: {
       heads: gridState.selectedHeads,
-      note: gridState.selectionNote,
     },
   };
 
@@ -1187,19 +1049,14 @@ function shuffleArray(array) {
 async function updateSidePane() {
   const patternImages = document.getElementById("pattern-images");
   const selectedCount = document.getElementById("selected-count");
-  const notesContainer = document.getElementById("selection-notes-container");
 
   selectedCount.textContent = `(${gridState.selectedHeads.length})`;
 
   if (gridState.selectedHeads.length === 0) {
     patternImages.innerHTML =
       '<div class="empty-state">Click on cells to select heads and view their attention patterns. Shift-click to select all heads in a cluster.</div>';
-    notesContainer.style.display = "none";
     return;
   }
-
-  // Show notes container when heads are selected
-  notesContainer.style.display = "block";
 
   patternImages.innerHTML = "";
 

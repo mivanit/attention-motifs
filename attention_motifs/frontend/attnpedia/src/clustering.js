@@ -21,24 +21,6 @@ class ClusteringLoader {
     // Cluster labels (loaded from localStorage + server)
     this._labels = {};
     this._resolvedLabels = {};
-
-    // Generate distinct colors using golden angle
-    this._colors = this._generateColors(50);
-  }
-
-  /**
-   * Generate n distinct colors
-   */
-  _generateColors(n) {
-    const colors = [];
-    const goldenAngle = 137.508;
-    for (let i = 0; i < n; i++) {
-      const hue = (i * goldenAngle) % 360;
-      const saturation = 65 + (i % 3) * 10;
-      const lightness = 45 + (i % 2) * 10;
-      colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
-    }
-    return colors;
   }
 
   /**
@@ -107,123 +89,46 @@ class ClusteringLoader {
   }
 
   /**
-   * Core: compute raw cluster assignments by cutting at a given height.
-   * Returns raw assignments before min-size filtering.
-   */
-  _computeByHeight(cutHeight) {
-    if (!this._linkage || !this._meta) return {};
-
-    const linkage = this._linkage;
-    const clsValues = this._meta.cls_values;
-    const n = clsValues.length;
-
-    // Union-find for cluster membership
-    const parent = Array.from({ length: 2 * n - 1 }, (_, i) => i);
-
-    const find = (x) => {
-      if (parent[x] !== x) parent[x] = find(parent[x]);
-      return parent[x];
-    };
-
-    const union = (x, y, newParent) => {
-      parent[find(x)] = newParent;
-      parent[find(y)] = newParent;
-    };
-
-    // Process merges below cut height
-    for (let i = 0; i < linkage.length; i++) {
-      const [idx1, idx2, distance] = linkage[i];
-      if (distance <= cutHeight) {
-        union(Math.floor(idx1), Math.floor(idx2), n + i);
-      }
-    }
-
-    // Assign cluster IDs
-    const rootToCluster = {};
-    let nextCluster = 0;
-    const raw = {};
-
-    for (let i = 0; i < n; i++) {
-      const root = find(i);
-      if (!(root in rootToCluster)) {
-        rootToCluster[root] = nextCluster++;
-      }
-      raw[clsValues[i]] = rootToCluster[root];
-    }
-
-    return raw;
-  }
-
-  /**
-   * Apply min-size filtering: clusters smaller than minSize get id = -1 (misc).
-   * Renumbers remaining clusters contiguously.
+   * Apply min-size filtering using shared engine.
+   * Returns filtered assignments (small clusters get id = -1).
    */
   _applyMinSizeFilter(raw) {
     if (this._minClusterSize <= 0) return { ...raw };
-
-    // Count sizes
-    const sizes = {};
-    for (const cid of Object.values(raw)) {
-      sizes[cid] = (sizes[cid] || 0) + 1;
-    }
-
-    // Build remap: small clusters -> -1, others renumbered
-    const remap = {};
-    let nextId = 0;
-    for (const [cid, size] of Object.entries(sizes)) {
-      if (size >= this._minClusterSize) {
-        remap[cid] = nextId++;
-      } else {
-        remap[cid] = -1;
-      }
-    }
-
-    const filtered = {};
-    for (const [headId, cid] of Object.entries(raw)) {
-      filtered[headId] = remap[cid];
-    }
-    return filtered;
+    return applyMinSizeFilter(raw, this._minClusterSize).assignments;
   }
 
   /**
-   * Compute assignments by target number of clusters
+   * Compute assignments by target number of clusters.
+   * Uses shared computeClustersByNClusters() from cluster_engine.js.
    */
   _computeAssignmentsByNClusters(nClusters) {
     if (!this._linkage || !this._meta) return;
 
-    const clsValues = this._meta.cls_values;
-    const n = clsValues.length;
-
-    if (nClusters >= n) {
-      this._rawAssignments = {};
-      clsValues.forEach((cls, i) => {
-        this._rawAssignments[cls] = i;
-      });
-      this._cutHeight = this._maxCutHeight;
-      this._nClusters = nClusters;
-      this._assignments = this._applyMinSizeFilter(this._rawAssignments);
-      return;
-    }
-
-    // Find cut height for desired clusters
-    const heights = this._linkage.map((row) => row[2]).sort((a, b) => b - a);
-    const cutHeight = heights[n - nClusters - 1] + 1e-10;
-
-    this._cutHeight = cutHeight;
-    this._rawAssignments = this._computeByHeight(cutHeight);
+    const result = computeClustersByNClusters(
+      this._linkage,
+      this._meta.cls_values,
+      nClusters,
+    );
+    this._cutHeight = result.cutHeight;
+    this._rawAssignments = result.assignments;
     this._assignments = this._applyMinSizeFilter(this._rawAssignments);
     this._nClusters = nClusters;
     this._resolveLabels();
   }
 
   /**
-   * Compute assignments by cut height
+   * Compute assignments by cut height.
+   * Uses shared computeClustersByHeight() from cluster_engine.js.
    */
   _computeAssignmentsByCutHeight(cutHeight) {
     if (!this._linkage || !this._meta) return;
 
     this._cutHeight = cutHeight;
-    this._rawAssignments = this._computeByHeight(cutHeight);
+    this._rawAssignments = computeClustersByHeight(
+      this._linkage,
+      this._meta.cls_values,
+      cutHeight,
+    );
     this._assignments = this._applyMinSizeFilter(this._rawAssignments);
 
     // Count actual clusters (excluding -1)
@@ -302,21 +207,23 @@ class ClusteringLoader {
   }
 
   /**
-   * Get cluster color for a head
+   * Get cluster color for a head.
+   * Uses shared clusterColor() from cluster_utils.js.
    */
   async getColor(headId) {
     await this._ensureLoaded();
     const clusterId = this._assignments[headId];
     if (clusterId === undefined || clusterId === -1) return "transparent";
-    return this._colors[clusterId % this._colors.length];
+    return clusterColor(clusterId);
   }
 
   /**
-   * Get color for a cluster ID (synchronous, for use after loading)
+   * Get color for a cluster ID (synchronous, for use after loading).
+   * Uses shared clusterColor() from cluster_utils.js.
    */
   getClusterColor(clusterId) {
     if (clusterId === undefined || clusterId === -1) return "#888888";
-    return this._colors[clusterId % this._colors.length];
+    return clusterColor(clusterId);
   }
 
   /**
@@ -324,7 +231,7 @@ class ClusteringLoader {
    */
   getClusterColorRGB(clusterId) {
     if (clusterId === undefined || clusterId === -1) return null;
-    const hslStr = this._colors[clusterId % this._colors.length];
+    const hslStr = clusterColor(clusterId);
     // Parse "hsl(H, S%, L%)"
     const m = hslStr.match(/hsl\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/);
     if (!m) return null;

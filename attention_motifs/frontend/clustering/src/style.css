@@ -598,37 +598,6 @@ h1 {
   display: block;
 }
 
-/* Selection notes */
-.selection-notes {
-  padding: 12px;
-  border-top: 1px solid #eee;
-  flex-shrink: 0;
-}
-
-.selection-notes label {
-  display: block;
-  font-size: 13px;
-  color: #666;
-  margin-bottom: 6px;
-}
-
-.selection-notes textarea {
-  width: 100%;
-  min-height: 80px;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 13px;
-  resize: vertical;
-  box-sizing: border-box;
-}
-
-.selection-notes textarea:focus {
-  outline: none;
-  border-color: #1565c0;
-}
-
 /* Tooltip */
 .tooltip {
   position: fixed;
