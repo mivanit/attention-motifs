@@ -1064,3 +1064,141 @@ class TestAblationFrontend:
 		assert model_data["config"]["n_sequences"] == 10
 		assert len(model_data["results"]) == 1
 		assert model_data["results"][0]["head"] == "test-model:L0:H0"
+
+
+# ============================================================
+# Tests for s7_ablation.py - Pipeline Step Helpers
+# ============================================================
+
+
+class TestS7AblationHelpers:
+	"""Tests for s7_ablation.py helper functions."""
+
+	def test_build_ablation_config_filters_keys(self) -> None:
+		"""Pipeline-level keys are excluded, config keys pass through."""
+		from attention_motifs.pipeline.s7_ablation import _build_ablation_config
+
+		ablation_dict: dict = {
+			"n_sequences": 5,
+			"seed": 99,
+			# Pipeline-level keys — should be ignored
+			"all_heads": True,
+			"output_dir": "/tmp/out",
+			"cut_height": 3.0,
+			"n_clusters": 10,
+			"heads": ["gpt2-small:L5:H5"],
+			"cluster_ids": [0, 1],
+		}
+		config: AblationConfig = _build_ablation_config(ablation_dict)
+		assert config.n_sequences == 5
+		assert config.seed == 99
+
+	def test_build_ablation_config_warns_unknown(
+		self, capsys: pytest.CaptureFixture[str]
+	) -> None:
+		"""Unknown keys print a warning."""
+		from attention_motifs.pipeline.s7_ablation import _build_ablation_config
+
+		ablation_dict: dict = {"n_sequences": 2, "typo_key": 42}
+		_build_ablation_config(ablation_dict)
+		captured: str = capsys.readouterr().out
+		assert "typo_key" in captured
+		assert "Warning" in captured
+
+	def test_build_ablation_config_enum_conversion(self) -> None:
+		"""ablation_methods strings are converted to AblationMethod enums."""
+		from attention_motifs.pipeline.s7_ablation import _build_ablation_config
+
+		ablation_dict: dict = {"ablation_methods": ["zero", "mean"]}
+		config: AblationConfig = _build_ablation_config(ablation_dict)
+		assert config.ablation_methods == [AblationMethod.ZERO, AblationMethod.MEAN]
+
+	def test_cluster_dir_name(self) -> None:
+		"""Test both cut_height and n_clusters directory naming."""
+		from attention_motifs.pipeline.s7_ablation import _cluster_dir_name
+
+		assert (
+			_cluster_dir_name(cut_height=5.0, n_clusters=None, cluster_id=3)
+			== "h5.00_c3"
+		)
+		assert (
+			_cluster_dir_name(cut_height=None, n_clusters=20, cluster_id=3) == "n20_c3"
+		)
+
+	def test_write_cluster_info(self, tmp_path: Path) -> None:
+		"""Writes valid JSON with expected structure."""
+		from attention_motifs.pipeline.s7_ablation import _write_cluster_info
+
+		candidates: CandidateHeads = CandidateHeads(
+			heads_by_model={"gpt2-small": [(5, 5), (6, 9)]}
+		)
+		_write_cluster_info(
+			output_dir=tmp_path,
+			cluster_id=2,
+			candidates=candidates,
+			cut_height=4.5,
+			n_clusters=None,
+			seed_heads=["gpt2-small:L5:H5"],
+		)
+		info_path: Path = tmp_path / "cluster_info.json"
+		assert info_path.exists()
+		data: dict = json.loads(info_path.read_text())
+		assert data["cluster_id"] == 2
+		assert data["cut_height"] == 4.5
+		assert data["total_heads"] == 2
+		assert "gpt2-small" in data["models"]
+		assert data["seed_heads"] == ["gpt2-small:L5:H5"]
+
+	def test_resolve_cluster_ids_heads_mode(self) -> None:
+		"""Heads mode looks up cluster for each head."""
+		from attention_motifs.pipeline.s7_ablation import _resolve_cluster_ids
+
+		assignments: dict[str, int] = {
+			"gpt2-small:L5:H5": 0,
+			"gpt2-small:L6:H9": 1,
+			"gpt2-small:L0:H0": 0,
+		}
+		result: dict[int, list[str]] = _resolve_cluster_ids(
+			{"heads": ["gpt2-small:L5:H5", "gpt2-small:L6:H9"]},
+			assignments,
+		)
+		assert 0 in result
+		assert 1 in result
+		assert result[0] == ["gpt2-small:L5:H5"]
+		assert result[1] == ["gpt2-small:L6:H9"]
+
+	def test_resolve_cluster_ids_heads_mode_missing(self) -> None:
+		"""Heads mode raises if head not in assignments."""
+		from attention_motifs.pipeline.s7_ablation import _resolve_cluster_ids
+
+		with pytest.raises(ValueError, match="not found"):
+			_resolve_cluster_ids(
+				{"heads": ["gpt2-small:L99:H99"]},
+				{"gpt2-small:L5:H5": 0},
+			)
+
+	def test_resolve_cluster_ids_explicit(self) -> None:
+		"""Explicit cluster_ids are passed through."""
+		from attention_motifs.pipeline.s7_ablation import _resolve_cluster_ids
+
+		result: dict[int, list[str]] = _resolve_cluster_ids(
+			{"cluster_ids": [3, 7]},
+			{"gpt2-small:L5:H5": 0},
+		)
+		assert result == {3: [], 7: []}
+
+	def test_resolve_cluster_ids_default(self) -> None:
+		"""Default mode falls back to gpt2-small:L5:H5."""
+		from attention_motifs.pipeline.s7_ablation import _resolve_cluster_ids
+
+		assignments: dict[str, int] = {"gpt2-small:L5:H5": 2}
+		result: dict[int, list[str]] = _resolve_cluster_ids({}, assignments)
+		assert 2 in result
+		assert result[2] == ["gpt2-small:L5:H5"]
+
+	def test_resolve_cluster_ids_default_missing(self) -> None:
+		"""Default mode raises if gpt2-small:L5:H5 not in assignments."""
+		from attention_motifs.pipeline.s7_ablation import _resolve_cluster_ids
+
+		with pytest.raises(ValueError, match="gpt2-small:L5:H5"):
+			_resolve_cluster_ids({}, {"other-model:L0:H0": 0})

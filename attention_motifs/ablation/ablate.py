@@ -390,6 +390,8 @@ class HeadAblator:
 			yield
 		finally:
 			# Remove our hooks (they are the last ones added to each hook point).
+			# NOTE: assumes no nested ablate_heads contexts — our hooks are
+			# always the last added to each hook point.
 			# Must call handle.hook.remove() to deregister the underlying PyTorch
 			# forward hook — just popping from fwd_hooks only removes TransformerLens's
 			# bookkeeping entry but leaves the hook active in nn.Module._forward_hooks.

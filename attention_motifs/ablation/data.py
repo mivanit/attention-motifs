@@ -176,7 +176,8 @@ def generate_repeated_sequences(
 		if bos_token_id is not None:
 			resolved_bos_id = bos_token_id
 		else:
-			resolved_bos_id = getattr(tokenizer, "bos_token_id", None) or 0
+			bos_attr: int | None = getattr(tokenizer, "bos_token_id", None)
+			resolved_bos_id = bos_attr if bos_attr is not None else 0
 
 	sequences: list[RepeatedSequence] = []
 
@@ -294,9 +295,9 @@ def sequences_to_batch(
 	max_len: int = max(s.seq_len for s in sequences)
 	target_len: int = pad_to_length if pad_to_length is not None else max_len
 
-	batch: list[Tensor] = []
+	batch: list[Int[Tensor, " seq_len"]] = []
 	for seq in sequences:
-		tokens: Tensor = seq.tokens
+		tokens: Int[Tensor, " seq_len"] = seq.tokens
 		if tokens.shape[0] < target_len:
 			padding: Tensor = torch.full(
 				(target_len - tokens.shape[0],),
@@ -340,9 +341,9 @@ def get_induction_mask(
 	max_len: int = max(s.seq_len for s in sequences)
 	target_len: int = pad_to_length if pad_to_length is not None else max_len
 
-	masks: list[Tensor] = []
+	masks: list[Bool[Tensor, " seq_len"]] = []
 	for seq in sequences:
-		mask: Tensor = torch.zeros(
+		mask: Bool[Tensor, " seq_len"] = torch.zeros(
 			target_len, dtype=torch.bool, device=seq.tokens.device
 		)
 		for pos in seq.get_induction_positions():
@@ -401,9 +402,10 @@ def generate_long_context_prompts(
 		if bos_token_id is not None:
 			resolved_bos_id = bos_token_id
 		else:
-			resolved_bos_id = getattr(tokenizer, "bos_token_id", None) or 0
+			bos_attr: int | None = getattr(tokenizer, "bos_token_id", None)
+			resolved_bos_id = bos_attr if bos_attr is not None else 0
 
-	sequences: list[Tensor] = []
+	sequences: list[Int[Tensor, " seq_len"]] = []
 
 	for text in source_texts:
 		tokens: Tensor = tokenizer.encode(text, return_tensors="pt").squeeze(0)
@@ -467,7 +469,7 @@ def load_icl_texts(
 			line = line.strip()
 			if not line:
 				continue
-			row: dict = json.loads(line)
+			row: dict[str, Any] = json.loads(line)
 			text: str = row["text"]
 			if len(text) >= min_chars:
 				texts.append(text)
