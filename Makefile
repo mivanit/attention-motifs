@@ -769,8 +769,8 @@ am-clean:
 # --------------------------------------------------
 
 .PHONY: am-setup
-am-setup: am-data-download-pile am-setup-playwright _am-frontend-fetch-libs am-pipeline-download-models am-dep-reinstall-git
-	@echo "setup complete: models, data, libs, and playwright installed"
+am-setup: dep-compile am-data-download-pile am-setup-playwright _am-frontend-fetch-libs am-pipeline-download-models am-dep-reinstall-git
+	@echo "setup complete: deps compiled, models, data, libs, and playwright installed"
 
 .PHONY: am-pipeline-download-models
 am-pipeline-download-models:
