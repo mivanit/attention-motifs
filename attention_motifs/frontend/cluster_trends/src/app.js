@@ -1318,25 +1318,17 @@ async function init() {
   const labelsUrl = "../../features/clustering/cluster_labels.json";
   allClusterLabels = await loadClusterLabels(labelsUrl);
 
-  // Cut height slider (bidirectional range + number input)
-  const cutSlider = document.getElementById("cut-height");
-  const cutInput = document.getElementById("cut-height-input");
-
-  if (clusteringAvailable) {
-    cutSlider.addEventListener("input", (e) => {
-      const h = parseFloat(e.target.value);
-      cutInput.value = h.toFixed(2);
-      updateFromCutHeight(h);
-    });
-    cutInput.addEventListener("change", (e) => {
-      const h = Math.max(0, Math.min(10, parseFloat(e.target.value) || 0));
-      cutInput.value = h.toFixed(2);
-      cutSlider.value = h;
-      updateFromCutHeight(h);
-    });
-  } else {
-    cutSlider.disabled = true;
-    cutInput.disabled = true;
+  // Cut height control (shared component)
+  const cutHeightCtrl = createCutHeightControl({
+    container: document.getElementById("cut-height-container"),
+    maxHeight: 10,
+    step: 0.01,
+    initialValue: 5,
+    label: "Cut height:",
+    onChange: (h) => updateFromCutHeight(h),
+  });
+  if (!clusteringAvailable) {
+    cutHeightCtrl.setDisabled(true);
   }
 
   // K selector: switch to precomputed mode
@@ -1371,8 +1363,7 @@ async function init() {
   if (clusteringAvailable) {
     const savedCutHeight = ClusteringConfig.getCutHeight();
     const startCutHeight = savedCutHeight ?? 5;
-    cutSlider.value = startCutHeight;
-    cutInput.value = startCutHeight.toFixed(2);
+    cutHeightCtrl.setValue(startCutHeight);
     updateFromCutHeight(startCutHeight);
   } else {
     updateFromK(currentK);

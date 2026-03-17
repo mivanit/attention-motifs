@@ -5,6 +5,20 @@
  * Supports multi-selection of heads with pattern display in side pane.
  */
 
+/**
+ * Debounce a function call.
+ * @param {Function} fn
+ * @param {number} delay - Milliseconds
+ * @returns {Function}
+ */
+function debounce(fn, delay) {
+  let timer = null;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
 let gridState = {
   linkage: null,
   clsValues: null,
@@ -21,7 +35,6 @@ let gridState = {
   promptIndices: {},
   logScale: false,
   currentAssignments: null,
-  currentNClusters: 0,
   currentCutHeight: null,
   minClusterSize: 10,
   linkageMethod: "average",
@@ -32,7 +45,22 @@ let gridState = {
   selectionNote: "",
   clusterLabels: {}, // merged labels: cutHeightKey -> { clusterIdx: { name, desc, heads } }
   resolvedLabels: {}, // current cut height resolved: clusterId -> {name, desc}
+  dendrogramFull: false,
+  cutHeightControl: null, // shared cut-height control instance
 };
+
+/**
+ * Sync selected heads to URL search params (debounced).
+ */
+const syncSelectedHeadsToUrl = debounce(() => {
+  const url = new URL(window.location);
+  if (gridState.selectedHeads.length > 0) {
+    url.searchParams.set("heads", gridState.selectedHeads.join(","));
+  } else {
+    url.searchParams.delete("heads");
+  }
+  history.replaceState(null, "", url);
+}, 1000);
 
 // =====================================================================
 // Cluster Labels: persistence, matching, and resolution
@@ -223,11 +251,12 @@ function getLabeledCutHeights() {
  * Render tick marks on the cut-height slider for labeled cut heights
  */
 function renderSliderTicks() {
-  const ticksContainer = document.getElementById("cut-height-ticks");
+  if (!gridState.cutHeightControl) return;
+  const ticksContainer = gridState.cutHeightControl.getTicksContainer();
   if (!ticksContainer) return;
 
   ticksContainer.innerHTML = "";
-  const slider = document.getElementById("cut-height");
+  const slider = gridState.cutHeightControl.getSliderElement();
   const maxHeight = parseFloat(slider.max) || 10;
 
   const labeledHeights = getLabeledCutHeights();
@@ -238,8 +267,7 @@ function renderSliderTicks() {
     tick.style.left = `${pct}%`;
     tick.title = `${height.toFixed(3)} (labeled)`;
     tick.addEventListener("click", () => {
-      slider.value = height;
-      document.getElementById("cut-height-input").value = height.toFixed(3);
+      gridState.cutHeightControl.setValue(height);
       updateClustersByHeight(height);
     });
     ticksContainer.appendChild(tick);
@@ -394,8 +422,19 @@ async function initGridView(config) {
       }
     }
 
-    // Store original model order
-    gridState.originalModelOrder = Object.keys(gridState.modelConfigs);
+    // Store original model order, filtering out models not in clustering data
+    const modelsInClustering = new Set(
+      gridState.clsValues.map((headId) => headId.split(":")[0]),
+    );
+    gridState.originalModelOrder = Object.keys(gridState.modelConfigs).filter(
+      (m) => modelsInClustering.has(m),
+    );
+    const filteredConfigs = {};
+    for (const m of gridState.originalModelOrder) {
+      if (gridState.modelConfigs[m])
+        filteredConfigs[m] = gridState.modelConfigs[m];
+    }
+    gridState.modelConfigs = filteredConfigs;
 
     // Fetch model data using DataFrame
     try {
@@ -467,7 +506,7 @@ async function initGridView(config) {
     }
 
     // Set up controls
-    setupControls(config.defaultNClusters);
+    setupControls();
 
     // Set up tooltip
     setupTooltip();
@@ -483,13 +522,25 @@ async function initGridView(config) {
 
     // Initial render with cut height and min cluster size
     const initialMinClusterSize = gridState.minClusterSize;
-    document.getElementById("cut-height").value = initialCutHeight;
-    document.getElementById("cut-height-input").value =
-      initialCutHeight.toFixed(3);
+    gridState.cutHeightControl.setValue(initialCutHeight);
     document.getElementById("min-cluster-size").value = initialMinClusterSize;
     document.getElementById("min-cluster-size-input").value =
       initialMinClusterSize;
     updateClustersByHeight(initialCutHeight);
+
+    // Restore selected heads from URL
+    const initUrlParams = new URLSearchParams(window.location.search);
+    const headsParam = initUrlParams.get("heads");
+    if (headsParam) {
+      const validHeads = new Set(gridState.clsValues);
+      gridState.selectedHeads = headsParam
+        .split(",")
+        .filter((h) => h.trim() && validHeads.has(h));
+      if (gridState.selectedHeads.length > 0) {
+        updateSelectedCells();
+        updateSidePane();
+      }
+    }
 
     // Handle highlight cluster from shared config (e.g. navigated from cluster_trends)
     const highlightId = ClusteringConfig.getHighlightCluster();
@@ -505,63 +556,29 @@ async function initGridView(config) {
 
 /**
  * Set up control elements
- * @param {number} defaultNClusters - Default number of clusters
  */
-function setupControls(defaultNClusters) {
-  const nClustersSlider = document.getElementById("n-clusters");
-  const nClustersInput = document.getElementById("n-clusters-input");
-  const cutHeightSlider = document.getElementById("cut-height");
-  const cutHeightInput = document.getElementById("cut-height-input");
+function setupControls() {
   const minClusterSizeSlider = document.getElementById("min-cluster-size");
   const minClusterSizeInput = document.getElementById("min-cluster-size-input");
   const scaleSlider = document.getElementById("scale");
   const scaleValue = document.getElementById("scale-value");
   const exportBtn = document.getElementById("export-pattern-types");
 
-  // Set max clusters to number of heads
-  const maxClusters = Math.min(gridState.nHeads, 100);
-  nClustersSlider.max = maxClusters;
-  nClustersSlider.value = defaultNClusters;
-  nClustersInput.value = defaultNClusters;
-  nClustersInput.max = maxClusters;
-
   // Get max height from linkage, capped at 10
   const maxHeight = Math.min(
     Math.max(...gridState.linkage.map((row) => row[2])),
     10,
   );
-  cutHeightSlider.max = maxHeight;
-  cutHeightSlider.step = maxHeight / 1000;
-  cutHeightInput.max = maxHeight;
-  cutHeightInput.step = maxHeight / 1000;
 
-  // n-clusters slider and input (bidirectional)
-  nClustersSlider.addEventListener("input", (e) => {
-    const n = parseInt(e.target.value);
-    nClustersInput.value = n;
-    updateClusters(n);
-  });
-  nClustersInput.addEventListener("change", (e) => {
-    const n = Math.max(2, Math.min(maxClusters, parseInt(e.target.value) || 2));
-    nClustersInput.value = n;
-    nClustersSlider.value = n;
-    updateClusters(n);
-  });
-
-  // cut-height slider and input (bidirectional)
-  cutHeightSlider.addEventListener("input", (e) => {
-    const height = parseFloat(e.target.value);
-    cutHeightInput.value = height.toFixed(3);
-    updateClustersByHeight(height);
-  });
-  cutHeightInput.addEventListener("change", (e) => {
-    const height = Math.max(
-      0,
-      Math.min(maxHeight, parseFloat(e.target.value) || 0),
-    );
-    cutHeightInput.value = height.toFixed(3);
-    cutHeightSlider.value = height;
-    updateClustersByHeight(height);
+  // Create shared cut-height control (with tick marks for labeled heights)
+  gridState.cutHeightControl = createCutHeightControl({
+    container: document.getElementById("cut-height-container"),
+    maxHeight,
+    step: maxHeight / 1000,
+    initialValue: 5,
+    label: "Cut Height:",
+    showTicks: true,
+    onChange: (h) => updateClustersByHeight(h),
   });
 
   // min-cluster-size slider and input (bidirectional)
@@ -740,31 +757,6 @@ function getModelDataYaml(modelName) {
 }
 
 /**
- * Compute cluster assignments by cutting at a specific number of clusters
- * @param {number} nClusters - Number of clusters
- * @returns {Object.<string, number>} Map of head ID to cluster ID
- */
-function computeClusters(nClusters) {
-  const linkage = gridState.linkage;
-  const clsValues = gridState.clsValues;
-  const n = clsValues.length;
-
-  if (nClusters >= n) {
-    const assignments = {};
-    clsValues.forEach((cls, i) => {
-      assignments[cls] = i;
-    });
-    return assignments;
-  }
-
-  // Find the cut height that gives us the desired number of clusters
-  const heights = linkage.map((row) => row[2]).sort((a, b) => b - a);
-  const cutHeight = heights[n - nClusters - 1] + 1e-10;
-
-  return computeClustersByHeightInternal(cutHeight);
-}
-
-/**
  * Compute cluster assignments by cutting at a specific height
  * @param {number} cutHeight - Height at which to cut
  * @returns {Object.<string, number>} Map of head ID to cluster ID
@@ -866,29 +858,7 @@ function applyMinClusterSize(assignments) {
 function reapplyCurrentClustering() {
   if (gridState.currentCutHeight !== null) {
     updateClustersByHeight(gridState.currentCutHeight);
-  } else {
-    updateClusters(gridState.currentNClusters || 10);
   }
-}
-
-/**
- * Update visualization for a given number of clusters
- * @param {number} nClusters - Number of clusters
- */
-function updateClusters(nClusters) {
-  gridState.currentNClusters = nClusters;
-  gridState.currentCutHeight = null;
-
-  const rawAssignments = computeClusters(nClusters);
-  const {
-    assignments,
-    smallClusters,
-    nClusters: finalNClusters,
-  } = applyMinClusterSize(rawAssignments);
-
-  window.CLUSTER_STATE.setAssignments(assignments, finalNClusters);
-  renderModelGrids();
-  updateStats(assignments, finalNClusters, smallClusters);
 }
 
 /**
@@ -900,15 +870,11 @@ function updateClustersByHeight(cutHeight) {
   ClusteringConfig.setCutHeight(cutHeight);
 
   const rawAssignments = computeClustersByHeightInternal(cutHeight);
-  const rawNClusters = new Set(Object.values(rawAssignments)).size;
   const {
     assignments,
     smallClusters,
     nClusters: finalNClusters,
   } = applyMinClusterSize(rawAssignments);
-
-  document.getElementById("n-clusters").value = rawNClusters;
-  document.getElementById("n-clusters-input").value = rawNClusters;
 
   window.CLUSTER_STATE.setAssignments(assignments, finalNClusters);
   renderModelGrids();
@@ -1197,6 +1163,10 @@ function updateSelectedCells() {
   // Update count
   document.getElementById("selected-count").textContent =
     `(${gridState.selectedHeads.length})`;
+
+  // Sync selection to URL (debounced) and update cluster labels
+  syncSelectedHeadsToUrl();
+  renderClusterLabels();
 }
 
 /**
@@ -1409,6 +1379,7 @@ function hideTooltip() {
 function updateStats(assignments, nClusters, smallClusters = new Set()) {
   // Store for re-rendering when toggling log scale
   gridState.currentAssignments = assignments;
+  gridState.currentNClusters = nClusters;
 
   const sizes = window.CLUSTER_STATE.getClusterSizes();
   const sortedSizes = Object.values(sizes).sort((a, b) => b - a);
@@ -1545,27 +1516,129 @@ function buildClusterTree() {
 }
 
 /**
+ * Truncate a cluster tree to at most maxLeaves leaf nodes.
+ * Collapses subtrees containing only small clusters into aggregate nodes.
+ * @param {Object} tree - Collapsed cluster tree from buildClusterTree()
+ * @param {number} maxLeaves - Maximum number of leaf nodes to show
+ * @returns {Object} Truncated tree
+ */
+function truncateTree(tree, maxLeaves) {
+  // Count current leaves
+  function countLeaves(node) {
+    if (node.isLeaf || node.isAggregate) return 1;
+    return countLeaves(node.children[0]) + countLeaves(node.children[1]);
+  }
+
+  if (countLeaves(tree) <= maxLeaves) return tree;
+
+  const sizes = window.CLUSTER_STATE.getClusterSizes();
+
+  // Collect all leaves with their sizes
+  /** @type {Array<{clusterId: number, size: number}>} */
+  const allLeaves = [];
+  function collectLeaves(node) {
+    if (node.isLeaf) {
+      allLeaves.push({
+        clusterId: node.clusterId,
+        size: sizes[node.clusterId] || node.count,
+      });
+      return;
+    }
+    collectLeaves(node.children[0]);
+    collectLeaves(node.children[1]);
+  }
+  collectLeaves(tree);
+
+  // Sort by size descending, keep top (maxLeaves - 1) as "big"
+  allLeaves.sort((a, b) => b.size - a.size);
+  const bigClusterIds = new Set(
+    allLeaves.slice(0, maxLeaves - 1).map((l) => l.clusterId),
+  );
+
+  // Walk tree: collapse subtrees where ALL leaves are small
+  function truncateNode(node) {
+    if (node.isLeaf) {
+      if (bigClusterIds.has(node.clusterId)) return node;
+      // Small leaf - return as-is, parent will aggregate
+      return node;
+    }
+
+    const left = truncateNode(node.children[0]);
+    const right = truncateNode(node.children[1]);
+
+    // Collect all cluster IDs in each subtree
+    function getClusterIds(n) {
+      if (n.isAggregate) return [...n.clusterIds];
+      if (n.isLeaf) return [n.clusterId];
+      return [...getClusterIds(n.children[0]), ...getClusterIds(n.children[1])];
+    }
+
+    const leftIds = getClusterIds(left);
+    const rightIds = getClusterIds(right);
+    const allIds = [...leftIds, ...rightIds];
+    const allSmall = allIds.every((id) => !bigClusterIds.has(id));
+
+    if (allSmall) {
+      // Collapse entire subtree into aggregate
+      return {
+        isAggregate: true,
+        isLeaf: false,
+        clusterIds: allIds,
+        totalCount: allIds.reduce((sum, id) => sum + (sizes[id] || 0), 0),
+        height: node.height,
+        count: node.count,
+      };
+    }
+
+    return {
+      isLeaf: false,
+      clusterId: null,
+      height: node.height,
+      count: node.count,
+      children: [left, right],
+    };
+  }
+
+  return truncateNode(tree);
+}
+
+/**
  * Render a simple horizontal dendrogram showing cluster structure
  */
 function renderMiniDendrogram() {
   const svg = document.getElementById("mini-dendrogram");
   if (!svg) return;
 
-  const tree = buildClusterTree();
+  const fullTree = buildClusterTree();
+  const tree = gridState.dendrogramFull ? fullTree : truncateTree(fullTree, 10);
   const sizes = window.CLUSTER_STATE.getClusterSizes();
+
+  // Update toggle button text
+  const toggleBtn = document.getElementById("dendrogram-toggle");
+  if (toggleBtn) {
+    const fullLeafCount = (function countL(n) {
+      return n.isLeaf ? 1 : countL(n.children[0]) + countL(n.children[1]);
+    })(fullTree);
+    toggleBtn.textContent = gridState.dendrogramFull ? "Truncate" : "Show All";
+    toggleBtn.style.display = fullLeafCount <= 10 ? "none" : "";
+    toggleBtn.onclick = () => {
+      gridState.dendrogramFull = !gridState.dendrogramFull;
+      renderMiniDendrogram();
+    };
+  }
 
   // Get dimensions
   const rect = svg.getBoundingClientRect();
   const width = rect.width || 380;
   const height = rect.height || 160;
-  const margin = { top: 5, right: 50, bottom: 5, left: 5 };
+  const margin = { top: 5, right: 60, bottom: 5, left: 5 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
   // Count leaves and assign y positions
   let leafCount = 0;
   function countLeaves(node) {
-    if (node.isLeaf) {
+    if (node.isLeaf || node.isAggregate) {
       node.leafIndex = leafCount++;
       return 1;
     }
@@ -1573,9 +1646,9 @@ function renderMiniDendrogram() {
   }
   const totalLeaves = countLeaves(tree);
 
-  // Get min and max heights for x scaling (to avoid long root line)
+  // Get min and max heights for x scaling
   function getHeightRange(node) {
-    if (node.isLeaf) return { min: Infinity, max: 0 };
+    if (node.isLeaf || node.isAggregate) return { min: Infinity, max: 0 };
     const left = getHeightRange(node.children[0]);
     const right = getHeightRange(node.children[1]);
     return {
@@ -1586,9 +1659,9 @@ function renderMiniDendrogram() {
   const { min: minHeight, max: maxHeight } = getHeightRange(tree);
   const heightRange = maxHeight - minHeight || 1;
 
-  // Position nodes - scale x from minHeight to maxHeight
+  // Position nodes - compact root line
   function positionNodes(node) {
-    if (node.isLeaf) {
+    if (node.isLeaf || node.isAggregate) {
       node.x = innerWidth;
       node.y = (node.leafIndex + 0.5) * (innerHeight / totalLeaves);
       return node.y;
@@ -1596,9 +1669,8 @@ function renderMiniDendrogram() {
 
     const y0 = positionNodes(node.children[0]);
     const y1 = positionNodes(node.children[1]);
-    // Scale so minHeight maps to ~20% from left, maxHeight maps to right edge
     const normalizedHeight = (maxHeight - node.height) / heightRange;
-    node.x = innerWidth * (0.15 + normalizedHeight * 0.85);
+    node.x = innerWidth * (0.02 + normalizedHeight * 0.98);
     node.y = (y0 + y1) / 2;
     return node.y;
   }
@@ -1611,6 +1683,55 @@ function renderMiniDendrogram() {
   const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
 
   function renderNode(node) {
+    if (node.isAggregate) {
+      // Aggregate node: gray circle with "(N clusters)" label
+      const circle = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "circle",
+      );
+      circle.setAttribute("cx", margin.left + node.x);
+      circle.setAttribute("cy", margin.top + node.y);
+      circle.setAttribute("r", 6);
+      circle.setAttribute("fill", "#bbb");
+      circle.setAttribute("stroke", "white");
+      circle.setAttribute("stroke-width", 1);
+      circle.setAttribute("cursor", "pointer");
+
+      // Hover: highlight corresponding cluster chips
+      circle.addEventListener("mouseenter", () => {
+        const chipContainer = document.getElementById("top-clusters");
+        if (!chipContainer) return;
+        const aggregateIds = new Set(node.clusterIds);
+        chipContainer.querySelectorAll(".cluster-chip").forEach((chip) => {
+          const cid = parseInt(chip.dataset.clusterId);
+          if (aggregateIds.has(cid)) {
+            chip.style.outline = "2px solid #333";
+          }
+        });
+      });
+      circle.addEventListener("mouseleave", () => {
+        const chipContainer = document.getElementById("top-clusters");
+        if (!chipContainer) return;
+        chipContainer.querySelectorAll(".cluster-chip").forEach((chip) => {
+          chip.style.outline = "";
+        });
+      });
+      g.appendChild(circle);
+
+      // Label
+      const text = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "text",
+      );
+      text.setAttribute("x", margin.left + node.x + 10);
+      text.setAttribute("y", margin.top + node.y + 4);
+      text.setAttribute("font-size", 10);
+      text.setAttribute("fill", "#888");
+      text.textContent = `(${node.clusterIds.length} clusters)`;
+      g.appendChild(text);
+      return;
+    }
+
     if (node.isLeaf) {
       const color =
         window.CLUSTER_STATE.colors[
@@ -1685,14 +1806,27 @@ function renderClusterLabels() {
   const container = document.getElementById("cluster-labels");
   if (!container) return;
 
+  // Only show clusters for currently selected heads
+  const selectedClusterIds = new Set(
+    gridState.selectedHeads
+      .map((h) => window.CLUSTER_STATE.getClusterId(h))
+      .filter((id) => id !== undefined),
+  );
+
+  if (selectedClusterIds.size === 0) {
+    container.innerHTML =
+      '<div class="cluster-labels-hint" style="color: #888; font-style: italic; padding: 4px 0;">Select heads to edit cluster labels</div>';
+    return;
+  }
+
   const sizes = window.CLUSTER_STATE.getClusterSizes();
   const resolved = gridState.resolvedLabels;
 
-  // Sort clusters by size descending, take top 20
+  // Show only clusters that contain selected heads, sorted by size
   const sortedClusters = Object.entries(sizes)
     .map(([clusterId, size]) => ({ clusterId: parseInt(clusterId), size }))
-    .sort((a, b) => b.size - a.size)
-    .slice(0, 20);
+    .filter(({ clusterId }) => selectedClusterIds.has(clusterId))
+    .sort((a, b) => b.size - a.size);
 
   container.innerHTML = `
     <div class="cluster-labels-header">

@@ -23,39 +23,7 @@
       <div class="controls-header">
         <div class="controls-left">
           <div class="controls clustering-controls">
-            <div class="control-group">
-              <label for="n-clusters">Number of Clusters:</label>
-              <input type="range" id="n-clusters" min="2" max="50" value="10" />
-              <input
-                type="number"
-                id="n-clusters-input"
-                value="10"
-                min="2"
-                class="control-input"
-              />
-            </div>
-            <div class="control-group">
-              <label for="cut-height">Cut Height:</label>
-              <div class="slider-with-ticks">
-                <input
-                  type="range"
-                  id="cut-height"
-                  min="0"
-                  max="10"
-                  value="5"
-                  step="0.01"
-                />
-                <div class="slider-ticks" id="cut-height-ticks"></div>
-              </div>
-              <input
-                type="number"
-                id="cut-height-input"
-                value="0"
-                min="0"
-                step="0.001"
-                class="control-input"
-              />
-            </div>
+            <div class="control-group" id="cut-height-container"></div>
             <div class="control-group">
               <label for="min-cluster-size">Min Cluster Size:</label>
               <input
@@ -112,6 +80,13 @@
         <div class="controls-right">
           <div id="mini-dendrogram-container">
             <svg id="mini-dendrogram"></svg>
+            <button
+              id="dendrogram-toggle"
+              class="toggle-btn"
+              style="font-size: 10px; padding: 2px 6px"
+            >
+              Show All
+            </button>
           </div>
         </div>
       </div>
@@ -164,6 +139,7 @@
     <script src="../../libs/sparklines.js"></script>
     <script src="../../shared/cluster_utils.js"></script>
     <script src="../../shared/clustering_config.js"></script>
+    <script src="../../shared/cut_height_control.js"></script>
     <script src="clusterState.js"></script>
     <script src="gridView.js"></script>
     <script>
@@ -177,7 +153,6 @@
           urlParams.get("linkage") || "../../features/clustering/linkage.json",
         modelsUrl: urlParams.get("models") || "../../patterns/models.jsonl",
         patternsBaseUrl: urlParams.get("patterns") || "../../patterns",
-        defaultNClusters: parseInt(urlParams.get("n_clusters") || "10"),
       };
 
       // Initialize grid view
