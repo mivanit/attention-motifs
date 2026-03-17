@@ -17,7 +17,7 @@ const GOLDEN_ANGLE = 137.508;
 function clusterColor(idx) {
   const hue = (idx * GOLDEN_ANGLE) % 360;
   const sat = 65 + (idx % 3) * 10;
-  const lit = 50 + (idx % 2) * 8;
+  const lit = 45 + (idx % 2) * 10;
   return `hsl(${hue}, ${sat}%, ${lit}%)`;
 }
 
@@ -30,7 +30,7 @@ function clusterColor(idx) {
 function clusterColorAlpha(idx, alpha) {
   const hue = (idx * GOLDEN_ANGLE) % 360;
   const sat = 65 + (idx % 3) * 10;
-  const lit = 50 + (idx % 2) * 8;
+  const lit = 45 + (idx % 2) * 10;
   return `hsla(${hue}, ${sat}%, ${lit}%, ${alpha})`;
 }
 
