@@ -58,6 +58,7 @@ from attention_motifs.ablation.metrics import (
 
 import torch
 from torch import Tensor
+from jaxtyping import Float
 from transformer_lens import HookedTransformer
 
 
@@ -409,14 +410,13 @@ def run_ablation_experiment(
 				# must re-cache clean patterns and re-enter ablate_heads
 				# for each one (Olsson et al. 2022).
 				if icl_prompts and method == AblationMethod.PATTERN_PRESERVING:
-					heads_to_ablate = [(layer, head)]
-					saved_patterns: dict | None = ablator._clean_patterns
+					saved_patterns: dict[str, Float[Tensor, "batch n_heads dest src"]] | None = ablator._clean_patterns
 
 					def _pattern_preserving_forward(
 						m: HookedTransformer, tokens: Tensor
 					) -> Tensor:
-						ablator.set_clean_patterns(tokens)  # noqa: F821
-						with ablator.ablate_heads(  # noqa: F821
+						ablator.set_clean_patterns(tokens)
+						with ablator.ablate_heads(
 							[(layer, head)], AblationMethod.PATTERN_PRESERVING
 						):
 							return m(tokens)
