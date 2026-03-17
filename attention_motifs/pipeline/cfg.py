@@ -26,6 +26,7 @@ DataFilename = Literal[
 	"scaled",
 	"pca",
 	"pca_npy",
+	"pca_web",
 	"head_dists_zanj",
 	"head_dists_raw",
 	"head_embed",
@@ -49,6 +50,7 @@ DATA_FNAMES: dict[DataFilename, str] = {
 	"importance": "importance.jsonl",
 	"pca": "pca.jsonl",
 	"pca_npy": "pca.npy",
+	"pca_web": "pca_web.csv",
 	"head_dists_zanj": "head_dists.zanj",
 	"head_dists_raw": "head_dists_raw",
 	"head_embed": "head_embed.jsonl",
@@ -87,7 +89,7 @@ DEFAULT_VIS_CONFIGS: dict[str, dict[str, Any]] = dict(
 		path="embeds/patterns/",
 		cfg_path="config.json",
 		cfg={
-			"dataFile": "../../../features/pca.csv",
+			"dataFile": "../../../features/pca_web.csv",
 			"numericalPrefix": "pc.",
 			"defaultColorColumn": "activation.model",
 			"defaultSelectionColumn": "activation.model",
@@ -234,6 +236,10 @@ class PipelineConfig:
 	models: list[str]
 	pca_n_components: int = 16
 
+	# s3: web CSV sampling (subset of prompts for pca_web.csv)
+	web_pca_n_prompts: int | None = None  # None = write all prompts to web CSV
+	web_pca_seed: int = 42
+
 	# head embedding configuration
 	embedding_methods: list[EmbeddingMethod] = field(
 		default_factory=lambda: ["isomap", "umap", "tsne", "pca"]
@@ -334,6 +340,8 @@ class PipelineConfig:
 			prompts_max_chars=self.prompts_max_chars,
 			models=sorted(self.models),
 			pca_n_components=self.pca_n_components,
+			web_pca_n_prompts=self.web_pca_n_prompts,
+			web_pca_seed=self.web_pca_seed,
 			embedding_methods=sorted(self.embedding_methods),
 			embedding_n_components_list=sorted(self.embedding_n_components_list),
 			embedding_n_neighbors_list=sorted(self.embedding_n_neighbors_list),
@@ -396,6 +404,13 @@ class PipelineConfig:
 		assert (
 			isinstance(self.cuda_context_bytes, int) and self.cuda_context_bytes >= 0
 		), "cuda_context_bytes must be a non-negative integer"
+
+		# s3 web PCA sampling validation
+		if self.web_pca_n_prompts is not None:
+			assert (
+				isinstance(self.web_pca_n_prompts, int) and self.web_pca_n_prompts > 0
+			), "web_pca_n_prompts must be a positive integer or None"
+		assert isinstance(self.web_pca_seed, int), "web_pca_seed must be an integer"
 
 		# s1b render patterns validation
 		if self.render_n_samples is not None:
@@ -463,6 +478,8 @@ class PipelineConfig:
 			pca_n_components=data.get(
 				"pca_n_components", 16
 			),  # default to 16 if not specified
+			web_pca_n_prompts=data.get("web_pca_n_prompts", None),
+			web_pca_seed=data.get("web_pca_seed", 42),
 			embedding_methods=data.get(
 				"embedding_methods", ["isomap", "umap", "tsne", "pca"]
 			),

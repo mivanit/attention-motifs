@@ -1,3 +1,5 @@
+import random
+
 import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
@@ -17,6 +19,25 @@ from attention_motifs.features.analysis import (
 from attention_motifs.features.plotting import (
 	apply_pca,
 )
+
+
+def _sample_prompts(
+	df: pl.DataFrame,
+	n_prompts: int,
+	seed: int,
+	prompt_col: str = "activation.prompt",
+) -> pl.DataFrame:
+	"""Deterministically sample a subset of prompts, keeping all rows for each sampled prompt.
+
+	All models share the same prompt subset. Models with fewer prompts than
+	`n_prompts` keep all their rows.
+	"""
+	unique_prompts: list[str] = sorted(df[prompt_col].unique().to_list())
+	if len(unique_prompts) <= n_prompts:
+		return df
+	rng: random.Random = random.Random(seed)
+	sampled: list[str] = rng.sample(unique_prompts, n_prompts)
+	return df.filter(pl.col(prompt_col).is_in(sampled))
 
 
 def compute_normalization(cfg: PipelineConfig) -> tuple[pl.DataFrame, list[str]]:
@@ -107,6 +128,19 @@ def compute_pca(
 	# write a CSV version with less precision, for the web interface
 	df_pca.write_csv(
 		cfg.data_path("pca").with_suffix(".csv"),
+		float_precision=6,
+	)
+
+	# write a reduced CSV for the web visualization (sampled prompts)
+	df_pca_web: pl.DataFrame = df_pca
+	if cfg.web_pca_n_prompts is not None:
+		df_pca_web = _sample_prompts(
+			df_pca,
+			n_prompts=cfg.web_pca_n_prompts,
+			seed=cfg.web_pca_seed,
+		)
+	df_pca_web.write_csv(
+		cfg.data_path("pca_web"),
 		float_precision=6,
 	)
 

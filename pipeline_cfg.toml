@@ -72,6 +72,10 @@ models = [
 ]
 # number of components for PCA decomposition of activation features
 pca_n_components = 6
+# max prompts in web CSV (pca_web.csv). same prompt subset for all models.
+# PCA is computed on ALL data; this only limits the web visualization file.
+# comment out = use all prompts
+web_pca_n_prompts = 128
 
 # head embedding configuration
 # ============================================================
@@ -148,7 +152,7 @@ verbose = 99
 pca_all_dpi = 150
 
 [vis_configs.embed_pattern.cfg]
-dataFile = "../../../features/pca.csv"
+dataFile = "../../../features/pca_web.csv"
 
 # visualization configurations (uncomment to override defaults)
 # ============================================================

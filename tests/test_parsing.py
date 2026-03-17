@@ -10,6 +10,7 @@ import pytest
 
 from attention_motifs.attnpedia.attnpedia import parse_cls, parse_head
 from attention_motifs.pipeline.cfg import PipelineConfig, deep_merge_dicts
+from attention_motifs.pipeline.s3_feat_proc import _sample_prompts
 from attention_motifs.pipeline.s5_head_embed import (
 	create_plots_metadata,
 	get_embedding_prefixes,
@@ -179,3 +180,78 @@ class TestComputeHash:
 		cfg2: PipelineConfig = PipelineConfig.read(Path("tests/pipeline_cfg_test.toml"))
 		cfg2.models = ["different-model"]
 		assert cfg1.compute_hash() != cfg2.compute_hash()
+
+
+# ===========================================================================
+# s3 web PCA sampling
+# ===========================================================================
+
+
+class TestSamplePrompts:
+	"""Tests for _sample_prompts used to create the reduced pca_web.csv."""
+
+	@pytest.fixture()
+	def df(self) -> pl.DataFrame:
+		"""3 models × 5 prompts × 2 heads = 30 rows."""
+		rows: list[dict[str, str | float]] = []
+		for model in ["model-a", "model-b", "model-c"]:
+			for prompt in ["p1", "p2", "p3", "p4", "p5"]:
+				for head in [0, 1]:
+					rows.append(
+						{
+							"activation.model": model,
+							"activation.prompt": prompt,
+							"activation.head": float(head),
+							"pc.0": 1.0,
+						}
+					)
+		return pl.DataFrame(rows)
+
+	def test_samples_correct_prompt_count(self, df: pl.DataFrame) -> None:
+		result: pl.DataFrame = _sample_prompts(df, n_prompts=2, seed=42)
+		prompts: list[str] = result["activation.prompt"].unique().sort().to_list()
+		assert len(prompts) == 2
+
+	def test_same_prompts_across_models(self, df: pl.DataFrame) -> None:
+		result: pl.DataFrame = _sample_prompts(df, n_prompts=2, seed=42)
+		prompts_per_model: dict[str, set[str]] = {}
+		for model in result["activation.model"].unique().to_list():
+			model_prompts: set[str] = set(
+				result.filter(pl.col("activation.model") == model)[
+					"activation.prompt"
+				].to_list()
+			)
+			prompts_per_model[model] = model_prompts
+		# all models should have the exact same prompt set
+		values: list[set[str]] = list(prompts_per_model.values())
+		assert all(v == values[0] for v in values)
+
+	def test_all_heads_preserved(self, df: pl.DataFrame) -> None:
+		"""Each prompt should keep all its heads (2 per model)."""
+		result: pl.DataFrame = _sample_prompts(df, n_prompts=2, seed=42)
+		# 2 prompts × 3 models × 2 heads = 12 rows
+		assert len(result) == 12
+
+	def test_deterministic(self, df: pl.DataFrame) -> None:
+		r1: pl.DataFrame = _sample_prompts(df, n_prompts=2, seed=42)
+		r2: pl.DataFrame = _sample_prompts(df, n_prompts=2, seed=42)
+		assert r1.equals(r2)
+
+	def test_different_seed_different_result(self, df: pl.DataFrame) -> None:
+		r1: pl.DataFrame = _sample_prompts(df, n_prompts=2, seed=42)
+		r2: pl.DataFrame = _sample_prompts(df, n_prompts=2, seed=99)
+		p1: list[str] = sorted(r1["activation.prompt"].unique().to_list())
+		p2: list[str] = sorted(r2["activation.prompt"].unique().to_list())
+		# with 5 prompts and sample of 2, different seeds should (very likely) differ
+		assert p1 != p2
+
+	def test_n_prompts_exceeds_available(self, df: pl.DataFrame) -> None:
+		"""If n_prompts >= available prompts, return all rows unchanged."""
+		result: pl.DataFrame = _sample_prompts(df, n_prompts=100, seed=42)
+		assert len(result) == len(df)
+
+	def test_config_defaults_none(self) -> None:
+		"""web_pca_n_prompts defaults to None when not in TOML."""
+		cfg: PipelineConfig = PipelineConfig.read(Path("tests/pipeline_cfg_test.toml"))
+		assert cfg.web_pca_n_prompts is None
+		assert cfg.web_pca_seed == 42
