@@ -13,6 +13,7 @@ def vec_features(
 	# compute_distribution: bool = True,
 	# compute_timeseries: bool = True,
 	reduced: bool = True,
+	dist_only: bool = False,
 ) -> dict[str, float]:
 	if len(arr.shape) != 1:
 		dbg_tensor(arr)
@@ -50,6 +51,9 @@ def vec_features(
 		dist_features["energy"] = float(np.sum(arr**2))
 		dist_features["kurtosis"] = float(stats.kurtosis(arr))
 		dist_features["L2_norm"] = float(np.linalg.norm(arr, ord=2) / n)
+
+	if dist_only:
+		return dist_features
 
 	# if compute_timeseries:
 	# Lag-1 Autocorrelation (Pearson correlation between arr[:-1] and arr[1:])

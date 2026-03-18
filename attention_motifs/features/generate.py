@@ -1,9 +1,7 @@
 from pathlib import Path
 
-from attention_motifs.features.features import (
-	scalar_feature_table,
-	compute_scalar_features,
-)
+from attention_motifs.features.feature_table import scalar_feature_table
+from attention_motifs.features.features import compute_scalar_features
 
 
 if __name__ == "__main__":

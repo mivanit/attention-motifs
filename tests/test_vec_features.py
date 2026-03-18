@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from attention_motifs.features.features import gram_features
 from attention_motifs.features.vec_features import (
 	VEC_FEATURES_NAMES,
 	vec_features,
@@ -73,6 +74,69 @@ class TestVecFeatures:
 		assert "energy" in full
 		assert "kurtosis" not in reduced
 		assert "kurtosis" in full
+
+	def test_dist_only(self) -> None:
+		"""dist_only=True returns only distribution features, no time-series."""
+		arr: np.ndarray = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+		feats: dict[str, float] = vec_features(arr, dist_only=True)
+		assert "mean" in feats
+		assert "variance" in feats
+		assert "entropy" in feats
+		assert "linreg.slope" not in feats
+		assert "autocorr_lag1" not in feats
+		assert "psd_total_power" not in feats
+
+	def test_dist_only_with_reduced_false(self) -> None:
+		"""dist_only=True, reduced=False includes energy/kurtosis but no time-series."""
+		arr: np.ndarray = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+		feats: dict[str, float] = vec_features(arr, reduced=False, dist_only=True)
+		assert "energy" in feats
+		assert "kurtosis" in feats
+		assert "linreg.slope" not in feats
+		assert "autocorr_lag1" not in feats
+
+
+class TestGramFeatures:
+	"""Tests for gram_features — expanded gram matrix feature extraction."""
+
+	def test_gram_features_keys(self) -> None:
+		"""gram_features returns hist, rowsum, colsum, and flat prefixed features."""
+		rng: np.random.Generator = np.random.default_rng(42)
+		G: np.ndarray = rng.random((8, 8))
+		feats: dict[str, float] = gram_features(G)
+		prefixes: set[str] = {k.split(".")[0] for k in feats}
+		assert prefixes == {"hist", "rowsum", "colsum", "flat"}
+
+	def test_flat_no_timeseries(self) -> None:
+		"""flat.* should NOT have time-series keys."""
+		rng: np.random.Generator = np.random.default_rng(42)
+		G: np.ndarray = rng.random((8, 8))
+		feats: dict[str, float] = gram_features(G)
+		assert "flat.linreg.slope" not in feats
+		assert "flat.autocorr_lag1" not in feats
+		assert "flat.psd_total_power" not in feats
+		# but should have distribution keys
+		assert "flat.mean" in feats
+		assert "flat.variance" in feats
+		assert "flat.energy" in feats
+
+	def test_rowsum_colsum_have_timeseries(self) -> None:
+		"""rowsum.* and colsum.* should have time-series keys."""
+		rng: np.random.Generator = np.random.default_rng(42)
+		G: np.ndarray = rng.random((8, 8))
+		feats: dict[str, float] = gram_features(G)
+		assert "rowsum.linreg.slope" in feats
+		assert "rowsum.autocorr_lag1" in feats
+		assert "colsum.linreg.slope" in feats
+		assert "colsum.autocorr_lag1" in feats
+
+	def test_no_nan_values(self) -> None:
+		"""All feature values should be finite."""
+		rng: np.random.Generator = np.random.default_rng(42)
+		G: np.ndarray = rng.random((8, 8))
+		feats: dict[str, float] = gram_features(G)
+		for k, v in feats.items():
+			assert np.isfinite(v), f"Non-finite value for {k}: {v}"
 
 
 class TestVecFeaturesArr:
