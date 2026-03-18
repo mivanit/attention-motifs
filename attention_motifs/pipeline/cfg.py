@@ -141,6 +141,7 @@ DEFAULT_VIS_CONFIGS: dict[str, dict[str, Any]] = dict(
 			"defaultColorColumn": "type.group",
 			"defaultSelectionColumn": "type.group",
 			"hoverColumns": ["cls", "type.primary", "type.group"],
+			"clustering_methods_url": "../../../features/clustering_methods.json",
 			"clustering_meta_url": "../../../features/clustering/clustering_meta.json",
 			"clustering_linkage_url": "../../../features/clustering/linkage.json",
 			"cluster_labels_url": "../../../features/clustering/cluster_labels.json",

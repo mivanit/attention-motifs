@@ -492,7 +492,7 @@ def compute_leiden(
 	for res in sorted(resolutions):
 		param_key: str = f"{res:.3f}"
 
-		membership: ig.clustering.VertexClustering = graph.community_leiden(
+		membership: Any = graph.community_leiden(
 			objective_function="modularity",
 			weights="weight",
 			resolution=res,
