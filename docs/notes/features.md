@@ -181,13 +181,17 @@ This aligns rows by *relative* position: column $n-1$ always contains the self-a
 
 ## Gram-to-Scalar Pipeline
 
-Each of the eight gram/similarity matrices $G \in \mathbb{R}^{n \times n}$ is reduced to a set of scalars as follows:
+Each of the eight gram/similarity matrices $G \in \mathbb{R}^{n \times n}$ is reduced to 48 scalar features via four extraction paths:
 
-1. **Flatten**: collect all $n^2$ entries of $G$ into a vector
-2. **Histogram**: bin the values into 32 uniform bins over $[0, 1]$ (normalized density)
-3. **Summarize**: apply the base scalar features (reduced set — without energy, kurtosis, or L2 norm) to the 32-dimensional histogram vector
+1. **Histogram (`hist.*`)**: flatten $G$ into a vector, bin into 32 uniform bins over $[0, 1]$ (normalized density), then apply the reduced base scalar features (distribution + time-series, without energy/kurtosis/L2 norm) to the 32-dimensional histogram vector. This captures the overall shape of the value distribution — e.g., a head where all rows attend identically produces a histogram concentrated near 1.0 (high mean, low entropy). **11 features.**
 
-The histogram step captures the overall *distribution* of pairwise similarities. For instance, a head where all rows attend identically will produce a histogram concentrated near 1.0 (high mean, low entropy), while a head with diverse attention patterns will spread mass across the range (lower mean, higher entropy).
+2. **Row sums (`rowsum.*`)**: compute $r_i = \sum_j G_{i,j}$ for each row, then apply the full base scalar features (distribution + time-series, including energy/kurtosis/L2 norm). Position order is meaningful, so time-series features (slope, autocorrelation) capture how row similarity varies across positions. **14 features.**
+
+3. **Column sums (`colsum.*`)**: compute $c_j = \sum_i G_{i,j}$ for each column, then apply the full base scalar features. Same rationale as row sums. **14 features.**
+
+4. **Flat (`flat.*`)**: flatten $G$ and apply distribution-only base scalar features (including energy/kurtosis/L2 norm, but no time-series). The flattened order is arbitrary, so time-series statistics are not meaningful; only distributional statistics are computed. **9 features.**
+
+Total: 48 features per gram matrix, 384 across the 8 gram matrices.
 
 
 ## Feature Naming
@@ -214,4 +218,8 @@ Features follow the naming pattern `feat.<context>.<statistic>`, where `<context
 | `log.gram.skew.row` | Log-space skew row cosine similarity |
 | `log.gram.skew.col` | Log-space skew column cosine similarity |
 
-For gram contexts, the statistic is additionally prefixed with `hist` (since it is computed on the histogram), giving names like `feat.gram.row.hist.entropy` or `feat.log.gram.skew.row.hist.linreg.slope`.
+For gram contexts, the statistic is additionally prefixed with the extraction path (`hist`, `rowsum`, `colsum`, or `flat`), giving names like:
+
+- `feat.gram.row.hist.entropy` — Shannon entropy of the histogram of the row gram matrix
+- `feat.gram.row.rowsum.linreg.slope` — linear trend in row sums of the row gram matrix
+- `feat.log.gram.skew.col.flat.mean` — mean of all entries in the log-space skew column cosine similarity matrix
