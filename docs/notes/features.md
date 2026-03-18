@@ -8,73 +8,82 @@ Features are computed in three stages:
 
 1. **Vector extraction**: pull out meaningful 1D slices of $A$
 2. **Gram matrix construction**: build matrices capturing pairwise similarity structure
-3. **Scalar summarization**: reduce vectors and matrices to scalar statistics
-
----
+3. **Scalar summarization**: reduce vectors and matrices to scalar statistics, to enable a consistent embedding regardless of context window size $n$
 
 ## Vector Extractions
 
 Eight vectors are extracted from $A$ and summarized with the full set of base scalar features (see below).
 
-### Diagonal: self-attention
+- Diagonal: self-attention
 
-$$d = \operatorname{diag}(A), \quad d_i = A_{i,i}$$
+	$$
+		d = \operatorname{diag}(A), \quad d_i = A_{i,i}
+	$$
 
-The diagonal captures how much each position attends to itself. High diagonal values indicate identity-like or "copying" behavior; low values indicate the head distributes attention elsewhere.
+	The diagonal captures how much each position attends to itself. High diagonal values indicate identity-like or "copying" behavior; low values indicate the head distributes attention elsewhere.
 
-### First-token column
+- First-token column (Attention sink)
 
-$$f = A_{:,\,0}$$
+	$$f = A_{:,\,0}$$
 
-The first column of $A$ gives each position's attention to token 0. For models that prepend a BOS token (GPT-2, Pythia, TinyStories, Gemma), this measures BOS attention. For models without BOS prepending (e.g. Llama), this is attention to the first content token.
+	The first column of $A$ gives each position's attention to token 0. Note that this is generally the BOS (beginning of string) token. \TODO{cite attention sink}
 
-### Last-token column
+- Last-token column
 
-$$\ell = A_{:,\,n-1}$$
+	$$\ell = A_{:,\,n-1}$$
 
-The last column of $A$ gives each position's attention to the final token in the context.
+	The last column of $A$ gives each position's attention to the final token in the context.
 
-### Previous-token (subdiagonal)
+	\TODO{remove this feature. last col is zero everywhere except the last row}
 
-$$p_i = A_{i,\,i-1} \quad \text{for } i \ge 1$$
+- Previous-token (subdiagonal)
 
-The first subdiagonal of $A$, giving each position's attention to the immediately preceding token. This is the signature of "previous-token" or bigram heads.
+	$$
+		p_i = A_{i,\,i-1} \quad \text{for } i \ge 1
+	$$
 
-### Row entropy
+	The first subdiagonal of $A$, giving each position's attention to the immediately preceding token. This is the signature of "previous-token" or bigram heads.
 
-$$H_i = -\sum_j A_{i,j} \ln A_{i,j}$$
+- Row entropy
 
-The Shannon entropy (natural log) of each row's attention distribution. Low entropy indicates the head concentrates attention on a few positions; high entropy indicates a diffuse, uniform-like distribution.
+	$$
+		H_i = -\sum_j A_{i,j} \ln A_{i,j}
+	$$
 
-### Attention distance
+	The Shannon entropy \TODO{cite} of each row's attention distribution. Low entropy indicates the head concentrates attention on a few positions; high entropy indicates a diffuse, uniform-like distribution.
 
-$$\delta_i = \sum_j A_{i,j} \, |i - j|$$
+- Attention distance
 
-The expected absolute distance between source and target positions, weighted by attention. Small values indicate local attention (attending to nearby tokens); large values indicate long-range attention.
+	$$
+		\delta_i = \sum_j A_{i,j} \, |i - j|
+	$$
 
-### Row max
+	The expected absolute distance between source and target positions, weighted by attention. Small values indicate local attention (attending to nearby tokens); large values indicate long-range attention.
 
-$$m_i = \max_j A_{i,j}$$
+- Row max
 
-The maximum attention weight in each row, measuring peakedness. A row max near 1 means the head attends almost entirely to a single position; values near $1/i$ indicate near-uniform attention.
+	$$m_i = \max_j A_{i,j}$$
 
-### Column sum
+	The maximum attention weight in each row, measuring peakedness. A row max near 1 means the head attends almost entirely to a single position; values near $1/i$ indicate near-uniform attention.
 
-$$c_j = \sum_i A_{i,j}$$
+- Column sum
 
-The total attention received by each target position, summed over all source positions. Positions with high column sums are broadly attended to across the sequence (e.g., BOS tokens, separator tokens).
+	$$c_j = \sum_i A_{i,j}$$
 
----
+	The total attention received by each target position, summed over all source positions. Positions with high column sums are broadly attended to across the sequence (e.g., BOS tokens, separator tokens).
 
-## Standalone Scalar Features
+	\TODO{shannon entropy of column sums?}
 
-### Band energy
 
-$$E_\text{band} = \frac{\sum_{i,j:\,|i-j| \le k} A_{i,j}}{\sum_{i,j} A_{i,j}}, \quad k = \max\!\left(1,\, \lfloor n/4 \rfloor\right)$$
+## Other Scalar Features
 
-The fraction of total attention mass concentrated within $k$ diagonals of the main diagonal. Values near 1 indicate the head attends primarily to nearby positions; lower values indicate significant long-range attention.
+- Band energy
 
----
+	$$
+		E_\text{band} = \frac{\sum_{i,j:\,|i-j| \le k} A_{i,j}}{\sum_{i,j} A_{i,j}}, \quad k = \max\!\left(1,\, \lfloor n/4 \rfloor\right)
+	$$
+
+	The fraction of total attention mass concentrated within $k$ diagonals of the main diagonal. Values near 1 indicate the head attends primarily to nearby positions; lower values indicate significant long-range attention.
 
 ## Base Scalar Features
 
@@ -108,7 +117,6 @@ These treat the position index as a time axis, capturing how the vector evolves 
 | Linear regression intercept | $b$ from $x_i \approx m \cdot i + b$ | Baseline level |
 | Linear regression $R^2$ | $r^2$ | Goodness of linear fit |
 
----
 
 ## Gram Matrix Features
 
@@ -158,7 +166,6 @@ Cosine similarity on the rows of $S(A_\text{log})$, combining log-space normaliz
 
 Same as above but computed on columns of $S(A_\text{log})$.
 
----
 
 ## The Skew Transform
 
@@ -170,9 +177,7 @@ For example, with $n=4$:
 
 $$A = \begin{pmatrix} a & 0 & 0 & 0 \\ b & c & 0 & 0 \\ d & e & f & 0 \\ g & h & i & j \end{pmatrix} \;\;\longrightarrow\;\; S(A) = \begin{pmatrix} 0 & 0 & 0 & a \\ 0 & 0 & b & c \\ 0 & d & e & f \\ g & h & i & j \end{pmatrix}$$
 
-This aligns rows by *relative* position: column $n-1$ always contains the self-attention weight, column $n-2$ the weight on the immediately preceding token, and so on. Without this transform, the diagonal entries of $A$ lie in different columns for each row, making row-wise comparisons conflate positional structure with sequence position.
-
----
+This aligns rows by *relative* position: column $n-1$ always contains the self-attention weight, column $n-2$ the weight on the immediately preceding token, and so on. This transform allows row-wise correlations to capture similarity in relative-position attention patterns. For example, the skew of an identity matrix $S(\mathbb{I})$ would be a matrix of ones in the last column and zeros elsewhere. All rows of $S(\mathbb{I})$ are identical, so the skew row gram $S(\mathbb{I}) S(\mathbb{I})^\top$ would be a matrix of all ones, indicating perfect similarity in relative-position attention patterns across all positions.
 
 ## Gram-to-Scalar Pipeline
 
@@ -184,7 +189,6 @@ Each of the eight gram/similarity matrices $G \in \mathbb{R}^{n \times n}$ is re
 
 The histogram step captures the overall *distribution* of pairwise similarities. For instance, a head where all rows attend identically will produce a histogram concentrated near 1.0 (high mean, low entropy), while a head with diverse attention patterns will spread mass across the range (lower mean, higher entropy).
 
----
 
 ## Feature Naming
 
