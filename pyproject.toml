@@ -147,6 +147,7 @@ module = [
 	"mpl_toolkits.*",
 	"sklearn.*",
 	"js_embedding_vis",
+	"igraph",
 ]
 ignore_missing_imports = true
 
