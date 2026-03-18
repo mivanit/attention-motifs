@@ -120,7 +120,7 @@ N_VEC_FEATURES: Final[int] = len(VEC_FEATURES_NAMES)
 def vec_features_arr(
 	x: Float[np.ndarray, "*n"],
 ) -> Float[np.ndarray, f"{N_VEC_FEATURES}"]:
-	"""Return the full 17-element feature vector for a 1-D array.
+	"""Return the full 16-element feature vector for a 1-D array.
 
 	The column order is fixed by ``VEC_FEATURES_NAMES`` so that downstream
 	code can reconstruct a ``dict`` via
