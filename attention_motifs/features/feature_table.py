@@ -124,7 +124,7 @@ def scalar_feature_table(
 					f" is not sanitized (expected {sanitized!r})\033[m"
 				)
 
-	print_log = print if verbose else lambda *args, **kwargs: None
+	print_log = (lambda *args, **kwargs: print(*args, flush=True, **kwargs)) if verbose else lambda *args, **kwargs: None
 
 	print_log(f"# models: {models}")
 
@@ -226,6 +226,7 @@ def scalar_feature_table(
 	if missing:
 		raise FileNotFoundError(f"Missing checkpoint files for models: {missing}")
 
+	print_log(f"# all {len(models)} model checkpoints found, concatenating into {out_path} ...")
 	dfs: list[pl.DataFrame] = [pl.read_ndjson(p) for p in checkpoint_paths]
 	df: pl.DataFrame = pl.concat(dfs)
 
