@@ -3,7 +3,8 @@
  *
  * Assumes ClusteringLoader is already defined (concatenated before this file).
  * Sets HOOKS.onReady to wire clustering controls into the js-embedding-vis
- * custom panel: cut height slider, min cluster size slider, enable checkbox.
+ * custom panel: method selector, cut height slider, param selector,
+ * min cluster size slider, enable checkbox.
  */
 
 HOOKS.onReady = async (pointCloud, uiManager) => {
@@ -18,27 +19,77 @@ HOOKS.onReady = async (pointCloud, uiManager) => {
   let enabled = true;
 
   // Grab DOM elements from the custom panel
+  const methodSelect = document.getElementById("clusterMethod");
+  const cutHeightRow = document.getElementById("clusterCutHeightRow");
   const cutSlider = document.getElementById("clusterCutHeight");
   const cutValue = document.getElementById("clusterCutHeightValue");
+  const paramRow = document.getElementById("clusterParamRow");
+  const paramSelect = document.getElementById("clusterParamSelect");
+  const paramLabel = document.getElementById("clusterParamLabel");
   const minSizeSlider = document.getElementById("clusterMinSize");
   const minSizeValue = document.getElementById("clusterMinSizeValue");
   const statsEl = document.getElementById("clusterStats");
   const enabledCheckbox = document.getElementById("clusterEnabled");
 
+  // Populate method dropdown
+  const methods = clustering.getAvailableMethods();
+  if (methodSelect) {
+    methodSelect.innerHTML = "";
+    for (const m of methods) {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      methodSelect.appendChild(opt);
+    }
+    methodSelect.value = clustering.getMethod();
+  }
+
+  // Show/hide controls based on method
+  function updateControlVisibility() {
+    const isHier = clustering.isHierarchical();
+    if (cutHeightRow) cutHeightRow.style.display = isHier ? "" : "none";
+    if (paramRow) paramRow.style.display = isHier ? "none" : "";
+
+    if (!isHier) {
+      const info = clustering.getFlatParamInfo();
+      if (info && paramSelect && paramLabel) {
+        paramLabel.textContent = info.paramName + ":";
+        paramSelect.innerHTML = "";
+        for (const pk of info.paramKeys) {
+          const opt = document.createElement("option");
+          opt.value = pk;
+          const meta = info.meta[pk];
+          const extra = meta
+            ? ` (${meta.n_clusters} clusters${meta.n_outliers ? `, ${meta.n_outliers} outliers` : ""})`
+            : "";
+          opt.textContent = pk + extra;
+          paramSelect.appendChild(opt);
+        }
+        paramSelect.value = clustering.getParamKey() || info.paramKeys[0];
+      }
+    }
+  }
+
   // Configure cut height slider (capped at 10, default 5)
-  const maxHeight = Math.min(clustering.getMaxCutHeight(), 10);
-  cutSlider.max = maxHeight;
-  cutSlider.step = maxHeight / 1000;
-  cutSlider.value = 5;
-  cutValue.textContent = "5.00";
-  clustering._computeAssignmentsByCutHeight(5);
+  if (clustering.isHierarchical() && clustering.getMaxCutHeight()) {
+    const maxHeight = Math.min(clustering.getMaxCutHeight(), 10);
+    cutSlider.max = maxHeight;
+    cutSlider.step = maxHeight / 1000;
+    cutSlider.value = 5;
+    cutValue.textContent = "5.00";
+    clustering._computeAssignmentsByCutHeight(5);
+  }
+
+  updateControlVisibility();
 
   // Update stats display
   function updateStats() {
     const n = clustering.getNClustersActual();
     const misc = clustering.getUnclusteredCount();
-    statsEl.textContent =
-      `${n} clusters` + (misc > 0 ? `, ${misc} unclustered` : "");
+    let text = `${n} clusters`;
+    if (misc > 0) text += `, ${misc} unclustered`;
+    text += ` [${clustering.getMethod()}]`;
+    statsEl.textContent = text;
   }
 
   // Rebuild color override from current assignments and refresh
@@ -68,6 +119,23 @@ HOOKS.onReady = async (pointCloud, uiManager) => {
     return text;
   };
 
+  // Bind method selector
+  if (methodSelect) {
+    methodSelect.addEventListener("change", () => {
+      clustering.setMethod(methodSelect.value);
+      updateControlVisibility();
+      rebuildAndRefresh();
+    });
+  }
+
+  // Bind param selector (for flat methods)
+  if (paramSelect) {
+    paramSelect.addEventListener("change", async () => {
+      await clustering.setParamKey(paramSelect.value);
+      rebuildAndRefresh();
+    });
+  }
+
   // Bind cut height slider
   cutSlider.addEventListener("input", () => {
     const h = parseFloat(cutSlider.value);
@@ -77,14 +145,10 @@ HOOKS.onReady = async (pointCloud, uiManager) => {
   });
 
   // Bind min cluster size slider
-  minSizeSlider.addEventListener("input", () => {
+  minSizeSlider.addEventListener("input", async () => {
     const n = parseInt(minSizeSlider.value);
     minSizeValue.textContent = n;
-    clustering._minClusterSize = n;
-    clustering._assignments = clustering._applyMinSizeFilter(
-      clustering._rawAssignments,
-    );
-    clustering._resolveLabels();
+    await clustering.setMinClusterSize(n);
     rebuildAndRefresh();
   });
 

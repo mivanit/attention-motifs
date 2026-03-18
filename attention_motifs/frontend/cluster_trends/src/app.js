@@ -48,6 +48,9 @@ let currentRecords = { by_layer: [], by_model: [], entropy_by_layer: [] };
 // Cluster visibility state for legend toggling
 /** @type {Object<number, boolean>} */ let clusterVisible = {};
 
+// Multi-method state
+/** @type {string} */ let currentMethod = "hierarchical";
+
 // ── Colors ──────────────────────────────────────────────────────
 // clusterColor() and clusterColorAlpha() are provided by cluster_utils.js
 
@@ -260,6 +263,36 @@ function updateFromK(k) {
     entropy_by_layer: DATA.entropy_by_layer[key] || [],
   };
   clusterVisible = {}; // Reset visibility on new clustering
+  rebuildAll();
+}
+
+/**
+ * Update currentRecords from a flat clustering method's precomputed parameter.
+ * Reads from DATA.hdbscan or DATA.leiden sub-objects.
+ * @param {string} method - "hdbscan" or "leiden"
+ * @param {string} paramKey - The parameter key (e.g. "5", "0.5")
+ */
+function updateFromFlatParam(method, paramKey) {
+  const methodData = DATA[method];
+  if (!methodData) return;
+
+  // Build the trend key: for HDBSCAN "hdbscan.mcs{v}", for Leiden "leiden.r{v}"
+  let trendKey;
+  if (method === "hdbscan") {
+    trendKey = `hdbscan.mcs${paramKey}`;
+  } else if (method === "leiden") {
+    trendKey = `leiden.r${paramKey}`;
+  } else {
+    return;
+  }
+
+  resolvedLabels = {};
+  currentRecords = {
+    by_layer: methodData.by_layer[trendKey] || [],
+    by_model: methodData.by_model[trendKey] || [],
+    entropy_by_layer: methodData.entropy_by_layer[trendKey] || [],
+  };
+  clusterVisible = {};
   rebuildAll();
 }
 
@@ -1255,6 +1288,64 @@ async function init() {
     }
   }
 
+  // --- Method selector ---
+  const methodSelect = document.getElementById("method-select");
+  const hierControls = document.getElementById("hierarchical-controls");
+  const flatParamControls = document.getElementById("flat-param-controls");
+  const flatParamSelect = document.getElementById("flat-param-select");
+  const flatParamLabel = document.getElementById("flat-param-label");
+
+  const availableMethods = DATA.methods || ["hierarchical"];
+
+  // Filter to methods that have data
+  const methodsWithData = availableMethods.filter(
+    (m) => m === "hierarchical" || DATA[m] !== undefined,
+  );
+
+  if (methodSelect) {
+    methodSelect.innerHTML = "";
+    for (const m of methodsWithData) {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      methodSelect.appendChild(opt);
+    }
+
+    const savedMethod = ClusteringConfig.getMethod();
+    currentMethod =
+      savedMethod && methodsWithData.includes(savedMethod)
+        ? savedMethod
+        : "hierarchical";
+    methodSelect.value = currentMethod;
+  }
+
+  function updateMethodControls() {
+    const isHier = currentMethod === "hierarchical";
+    if (hierControls) hierControls.style.display = isHier ? "" : "none";
+    if (flatParamControls)
+      flatParamControls.style.display = isHier ? "none" : "";
+
+    if (!isHier && flatParamSelect) {
+      const methodData = DATA[currentMethod];
+      if (methodData) {
+        if (flatParamLabel)
+          flatParamLabel.textContent = methodData.param_name + ":";
+        flatParamSelect.innerHTML = "";
+        for (const pv of methodData.param_values) {
+          const opt = document.createElement("option");
+          opt.value = String(pv);
+          opt.textContent = String(pv);
+          flatParamSelect.appendChild(opt);
+        }
+        const savedPK = ClusteringConfig.getParamKey();
+        flatParamSelect.value =
+          savedPK && methodData.param_values.map(String).includes(savedPK)
+            ? savedPK
+            : String(methodData.param_values[0]);
+      }
+    }
+  }
+
   // Populate K selector
   const kSelect = document.getElementById("k-select");
   for (const k of DATA.k_values) {
@@ -1297,6 +1388,41 @@ async function init() {
     updateFromK(Number(kSelect.value));
   });
 
+  // Method selector
+  if (methodSelect) {
+    methodSelect.addEventListener("change", () => {
+      currentMethod = methodSelect.value;
+      ClusteringConfig.setMethod(currentMethod);
+      updateMethodControls();
+
+      if (currentMethod === "hierarchical") {
+        if (clusteringAvailable) {
+          const h = cutHeightCtrl.getValue ? cutHeightCtrl.getValue() : 5;
+          updateFromCutHeight(h);
+        } else {
+          updateFromK(currentK);
+        }
+      } else {
+        const pk = flatParamSelect ? flatParamSelect.value : null;
+        if (pk) {
+          ClusteringConfig.setParamKey(pk);
+          updateFromFlatParam(currentMethod, pk);
+        }
+      }
+    });
+  }
+
+  // Flat param selector
+  if (flatParamSelect) {
+    flatParamSelect.addEventListener("change", () => {
+      const pk = flatParamSelect.value;
+      ClusteringConfig.setParamKey(pk);
+      updateFromFlatParam(currentMethod, pk);
+    });
+  }
+
+  updateMethodControls();
+
   document.getElementById("show-lines").addEventListener("change", () => {
     buildLayerChart();
   });
@@ -1320,14 +1446,19 @@ async function init() {
   document.getElementById("loading").style.display = "none";
   document.getElementById("charts-container").style.display = "block";
 
-  // Initial draw: use shared config cut height if available
-  if (clusteringAvailable) {
-    const savedCutHeight = ClusteringConfig.getCutHeight();
-    const startCutHeight = savedCutHeight ?? 5;
-    cutHeightCtrl.setValue(startCutHeight);
-    updateFromCutHeight(startCutHeight);
+  // Initial draw based on current method
+  if (currentMethod === "hierarchical") {
+    if (clusteringAvailable) {
+      const savedCutHeight = ClusteringConfig.getCutHeight();
+      const startCutHeight = savedCutHeight ?? 5;
+      cutHeightCtrl.setValue(startCutHeight);
+      updateFromCutHeight(startCutHeight);
+    } else {
+      updateFromK(currentK);
+    }
   } else {
-    updateFromK(currentK);
+    const pk = flatParamSelect ? flatParamSelect.value : null;
+    if (pk) updateFromFlatParam(currentMethod, pk);
   }
 }
 

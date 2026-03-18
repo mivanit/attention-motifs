@@ -134,13 +134,48 @@ async function loadClusterLabels(serverUrl) {
  */
 function resolveClusterLabels(allLabels, cutHeight, assignments) {
   const heightKey = cutHeight.toFixed(3);
-  const labelsForHeight = allLabels[heightKey];
-  if (!labelsForHeight) return {};
+  return resolveClusterLabelsByKey(allLabels, heightKey, assignments);
+}
+
+/**
+ * Resolve stored labels for a flat clustering method.
+ * Label key format: "{method}:{param_name}={value}"
+ *
+ * @param {Object} allLabels - Full labels object keyed by label key
+ * @param {string} method - Clustering method name (e.g. "hdbscan", "leiden")
+ * @param {string} paramName - Parameter name (e.g. "min_cluster_size", "resolution")
+ * @param {string} paramKey - Parameter value as string
+ * @param {Object<string, number>} assignments - headId -> clusterId
+ * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+ */
+function resolveClusterLabelsFlat(
+  allLabels,
+  method,
+  paramName,
+  paramKey,
+  assignments,
+) {
+  const labelKey = `${method}:${paramName}=${paramKey}`;
+  return resolveClusterLabelsByKey(allLabels, labelKey, assignments);
+}
+
+/**
+ * Resolve stored labels against current cluster assignments using a specific key.
+ * Shared implementation for both hierarchical and flat methods.
+ *
+ * @param {Object} allLabels - Full labels object keyed by label key
+ * @param {string} key - The label key to look up
+ * @param {Object<string, number>} assignments - headId -> clusterId
+ * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+ */
+function resolveClusterLabelsByKey(allLabels, key, assignments) {
+  const labelsForKey = allLabels[key];
+  if (!labelsForKey) return {};
 
   const resolvedCounts = {};
   const resolved = {};
 
-  for (const [_origIdx, entry] of Object.entries(labelsForHeight)) {
+  for (const [_origIdx, entry] of Object.entries(labelsForKey)) {
     if (!entry || !entry.name) continue;
     const heads = entry.heads || [];
 

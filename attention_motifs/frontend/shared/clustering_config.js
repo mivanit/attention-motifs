@@ -58,4 +58,24 @@ const ClusteringConfig = {
     delete s.highlightCluster;
     localStorage.setItem(CLUSTERING_CONFIG_KEY, JSON.stringify(s));
   },
+
+  /** @returns {string|null} clustering method name ("hierarchical", "hdbscan", "leiden") */
+  getMethod() {
+    return this.load().method ?? null;
+  },
+
+  /** @param {string} method */
+  setMethod(method) {
+    this.save({ method });
+  },
+
+  /** @returns {string|null} current parameter key for flat methods */
+  getParamKey() {
+    return this.load().paramKey ?? null;
+  },
+
+  /** @param {string} key */
+  setParamKey(key) {
+    this.save({ paramKey: key });
+  },
 };

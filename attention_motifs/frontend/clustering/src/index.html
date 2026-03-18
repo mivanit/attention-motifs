@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hierarchical Clustering - Attention Heads</title>
+    <title>Clustering - Attention Heads</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -18,12 +18,26 @@
     </nav>
 
     <div class="container">
-      <h1>Hierarchical Clustering of Attention Heads</h1>
+      <h1>Clustering of Attention Heads</h1>
 
       <div class="controls-header">
         <div class="controls-left">
           <div class="controls clustering-controls">
-            <div class="control-group" id="cut-height-container"></div>
+            <div class="control-group">
+              <label for="clustering-method-select">Method:</label>
+              <select id="clustering-method-select" class="dropdown"></select>
+            </div>
+            <div id="hierarchical-controls">
+              <div class="control-group" id="cut-height-container"></div>
+            </div>
+            <div id="flat-param-controls" style="display: none">
+              <div class="control-group">
+                <label id="clustering-param-label" for="clustering-param-select"
+                  >Parameter:</label
+                >
+                <select id="clustering-param-select" class="dropdown"></select>
+              </div>
+            </div>
             <div class="control-group">
               <label for="min-cluster-size">Min Cluster Size:</label>
               <input

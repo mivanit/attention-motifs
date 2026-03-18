@@ -21,10 +21,24 @@
       <h1>Cluster Trends</h1>
 
       <div class="global-controls">
-        <div class="control-group" id="cut-height-container"></div>
         <div class="control-group">
-          <label for="k-select">K (precomputed):</label>
-          <select id="k-select"></select>
+          <label for="method-select">Method:</label>
+          <select id="method-select"></select>
+        </div>
+        <div id="hierarchical-controls">
+          <div class="control-group" id="cut-height-container"></div>
+          <div class="control-group">
+            <label for="k-select">K (precomputed):</label>
+            <select id="k-select"></select>
+          </div>
+        </div>
+        <div id="flat-param-controls" style="display: none">
+          <div class="control-group">
+            <label id="flat-param-label" for="flat-param-select"
+              >Parameter:</label
+            >
+            <select id="flat-param-select"></select>
+          </div>
         </div>
         <div class="control-group">
           <label for="show-lines">Lines:</label>

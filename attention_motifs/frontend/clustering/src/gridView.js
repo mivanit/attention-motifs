@@ -46,6 +46,11 @@ let gridState = {
   resolvedLabels: {}, // current cut height resolved: clusterId -> {name, desc}
   dendrogramFull: false,
   cutHeightControl: null, // shared cut-height control instance
+  // Multi-method clustering
+  currentMethod: "hierarchical", // "hierarchical" | "hdbscan" | "leiden"
+  availableMethods: [], // methods with data available
+  flatData: {}, // { method: { meta, partitions, labels } }
+  currentParamKey: null, // current param key for flat methods
 };
 
 /**
@@ -77,6 +82,22 @@ function getCutHeightKey(cutHeight) {
 }
 
 /**
+ * Get the current label key based on the active clustering method.
+ * Hierarchical: cutHeight.toFixed(3)
+ * Flat methods: "{method}:{param_name}={value}"
+ * @returns {string|null}
+ */
+function getCurrentLabelKey() {
+  if (gridState.currentMethod === "hierarchical") {
+    if (gridState.currentCutHeight === null) return null;
+    return getCutHeightKey(gridState.currentCutHeight);
+  }
+  const flat = gridState.flatData[gridState.currentMethod];
+  if (!flat || !gridState.currentParamKey) return null;
+  return `${flat.meta.method}:${flat.meta.param_name}=${gridState.currentParamKey}`;
+}
+
+/**
  * Save current labels to localStorage
  */
 function saveLabelsToLocalStorage() {
@@ -91,12 +112,12 @@ function saveLabelsToLocalStorage() {
 }
 
 /**
- * Get labels object for the current cut height
+ * Get labels object for the current clustering state
  * @returns {Object} Map of clusterIdx string -> { name, desc, heads }
  */
 function getCurrentLabels() {
-  if (gridState.currentCutHeight === null) return {};
-  const key = getCutHeightKey(gridState.currentCutHeight);
+  const key = getCurrentLabelKey();
+  if (!key) return {};
   return gridState.clusterLabels[key] || {};
 }
 
@@ -105,15 +126,30 @@ function getCurrentLabels() {
  * Uses shared resolveClusterLabels() from cluster_utils.js.
  */
 function updateResolvedLabels() {
-  if (gridState.currentCutHeight === null) {
-    gridState.resolvedLabels = {};
-    return;
+  if (gridState.currentMethod === "hierarchical") {
+    if (gridState.currentCutHeight === null) {
+      gridState.resolvedLabels = {};
+      return;
+    }
+    gridState.resolvedLabels = resolveClusterLabels(
+      gridState.clusterLabels,
+      gridState.currentCutHeight,
+      window.CLUSTER_STATE.getAssignments(),
+    );
+  } else {
+    const flat = gridState.flatData[gridState.currentMethod];
+    if (flat && gridState.currentParamKey) {
+      gridState.resolvedLabels = resolveClusterLabelsFlat(
+        flat.labels,
+        flat.meta.method,
+        flat.meta.param_name,
+        gridState.currentParamKey,
+        window.CLUSTER_STATE.getAssignments(),
+      );
+    } else {
+      gridState.resolvedLabels = {};
+    }
   }
-  gridState.resolvedLabels = resolveClusterLabels(
-    gridState.clusterLabels,
-    gridState.currentCutHeight,
-    window.CLUSTER_STATE.getAssignments(),
-  );
 }
 
 /**
@@ -123,8 +159,8 @@ function updateResolvedLabels() {
  * @param {string|null} desc - Longer description (null/empty for none)
  */
 function setClusterLabel(clusterId, name, desc) {
-  if (gridState.currentCutHeight === null) return;
-  const key = getCutHeightKey(gridState.currentCutHeight);
+  const key = getCurrentLabelKey();
+  if (!key) return;
 
   const trimName = name ? name.trim() : "";
   const trimDesc = desc ? desc.trim() : "";
@@ -450,6 +486,61 @@ async function initGridView(config) {
       "../../features/clustering/cluster_labels.json";
     gridState.clusterLabels = await loadClusterLabels(labelsUrl);
 
+    // Detect available methods from manifest
+    gridState.availableMethods = ["hierarchical"]; // hierarchical always if linkage loaded
+    try {
+      const methodsUrl = "../../features/clustering_methods.json";
+      const mResp = await fetch(methodsUrl);
+      if (mResp.ok) {
+        const manifest = await mResp.json();
+        gridState.availableMethods = manifest.methods || ["hierarchical"];
+      }
+    } catch (e) {
+      // Fall back to hierarchical only
+    }
+
+    // Load flat clustering data (HDBSCAN, Leiden)
+    for (const method of ["hdbscan", "leiden"]) {
+      if (!gridState.availableMethods.includes(method)) continue;
+      try {
+        const flatMetaUrl = `../../features/clustering_${method}/clustering_meta.json`;
+        const flatPartitionsUrl = `../../features/clustering_${method}/partitions.json`;
+        const flatLabelsUrl = `../../features/clustering_${method}/cluster_labels.json`;
+        const [fMetaResp, fPartResp] = await Promise.all([
+          fetch(flatMetaUrl),
+          fetch(flatPartitionsUrl),
+        ]);
+        if (fMetaResp.ok && fPartResp.ok) {
+          const fMeta = await fMetaResp.json();
+          const fPartitions = await fPartResp.json();
+          const fLabels = await loadClusterLabels(flatLabelsUrl);
+          gridState.flatData[method] = {
+            meta: fMeta,
+            partitions: fPartitions,
+            labels: fLabels,
+          };
+          // Merge flat labels into clusterLabels for unified storage
+          for (const [k, v] of Object.entries(fLabels)) {
+            if (!gridState.clusterLabels[k]) {
+              gridState.clusterLabels[k] = v;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn(`Failed to load ${method} clustering data:`, e);
+      }
+    }
+
+    // Determine initial method and parameters
+    const savedMethod = ClusteringConfig.getMethod();
+    if (
+      savedMethod &&
+      (savedMethod === "hierarchical" ||
+        gridState.flatData[savedMethod] !== undefined)
+    ) {
+      gridState.currentMethod = savedMethod;
+    }
+
     // Determine initial cut height: shared config > labels > default
     let initialCutHeight = 5;
     const savedCutHeight = ClusteringConfig.getCutHeight();
@@ -479,13 +570,27 @@ async function initGridView(config) {
     // Set up help tooltip with model data
     setupHelpTooltip();
 
-    // Initial render with cut height and min cluster size
+    // Initial render
     const initialMinClusterSize = gridState.minClusterSize;
-    gridState.cutHeightControl.setValue(initialCutHeight);
     document.getElementById("min-cluster-size").value = initialMinClusterSize;
     document.getElementById("min-cluster-size-input").value =
       initialMinClusterSize;
-    updateClustersByHeight(initialCutHeight);
+
+    if (gridState.currentMethod === "hierarchical") {
+      gridState.cutHeightControl.setValue(initialCutHeight);
+      updateClustersByHeight(initialCutHeight);
+    } else {
+      const flat = gridState.flatData[gridState.currentMethod];
+      const savedParamKey = ClusteringConfig.getParamKey();
+      const paramKey =
+        savedParamKey && flat.meta.param_keys.includes(savedParamKey)
+          ? savedParamKey
+          : flat.meta.param_keys[0];
+      // Update param dropdown
+      const paramSelect = document.getElementById("clustering-param-select");
+      if (paramSelect) paramSelect.value = paramKey;
+      updateClustersByParam(paramKey);
+    }
 
     // Restore selected heads from URL
     const initUrlParams = new URLSearchParams(window.location.search);
@@ -522,6 +627,72 @@ function setupControls() {
   const scaleSlider = document.getElementById("scale");
   const scaleValue = document.getElementById("scale-value");
   const exportBtn = document.getElementById("export-pattern-types");
+
+  // --- Method selector ---
+  const methodSelect = document.getElementById("clustering-method-select");
+  const hierControls = document.getElementById("hierarchical-controls");
+  const paramControls = document.getElementById("flat-param-controls");
+  const paramSelect = document.getElementById("clustering-param-select");
+  const paramLabel = document.getElementById("clustering-param-label");
+
+  if (methodSelect) {
+    methodSelect.innerHTML = "";
+    const methodsWithData = gridState.availableMethods.filter(
+      (m) => m === "hierarchical" || gridState.flatData[m] !== undefined,
+    );
+    for (const m of methodsWithData) {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      methodSelect.appendChild(opt);
+    }
+    methodSelect.value = gridState.currentMethod;
+
+    // Show/hide method-specific controls
+    function updateMethodControls() {
+      const isHier = gridState.currentMethod === "hierarchical";
+      if (hierControls) hierControls.style.display = isHier ? "" : "none";
+      if (paramControls) paramControls.style.display = isHier ? "none" : "";
+
+      if (!isHier && paramSelect) {
+        const flat = gridState.flatData[gridState.currentMethod];
+        if (flat) {
+          if (paramLabel) paramLabel.textContent = flat.meta.param_name + ":";
+          paramSelect.innerHTML = "";
+          for (const pk of flat.meta.param_keys) {
+            const opt = document.createElement("option");
+            opt.value = pk;
+            const meta = flat.meta.partition_meta[pk];
+            const extra = meta
+              ? ` (${meta.n_clusters}cl${meta.n_outliers ? `, ${meta.n_outliers}out` : ""})`
+              : "";
+            opt.textContent = pk + extra;
+            paramSelect.appendChild(opt);
+          }
+          const savedParamKey = ClusteringConfig.getParamKey();
+          paramSelect.value =
+            savedParamKey && flat.meta.param_keys.includes(savedParamKey)
+              ? savedParamKey
+              : flat.meta.param_keys[0];
+        }
+      }
+    }
+
+    updateMethodControls();
+
+    methodSelect.addEventListener("change", () => {
+      gridState.currentMethod = methodSelect.value;
+      ClusteringConfig.setMethod(methodSelect.value);
+      updateMethodControls();
+      reapplyCurrentClustering();
+    });
+
+    if (paramSelect) {
+      paramSelect.addEventListener("change", () => {
+        updateClustersByParam(paramSelect.value);
+      });
+    }
+  }
 
   // Get max height from linkage, capped at 10
   const maxHeight = Math.min(
@@ -714,9 +885,38 @@ function getModelDataYaml(modelName) {
  * Reapply current clustering with updated min-cluster-size
  */
 function reapplyCurrentClustering() {
-  if (gridState.currentCutHeight !== null) {
-    updateClustersByHeight(gridState.currentCutHeight);
+  if (gridState.currentMethod === "hierarchical") {
+    if (gridState.currentCutHeight !== null) {
+      updateClustersByHeight(gridState.currentCutHeight);
+    }
+  } else {
+    if (gridState.currentParamKey !== null) {
+      updateClustersByParam(gridState.currentParamKey);
+    }
   }
+}
+
+/**
+ * Update visualization for a flat clustering method parameter.
+ * @param {string} paramKey - The parameter value key
+ */
+function updateClustersByParam(paramKey) {
+  const flat = gridState.flatData[gridState.currentMethod];
+  if (!flat) return;
+
+  gridState.currentParamKey = paramKey;
+  ClusteringConfig.setParamKey(paramKey);
+
+  const rawAssignments = getFlatPartitionAssignments(flat.partitions, paramKey);
+  const {
+    assignments,
+    smallClusters,
+    nClusters: finalNClusters,
+  } = applyMinSizeFilter(rawAssignments, gridState.minClusterSize);
+
+  window.CLUSTER_STATE.setAssignments(assignments, finalNClusters);
+  renderModelGrids();
+  updateStats(assignments, finalNClusters, smallClusters);
 }
 
 /**

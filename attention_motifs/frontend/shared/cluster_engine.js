@@ -147,3 +147,16 @@ function computeClustersByNClusters(linkage, clsValues, nClusters) {
     cutHeight,
   };
 }
+
+/**
+ * Look up precomputed flat partition assignments by parameter key.
+ * Used for HDBSCAN and Leiden methods where assignments are precomputed
+ * at discrete parameter values (not computed client-side like hierarchical).
+ *
+ * @param {Object<string, Object<string, number>>} partitions - paramKey -> { headId: clusterId }
+ * @param {string} paramKey - The parameter key to look up
+ * @returns {Object<string, number>} headId -> clusterId (empty object if key not found)
+ */
+function getFlatPartitionAssignments(partitions, paramKey) {
+  return partitions[paramKey] || {};
+}
