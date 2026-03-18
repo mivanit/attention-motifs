@@ -34,7 +34,7 @@ from attention_motifs.ablation.metrics import AblationResult
 class TestRepeatedSequence:
 	"""Tests for RepeatedSequence dataclass."""
 
-	def test_basic_creation(self):
+	def test_basic_creation(self) -> None:
 		tokens: torch.Tensor = torch.tensor([1, 2, 3, 1, 2, 3])
 		seq: RepeatedSequence = RepeatedSequence(
 			tokens=tokens,
@@ -46,7 +46,7 @@ class TestRepeatedSequence:
 		assert seq.base_length == 3
 		assert seq.n_repetitions == 2
 
-	def test_induction_positions(self):
+	def test_induction_positions(self) -> None:
 		# [A B C][A B C] - positions 4, 5 are in 2nd repetition (after start)
 		tokens: torch.Tensor = torch.tensor([1, 2, 3, 1, 2, 3])
 		seq: RepeatedSequence = RepeatedSequence(
@@ -66,7 +66,7 @@ class TestRepeatedSequence:
 		assert 1 not in positions
 		assert 2 not in positions
 
-	def test_has_bos_field(self):
+	def test_has_bos_field(self) -> None:
 		"""Test that has_bos field works correctly."""
 		tokens: torch.Tensor = torch.tensor([0, 1, 2, 3, 1, 2, 3])
 		seq: RepeatedSequence = RepeatedSequence(
@@ -79,7 +79,7 @@ class TestRepeatedSequence:
 		assert seq.has_bos is True
 		assert seq.seq_len == 7
 
-	def test_induction_positions_with_bos(self):
+	def test_induction_positions_with_bos(self) -> None:
 		"""Test induction positions are correct when BOS is prepended."""
 		# [BOS][A B C][A B C]
 		tokens: torch.Tensor = torch.tensor([0, 1, 2, 3, 1, 2, 3])
@@ -116,7 +116,7 @@ class TestGenerateRepeatedSequences:
 
 		return MockTokenizer()
 
-	def test_basic_generation(self):
+	def test_basic_generation(self) -> None:
 		tokenizer = self._make_mock_tokenizer()
 		sequences: list[RepeatedSequence] = generate_repeated_sequences(
 			tokenizer=tokenizer,
@@ -132,7 +132,7 @@ class TestGenerateRepeatedSequences:
 			assert seq.n_repetitions == 3
 			assert seq.seq_len == 15  # 5 * 3
 
-	def test_repetition_structure(self):
+	def test_repetition_structure(self) -> None:
 		tokenizer = self._make_mock_tokenizer()
 		sequences: list[RepeatedSequence] = generate_repeated_sequences(
 			tokenizer=tokenizer,
@@ -148,7 +148,7 @@ class TestGenerateRepeatedSequences:
 			assert torch.all(tokens[0:4] == tokens[4:8])
 			assert torch.all(tokens[0:4] == tokens[8:12])
 
-	def test_seed_reproducibility(self):
+	def test_seed_reproducibility(self) -> None:
 		tokenizer = self._make_mock_tokenizer()
 		seq1: list[RepeatedSequence] = generate_repeated_sequences(
 			tokenizer, n_sequences=5, seed=123
@@ -159,7 +159,7 @@ class TestGenerateRepeatedSequences:
 		for s1, s2 in zip(seq1, seq2):
 			assert torch.all(s1.tokens == s2.tokens)
 
-	def test_prepend_bos(self):
+	def test_prepend_bos(self) -> None:
 		"""Test that BOS token is correctly prepended."""
 		tokenizer = self._make_mock_tokenizer()
 		sequences: list[RepeatedSequence] = generate_repeated_sequences(
@@ -182,7 +182,7 @@ class TestGenerateRepeatedSequences:
 			# Repetitions should still match
 			assert torch.all(seq.tokens[1:5] == seq.tokens[5:9])
 
-	def test_no_bos(self):
+	def test_no_bos(self) -> None:
 		"""Test generation without BOS prepend."""
 		tokenizer = self._make_mock_tokenizer()
 		sequences: list[RepeatedSequence] = generate_repeated_sequences(
@@ -199,7 +199,7 @@ class TestGenerateRepeatedSequences:
 			assert seq.repetition_starts[0] == 0
 			assert seq.repetition_starts[1] == 4
 
-	def test_exclude_common_tokens(self):
+	def test_exclude_common_tokens(self) -> None:
 		"""Test that common tokens (low IDs) are excluded."""
 		tokenizer = self._make_mock_tokenizer()
 		sequences: list[RepeatedSequence] = generate_repeated_sequences(
@@ -219,7 +219,7 @@ class TestGenerateRepeatedSequences:
 					f"Token {token_id} is below common_threshold=100"
 				)
 
-	def test_exclude_common_disabled(self):
+	def test_exclude_common_disabled(self) -> None:
 		"""Test that common tokens can be included."""
 		tokenizer = self._make_mock_tokenizer()
 		sequences: list[RepeatedSequence] = generate_repeated_sequences(
@@ -240,7 +240,7 @@ class TestGenerateRepeatedSequences:
 		# Special tokens (0-3) are still excluded, but 4-99 should appear
 		assert has_low_token, "Expected some tokens below 100 when exclude_common=False"
 
-	def test_custom_bos_token_id(self):
+	def test_custom_bos_token_id(self) -> None:
 		"""Test custom BOS token ID."""
 		tokenizer = self._make_mock_tokenizer()
 		sequences: list[RepeatedSequence] = generate_repeated_sequences(
@@ -259,7 +259,7 @@ class TestGenerateRepeatedSequences:
 class TestSequencesBatch:
 	"""Tests for batching sequences."""
 
-	def test_sequences_to_batch(self):
+	def test_sequences_to_batch(self) -> None:
 		sequences: list[RepeatedSequence] = [
 			RepeatedSequence(
 				tokens=torch.tensor([1, 2, 3]),
@@ -279,7 +279,7 @@ class TestSequencesBatch:
 		assert torch.all(batch[0] == torch.tensor([1, 2, 3]))
 		assert torch.all(batch[1] == torch.tensor([4, 5, 6]))
 
-	def test_batch_with_padding(self):
+	def test_batch_with_padding(self) -> None:
 		sequences: list[RepeatedSequence] = [
 			RepeatedSequence(
 				tokens=torch.tensor([1, 2]),
@@ -298,7 +298,7 @@ class TestSequencesBatch:
 		assert batch.shape == (2, 3)
 		assert batch[0, 2] == 0  # padded
 
-	def test_induction_mask(self):
+	def test_induction_mask(self) -> None:
 		sequences: list[RepeatedSequence] = [
 			RepeatedSequence(
 				tokens=torch.tensor([1, 2, 1, 2]),
@@ -323,28 +323,28 @@ class TestSequencesBatch:
 class TestHeadParsing:
 	"""Tests for head string parsing utilities."""
 
-	def test_parse_head_string_short_format(self):
+	def test_parse_head_string_short_format(self) -> None:
 		layer, head = parse_head_string("L5:H5")
 		assert layer == 5
 		assert head == 5
 
-	def test_parse_head_string_full_format(self):
+	def test_parse_head_string_full_format(self) -> None:
 		layer, head = parse_head_string("gpt2-small:L6:H9")
 		assert layer == 6
 		assert head == 9
 
-	def test_parse_head_string_different_numbers(self):
+	def test_parse_head_string_different_numbers(self) -> None:
 		layer, head = parse_head_string("L0:H11")
 		assert layer == 0
 		assert head == 11
 
-	def test_heads_from_strings(self):
+	def test_heads_from_strings(self) -> None:
 		heads: list[tuple[int, int]] = heads_from_strings(
 			["L5:H5", "L6:H9", "gpt2-small:L7:H10"]
 		)
 		assert heads == [(5, 5), (6, 9), (7, 10)]
 
-	def test_invalid_format(self):
+	def test_invalid_format(self) -> None:
 		with pytest.raises(ValueError):
 			parse_head_string("invalid")
 
@@ -352,15 +352,15 @@ class TestHeadParsing:
 class TestAblationMethod:
 	"""Tests for AblationMethod enum."""
 
-	def test_enum_values(self):
+	def test_enum_values(self) -> None:
 		assert AblationMethod.ZERO.value == "zero"
 		assert AblationMethod.MEAN.value == "mean"
 
-	def test_pattern_preserving_enum(self):
+	def test_pattern_preserving_enum(self) -> None:
 		"""Test that PATTERN_PRESERVING enum value exists."""
 		assert AblationMethod.PATTERN_PRESERVING.value == "pattern_preserving"
 
-	def test_all_methods(self):
+	def test_all_methods(self) -> None:
 		"""Test that all expected ablation methods are defined."""
 		methods: set[str] = {m.value for m in AblationMethod}
 		assert methods == {"zero", "mean", "pattern_preserving"}
@@ -374,14 +374,14 @@ class TestAblationMethod:
 class TestKnownInductionHeads:
 	"""Tests for getting known induction heads."""
 
-	def test_get_known_heads(self):
+	def test_get_known_heads(self) -> None:
 		heads: list[str] = get_known_induction_heads()
 		assert len(heads) > 0
 		# All heads should be from gpt2-small
 		for head in heads:
 			assert head.startswith("gpt2-small:")
 
-	def test_specific_heads_present(self):
+	def test_specific_heads_present(self) -> None:
 		heads: list[str] = get_known_induction_heads()
 		# These are well-known induction heads from IOI paper
 		assert "gpt2-small:L5:H5" in heads
@@ -391,7 +391,7 @@ class TestKnownInductionHeads:
 class TestDistanceCandidates:
 	"""Tests for DistanceCandidates dataclass."""
 
-	def test_basic_creation(self):
+	def test_basic_creation(self) -> None:
 		candidates: DistanceCandidates = DistanceCandidates(
 			reference_heads=["gpt2-small:L5:H5"],
 			candidates_by_model={
@@ -402,7 +402,7 @@ class TestDistanceCandidates:
 		assert len(candidates.reference_heads) == 1
 		assert "pythia-1b" in candidates.candidates_by_model
 
-	def test_get_top_candidates(self):
+	def test_get_top_candidates(self) -> None:
 		candidates: DistanceCandidates = DistanceCandidates(
 			reference_heads=["gpt2-small:L5:H5"],
 			candidates_by_model={
@@ -419,7 +419,7 @@ class TestDistanceCandidates:
 		assert top2[0][0] == "pythia-1b:L5:H7"
 		assert top2[1][0] == "pythia-1b:L6:H3"
 
-	def test_get_all_candidates(self):
+	def test_get_all_candidates(self) -> None:
 		candidates: DistanceCandidates = DistanceCandidates(
 			reference_heads=["gpt2-small:L5:H5"],
 			candidates_by_model={
@@ -433,7 +433,7 @@ class TestDistanceCandidates:
 		# Should be sorted by score descending
 		assert all_cands[0][1] >= all_cands[1][1]
 
-	def test_to_dataframe(self):
+	def test_to_dataframe(self) -> None:
 		candidates: DistanceCandidates = DistanceCandidates(
 			reference_heads=["gpt2-small:L5:H5"],
 			candidates_by_model={
@@ -550,7 +550,7 @@ class TestCandidateHeads:
 class TestAblationResult:
 	"""Tests for AblationResult dataclass."""
 
-	def test_creation(self):
+	def test_creation(self) -> None:
 		result: AblationResult = AblationResult(
 			head="pythia-1b:L5:H7",
 			ablation_method=AblationMethod.ZERO,
@@ -565,7 +565,7 @@ class TestAblationResult:
 		assert result.head == "pythia-1b:L5:H7"
 		assert result.loss_increase == 1.5
 
-	def test_optional_fields_defaults(self):
+	def test_optional_fields_defaults(self) -> None:
 		"""Test that optional fields have correct defaults."""
 		result: AblationResult = AblationResult(
 			head="test:L0:H0",
@@ -584,7 +584,7 @@ class TestAblationResult:
 		assert result.ablated_icl_score is None
 		assert result.icl_degradation is None
 
-	def test_to_dict(self):
+	def test_to_dict(self) -> None:
 		result: AblationResult = AblationResult(
 			head="test:L0:H0",
 			ablation_method=AblationMethod.MEAN,
@@ -601,7 +601,7 @@ class TestAblationResult:
 		assert d["ablation_method"] == "mean"
 		assert d["loss_increase"] == 1.0
 
-	def test_serialize_includes_all_fields(self):
+	def test_serialize_includes_all_fields(self) -> None:
 		"""Test that serialize() includes all metric fields."""
 		result: AblationResult = AblationResult(
 			head="test:L0:H0",
@@ -623,7 +623,7 @@ class TestAblationResult:
 		assert d["ablated_icl_score"] is None
 		assert d["icl_degradation"] is None
 
-	def test_pattern_preserving_ablation_method(self):
+	def test_pattern_preserving_ablation_method(self) -> None:
 		"""Test AblationResult with pattern-preserving method."""
 		result: AblationResult = AblationResult(
 			head="test:L0:H0",
@@ -892,7 +892,7 @@ class TestIntegration:
 		except ImportError:
 			pytest.skip("transformer-lens not installed")
 
-	def test_generate_sequences_with_real_tokenizer(self, model):
+	def test_generate_sequences_with_real_tokenizer(self, model) -> None:
 		sequences: list[RepeatedSequence] = generate_repeated_sequences(
 			tokenizer=model.tokenizer,
 			n_sequences=5,
@@ -905,7 +905,7 @@ class TestIntegration:
 		for seq in sequences:
 			assert seq.seq_len == 20
 
-	def test_generate_sequences_with_bos(self, model):
+	def test_generate_sequences_with_bos(self, model) -> None:
 		"""Test BOS prepending with a real tokenizer."""
 		sequences: list[RepeatedSequence] = generate_repeated_sequences(
 			tokenizer=model.tokenizer,
@@ -922,14 +922,14 @@ class TestIntegration:
 			assert seq.seq_len == 21
 			assert seq.repetition_starts[0] == 1
 
-	def test_ablator_creation(self, model):
+	def test_ablator_creation(self, model) -> None:
 		from attention_motifs.ablation.ablate import HeadAblator
 
 		ablator: HeadAblator = HeadAblator(model)
 		assert ablator.n_layers == model.cfg.n_layers
 		assert ablator.n_heads == model.cfg.n_heads
 
-	def test_cache_clean_patterns(self, model):
+	def test_cache_clean_patterns(self, model) -> None:
 		"""Test clean pattern caching for pattern-preserving ablation."""
 		from attention_motifs.ablation.ablate import HeadAblator
 
@@ -943,7 +943,7 @@ class TestIntegration:
 		for name, pattern in patterns.items():
 			assert pattern.dim() == 4  # batch, n_heads, dest, src
 
-	def test_pattern_preserving_ablation_context(self, model):
+	def test_pattern_preserving_ablation_context(self, model) -> None:
 		"""Test pattern-preserving ablation context manager."""
 		from attention_motifs.ablation.ablate import HeadAblator
 
