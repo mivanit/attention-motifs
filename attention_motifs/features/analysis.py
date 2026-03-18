@@ -435,8 +435,6 @@ def plot_importance_covariance(
 	# 	ax_hist.set_title("Importance distribution")
 	# 	ax_hist.invert_yaxis()
 
-	plt.tight_layout()
-
 	return features, cov
 
 

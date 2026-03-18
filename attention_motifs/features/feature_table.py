@@ -54,7 +54,6 @@ def process_prompt(
 			model_name=model_name,
 			prompt=prompt,
 			save_path=save_path,
-			return_fmt="numpy",
 		)
 
 		output: list[dict[str, int | float | str]] = list()

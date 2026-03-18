@@ -156,7 +156,6 @@ def apply_pca(
 		ax2.set_ylabel("Cumulative Explained Variance")
 		ax2.set_title("Cumulative Explained Variance")
 		ax2.set_xticks(range(0, len(cumulative_variance), 2))
-		ax2.legend()
 
 		plt.tight_layout()
 
