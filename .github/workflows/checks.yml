@@ -37,7 +37,7 @@ jobs:
         run: make format-check
         
       - name: Install playwright, fetch libs, other setup
-        run: make am-setup
+        run: make am-setup PIPELINE_CFG_PATH=tests/pipeline_cfg_test.toml
 
       - name: Run tests
         run: make test
