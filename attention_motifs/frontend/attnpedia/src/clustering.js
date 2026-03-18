@@ -201,7 +201,7 @@ class ClusteringLoader {
       }
     } else {
       const flat = this._flatData[method];
-      if (!flat) return;
+      if (!flat || !flat.meta.param_keys.length) return;
 
       // Use saved param key or first available
       const savedKey = ClusteringConfig.getParamKey();

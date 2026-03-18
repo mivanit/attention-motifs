@@ -581,15 +581,17 @@ async function initGridView(config) {
       updateClustersByHeight(initialCutHeight);
     } else {
       const flat = gridState.flatData[gridState.currentMethod];
-      const savedParamKey = ClusteringConfig.getParamKey();
-      const paramKey =
-        savedParamKey && flat.meta.param_keys.includes(savedParamKey)
-          ? savedParamKey
-          : flat.meta.param_keys[0];
-      // Update param dropdown
-      const paramSelect = document.getElementById("clustering-param-select");
-      if (paramSelect) paramSelect.value = paramKey;
-      updateClustersByParam(paramKey);
+      if (flat && flat.meta.param_keys.length) {
+        const savedParamKey = ClusteringConfig.getParamKey();
+        const paramKey =
+          savedParamKey && flat.meta.param_keys.includes(savedParamKey)
+            ? savedParamKey
+            : flat.meta.param_keys[0];
+        // Update param dropdown
+        const paramSelect = document.getElementById("clustering-param-select");
+        if (paramSelect) paramSelect.value = paramKey;
+        updateClustersByParam(paramKey);
+      }
     }
 
     // Restore selected heads from URL
@@ -915,6 +917,7 @@ function updateClustersByParam(paramKey) {
   } = applyMinSizeFilter(rawAssignments, gridState.minClusterSize);
 
   window.CLUSTER_STATE.setAssignments(assignments, finalNClusters);
+  updateResolvedLabels();
   renderModelGrids();
   updateStats(assignments, finalNClusters, smallClusters);
 }
@@ -940,6 +943,7 @@ function updateClustersByHeight(cutHeight) {
   } = applyMinSizeFilter(rawAssignments, gridState.minClusterSize);
 
   window.CLUSTER_STATE.setAssignments(assignments, finalNClusters);
+  updateResolvedLabels();
   renderModelGrids();
   updateStats(assignments, finalNClusters, smallClusters);
 }

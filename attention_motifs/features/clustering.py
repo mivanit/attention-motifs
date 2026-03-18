@@ -328,21 +328,6 @@ class FlatClusteringResult:
 		)
 
 
-def _relabel_contiguous(labels: Int[np.ndarray, " n"]) -> dict[str, int]:
-	"""Relabel cluster assignments to be contiguous 0-indexed, preserving -1 for outliers.
-
-	Args:
-		labels: Raw cluster labels (may have gaps, may use -1 for noise)
-
-	Returns:
-		Dict ready to zip with cls_values
-	"""
-	unique_labels: list[int] = sorted(set(int(x) for x in labels if x != -1))
-	label_map: dict[int, int] = {old: new for new, old in enumerate(unique_labels)}
-	label_map[-1] = -1
-	return {str(i): label_map[int(labels[i])] for i in range(len(labels))}
-
-
 def compute_hdbscan(
 	distances: Float[np.ndarray, "n_heads n_heads"],
 	cls_values: list[str],

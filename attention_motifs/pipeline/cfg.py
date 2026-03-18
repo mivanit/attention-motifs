@@ -471,6 +471,7 @@ class PipelineConfig:
 
 		# Clustering validation
 		valid_clustering_methods: set[str] = {"hierarchical", "hdbscan", "leiden"}
+		assert len(self.clustering_methods) > 0, "clustering_methods must not be empty"
 		assert all(m in valid_clustering_methods for m in self.clustering_methods), (
 			f"clustering_methods must be subset of {valid_clustering_methods}"
 		)
