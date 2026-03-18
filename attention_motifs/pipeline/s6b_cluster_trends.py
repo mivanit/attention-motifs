@@ -5,6 +5,7 @@ Reads clustered head embeddings and model metadata, then computes:
 - Per (model, cluster) fractions
 - Per (model, layer) Shannon entropy of cluster distribution
 Outputs a compact JSON file for the cluster_trends frontend.
+Supports hierarchical, HDBSCAN, and Leiden clustering methods.
 """
 
 import json
@@ -53,58 +54,33 @@ def _shannon_entropy(counts: list[int]) -> float:
 	return entropy
 
 
-def cluster_trends(cfg: PipelineConfig) -> None:
-	"""Compute cluster trend data and write cluster_trends frontend."""
-	pipeline_step_major("pipeline step 6b: cluster trends")
+def _compute_trends_for_columns(
+	df: pl.DataFrame,
+	cluster_cols: list[str],
+	models_meta: dict[str, dict[str, Any]],
+) -> tuple[
+	dict[str, list[dict[str, Any]]],
+	dict[str, list[dict[str, Any]]],
+	dict[str, list[dict[str, Any]]],
+]:
+	"""Compute by_layer, by_model, and entropy_by_layer trends for a set of cluster columns.
 
-	# Load clustered head embeddings from s6
-	embed_path: Path = cfg.data_path("head_embed_clustered")
-	df: pl.DataFrame = pl.read_ndjson(embed_path)
+	Args:
+		df: DataFrame with cluster columns
+		cluster_cols: List of column names to compute trends for
+		models_meta: Model metadata dict
 
-	if cfg.verbose > 0:
-		print(f"Loaded clustered embeddings: {df.shape}")
-
-	# Load model configs from models.jsonl
-	models_jsonl_path: Path = cfg.patterns_dir / "models.jsonl"
-	model_configs_raw: list[dict[str, Any]] = []
-	with open(models_jsonl_path, "r") as f:
-		line: str
-		for line in f:
-			line = line.strip()
-			if line:
-				model_configs_raw.append(json.loads(line))
-
-	# Build model metadata dict
-	models_meta: dict[str, dict[str, Any]] = {}
-	mc: dict[str, Any]
-	for mc in model_configs_raw:
-		name: str = mc["model_name"]
-		models_meta[name] = {
-			"n_layers": mc["n_layers"],
-			"n_heads": mc["n_heads"],
-			"n_params": mc.get("n_params", 0),
-			"family": get_model_family(name),
-		}
-
-	if cfg.verbose > 0:
-		print(f"Loaded model metadata for {len(models_meta)} models")
-
-	# Identify cluster columns and K values
-	cluster_cols: list[str] = [c for c in df.columns if c.startswith("cluster.k")]
-	k_values: list[int] = sorted(int(c.removeprefix("cluster.k")) for c in cluster_cols)
-
-	if cfg.verbose > 0:
-		print(f"K values: {k_values}")
-
-	# Compute trends for each K
+	Returns:
+		Tuple of (by_layer, by_model, entropy_by_layer) dicts keyed by column suffix
+	"""
 	by_layer: dict[str, list[dict[str, Any]]] = {}
 	by_model: dict[str, list[dict[str, Any]]] = {}
 	entropy_by_layer: dict[str, list[dict[str, Any]]] = {}
 
-	k: int
-	for k in k_values:
-		col: str = f"cluster.k{k}"
-		key: str = f"k{k}"
+	col: str
+	for col in cluster_cols:
+		# Extract a short key from the column name (strip "cluster." prefix)
+		key: str = col.removeprefix("cluster.")
 
 		# --- by_layer: per (model, layer, cluster) ---
 		layer_records: list[dict[str, Any]] = []
@@ -189,21 +165,117 @@ def cluster_trends(cfg: PipelineConfig) -> None:
 
 		by_model[key] = model_records
 
-		if cfg.verbose > 1:
-			print(
-				f"  {key}: {len(layer_records)} layer records, "
-				f"{len(model_records)} model records, "
-				f"{len(entropy_records)} entropy records"
-			)
+	return by_layer, by_model, entropy_by_layer
 
-	# Assemble output
+
+def cluster_trends(cfg: PipelineConfig) -> None:
+	"""Compute cluster trend data and write cluster_trends frontend."""
+	pipeline_step_major("pipeline step 6b: cluster trends")
+
+	# Load clustered head embeddings from s6
+	embed_path: Path = cfg.data_path("head_embed_clustered")
+	df: pl.DataFrame = pl.read_ndjson(embed_path)
+
+	if cfg.verbose > 0:
+		print(f"Loaded clustered embeddings: {df.shape}")
+
+	# Load model configs from models.jsonl
+	models_jsonl_path: Path = cfg.patterns_dir / "models.jsonl"
+	model_configs_raw: list[dict[str, Any]] = []
+	with open(models_jsonl_path, "r") as f:
+		line: str
+		for line in f:
+			line = line.strip()
+			if line:
+				model_configs_raw.append(json.loads(line))
+
+	# Build model metadata dict
+	models_meta: dict[str, dict[str, Any]] = {}
+	mc: dict[str, Any]
+	for mc in model_configs_raw:
+		name: str = mc["model_name"]
+		models_meta[name] = {
+			"n_layers": mc["n_layers"],
+			"n_heads": mc["n_heads"],
+			"n_params": mc.get("n_params", 0),
+			"family": get_model_family(name),
+		}
+
+	if cfg.verbose > 0:
+		print(f"Loaded model metadata for {len(models_meta)} models")
+
+	# --- Hierarchical trends (backward-compatible top-level keys) ---
+	hierarchical_cols: list[str] = sorted(
+		c for c in df.columns if c.startswith("cluster.k")
+	)
+	k_values: list[int] = sorted(
+		int(c.removeprefix("cluster.k")) for c in hierarchical_cols
+	)
+
+	by_layer: dict[str, list[dict[str, Any]]]
+	by_model: dict[str, list[dict[str, Any]]]
+	entropy_by_layer: dict[str, list[dict[str, Any]]]
+
+	if hierarchical_cols:
+		by_layer, by_model, entropy_by_layer = _compute_trends_for_columns(
+			df, hierarchical_cols, models_meta
+		)
+	else:
+		by_layer, by_model, entropy_by_layer = {}, {}, {}
+
+	# Assemble output (backward-compatible structure at top level)
 	output: dict[str, Any] = {
 		"models": models_meta,
+		"methods": list(cfg.clustering_methods),
 		"k_values": k_values,
 		"by_layer": by_layer,
 		"by_model": by_model,
 		"entropy_by_layer": entropy_by_layer,
 	}
+
+	# --- HDBSCAN trends ---
+	hdbscan_cols: list[str] = sorted(
+		c for c in df.columns if c.startswith("cluster.hdbscan.")
+	)
+	if hdbscan_cols:
+		h_by_layer, h_by_model, h_entropy = _compute_trends_for_columns(
+			df, hdbscan_cols, models_meta
+		)
+		param_values: list[int] = sorted(
+			int(c.removeprefix("cluster.hdbscan.mcs")) for c in hdbscan_cols
+		)
+		output["hdbscan"] = {
+			"param_name": "min_cluster_size",
+			"param_values": param_values,
+			"by_layer": h_by_layer,
+			"by_model": h_by_model,
+			"entropy_by_layer": h_entropy,
+		}
+
+	# --- Leiden trends ---
+	leiden_cols: list[str] = sorted(
+		c for c in df.columns if c.startswith("cluster.leiden.")
+	)
+	if leiden_cols:
+		l_by_layer, l_by_model, l_entropy = _compute_trends_for_columns(
+			df, leiden_cols, models_meta
+		)
+		leiden_param_values: list[float] = sorted(
+			float(c.removeprefix("cluster.leiden.r")) for c in leiden_cols
+		)
+		output["leiden"] = {
+			"param_name": "resolution",
+			"param_values": leiden_param_values,
+			"by_layer": l_by_layer,
+			"by_model": l_by_model,
+			"entropy_by_layer": l_entropy,
+		}
+
+	if cfg.verbose > 0:
+		print(
+			f"Computed trends: hierarchical={len(hierarchical_cols)}, "
+			f"hdbscan={len(hdbscan_cols)}, leiden={len(leiden_cols)} columns"
+		)
 
 	# Write JSON
 	output_path: Path = cfg.data_path("cluster_trends")

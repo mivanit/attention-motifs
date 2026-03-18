@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from attention_motifs.consts import DEFAULT_COMPRESS_LEVEL
-from attention_motifs.features.clustering import LinkageMethod
+from attention_motifs.features.clustering import ClusteringMethod, LinkageMethod
 from attention_motifs.util.model_name import cached_sanitize_model_name
 
 PIPELINE_CFG_EXAMPLES: str = """
@@ -32,6 +32,8 @@ DataFilename = Literal[
 	"head_embed",
 	"head_embed_clustered",
 	"clustering",
+	"clustering_hdbscan",
+	"clustering_leiden",
 	"cluster_trends",
 	"importance",
 ]
@@ -56,6 +58,8 @@ DATA_FNAMES: dict[DataFilename, str] = {
 	"head_embed": "head_embed.jsonl",
 	"head_embed_clustered": "head_embed_clustered.jsonl",
 	"clustering": "clustering",
+	"clustering_hdbscan": "clustering_hdbscan",
+	"clustering_leiden": "clustering_leiden",
 	"cluster_trends": "cluster_trends.json",
 }
 
@@ -140,6 +144,12 @@ DEFAULT_VIS_CONFIGS: dict[str, dict[str, Any]] = dict(
 			"clustering_meta_url": "../../../features/clustering/clustering_meta.json",
 			"clustering_linkage_url": "../../../features/clustering/linkage.json",
 			"cluster_labels_url": "../../../features/clustering/cluster_labels.json",
+			"clustering_hdbscan_meta_url": "../../../features/clustering_hdbscan/clustering_meta.json",
+			"clustering_hdbscan_partitions_url": "../../../features/clustering_hdbscan/partitions.json",
+			"clustering_hdbscan_labels_url": "../../../features/clustering_hdbscan/cluster_labels.json",
+			"clustering_leiden_meta_url": "../../../features/clustering_leiden/clustering_meta.json",
+			"clustering_leiden_partitions_url": "../../../features/clustering_leiden/partitions.json",
+			"clustering_leiden_labels_url": "../../../features/clustering_leiden/cluster_labels.json",
 			"selectedPoints": {
 				"size": 20,
 				"sizeMin": 0.1,
@@ -184,8 +194,15 @@ DEFAULT_VIS_CONFIGS: dict[str, dict[str, Any]] = dict(
 						'<label><input type="checkbox" id="clusterEnabled" checked> Enable cluster coloring</label>'
 						"</div>"
 						'<div style="margin-bottom:6px;">'
+						'<label>Method: <select id="clusterMethod" style="color:#0f0;background:#222;border:1px solid #555;"></select></label>'
+						"</div>"
+						'<div id="clusterCutHeightRow" style="margin-bottom:6px;">'
 						'<label>Cut Height: <span id="clusterCutHeightValue" style="color:#0f0">5.00</span></label>'
 						'<input type="range" id="clusterCutHeight" min="0" max="10" step="0.01" value="5" style="width:100%">'
+						"</div>"
+						'<div id="clusterParamRow" style="margin-bottom:6px;display:none;">'
+						'<label><span id="clusterParamLabel">Parameter:</span> '
+						'<select id="clusterParamSelect" style="color:#0f0;background:#222;border:1px solid #555;"></select></label>'
 						"</div>"
 						'<div style="margin-bottom:6px;">'
 						'<label>Min Cluster Size: <span id="clusterMinSizeValue" style="color:#0f0">0</span></label>'
@@ -254,11 +271,24 @@ class PipelineConfig:
 		default_factory=lambda: [2, 4, 8, 16, 32, 64]
 	)
 
-	# clustering configuration
-	clustering_linkage_method: LinkageMethod = "average"
-	clustering_n_clusters_list: list[int] = field(
+	# clustering configuration (from [clustering] TOML section)
+	clustering_methods: list[ClusteringMethod] = field(
+		default_factory=lambda: ["hierarchical", "hdbscan", "leiden"]
+	)
+	# hierarchical (agglomerative, scipy)
+	clustering_hierarchical_linkage_method: LinkageMethod = "average"
+	clustering_hierarchical_n_clusters_list: list[int] = field(
 		default_factory=lambda: [5, 10, 20, 50]
 	)
+	# HDBSCAN (density-based, sklearn)
+	clustering_hdbscan_min_cluster_sizes: list[int] = field(
+		default_factory=lambda: [3, 5, 10, 20]
+	)
+	# Leiden (graph community detection, igraph)
+	clustering_leiden_resolutions: list[float] = field(
+		default_factory=lambda: [0.1, 0.25, 0.5, 1.0, 2.0]
+	)
+	clustering_leiden_n_neighbors: int = 10
 
 	# computing
 	n_proc: int
@@ -350,8 +380,16 @@ class PipelineConfig:
 			embedding_methods=sorted(self.embedding_methods),
 			embedding_n_components_list=sorted(self.embedding_n_components_list),
 			embedding_n_neighbors_list=sorted(self.embedding_n_neighbors_list),
-			clustering_linkage_method=self.clustering_linkage_method,
-			clustering_n_clusters_list=sorted(self.clustering_n_clusters_list),
+			clustering_methods=sorted(self.clustering_methods),
+			clustering_hierarchical_linkage_method=self.clustering_hierarchical_linkage_method,
+			clustering_hierarchical_n_clusters_list=sorted(
+				self.clustering_hierarchical_n_clusters_list
+			),
+			clustering_hdbscan_min_cluster_sizes=sorted(
+				self.clustering_hdbscan_min_cluster_sizes
+			),
+			clustering_leiden_resolutions=sorted(self.clustering_leiden_resolutions),
+			clustering_leiden_n_neighbors=self.clustering_leiden_n_neighbors,
 			render_patterns_enabled=self.render_patterns_enabled,
 			render_n_samples=self.render_n_samples,
 			render_seed=self.render_seed,
@@ -431,15 +469,30 @@ class PipelineConfig:
 		)
 
 		# Clustering validation
+		valid_clustering_methods: set[str] = {"hierarchical", "hdbscan", "leiden"}
+		assert all(m in valid_clustering_methods for m in self.clustering_methods), (
+			f"clustering_methods must be subset of {valid_clustering_methods}"
+		)
 		valid_linkage: set[str] = {"ward", "average", "complete", "single"}
-		assert self.clustering_linkage_method in valid_linkage, (
-			f"clustering_linkage_method must be one of {valid_linkage}"
+		assert self.clustering_hierarchical_linkage_method in valid_linkage, (
+			f"clustering_hierarchical_linkage_method must be one of {valid_linkage}"
 		)
 		assert (
-			isinstance(self.clustering_n_clusters_list, list)
-			and len(self.clustering_n_clusters_list) > 0
-			and all(k >= 2 for k in self.clustering_n_clusters_list)
-		), "clustering_n_clusters_list must be a non-empty list of integers >= 2"
+			isinstance(self.clustering_hierarchical_n_clusters_list, list)
+			and len(self.clustering_hierarchical_n_clusters_list) > 0
+			and all(k >= 2 for k in self.clustering_hierarchical_n_clusters_list)
+		), (
+			"clustering_hierarchical_n_clusters_list must be a non-empty list of integers >= 2"
+		)
+		assert all(s >= 2 for s in self.clustering_hdbscan_min_cluster_sizes), (
+			"clustering_hdbscan_min_cluster_sizes values must be >= 2"
+		)
+		assert all(r > 0 for r in self.clustering_leiden_resolutions), (
+			"clustering_leiden_resolutions values must be > 0"
+		)
+		assert self.clustering_leiden_n_neighbors >= 1, (
+			"clustering_leiden_n_neighbors must be >= 1"
+		)
 
 	def as_str(self) -> str:
 		"""Return a string representation of the configuration"""
@@ -464,6 +517,42 @@ class PipelineConfig:
 	def __repr__(self) -> str:
 		"""Return a string representation of the configuration"""
 		return self.as_str()
+
+	@staticmethod
+	def _load_clustering_config(data: dict) -> dict[str, Any]:
+		"""Extract clustering config from a TOML data dict.
+
+		Reads from [clustering] section if present, with backward compatibility
+		for old flat top-level keys (clustering_linkage_method, etc.).
+		"""
+		c: dict[str, Any] = data.get("clustering", {})
+		# Backward compat: fall back to old flat top-level keys
+		return dict(
+			clustering_methods=c.get(
+				"methods",
+				data.get("clustering_methods", ["hierarchical", "hdbscan", "leiden"]),
+			),
+			clustering_hierarchical_linkage_method=c.get(
+				"hierarchical_linkage_method",
+				data.get("clustering_linkage_method", "average"),
+			),
+			clustering_hierarchical_n_clusters_list=c.get(
+				"hierarchical_n_clusters_list",
+				data.get("clustering_n_clusters_list", [5, 10, 20, 50]),
+			),
+			clustering_hdbscan_min_cluster_sizes=c.get(
+				"hdbscan_min_cluster_sizes",
+				data.get("clustering_hdbscan_min_cluster_sizes", [3, 5, 10, 20]),
+			),
+			clustering_leiden_resolutions=c.get(
+				"leiden_resolutions",
+				data.get("clustering_leiden_resolutions", [0.1, 0.25, 0.5, 1.0, 2.0]),
+			),
+			clustering_leiden_n_neighbors=c.get(
+				"leiden_n_neighbors",
+				data.get("clustering_leiden_n_neighbors", 10),
+			),
+		)
 
 	@classmethod
 	def load(cls, data: dict) -> "PipelineConfig":
@@ -492,10 +581,7 @@ class PipelineConfig:
 			embedding_n_neighbors_list=data.get(
 				"embedding_n_neighbors_list", [2, 4, 8, 16, 32, 64]
 			),
-			clustering_linkage_method=data.get("clustering_linkage_method", "average"),
-			clustering_n_clusters_list=data.get(
-				"clustering_n_clusters_list", [5, 10, 20, 50]
-			),
+			**cls._load_clustering_config(data),
 			prompts_min_chars=data["prompts_min_chars"],
 			prompts_max_chars=data["prompts_max_chars"],
 			device=data.get("device", "cpu"),  # default to 'cpu' if not specified

@@ -1,9 +1,15 @@
-"""Hierarchical clustering for attention head distances."""
+"""Clustering methods for attention head distances.
 
-from dataclasses import dataclass
+Provides hierarchical clustering (existing) plus HDBSCAN and Leiden
+community detection as alternative methods that better respect manifold
+structure.
+"""
+
+from dataclasses import dataclass, field
 import json
+import logging
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 from jaxtyping import Float, Int
@@ -11,7 +17,10 @@ from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial.distance import squareform
 
 
+logger: logging.Logger = logging.getLogger(__name__)
+
 LinkageMethod = Literal["ward", "average", "complete", "single"]
+ClusteringMethod = Literal["hierarchical", "hdbscan", "leiden"]
 
 
 @dataclass
@@ -186,3 +195,332 @@ class HierarchicalClusteringResult:
 			linkage_matrix=Z,
 			linkage_method=method,
 		)
+
+
+@dataclass
+class FlatClusteringResult:
+	"""Result of a flat (non-hierarchical) clustering method.
+
+	Stores precomputed cluster assignments for multiple parameter values.
+	Used by both HDBSCAN and Leiden community detection.
+	"""
+
+	cls_values: list[str]
+	method: Literal["hdbscan", "leiden"]
+	param_name: str  # "min_cluster_size" for HDBSCAN, "resolution" for Leiden
+	param_keys: list[str]  # sorted parameter value keys
+	# param_key -> {head_id -> cluster_id}
+	partitions: dict[str, dict[str, int]]
+	# param_key -> {n_clusters, n_outliers, ...}
+	partition_meta: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+	def get_clusters(self, param_key: str) -> dict[str, int]:
+		"""Get cluster assignments for a specific parameter value.
+
+		Args:
+			param_key: String key for the parameter value (e.g. "10" or "0.500")
+
+		Returns:
+			Dict mapping head ID to cluster index (0-indexed, -1 for outliers)
+		"""
+		if param_key not in self.partitions:
+			raise KeyError(
+				f"Unknown param_key '{param_key}', available: {self.param_keys}"
+			)
+		return dict(self.partitions[param_key])
+
+	def generate_default_labels(
+		self,
+	) -> dict[str, dict[str, dict[str, str | None | list[str]]]]:
+		"""Generate default cluster labels with null name/desc for each parameter.
+
+		Returns labels keyed by "{method}:{param_name}={value}" with the same
+		structure as HierarchicalClusteringResult.generate_default_labels().
+		"""
+		labels: dict[str, dict[str, dict[str, str | None | list[str]]]] = {}
+		for param_key in self.param_keys:
+			label_key: str = f"{self.method}:{self.param_name}={param_key}"
+			assignments: dict[str, int] = self.partitions[param_key]
+
+			# Group heads by cluster
+			clusters: dict[int, list[str]] = {}
+			for head_id, cluster_id in assignments.items():
+				clusters.setdefault(cluster_id, []).append(head_id)
+
+			labels[label_key] = {
+				str(cluster_id): {
+					"name": None,
+					"desc": None,
+					"heads": sorted(heads),
+				}
+				for cluster_id, heads in sorted(clusters.items())
+			}
+		return labels
+
+	def save(self, path: Path | str) -> None:
+		"""Write to directory with JSON files.
+
+		Creates:
+		- clustering_meta.json: metadata (method, param_name, cls_values, param_keys, partition_meta)
+		- partitions.json: all assignments for browser consumption
+		"""
+		output_dir: Path = Path(path)
+		output_dir.mkdir(parents=True, exist_ok=True)
+
+		meta: dict = dict(
+			method=self.method,
+			param_name=self.param_name,
+			cls_values=self.cls_values,
+			param_keys=self.param_keys,
+			partition_meta=self.partition_meta,
+		)
+		meta_path: Path = output_dir / "clustering_meta.json"
+		with open(meta_path, "w") as f:
+			json.dump(meta, f, indent=2)
+
+		partitions_path: Path = output_dir / "partitions.json"
+		with open(partitions_path, "w") as f:
+			json.dump(self.partitions, f)
+
+	@classmethod
+	def read(cls, path: Path | str) -> "FlatClusteringResult":
+		"""Load from directory with JSON files."""
+		input_dir: Path = Path(path)
+
+		meta_path: Path = input_dir / "clustering_meta.json"
+		with open(meta_path, "r") as f:
+			meta: dict = json.load(f)
+
+		partitions_path: Path = input_dir / "partitions.json"
+		with open(partitions_path, "r") as f:
+			partitions: dict[str, dict[str, int]] = json.load(f)
+
+		return cls(
+			cls_values=meta["cls_values"],
+			method=meta["method"],
+			param_name=meta["param_name"],
+			param_keys=meta["param_keys"],
+			partitions=partitions,
+			partition_meta=meta.get("partition_meta", {}),
+		)
+
+	def serialize(self) -> dict:
+		"""Convert to JSON-compatible dict."""
+		return dict(
+			cls_values=self.cls_values,
+			method=self.method,
+			param_name=self.param_name,
+			param_keys=self.param_keys,
+			partitions=self.partitions,
+			partition_meta=self.partition_meta,
+		)
+
+	@classmethod
+	def load(cls, data: dict) -> "FlatClusteringResult":
+		"""Create instance from dict."""
+		return cls(
+			cls_values=data["cls_values"],
+			method=data["method"],
+			param_name=data["param_name"],
+			param_keys=data["param_keys"],
+			partitions=data["partitions"],
+			partition_meta=data.get("partition_meta", {}),
+		)
+
+
+def _relabel_contiguous(labels: Int[np.ndarray, " n"]) -> dict[str, int]:
+	"""Relabel cluster assignments to be contiguous 0-indexed, preserving -1 for outliers.
+
+	Args:
+		labels: Raw cluster labels (may have gaps, may use -1 for noise)
+
+	Returns:
+		Dict ready to zip with cls_values
+	"""
+	unique_labels: list[int] = sorted(set(int(x) for x in labels if x != -1))
+	label_map: dict[int, int] = {old: new for new, old in enumerate(unique_labels)}
+	label_map[-1] = -1
+	return {str(i): label_map[int(labels[i])] for i in range(len(labels))}
+
+
+def compute_hdbscan(
+	distances: Float[np.ndarray, "n_heads n_heads"],
+	cls_values: list[str],
+	min_cluster_sizes: list[int],
+) -> FlatClusteringResult:
+	"""Compute HDBSCAN clustering at multiple min_cluster_size values.
+
+	Args:
+		distances: Square distance matrix (n_heads x n_heads)
+		cls_values: List of head IDs in the same order as the distance matrix
+		min_cluster_sizes: List of min_cluster_size values to compute
+
+	Returns:
+		FlatClusteringResult with partitions for each min_cluster_size
+	"""
+	from sklearn.cluster import HDBSCAN
+
+	n_heads: int = len(cls_values)
+	partitions: dict[str, dict[str, int]] = {}
+	partition_meta: dict[str, dict[str, Any]] = {}
+
+	for mcs in sorted(min_cluster_sizes):
+		param_key: str = str(mcs)
+
+		if mcs > n_heads // 2:
+			logger.warning(
+				f"HDBSCAN min_cluster_size={mcs} > n_heads/2={n_heads // 2}, skipping"
+			)
+			continue
+
+		clusterer: HDBSCAN = HDBSCAN(
+			min_cluster_size=mcs,
+			metric="precomputed",
+		)
+		labels: Int[np.ndarray, " n_heads"] = clusterer.fit_predict(distances)
+
+		# Build assignments dict
+		assignments: dict[str, int] = {}
+		unique_labels: list[int] = sorted(set(int(x) for x in labels if x != -1))
+		label_map: dict[int, int] = {old: new for new, old in enumerate(unique_labels)}
+		label_map[-1] = -1
+		for i, cls_val in enumerate(cls_values):
+			assignments[cls_val] = label_map[int(labels[i])]
+
+		n_clusters: int = len(unique_labels)
+		n_outliers: int = int(np.sum(labels == -1))
+
+		partitions[param_key] = assignments
+		partition_meta[param_key] = {
+			"n_clusters": n_clusters,
+			"n_outliers": n_outliers,
+		}
+
+		logger.info(
+			f"HDBSCAN min_cluster_size={mcs}: "
+			f"{n_clusters} clusters, {n_outliers} outliers"
+		)
+
+	param_keys: list[str] = sorted(partitions.keys(), key=lambda x: int(x))
+
+	return FlatClusteringResult(
+		cls_values=cls_values,
+		method="hdbscan",
+		param_name="min_cluster_size",
+		param_keys=param_keys,
+		partitions=partitions,
+		partition_meta=partition_meta,
+	)
+
+
+def compute_leiden(
+	distances: Float[np.ndarray, "n_heads n_heads"],
+	cls_values: list[str],
+	resolutions: list[float],
+	n_neighbors: int = 10,
+) -> FlatClusteringResult:
+	"""Compute Leiden community detection at multiple resolution values.
+
+	Builds a k-NN graph from the distance matrix with Gaussian kernel weights,
+	then runs Leiden community detection at each resolution.
+
+	Args:
+		distances: Square distance matrix (n_heads x n_heads)
+		cls_values: List of head IDs in the same order as the distance matrix
+		resolutions: List of resolution values to compute
+		n_neighbors: Number of nearest neighbors for the k-NN graph
+
+	Returns:
+		FlatClusteringResult with partitions for each resolution
+	"""
+	import igraph as ig
+
+	n_heads: int = len(cls_values)
+	k: int = min(n_neighbors, n_heads - 1)
+
+	# Build mutual k-NN graph with Gaussian kernel weights
+	# sigma = median of all k-NN distances for scale invariance
+	knn_dists: list[float] = []
+	neighbors: list[set[int]] = []
+	for i in range(n_heads):
+		sorted_indices: Int[np.ndarray, " n_heads"] = np.argsort(distances[i])
+		# skip self (index 0 in sorted)
+		nn: set[int] = set(int(x) for x in sorted_indices[1 : k + 1])
+		neighbors.append(nn)
+		for j in nn:
+			knn_dists.append(float(distances[i, j]))
+
+	sigma: float = float(np.median(knn_dists)) if knn_dists else 1.0
+	if sigma < 1e-10:
+		sigma = 1.0
+
+	# Build edge list (mutual k-NN: edge if both are in each other's k-NN)
+	edges: list[tuple[int, int]] = []
+	weights: list[float] = []
+	for i in range(n_heads):
+		for j in neighbors[i]:
+			if j > i and i in neighbors[j]:  # mutual
+				w: float = float(np.exp(-(distances[i, j] ** 2) / (2 * sigma**2)))
+				edges.append((i, j))
+				weights.append(w)
+
+	# Fallback: if mutual k-NN produces a disconnected or too-sparse graph,
+	# use non-mutual k-NN
+	if len(edges) < n_heads - 1:
+		logger.info(
+			f"Mutual k-NN graph too sparse ({len(edges)} edges), "
+			f"falling back to non-mutual k-NN"
+		)
+		edges = []
+		weights = []
+		seen: set[tuple[int, int]] = set()
+		for i in range(n_heads):
+			for j in neighbors[i]:
+				edge: tuple[int, int] = (min(i, j), max(i, j))
+				if edge not in seen:
+					seen.add(edge)
+					w = float(np.exp(-(distances[i, j] ** 2) / (2 * sigma**2)))
+					edges.append(edge)
+					weights.append(w)
+
+	graph: ig.Graph = ig.Graph(n=n_heads, edges=edges)
+	graph.es["weight"] = weights
+
+	partitions: dict[str, dict[str, int]] = {}
+	partition_meta: dict[str, dict[str, Any]] = {}
+
+	for res in sorted(resolutions):
+		param_key: str = f"{res:.3f}"
+
+		membership: ig.clustering.VertexClustering = graph.community_leiden(
+			objective_function="modularity",
+			weights="weight",
+			resolution=res,
+		)
+		labels: list[int] = membership.membership
+
+		# Build assignments dict (already 0-indexed from igraph)
+		assignments: dict[str, int] = {}
+		for i, cls_val in enumerate(cls_values):
+			assignments[cls_val] = int(labels[i])
+
+		n_clusters: int = len(set(labels))
+
+		partitions[param_key] = assignments
+		partition_meta[param_key] = {
+			"n_clusters": n_clusters,
+			"n_outliers": 0,
+		}
+
+		logger.info(f"Leiden resolution={res:.3f}: {n_clusters} clusters")
+
+	param_keys: list[str] = sorted(partitions.keys(), key=lambda x: float(x))
+
+	return FlatClusteringResult(
+		cls_values=cls_values,
+		method="leiden",
+		param_name="resolution",
+		param_keys=param_keys,
+		partitions=partitions,
+		partition_meta=partition_meta,
+	)

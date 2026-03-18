@@ -77,6 +77,8 @@ pca_n_components = 6
 # comment out = use all prompts
 web_pca_n_prompts = 128
 
+# clustering configuration -- see [clustering] section near bottom
+
 # head embedding configuration
 # ============================================================
 # methods to use for head embeddings (uncomment to override defaults)
@@ -184,6 +186,32 @@ dataFile = "../../../features/pca_web.csv"
 # dataFile = "../../../features/head_embed.jsonl"
 # numericalPrefix = "embed."
 # defaultColorColumn = "type.group"
+
+# clustering (step s4c)
+# ============================================================
+# Which clustering methods to compute. All three run by default.
+# Each method uses the same mean head-distance matrix from step s4.
+[clustering]
+methods = ["hierarchical", "hdbscan", "leiden"]
+
+# -- hierarchical (agglomerative, scipy) --
+# Linkage criterion: "ward", "average", "complete", "single"
+# hierarchical_linkage_method = "average"
+# K values to pre-compute dendrogram cuts for
+# hierarchical_n_clusters_list = [5, 10, 20, 50]
+
+# -- HDBSCAN (density-based, sklearn) --
+# min_cluster_size values to sweep; controls cluster granularity.
+# Heads not assigned to any cluster become outliers (label -1).
+# hdbscan_min_cluster_sizes = [3, 5, 10, 20]
+
+# -- Leiden (graph community detection, igraph) --
+# Builds a mutual k-NN graph from the distance matrix with Gaussian
+# kernel edge weights, then runs Leiden at each resolution.
+# Higher resolution = more / smaller clusters.
+# leiden_resolutions = [0.1, 0.25, 0.5, 1.0, 2.0]
+# k for k-NN graph construction
+# leiden_n_neighbors = 10
 
 # ablation experiments (step s7)
 # ============================================================
