@@ -49,7 +49,7 @@ def plot_feat_covariance(
 		cmap="coolwarm",
 		figsize=(10, 10),
 		tick_pad=100,
-		importance_threshold=0.2,
+		importance_threshold=0.1,
 	)
 	plt.savefig(
 		cfg.figure_path("cov_reduced"),

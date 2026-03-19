@@ -356,6 +356,13 @@ def plot_importance_covariance(
 		scores_df = scores_df.filter(pl.col(metrics[0]) > importance_threshold)
 		features = scores_df["feature"].to_list()
 
+	if not features:
+		print(
+			f"[plot_importance_covariance] No features pass the filter "
+			f"(importance_threshold={importance_threshold}). Skipping plot."
+		)
+		return [], np.empty((0, 0))
+
 	labels = [f.removeprefix(feat_strip_prefix) for f in features]
 
 	# ---------- monospace + right-padding for labels ----------------------
