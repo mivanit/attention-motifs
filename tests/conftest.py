@@ -4,6 +4,7 @@ import atexit
 import http.server
 import socket
 import socketserver
+import sys
 import threading
 import time
 from pathlib import Path
@@ -51,6 +52,18 @@ class QuietHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 		pass
 
 
+class _QuietTCPServer(socketserver.TCPServer):
+	"""TCPServer that silences BrokenPipeError from client disconnects."""
+
+	allow_reuse_address = True
+
+	def handle_error(self, request: object, client_address: object) -> None:
+		exc_type: type[BaseException] | None = sys.exc_info()[0]
+		if exc_type is not None and issubclass(exc_type, BrokenPipeError):
+			return
+		super().handle_error(request, client_address)
+
+
 def _make_handler_factory(
 	directory: str,
 ) -> type[QuietHTTPRequestHandler]:
@@ -81,9 +94,8 @@ def pytest_configure(config: pytest.Config) -> None:
 	# tests wait for pipeline via the ensure_pipeline_output fixture)
 	TESTS_TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
-	socketserver.TCPServer.allow_reuse_address = True
 	try:
-		_httpd = socketserver.TCPServer(
+		_httpd = _QuietTCPServer(
 			("", HTTP_SERVER_PORT),
 			_make_handler_factory(str(TESTS_TEMP_DIR)),
 		)
