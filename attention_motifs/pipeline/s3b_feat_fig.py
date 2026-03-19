@@ -40,7 +40,9 @@ def plot_feat_covariance(
 	plt.savefig(cfg.figure_path("cov_full"), bbox_inches="tight", pad_inches=0.01)
 
 	# reduced
-	plot_importance_covariance(
+	reduced_feats: list[str]
+	_cov: Float[np.ndarray, "n n"]
+	reduced_feats, _cov = plot_importance_covariance(
 		data_scaled,
 		df_importance,
 		# feature_order=sorted(FEATURE_COLS, key=lambda x: x.split(".")[-1]),
@@ -51,11 +53,12 @@ def plot_feat_covariance(
 		tick_pad=100,
 		importance_threshold=0.1,
 	)
-	plt.savefig(
-		cfg.figure_path("cov_reduced"),
-		bbox_inches="tight",
-		pad_inches=0.01,
-	)
+	if reduced_feats:
+		plt.savefig(
+			cfg.figure_path("cov_reduced"),
+			bbox_inches="tight",
+			pad_inches=0.01,
+		)
 
 
 def plot_pca_all(
