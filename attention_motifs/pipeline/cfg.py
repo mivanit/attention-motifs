@@ -826,11 +826,11 @@ def pipeline_step_major(msg: str) -> None:
 	import shutil
 
 	term_width: int = shutil.get_terminal_size((80, 20)).columns
-	print(f"\033[94m{'=' * term_width}\033[m")
-	print(f"\033[94m{msg.center(term_width)}\033[m")
-	print(f"\033[94m{'=' * term_width}\033[m")
+	print(f"\033[94m{'=' * term_width}\033[m", flush=True)
+	print(f"\033[94m{msg.center(term_width)}\033[m", flush=True)
+	print(f"\033[94m{'=' * term_width}\033[m", flush=True)
 
 
 def pipeline_model_progress(idx: int, total: int, name: str) -> None:
 	"""Print model progress in cyan for visibility"""
-	print(f"\033[96mprocessing model {idx + 1} / {total}: {name}\033[m")
+	print(f"\033[96mprocessing model {idx + 1} / {total}: {name}\033[m", flush=True)

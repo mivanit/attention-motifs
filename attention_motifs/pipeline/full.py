@@ -1,6 +1,6 @@
 import attention_motifs.consts  # noqa: F401  # Load HF_TOKEN into os.environ early
 
-print("Importing modules...")
+print("Importing modules...", flush=True)
 
 import time
 from pathlib import Path
@@ -63,16 +63,18 @@ def _load_or_create_state(cfg: PipelineConfig) -> PipelineState:
 		if state.config_hash != current_hash:
 			print(
 				f"[smart] Config changed (hash: {current_hash[:8]}...), "
-				f"invalidating all completed steps"
+				f"invalidating all completed steps",
+				flush=True,
 			)
 			state = PipelineState(config_hash=current_hash)
 		else:
 			print(
 				f"[smart] Config unchanged (hash: {current_hash[:8]}...), "
-				f"{len(state.completed_steps)} steps already complete"
+				f"{len(state.completed_steps)} steps already complete",
+				flush=True,
 			)
 	else:
-		print("[smart] No previous state found, starting fresh")
+		print("[smart] No previous state found, starting fresh", flush=True)
 		state = PipelineState(config_hash=current_hash)
 
 	return state
@@ -92,10 +94,10 @@ def full_pipeline(cfg: PipelineConfig) -> None:
 			pca_n_components=cfg.pca_n_components,
 			n_proc=n_proc,
 		)
-		print(json.dumps(report, indent=2))
+		print(json.dumps(report, indent=2), flush=True)
 		return
 
-	print(f"Running full pipeline with config:\n{cfg}")
+	print(f"Running full pipeline with config:\n{cfg}", flush=True)
 
 	state: PipelineState | None = None
 	if cfg.smart_mode:
@@ -106,13 +108,16 @@ def full_pipeline(cfg: PipelineConfig) -> None:
 	for step_name, step_func in PIPELINE_STEPS:
 		# Config-based skip: s1b can be disabled entirely
 		if step_name == "s1b_render_patterns" and not cfg.render_patterns_enabled:
-			print("[skip] s1b_render_patterns disabled in config")
+			print("[skip] s1b_render_patterns disabled in config", flush=True)
 			continue
 
 		# Smart mode: check if step already complete
 		if state is not None and state.is_step_complete(step_name):
 			record = state.completed_steps[step_name]
-			print(f"[smart] Skipping {step_name} (completed at {record.completed_at})")
+			print(
+				f"[smart] Skipping {step_name} (completed at {record.completed_at})",
+				flush=True,
+			)
 			continue
 
 		# Run the step
@@ -124,7 +129,7 @@ def full_pipeline(cfg: PipelineConfig) -> None:
 		if state is not None:
 			state.mark_step_complete(step_name, duration)
 			state.save(_get_state_path(cfg))
-			print(f"[smart] Saved state after {step_name}")
+			print(f"[smart] Saved state after {step_name}", flush=True)
 
 
 if __name__ == "__main__":

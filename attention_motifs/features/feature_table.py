@@ -120,7 +120,8 @@ def scalar_feature_table(
 			if sanitized != m:
 				print(
 					f"\033[93m  WARNING: model name {m!r} from models.jsonl"
-					f" is not sanitized (expected {sanitized!r})\033[m"
+					f" is not sanitized (expected {sanitized!r})\033[m",
+					flush=True,
 				)
 
 	print_log = (
