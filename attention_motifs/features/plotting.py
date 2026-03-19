@@ -127,8 +127,12 @@ def apply_pca(
 	    - Transformed data array
 	    - Fitted PCA object
 	"""
-	# Fit PCA
-	pca: PCA = PCA(n_components=n_components, random_state=0)
+	# Use covariance_eigh solver: for n >> d (here ~4M rows, 446 features), this builds
+	# the d×d covariance matrix via a single BLAS3 DSYRK call, then runs eigendecomposition
+	# on that small matrix. Compared to the default 'randomized' solver, it makes fewer
+	# passes over the data and produces an exact result (not approximate). Tradeoff: uses
+	# O(d^2) extra memory for the covariance matrix (~1.5 MB here), which is negligible.
+	pca: PCA = PCA(n_components=n_components, svd_solver="covariance_eigh")
 	pca_input = data[feature_cols].to_numpy()
 	dbg_tensor(pca_input)
 	reduced: np.ndarray = pca.fit_transform(pca_input)
