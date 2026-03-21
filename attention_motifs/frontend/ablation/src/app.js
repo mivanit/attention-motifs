@@ -109,6 +109,7 @@ let chartType = "histogram"; // "histogram" | "boxplot"
 let logScale = false; // log frequency axis for histograms
 let sortByMean = false; // sort boxplot clusters by mean value
 let visibleGroups = new Set(DEFAULT_VISIBLE_GROUPS);
+let tableClusterFilter = false; // filter table to selected cluster only
 let dataTable = null;
 
 // === Model family helpers ===
@@ -483,6 +484,11 @@ function setupColumnToggles() {
 function toggleGroup(group) {
   if (visibleGroups.has(group)) visibleGroups.delete(group);
   else visibleGroups.add(group);
+  renderTable();
+}
+
+function toggleTableClusterFilter() {
+  tableClusterFilter = document.getElementById("table-cluster-filter").checked;
   renderTable();
 }
 
@@ -1494,7 +1500,7 @@ function buildTableColumns() {
           const color = clustering.getClusterColor(cid);
           const span = document.createElement("span");
           span.className = "cluster-badge";
-          span.style.background = color;
+          span.style.setProperty("--badge-color", color);
           span.textContent = val;
           return span;
         },
@@ -1545,7 +1551,17 @@ function buildTableColumns() {
 }
 
 function buildTableData() {
-  const results = getFilteredResults();
+  let results = getFilteredResults();
+  if (
+    tableClusterFilter &&
+    selectedCluster !== null &&
+    clusteringAvailable &&
+    clustering._is_loaded
+  ) {
+    results = results.filter(
+      (r) => clustering._assignments[r.head] === selectedCluster,
+    );
+  }
   return results.map((r) => {
     const clusterId =
       clusteringAvailable && clustering._is_loaded
@@ -1576,6 +1592,14 @@ function buildTableData() {
 function renderTable() {
   const container = document.getElementById("results-table-container");
   container.innerHTML = "";
+
+  // Show/hide cluster filter toggle
+  const clusterToggle = document.getElementById("cluster-filter-toggle");
+  if (clusterToggle) {
+    clusterToggle.style.display = selectedCluster !== null ? "" : "none";
+    const cb = document.getElementById("table-cluster-filter");
+    if (cb) cb.checked = tableClusterFilter;
+  }
 
   const columns = buildTableColumns();
   const data = buildTableData();

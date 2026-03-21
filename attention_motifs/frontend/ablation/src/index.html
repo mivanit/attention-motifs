@@ -98,6 +98,20 @@
           <label>Columns:</label>
           <span id="column-toggles"></span>
         </div>
+        <div
+          class="control-group"
+          id="cluster-filter-toggle"
+          style="display: none"
+        >
+          <label class="chip"
+            ><input
+              type="checkbox"
+              id="table-cluster-filter"
+              onchange="toggleTableClusterFilter()"
+            />
+            Selected cluster only</label
+          >
+        </div>
       </div>
 
       <div id="results-table-container"></div>

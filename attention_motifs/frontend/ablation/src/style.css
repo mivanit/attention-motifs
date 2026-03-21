@@ -284,15 +284,16 @@ h1 {
   font-size: 13px;
 }
 
-/* Cluster badge */
+/* Cluster badge -- styled to match cluster chips */
 .cluster-badge {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 10px;
-  color: white;
+  border: 2px solid var(--badge-color);
+  background: color-mix(in srgb, var(--badge-color) 25%, white);
+  color: #333;
   font-size: 11px;
   font-weight: 600;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
 }
 
 /* Classification badge */
