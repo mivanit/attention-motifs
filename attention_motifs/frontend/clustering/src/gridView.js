@@ -817,7 +817,7 @@ function setupResizableDivider() {
     if (!isDragging) return;
     const containerRect = divider.parentElement.getBoundingClientRect();
     const newRightWidth = containerRect.right - e.clientX;
-    const clampedWidth = Math.max(300, Math.min(800, newRightWidth));
+    const clampedWidth = Math.max(200, Math.min(800, newRightWidth));
     rightPane.style.width = clampedWidth + "px";
   });
 
@@ -1005,6 +1005,164 @@ function exportPatternTypes() {
 }
 
 /**
+ * Export a single family row as a clean SVG.
+ * Reconstructs model grids as SVG rects with labels.
+ * @param {string} family - Family name
+ * @param {string[]} models - Model names in this family (sorted)
+ */
+function exportFamilyRowSvg(family, models) {
+  const cellSize = 14 * gridState.scale;
+  const cellGap = 1 * gridState.scale;
+  const cellStep = cellSize + cellGap;
+  const modelGap = 20;
+  const labelFontSize = 10;
+  const headerFontSize = 12;
+  const labelColWidth = 22;
+  const headerHeight = 18;
+  const headLabelHeight = 14;
+  const topPadding = 24; // family name
+  const padding = 10;
+
+  // Calculate total width
+  let totalWidth = padding;
+  const modelPositions = [];
+  for (const modelName of models) {
+    const config = gridState.modelConfigs[modelName];
+    if (!config) continue;
+    const { n_layers, n_heads } = config;
+    const boxW = labelColWidth + n_heads * cellStep;
+    const boxH = headerHeight + headLabelHeight + n_layers * cellStep;
+    modelPositions.push({ modelName, x: totalWidth, config, boxW, boxH });
+    totalWidth += boxW + modelGap;
+  }
+  totalWidth += padding - modelGap; // remove last gap, add right padding
+
+  const maxBoxH = Math.max(...modelPositions.map((m) => m.boxH));
+  const totalHeight = topPadding + maxBoxH + padding;
+
+  // Build SVG
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("xmlns", ns);
+  svg.setAttribute("width", totalWidth);
+  svg.setAttribute("height", totalHeight);
+  svg.setAttribute("viewBox", `0 0 ${totalWidth} ${totalHeight}`);
+
+  // White background
+  const bg = document.createElementNS(ns, "rect");
+  bg.setAttribute("width", totalWidth);
+  bg.setAttribute("height", totalHeight);
+  bg.setAttribute("fill", "white");
+  svg.appendChild(bg);
+
+  // Family name
+  const familyText = document.createElementNS(ns, "text");
+  familyText.setAttribute("x", padding);
+  familyText.setAttribute("y", 16);
+  familyText.setAttribute("font-size", "14px");
+  familyText.setAttribute("font-weight", "600");
+  familyText.setAttribute("fill", "#555");
+  familyText.setAttribute("font-family", "sans-serif");
+  familyText.textContent = family;
+  svg.appendChild(familyText);
+
+  for (const { modelName, x, config } of modelPositions) {
+    const { n_layers, n_heads } = config;
+    const g = document.createElementNS(ns, "g");
+    g.setAttribute("transform", `translate(${x}, ${topPadding})`);
+
+    // Model name
+    const nameText = document.createElementNS(ns, "text");
+    nameText.setAttribute("x", (labelColWidth + n_heads * cellStep) / 2);
+    nameText.setAttribute("y", 12);
+    nameText.setAttribute("text-anchor", "middle");
+    nameText.setAttribute("font-size", `${headerFontSize}px`);
+    nameText.setAttribute("font-weight", "600");
+    nameText.setAttribute("fill", "#333");
+    nameText.setAttribute("font-family", "sans-serif");
+    nameText.textContent = modelName;
+    g.appendChild(nameText);
+
+    const gridY = headerHeight + headLabelHeight;
+
+    // Head labels
+    if (!gridState.sortByCluster) {
+      for (let h = 0; h < n_heads; h++) {
+        const ht = document.createElementNS(ns, "text");
+        ht.setAttribute("x", labelColWidth + h * cellStep + cellSize / 2);
+        ht.setAttribute("y", headerHeight + 10);
+        ht.setAttribute("text-anchor", "middle");
+        ht.setAttribute("font-size", "8px");
+        ht.setAttribute("fill", "#888");
+        ht.setAttribute("font-family", "sans-serif");
+        ht.textContent = h;
+        g.appendChild(ht);
+      }
+    }
+
+    // Layer labels and cells
+    for (let l = 0; l < n_layers; l++) {
+      // Layer label
+      const lt = document.createElementNS(ns, "text");
+      lt.setAttribute("x", labelColWidth - 4);
+      lt.setAttribute("y", gridY + l * cellStep + cellSize * 0.75);
+      lt.setAttribute("text-anchor", "end");
+      lt.setAttribute("font-size", "8px");
+      lt.setAttribute("fill", "#888");
+      lt.setAttribute("font-family", "sans-serif");
+      lt.textContent = `L${l}`;
+      g.appendChild(lt);
+
+      // Get head ordering
+      let headIndices = Array.from({ length: n_heads }, (_, i) => i);
+      if (gridState.sortByCluster) {
+        const clusterSizes = window.CLUSTER_STATE.getClusterSizes();
+        headIndices.sort((a, b) => {
+          const clusterA =
+            window.CLUSTER_STATE.getClusterId(`${modelName}:L${l}:H${a}`) ??
+            999;
+          const clusterB =
+            window.CLUSTER_STATE.getClusterId(`${modelName}:L${l}:H${b}`) ??
+            999;
+          const sizeA = clusterSizes[clusterA] ?? 0;
+          const sizeB = clusterSizes[clusterB] ?? 0;
+          if (sizeA !== sizeB) return sizeB - sizeA;
+          return clusterA - clusterB;
+        });
+      }
+
+      for (let col = 0; col < headIndices.length; col++) {
+        const h = headIndices[col];
+        const headId = `${modelName}:L${l}:H${h}`;
+        const color = window.CLUSTER_STATE.getColor(headId);
+
+        const rect = document.createElementNS(ns, "rect");
+        rect.setAttribute("x", labelColWidth + col * cellStep);
+        rect.setAttribute("y", gridY + l * cellStep);
+        rect.setAttribute("width", cellSize);
+        rect.setAttribute("height", cellSize);
+        rect.setAttribute("rx", "2");
+        rect.setAttribute("fill", color);
+        g.appendChild(rect);
+      }
+    }
+
+    svg.appendChild(g);
+  }
+
+  // Trigger download
+  const serializer = new XMLSerializer();
+  const svgStr = serializer.serializeToString(svg);
+  const blob = new Blob([svgStr], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `cluster_family_${family}.svg`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
  * Render all model grids
  */
 function renderModelGrids() {
@@ -1038,7 +1196,19 @@ function renderModelGrids() {
 
       const label = document.createElement("div");
       label.className = "family-label";
-      label.textContent = family;
+
+      const labelText = document.createElement("span");
+      labelText.textContent = family;
+      label.appendChild(labelText);
+
+      const exportBtn = document.createElement("button");
+      exportBtn.className = "family-export-btn";
+      exportBtn.textContent = "Export SVG";
+      exportBtn.addEventListener("click", () =>
+        exportFamilyRowSvg(family, byFamily[family]),
+      );
+      label.appendChild(exportBtn);
+
       familyRow.appendChild(label);
 
       for (const modelName of byFamily[family]) {
@@ -1069,24 +1239,15 @@ function renderModelBox(container, modelName) {
   // Header
   const header = document.createElement("div");
   header.className = "model-box-header";
+  header.textContent = modelName;
 
-  const headerText = document.createElement("span");
-  headerText.textContent = modelName;
-  header.appendChild(headerText);
-
-  // Add model-specific help icon
+  // Add hover tooltip with model info
   const modelYaml = getModelDataYaml(modelName);
   if (modelYaml) {
-    const helpIcon = document.createElement("span");
-    helpIcon.className = "model-help-icon";
-    helpIcon.textContent = "❓";
-
     const tooltip = document.createElement("div");
-    tooltip.className = "help-tooltip";
+    tooltip.className = "model-info-tooltip";
     tooltip.textContent = modelYaml;
-    helpIcon.appendChild(tooltip);
-
-    header.appendChild(helpIcon);
+    header.appendChild(tooltip);
   }
 
   box.appendChild(header);
@@ -1435,6 +1596,100 @@ function hideTooltip() {
 }
 
 /**
+ * Render a D3 bar chart of cluster sizes, colored by cluster.
+ * @param {Object.<number, number>} sizes - Map of clusterId to count
+ */
+function renderClusterSizeChart(sizes) {
+  const container = document.getElementById("cluster-size-chart-wrapper");
+  if (!container) return;
+  container.innerHTML = "";
+
+  // Sort clusters by size descending
+  const entries = Object.entries(sizes)
+    .map(([id, count]) => ({ id: parseInt(id), count }))
+    .sort((a, b) => b.count - a.count);
+
+  const margin = { top: 8, right: 12, bottom: 22, left: 36 };
+  const width = 400;
+  const height = 120;
+  const innerW = width - margin.left - margin.right;
+  const innerH = height - margin.top - margin.bottom;
+
+  const svg = d3
+    .select(container)
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("id", "cluster-size-chart")
+    .attr("xmlns", "http://www.w3.org/2000/svg");
+
+  const g = svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // X scale — one band per cluster
+  const x = d3
+    .scaleBand()
+    .domain(entries.map((_, i) => i))
+    .range([0, innerW])
+    .padding(0.15);
+
+  // Y scale — linear or log
+  const maxCount = d3.max(entries, (d) => d.count);
+  const y = gridState.logScale
+    ? d3.scaleLog().domain([0.8, maxCount]).range([innerH, 0]).clamp(true)
+    : d3.scaleLinear().domain([0, maxCount]).range([innerH, 0]).nice();
+
+  // Bars
+  g.selectAll("rect")
+    .data(entries)
+    .enter()
+    .append("rect")
+    .attr("x", (_, i) => x(i))
+    .attr("y", (d) => y(d.count))
+    .attr("width", x.bandwidth())
+    .attr("height", (d) => innerH - y(d.count))
+    .attr("fill", (d) => clusterColor(d.id))
+    .attr("opacity", 0.85);
+
+  // Y axis
+  const yAxis = gridState.logScale
+    ? d3.axisLeft(y).ticks(3, "~s")
+    : d3.axisLeft(y).ticks(4);
+  g.append("g")
+    .attr("class", "axis")
+    .call(yAxis)
+    .selectAll("text")
+    .style("font-size", "9px");
+
+  // X axis — show cluster rank
+  g.append("g")
+    .attr("class", "axis")
+    .attr("transform", `translate(0,${innerH})`)
+    .call(
+      d3
+        .axisBottom(x)
+        .tickValues(
+          entries.length <= 20
+            ? entries.map((_, i) => i)
+            : d3.range(0, entries.length, Math.ceil(entries.length / 10)),
+        )
+        .tickFormat((i) => (entries[i] ? entries[i].id : "")),
+    )
+    .selectAll("text")
+    .style("font-size", "8px");
+
+  // X axis label
+  g.append("text")
+    .attr("x", innerW / 2)
+    .attr("y", innerH + 20)
+    .attr("text-anchor", "middle")
+    .style("font-size", "9px")
+    .style("fill", "#888")
+    .text("cluster");
+}
+
+/**
  * Update statistics display with sparkline
  */
 function updateStats(assignments, nClusters, smallClusters = new Set()) {
@@ -1453,29 +1708,37 @@ function updateStats(assignments, nClusters, smallClusters = new Set()) {
       <span><strong>Largest:</strong> ${sortedSizes[0]}</span>
       <span><strong>Smallest:</strong> ${sortedSizes[sortedSizes.length - 1]}</span>
     </div>
-    <div class="stats-sparkline" id="stats-sparkline">
-      <span class="stats-sparkline-label">Distribution:</span>
+    <div id="cluster-size-chart-container">
       <button class="scale-toggle toggle-btn" id="scale-toggle">${gridState.logScale ? "Log" : "Linear"}</button>
+      <div id="cluster-size-chart-wrapper"></div>
+      <button class="toggle-btn" id="export-cluster-chart">Export SVG</button>
     </div>
   `;
 
-  // Add sparkline bar chart
+  // Build D3 bar chart of cluster sizes
   if (sortedSizes.length > 0) {
-    const sparklineContainer = document.getElementById("stats-sparkline");
-    const svgString = sparkbars(sortedSizes, null, {
-      width: 200,
-      height: 40,
-      color: "#1565c0",
-      yAxis: { ticks: true },
-      logScale: gridState.logScale,
-    });
-    sparklineContainer.insertAdjacentHTML("beforeend", svgString);
+    renderClusterSizeChart(sizes);
 
-    // Add toggle handler
     document.getElementById("scale-toggle").addEventListener("click", () => {
       gridState.logScale = !gridState.logScale;
       updateStats(gridState.currentAssignments, gridState.currentNClusters);
     });
+
+    document
+      .getElementById("export-cluster-chart")
+      .addEventListener("click", () => {
+        const svgEl = document.querySelector("#cluster-size-chart-wrapper svg");
+        if (!svgEl) return;
+        const serializer = new XMLSerializer();
+        const svgStr = serializer.serializeToString(svgEl);
+        const blob = new Blob([svgStr], { type: "image/svg+xml" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "cluster_sizes.svg";
+        a.click();
+        URL.revokeObjectURL(url);
+      });
   }
 
   // Resolve and render labels
