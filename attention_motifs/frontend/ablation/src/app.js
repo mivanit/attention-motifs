@@ -107,7 +107,7 @@ let modelFilter = "all"; // "all" | "gpt2" | "pythia"
 let selectedMethod = null; // null = first available
 let chartType = "histogram"; // "histogram" | "boxplot"
 let logScale = false; // log frequency axis for histograms
-let sortByMean = false; // sort boxplot clusters by mean value
+let sortMode = "none"; // "none" | "mean" | "median" | "ks-d"
 let visibleGroups = new Set(DEFAULT_VISIBLE_GROUPS);
 let tableClusterFilter = false; // filter table to selected cluster only
 let dataTable = null;
@@ -188,8 +188,9 @@ async function init() {
   setupModelFamilyButtons();
   setupChartTypeButtons();
   setupLogScaleButton();
-  setupSortByMeanButton();
+  setupSortSelect();
   setupChartWidthSlider();
+  if (clusteringReady) setupMinClusterSizeSlider();
   setupColumnToggles();
 
   // Initial render
@@ -281,10 +282,7 @@ function setupCutHeightSlider(initialValue) {
       ClusteringConfig.setCutHeight(h);
       updateClusterStats();
 
-      // Update selected cluster to follow DEFAULT_HEAD
-      const newClusterId = clustering._assignments[DEFAULT_HEAD];
-      if (newClusterId !== undefined) selectedCluster = newClusterId;
-
+      selectedCluster = null;
       renderClusterChips();
       renderCharts();
       renderTable();
@@ -356,16 +354,6 @@ function updateClusterStats() {
   if (unclustered > 0) text += `, ${unclustered} unclustered`;
   text += ")";
   document.getElementById("n-clusters-label").textContent = text;
-}
-
-async function selectDefaultCluster() {
-  const defaultClusterId = clustering._assignments[DEFAULT_HEAD];
-  selectedCluster = defaultClusterId !== undefined ? defaultClusterId : null;
-  if (selectedCluster === null) {
-    const sizes = await clustering.getClusterSizes();
-    const sorted = Object.entries(sizes).sort((a, b) => b[1] - a[1]);
-    if (sorted.length > 0) selectedCluster = parseInt(sorted[0][0]);
-  }
 }
 
 function setupMethodSelect(methods) {
@@ -445,17 +433,34 @@ function setupLogScaleButton() {
   container.appendChild(btn);
 }
 
-function setupSortByMeanButton() {
-  const container = document.getElementById("sort-mean-button");
-  const btn = document.createElement("button");
-  btn.className = "chart-type-btn" + (sortByMean ? " active" : "");
-  btn.textContent = "Sort Mean";
-  btn.addEventListener("click", () => {
-    sortByMean = !sortByMean;
-    btn.classList.toggle("active", sortByMean);
+function setupSortSelect() {
+  const select = document.getElementById("sort-select");
+  select.value = sortMode;
+  select.addEventListener("change", () => {
+    sortMode = select.value;
     renderCharts();
   });
-  container.appendChild(btn);
+}
+
+function setupMinClusterSizeSlider() {
+  const slider = document.getElementById("min-cluster-size");
+  const label = document.getElementById("min-cluster-size-value");
+  if (!slider || !clustering) return;
+
+  const initial = clustering.getMinClusterSize();
+  slider.value = initial;
+  label.textContent = initial;
+
+  slider.addEventListener("input", async () => {
+    const n = parseInt(slider.value);
+    label.textContent = n;
+    await clustering.setMinClusterSize(n);
+    updateClusterStats();
+    selectedCluster = null;
+    renderClusterChips();
+    renderCharts();
+    renderTable();
+  });
 }
 
 function setupChartWidthSlider() {
@@ -1082,10 +1087,20 @@ function applyHoverHighlight(svg, activeClusterId) {
 }
 
 function attachClusterHover(svg) {
-  svg.selectAll("[data-cluster-id]").on("mouseenter", function () {
-    const cid = parseInt(d3.select(this).attr("data-cluster-id"));
-    applyHoverHighlight(svg, cid);
-  });
+  svg
+    .selectAll("[data-cluster-id]")
+    .on("mouseenter", function () {
+      const cid = parseInt(d3.select(this).attr("data-cluster-id"));
+      applyHoverHighlight(svg, cid);
+    })
+    .on("click", function () {
+      const cid = parseInt(d3.select(this).attr("data-cluster-id"));
+      selectedCluster = cid;
+      renderClusterChips();
+      renderCharts();
+      renderTable();
+    })
+    .style("cursor", "pointer");
   svg.on("mouseleave", () => applyHoverHighlight(svg, null));
 }
 
@@ -1240,18 +1255,28 @@ function renderHistogramAll(metric, groupData) {
     .attr("opacity", 0);
 
   // Extended hover: also update KS D display
-  svg.selectAll("[data-cluster-id]").on("mouseenter", function () {
-    const cid = parseInt(d3.select(this).attr("data-cluster-id"));
-    applyHoverHighlight(svg, cid);
-    const ks = clusterKsStats[cid];
-    const text = formatKsStat(ks);
-    if (text) {
-      ksStatText
-        .text(text)
-        .attr("fill", isKsSignificant(ks) ? "#c33" : "#888")
-        .attr("opacity", 1);
-    }
-  });
+  svg
+    .selectAll("[data-cluster-id]")
+    .on("mouseenter", function () {
+      const cid = parseInt(d3.select(this).attr("data-cluster-id"));
+      applyHoverHighlight(svg, cid);
+      const ks = clusterKsStats[cid];
+      const text = formatKsStat(ks);
+      if (text) {
+        ksStatText
+          .text(text)
+          .attr("fill", isKsSignificant(ks) ? "#c33" : "#888")
+          .attr("opacity", 1);
+      }
+    })
+    .on("click", function () {
+      const cid = parseInt(d3.select(this).attr("data-cluster-id"));
+      selectedCluster = cid;
+      renderClusterChips();
+      renderCharts();
+      renderTable();
+    })
+    .style("cursor", "pointer");
   svg.on("mouseleave", () => {
     applyHoverHighlight(svg, null);
     ksStatText.attr("opacity", 0);
@@ -1270,10 +1295,27 @@ function renderBoxPlotAll(metric, groupData) {
 
   if (groupData.length === 0) return;
 
-  // Sort by mean if toggle is active
-  if (sortByMean) {
+  // Pre-compute KS D stats (needed for sort and display)
+  const clusterKsMap = {};
+  for (const cg of groupData) {
+    const otherValues = groupData
+      .filter((other) => other.clusterId !== cg.clusterId)
+      .flatMap((other) => other.values);
+    clusterKsMap[cg.clusterId] = ksTest(cg.values, otherValues);
+  }
+
+  // Sort clusters by statistic if active
+  if (sortMode === "mean") {
     groupData = [...groupData].sort(
       (a, b) => d3.mean(a.values) - d3.mean(b.values),
+    );
+  } else if (sortMode === "median") {
+    groupData = [...groupData].sort(
+      (a, b) => d3.median(a.values) - d3.median(b.values),
+    );
+  } else if (sortMode === "ks-d") {
+    groupData = [...groupData].sort(
+      (a, b) => clusterKsMap[b.clusterId].D - clusterKsMap[a.clusterId].D,
     );
   }
 
@@ -1332,10 +1374,7 @@ function renderBoxPlotAll(metric, groupData) {
       .text(cg.label.length > 12 ? cg.label.slice(0, 11) + "\u2026" : cg.label);
 
     // X-axis label: KS D (cluster vs all others)
-    const otherValues = groupData
-      .filter((other) => other.clusterId !== cg.clusterId)
-      .flatMap((other) => other.values);
-    const ks = ksTest(cg.values, otherValues);
+    const ks = clusterKsMap[cg.clusterId];
     const ksText = formatKsStat(ks);
     if (ksText) {
       g.append("text")

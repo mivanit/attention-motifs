@@ -50,6 +50,17 @@
             <select id="cluster-param-select"></select>
           </span>
           <span id="n-clusters-label">(-- clusters)</span>
+          <span id="min-size-controls">
+            <label>Min Size:</label>
+            <input
+              type="range"
+              id="min-cluster-size"
+              min="0"
+              max="50"
+              value="0"
+            />
+            <span id="min-cluster-size-value" class="slider-value">0</span>
+          </span>
         </div>
         <div class="control-group">
           <label>Models:</label>
@@ -63,7 +74,12 @@
           <label>Chart:</label>
           <span id="chart-type-buttons"></span>
           <span id="log-scale-button"></span>
-          <span id="sort-mean-button"></span>
+          <select id="sort-select">
+            <option value="none">No Sort</option>
+            <option value="mean">Sort Mean</option>
+            <option value="median">Sort Median</option>
+            <option value="ks-d">Sort KS D</option>
+          </select>
         </div>
         <div class="control-group">
           <label>Width:</label>
