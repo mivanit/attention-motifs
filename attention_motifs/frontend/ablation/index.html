@@ -90,6 +90,10 @@
       width: 100px;
     }
     
+    #min-cluster-size {
+      width: 80px;
+    }
+    
     .slider-value {
       font-family: "Menlo", "Consolas", monospace;
       font-size: 11px;
@@ -110,7 +114,8 @@
     
     #method-select,
     #cluster-method-select,
-    #cluster-param-select {
+    #cluster-param-select,
+    #sort-select {
       padding: 3px 8px;
       border-radius: 4px;
       border: 1px solid #ccc;
@@ -219,8 +224,6 @@
     }
     
     .chart-cell svg {
-      width: 100%;
-      height: 100%;
       display: block;
     }
     
@@ -379,8 +382,11 @@
       if (existingBtn) existingBtn.remove();
     
       const rect = container.getBoundingClientRect();
-      const width = rect.width;
-      const height = rect.height;
+      const cs = getComputedStyle(container);
+      const width =
+        rect.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const height =
+        rect.height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
       const innerWidth = width - margin.left - margin.right;
       const innerHeight = height - margin.top - margin.bottom;
     
@@ -3465,6 +3471,17 @@
             <select id="cluster-param-select"></select>
           </span>
           <span id="n-clusters-label">(-- clusters)</span>
+          <span id="min-size-controls">
+            <label>Min Size:</label>
+            <input
+              type="range"
+              id="min-cluster-size"
+              min="0"
+              max="50"
+              value="0"
+            />
+            <span id="min-cluster-size-value" class="slider-value">0</span>
+          </span>
         </div>
         <div class="control-group">
           <label>Models:</label>
@@ -3478,7 +3495,12 @@
           <label>Chart:</label>
           <span id="chart-type-buttons"></span>
           <span id="log-scale-button"></span>
-          <span id="sort-mean-button"></span>
+          <select id="sort-select">
+            <option value="none">No Sort</option>
+            <option value="mean">Sort Mean</option>
+            <option value="median">Sort Median</option>
+            <option value="ks-d">Sort KS D</option>
+          </select>
         </div>
         <div class="control-group">
           <label>Width:</label>
@@ -3643,7 +3665,7 @@
     let selectedMethod = null; // null = first available
     let chartType = "histogram"; // "histogram" | "boxplot"
     let logScale = false; // log frequency axis for histograms
-    let sortByMean = false; // sort boxplot clusters by mean value
+    let sortMode = "none"; // "none" | "mean" | "median" | "ks-d"
     let visibleGroups = new Set(DEFAULT_VISIBLE_GROUPS);
     let tableClusterFilter = false; // filter table to selected cluster only
     let dataTable = null;
@@ -3724,8 +3746,9 @@
       setupModelFamilyButtons();
       setupChartTypeButtons();
       setupLogScaleButton();
-      setupSortByMeanButton();
+      setupSortSelect();
       setupChartWidthSlider();
+      if (clusteringReady) setupMinClusterSizeSlider();
       setupColumnToggles();
     
       // Initial render
@@ -3817,10 +3840,7 @@
           ClusteringConfig.setCutHeight(h);
           updateClusterStats();
     
-          // Update selected cluster to follow DEFAULT_HEAD
-          const newClusterId = clustering._assignments[DEFAULT_HEAD];
-          if (newClusterId !== undefined) selectedCluster = newClusterId;
-    
+          selectedCluster = null;
           renderClusterChips();
           renderCharts();
           renderTable();
@@ -3892,16 +3912,6 @@
       if (unclustered > 0) text += `, ${unclustered} unclustered`;
       text += ")";
       document.getElementById("n-clusters-label").textContent = text;
-    }
-    
-    async function selectDefaultCluster() {
-      const defaultClusterId = clustering._assignments[DEFAULT_HEAD];
-      selectedCluster = defaultClusterId !== undefined ? defaultClusterId : null;
-      if (selectedCluster === null) {
-        const sizes = await clustering.getClusterSizes();
-        const sorted = Object.entries(sizes).sort((a, b) => b[1] - a[1]);
-        if (sorted.length > 0) selectedCluster = parseInt(sorted[0][0]);
-      }
     }
     
     function setupMethodSelect(methods) {
@@ -3981,17 +3991,34 @@
       container.appendChild(btn);
     }
     
-    function setupSortByMeanButton() {
-      const container = document.getElementById("sort-mean-button");
-      const btn = document.createElement("button");
-      btn.className = "chart-type-btn" + (sortByMean ? " active" : "");
-      btn.textContent = "Sort Mean";
-      btn.addEventListener("click", () => {
-        sortByMean = !sortByMean;
-        btn.classList.toggle("active", sortByMean);
+    function setupSortSelect() {
+      const select = document.getElementById("sort-select");
+      select.value = sortMode;
+      select.addEventListener("change", () => {
+        sortMode = select.value;
         renderCharts();
       });
-      container.appendChild(btn);
+    }
+    
+    function setupMinClusterSizeSlider() {
+      const slider = document.getElementById("min-cluster-size");
+      const label = document.getElementById("min-cluster-size-value");
+      if (!slider || !clustering) return;
+    
+      const initial = clustering.getMinClusterSize();
+      slider.value = initial;
+      label.textContent = initial;
+    
+      slider.addEventListener("input", async () => {
+        const n = parseInt(slider.value);
+        label.textContent = n;
+        await clustering.setMinClusterSize(n);
+        updateClusterStats();
+        selectedCluster = null;
+        renderClusterChips();
+        renderCharts();
+        renderTable();
+      });
     }
     
     function setupChartWidthSlider() {
@@ -4618,10 +4645,20 @@
     }
     
     function attachClusterHover(svg) {
-      svg.selectAll("[data-cluster-id]").on("mouseenter", function () {
-        const cid = parseInt(d3.select(this).attr("data-cluster-id"));
-        applyHoverHighlight(svg, cid);
-      });
+      svg
+        .selectAll("[data-cluster-id]")
+        .on("mouseenter", function () {
+          const cid = parseInt(d3.select(this).attr("data-cluster-id"));
+          applyHoverHighlight(svg, cid);
+        })
+        .on("click", function () {
+          const cid = parseInt(d3.select(this).attr("data-cluster-id"));
+          selectedCluster = cid;
+          renderClusterChips();
+          renderCharts();
+          renderTable();
+        })
+        .style("cursor", "pointer");
       svg.on("mouseleave", () => applyHoverHighlight(svg, null));
     }
     
@@ -4776,18 +4813,28 @@
         .attr("opacity", 0);
     
       // Extended hover: also update KS D display
-      svg.selectAll("[data-cluster-id]").on("mouseenter", function () {
-        const cid = parseInt(d3.select(this).attr("data-cluster-id"));
-        applyHoverHighlight(svg, cid);
-        const ks = clusterKsStats[cid];
-        const text = formatKsStat(ks);
-        if (text) {
-          ksStatText
-            .text(text)
-            .attr("fill", isKsSignificant(ks) ? "#c33" : "#888")
-            .attr("opacity", 1);
-        }
-      });
+      svg
+        .selectAll("[data-cluster-id]")
+        .on("mouseenter", function () {
+          const cid = parseInt(d3.select(this).attr("data-cluster-id"));
+          applyHoverHighlight(svg, cid);
+          const ks = clusterKsStats[cid];
+          const text = formatKsStat(ks);
+          if (text) {
+            ksStatText
+              .text(text)
+              .attr("fill", isKsSignificant(ks) ? "#c33" : "#888")
+              .attr("opacity", 1);
+          }
+        })
+        .on("click", function () {
+          const cid = parseInt(d3.select(this).attr("data-cluster-id"));
+          selectedCluster = cid;
+          renderClusterChips();
+          renderCharts();
+          renderTable();
+        })
+        .style("cursor", "pointer");
       svg.on("mouseleave", () => {
         applyHoverHighlight(svg, null);
         ksStatText.attr("opacity", 0);
@@ -4806,10 +4853,27 @@
     
       if (groupData.length === 0) return;
     
-      // Sort by mean if toggle is active
-      if (sortByMean) {
+      // Pre-compute KS D stats (needed for sort and display)
+      const clusterKsMap = {};
+      for (const cg of groupData) {
+        const otherValues = groupData
+          .filter((other) => other.clusterId !== cg.clusterId)
+          .flatMap((other) => other.values);
+        clusterKsMap[cg.clusterId] = ksTest(cg.values, otherValues);
+      }
+    
+      // Sort clusters by statistic if active
+      if (sortMode === "mean") {
         groupData = [...groupData].sort(
           (a, b) => d3.mean(a.values) - d3.mean(b.values),
+        );
+      } else if (sortMode === "median") {
+        groupData = [...groupData].sort(
+          (a, b) => d3.median(a.values) - d3.median(b.values),
+        );
+      } else if (sortMode === "ks-d") {
+        groupData = [...groupData].sort(
+          (a, b) => clusterKsMap[b.clusterId].D - clusterKsMap[a.clusterId].D,
         );
       }
     
@@ -4868,10 +4932,7 @@
           .text(cg.label.length > 12 ? cg.label.slice(0, 11) + "\u2026" : cg.label);
     
         // X-axis label: KS D (cluster vs all others)
-        const otherValues = groupData
-          .filter((other) => other.clusterId !== cg.clusterId)
-          .flatMap((other) => other.values);
-        const ks = ksTest(cg.values, otherValues);
+        const ks = clusterKsMap[cg.clusterId];
         const ksText = formatKsStat(ks);
         if (ksText) {
           g.append("text")
