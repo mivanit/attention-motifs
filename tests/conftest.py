@@ -5,6 +5,7 @@ import http.server
 import socket
 import socketserver
 import sys
+from typing import Any
 import threading
 import time
 from pathlib import Path
@@ -57,7 +58,9 @@ class _QuietTCPServer(socketserver.TCPServer):
 
 	allow_reuse_address = True
 
-	def handle_error(self, request: object, client_address: object) -> None:
+	def handle_error(
+		self, request: socket.socket | tuple[bytes, socket.socket], client_address: Any
+	) -> None:
 		exc_type: type[BaseException] | None = sys.exc_info()[0]
 		if exc_type is not None and issubclass(exc_type, BrokenPipeError):
 			return
