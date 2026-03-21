@@ -691,7 +691,7 @@ function buildSizeChartScatter(filtered) {
   const byCluster = {};
   for (const r of filtered) {
     const meta = DATA.models[r.model];
-    if (!meta) continue;
+    if (!meta || !meta.n_params) continue;
     if (!byCluster[r.cluster]) byCluster[r.cluster] = [];
     byCluster[r.cluster].push({
       x: meta.n_params,
@@ -709,6 +709,17 @@ function buildSizeChartScatter(filtered) {
   }
 
   const allPoints = clusterIds.flatMap((cid) => byCluster[cid] || []);
+
+  if (allPoints.length === 0) {
+    g.append("text")
+      .attr("x", innerWidth / 2)
+      .attr("y", innerHeight / 2)
+      .attr("text-anchor", "middle")
+      .attr("fill", "#999")
+      .text("No data for current filters");
+    return;
+  }
+
   const xExtent = d3.extent(allPoints, (d) => d.x);
   const yMax = d3.max(allPoints, (d) => d.y) || 1;
 
@@ -804,7 +815,7 @@ function buildSizeChartDistribution(filtered) {
   const byCluster = {};
   for (const r of filtered) {
     const meta = DATA.models[r.model];
-    if (!meta) continue;
+    if (!meta || !meta.n_params) continue;
     if (!byCluster[r.cluster]) byCluster[r.cluster] = [];
     byCluster[r.cluster].push({ size: meta.n_params, frac: r.frac });
   }
@@ -818,6 +829,17 @@ function buildSizeChartDistribution(filtered) {
   }
 
   const allPoints = clusterIds.flatMap((cid) => byCluster[cid] || []);
+
+  if (allPoints.length === 0) {
+    g.append("text")
+      .attr("x", innerWidth / 2)
+      .attr("y", innerHeight / 2)
+      .attr("text-anchor", "middle")
+      .attr("fill", "#999")
+      .text("No data for current filters");
+    return;
+  }
+
   const xExtent = d3.extent(allPoints, (d) => d.size);
   const yMax = d3.max(allPoints, (d) => d.frac) || 1;
 
@@ -1262,10 +1284,16 @@ async function init() {
   try {
     await loadData();
   } catch (err) {
+    console.error("Cluster trends init failed:", err);
     document.getElementById("loading").textContent =
       `Error loading data: ${err.message}`;
     return;
   }
+
+  console.log(
+    `Cluster trends loaded: ${Object.keys(DATA.models).length} models, ` +
+      `${DATA.k_values.length} K values, methods: ${(DATA.methods || []).join(", ")}`,
+  );
 
   // Initialize family and model toggle states
   const families = [
