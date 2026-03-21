@@ -95,13 +95,13 @@ header p {
 }
 
 .main-tool-card h3 {
-  margin: 16px 16px 8px 16px;
+  margin: 16px 24px 8px 24px;
   font-size: 1.1em;
   color: #9370db;
 }
 
 .main-tool-card p {
-  margin: 0 16px 16px 16px;
+  margin: 0 24px 16px 24px;
   font-size: 0.9em;
   color: #666;
   line-height: 1.5;
