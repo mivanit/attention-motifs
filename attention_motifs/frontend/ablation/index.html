@@ -4027,6 +4027,47 @@
       return results.map((r) => r[metric]).filter((v) => v != null && !isNaN(v));
     }
     
+    // === KS Test ===
+    
+    /**
+     * Two-sample Kolmogorov-Smirnov test.
+     * Returns { D, pValue } where D is the KS statistic and pValue is the
+     * asymptotic approximation.
+     */
+    function ksTest(sample1, sample2) {
+      const n1 = sample1.length;
+      const n2 = sample2.length;
+      if (n1 === 0 || n2 === 0) return { D: NaN, pValue: NaN };
+    
+      const s1 = [...sample1].sort((a, b) => a - b);
+      const s2 = [...sample2].sort((a, b) => a - b);
+    
+      // Merge and walk both CDFs
+      let i = 0,
+        j = 0,
+        maxD = 0;
+      while (i < n1 || j < n2) {
+        const v1 = i < n1 ? s1[i] : Infinity;
+        const v2 = j < n2 ? s2[j] : Infinity;
+        if (v1 <= v2) i++;
+        if (v2 <= v1) j++;
+        const d = Math.abs(i / n1 - j / n2);
+        if (d > maxD) maxD = d;
+      }
+    
+      // Asymptotic p-value: P ≈ 2 * exp(-2 * n_eff * D^2)
+      const nEff = (n1 * n2) / (n1 + n2);
+      const pValue = 2 * Math.exp(-2 * nEff * maxD * maxD);
+    
+      return { D: maxD, pValue: Math.min(pValue, 1) };
+    }
+    
+    function formatPValue(p) {
+      if (isNaN(p)) return "";
+      if (p < 0.001) return "KS p < 0.001";
+      return `KS p = ${p.toFixed(3)}`;
+    }
+    
     // === Charts (D3 SVG) ===
     
     function createChartContainers() {
@@ -4102,12 +4143,18 @@
     
       const inCounts = histogram(inValues);
       const outCounts = histogram(outValues);
-      const maxCount = Math.max(...inCounts, ...outCounts, 1);
+    
+      // Normalize to frequency so different-sized groups are comparable
+      const inTotal = inValues.length || 1;
+      const outTotal = outValues.length || 1;
+      const inFreqs = inCounts.map((c) => c / inTotal);
+      const outFreqs = outCounts.map((c) => c / outTotal);
+      const maxFreq = Math.max(...inFreqs, ...outFreqs, 0.01);
     
       const xScale = d3.scaleLinear().domain([min, max]).range([0, innerWidth]);
       const yScale = d3
         .scaleLinear()
-        .domain([0, maxCount * 1.1])
+        .domain([0, maxFreq * 1.1])
         .range([innerHeight, 0]);
     
       createXAxis(g, xScale, {
@@ -4116,12 +4163,9 @@
         ticks: 6,
       });
       createYAxis(g, yScale, {
-        label: "Count",
+        label: "Frequency",
         ticks: 5,
       });
-    
-      const barWidth = innerWidth / nBins;
-      const halfBar = barWidth / 2 - 1;
     
       const clusterColorStr =
         selectedCluster !== null && clusteringAvailable
@@ -4129,33 +4173,51 @@
           : "hsl(210, 70%, 50%)";
       const clusterLabel = getClusterChipLabel();
     
-      // In-cluster bars (left half of each bin)
-      g.selectAll(".bar-in")
-        .data(inCounts)
-        .enter()
-        .append("rect")
-        .attr("class", "bar-in")
-        .attr("x", (_, i) => xScale(min + i * binWidth))
-        .attr("y", (d) => yScale(d))
-        .attr("width", halfBar)
-        .attr("height", (d) => innerHeight - yScale(d))
-        .attr("fill", clusterColorToRGBA(clusterColorStr, 0.6))
-        .attr("stroke", clusterColorToRGBA(clusterColorStr, 1))
-        .attr("stroke-width", 1);
+      // Build line points at bin midpoints
+      const binMidpoints = Array.from(
+        { length: nBins },
+        (_, i) => min + (i + 0.5) * binWidth,
+      );
     
-      // Out-cluster bars (right half of each bin)
-      g.selectAll(".bar-out")
-        .data(outCounts)
-        .enter()
-        .append("rect")
-        .attr("class", "bar-out")
-        .attr("x", (_, i) => xScale(min + i * binWidth) + halfBar + 1)
-        .attr("y", (d) => yScale(d))
-        .attr("width", halfBar)
-        .attr("height", (d) => innerHeight - yScale(d))
-        .attr("fill", "rgba(150, 150, 150, 0.35)")
-        .attr("stroke", "rgba(150, 150, 150, 0.7)")
-        .attr("stroke-width", 1);
+      function drawDistributionLine(freqs, strokeColor, fillColor) {
+        const areaGen = d3
+          .area()
+          .x((_, i) => xScale(binMidpoints[i]))
+          .y0(innerHeight)
+          .y1((d) => yScale(d))
+          .curve(d3.curveMonotoneX);
+    
+        g.append("path")
+          .datum(freqs)
+          .attr("d", areaGen)
+          .attr("fill", fillColor)
+          .attr("stroke", "none");
+    
+        const lineGen = d3
+          .line()
+          .x((_, i) => xScale(binMidpoints[i]))
+          .y((d) => yScale(d))
+          .curve(d3.curveMonotoneX);
+    
+        g.append("path")
+          .datum(freqs)
+          .attr("d", lineGen)
+          .attr("fill", "none")
+          .attr("stroke", strokeColor)
+          .attr("stroke-width", 2);
+      }
+    
+      // Draw out-cluster first (behind), then in-cluster on top
+      drawDistributionLine(
+        outFreqs,
+        "rgba(150, 150, 150, 0.7)",
+        "rgba(150, 150, 150, 0.15)",
+      );
+      drawDistributionLine(
+        inFreqs,
+        clusterColorToRGBA(clusterColorStr, 1),
+        clusterColorToRGBA(clusterColorStr, 0.2),
+      );
     
       // Title
       svg
@@ -4168,37 +4230,52 @@
         .attr("fill", "#333")
         .text(METRIC_DISPLAY_NAMES[metric] || metric);
     
-      // Legend
+      // KS p-value
+      const ks = ksTest(inValues, outValues);
+      const pText = formatPValue(ks.pValue);
+      if (pText) {
+        svg
+          .append("text")
+          .attr("x", margin.left + innerWidth - 4)
+          .attr("y", margin.top + 14)
+          .attr("text-anchor", "end")
+          .attr("font-size", 11)
+          .attr("fill", ks.pValue < 0.05 ? "#c33" : "#888")
+          .text(pText);
+      }
+    
+      // Legend (line swatches)
       const legendG = svg
         .append("g")
         .attr("transform", `translate(${margin.left + 8},${margin.top + 4})`);
     
-      // In-cluster legend item
       legendG
-        .append("rect")
-        .attr("width", 10)
-        .attr("height", 10)
-        .attr("rx", 2)
-        .attr("fill", clusterColorToRGBA(clusterColorStr, 0.6));
+        .append("line")
+        .attr("x1", 0)
+        .attr("y1", 5)
+        .attr("x2", 14)
+        .attr("y2", 5)
+        .attr("stroke", clusterColorToRGBA(clusterColorStr, 1))
+        .attr("stroke-width", 2);
       legendG
         .append("text")
-        .attr("x", 14)
+        .attr("x", 18)
         .attr("y", 9)
         .attr("font-size", CHART_STYLES.legendFontSize)
         .attr("fill", CHART_STYLES.labelColor)
         .text(`${clusterLabel} (${inValues.length})`);
     
-      // Other legend item
       legendG
-        .append("rect")
-        .attr("y", 14)
-        .attr("width", 10)
-        .attr("height", 10)
-        .attr("rx", 2)
-        .attr("fill", "rgba(150, 150, 150, 0.35)");
+        .append("line")
+        .attr("x1", 0)
+        .attr("y1", 19)
+        .attr("x2", 14)
+        .attr("y2", 19)
+        .attr("stroke", "rgba(150, 150, 150, 0.7)")
+        .attr("stroke-width", 2);
       legendG
         .append("text")
-        .attr("x", 14)
+        .attr("x", 18)
         .attr("y", 23)
         .attr("font-size", CHART_STYLES.legendFontSize)
         .attr("fill", CHART_STYLES.labelColor)
@@ -4425,6 +4502,18 @@
             ...base,
             type: "string",
             id: "cluster",
+            filterFunction: (filterValue) => {
+              const ids = filterValue
+                .split(",")
+                .map((s) => parseInt(s.trim()))
+                .filter((n) => !isNaN(n));
+              if (ids.length === 0) return null;
+              const idSet = new Set(ids);
+              return (cellValue) => {
+                const cid = parseInt(String(cellValue).split(":")[0]);
+                return !isNaN(cid) && idSet.has(cid);
+              };
+            },
             renderer: (val, row) => {
               const cid = row._clusterId;
               if (cid === undefined || cid === null || cid === -1) return "\u2014";
