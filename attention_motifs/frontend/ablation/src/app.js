@@ -107,6 +107,7 @@ let modelFilter = "all"; // "all" | "gpt2" | "pythia"
 let selectedMethod = null; // null = first available
 let chartType = "histogram"; // "histogram" | "boxplot"
 let logScale = false; // log frequency axis for histograms
+let sortByMean = false; // sort boxplot clusters by mean value
 let visibleGroups = new Set(DEFAULT_VISIBLE_GROUPS);
 let dataTable = null;
 
@@ -186,13 +187,9 @@ async function init() {
   setupModelFamilyButtons();
   setupChartTypeButtons();
   setupLogScaleButton();
+  setupSortByMeanButton();
   setupChartWidthSlider();
   setupColumnToggles();
-
-  // Find default cluster (containing DEFAULT_HEAD)
-  if (clusteringReady) {
-    selectDefaultCluster();
-  }
 
   // Initial render
   renderClusterChips();
@@ -251,7 +248,7 @@ async function setupClusteringControls() {
     }
     updateClusteringControlVisibility();
     updateClusterStats();
-    selectDefaultCluster();
+    selectedCluster = null;
     renderClusterChips();
     renderCharts();
     renderTable();
@@ -344,7 +341,7 @@ function setupParamSelect() {
   paramSelect.addEventListener("change", async () => {
     await clustering.setParamKey(paramSelect.value);
     updateClusterStats();
-    selectDefaultCluster();
+    selectedCluster = null;
     renderClusterChips();
     renderCharts();
     renderTable();
@@ -442,6 +439,19 @@ function setupLogScaleButton() {
   btn.addEventListener("click", () => {
     logScale = !logScale;
     btn.classList.toggle("active", logScale);
+    renderCharts();
+  });
+  container.appendChild(btn);
+}
+
+function setupSortByMeanButton() {
+  const container = document.getElementById("sort-mean-button");
+  const btn = document.createElement("button");
+  btn.className = "chart-type-btn" + (sortByMean ? " active" : "");
+  btn.textContent = "Sort Mean";
+  btn.addEventListener("click", () => {
+    sortByMean = !sortByMean;
+    btn.classList.toggle("active", sortByMean);
     renderCharts();
   });
   container.appendChild(btn);
@@ -1254,6 +1264,13 @@ function renderBoxPlotAll(metric, groupData) {
 
   if (groupData.length === 0) return;
 
+  // Sort by mean if toggle is active
+  if (sortByMean) {
+    groupData = [...groupData].sort(
+      (a, b) => d3.mean(a.values) - d3.mean(b.values),
+    );
+  }
+
   // Compute Y domain from all values
   const allValues = groupData.flatMap((cg) => cg.values);
   const yMin = Math.min(...allValues);
@@ -1324,6 +1341,15 @@ function renderBoxPlotAll(metric, groupData) {
         .text(ksText);
     }
   }
+
+  // X-axis title
+  g.append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", innerHeight + 46)
+    .attr("text-anchor", "middle")
+    .attr("font-size", CHART_STYLES.labelFontSize)
+    .attr("fill", CHART_STYLES.labelColor)
+    .text("Cluster ID");
 
   // Title
   svg
