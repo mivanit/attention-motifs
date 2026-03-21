@@ -852,6 +852,7 @@ _am-frontend-fetch-libs:
 	curl -sL $(JS_DEV_TOOLKIT_URL)/yaml.js -o $(FRONTEND_DIR)/libs/yaml.js
 	curl -sL $(JS_DEV_TOOLKIT_URL)/sparklines.js -o $(FRONTEND_DIR)/libs/sparklines.js
 	curl -sL $(JS_DEV_TOOLKIT_URL)/array.js -o $(FRONTEND_DIR)/libs/array.js
+	curl -sL $(JS_DEV_TOOLKIT_URL)/table.js -o $(FRONTEND_DIR)/libs/table.js
 	curl -sL $(JS_DEV_TOOLKIT_URL)/notif.js -o $(FRONTEND_DIR)/libs/notif.js
 	curl -sL $(JS_DEV_TOOLKIT_URL)/notif.css -o $(FRONTEND_DIR)/libs/notif.css
 	curl -sL https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js -o $(FRONTEND_DIR)/libs/d3.min.js
