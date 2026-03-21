@@ -1,13 +1,23 @@
+from __future__ import annotations
+
 import hashlib
 import base64
-from typing import Iterable, Iterator, TypeVar, overload
+from typing import TYPE_CHECKING, Iterable, Iterator, TypeVar, overload
 import os
 import warnings
 
 import numpy as np
-import torch
-from jaxtyping import Float, Int
 from itertools import islice
+
+if TYPE_CHECKING:
+	import torch
+	from jaxtyping import Float, Int
+
+	AttentionPattern = Float[torch.Tensor, "n_ctx n_ctx"]
+	AttentionPatternBatch = Float[torch.Tensor, "batch n_ctx n_ctx"]
+	TokenSequence = Int[torch.Tensor, "n_ctx"]
+	TokenSequenceBatch = Int[torch.Tensor, "batch n_ctx"]
+	PromptHashIntSequence = Int[torch.Tensor, "n_samples"]
 
 # custom utils
 
@@ -17,14 +27,8 @@ DIVIDER_S1: str = "=" * 70
 DIVIDER_S2: str = "-" * 50
 "divider string for separating subsections"
 
-AttentionPattern = Float[torch.Tensor, "n_ctx n_ctx"]
-AttentionPatternBatch = Float[torch.Tensor, "batch n_ctx n_ctx"]
-TokenSequence = Int[torch.Tensor, "n_ctx"]
-TokenSequenceBatch = Int[torch.Tensor, "batch n_ctx"]
-
 PromptHashStr = str
 PromptHashInt = int
-PromptHashIntSequence = Int[torch.Tensor, "n_samples"]
 
 PROMPT_HASH_BYTES: int = 4
 "32 bits is enough for 4.3B unique prompts, but to avoid collision let's use 64 bits"
@@ -33,8 +37,6 @@ PROMPT_HASH_BITS: int = PROMPT_HASH_BYTES * 8
 
 
 PROMPT_HASH_MAX: int = 2**PROMPT_HASH_BITS
-
-PATTERN_DTYPE: torch.dtype = torch.float16
 
 DEFAULT_COMPRESS_LEVEL: int = 1
 "zlib compression level for .npz saves: 0=none, 1=fast, 6=numpy default, 9=max"
@@ -121,9 +123,6 @@ def str_batches(
 			break
 		idx += batch_size
 		yield str_slice
-
-
-T_Tensor = TypeVar("T_Tensor", torch.Tensor, np.ndarray)
 
 
 @overload

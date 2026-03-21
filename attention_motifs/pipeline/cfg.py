@@ -5,8 +5,10 @@ from pathlib import Path
 from typing import Any, Literal
 
 from attention_motifs.consts import DEFAULT_COMPRESS_LEVEL
-from attention_motifs.features.clustering import ClusteringMethod, LinkageMethod
 from attention_motifs.util.model_name import cached_sanitize_model_name
+
+ClusteringMethod = Literal["hierarchical", "hdbscan", "leiden"]
+LinkageMethod = Literal["ward", "average", "complete", "single"]
 
 PIPELINE_CFG_EXAMPLES: str = """
 # use `pipeline_cfg.toml`
