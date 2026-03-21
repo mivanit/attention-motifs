@@ -5,9 +5,22 @@ const urlParams = new URLSearchParams(window.location.search);
 // CONFIG object used by ClusteringLoader and AttentionPedia
 const CONFIG = {
   dataUrl: urlParams.get("data") || "ablation_results.json",
+  clustering_methods_url: "../features/clustering_methods.json",
   clustering_meta_url: "../features/clustering/clustering_meta.json",
   clustering_linkage_url: "../features/clustering/linkage.json",
   cluster_labels_url: "../features/clustering/cluster_labels.json",
+  clustering_hdbscan_meta_url:
+    "../features/clustering_hdbscan/clustering_meta.json",
+  clustering_hdbscan_partitions_url:
+    "../features/clustering_hdbscan/partitions.json",
+  clustering_hdbscan_labels_url:
+    "../features/clustering_hdbscan/cluster_labels.json",
+  clustering_leiden_meta_url:
+    "../features/clustering_leiden/clustering_meta.json",
+  clustering_leiden_partitions_url:
+    "../features/clustering_leiden/partitions.json",
+  clustering_leiden_labels_url:
+    "../features/clustering_leiden/cluster_labels.json",
   attnpedia_url: "../vis/attnpedia/ap.json",
 };
 
@@ -93,8 +106,7 @@ let modelFilter = "all"; // "all" | "gpt2" | "pythia"
 let selectedMethod = null; // null = first available
 let chartType = "histogram"; // "histogram" | "boxplot"
 let visibleGroups = new Set(DEFAULT_VISIBLE_GROUPS);
-let sortColumn = "loss_increase";
-let sortDescending = true;
+let dataTable = null;
 
 // === Model family helpers ===
 
@@ -154,15 +166,11 @@ async function init() {
   }
 
   // Set up initial clustering state
-  const savedCutHeight = ClusteringConfig.getCutHeight();
-  const initialCutHeight = savedCutHeight || DEFAULT_CUT_HEIGHT;
-
   if (clusteringReady) {
-    await clustering.setCutHeight(initialCutHeight);
-    setupCutHeightSlider(initialCutHeight);
+    await setupClusteringControls();
   }
 
-  // Collect all methods
+  // Collect all ablation methods
   const methods = new Set();
   for (const modelData of Object.values(allData.models)) {
     for (const r of modelData.results) {
@@ -179,14 +187,7 @@ async function init() {
 
   // Find default cluster (containing DEFAULT_HEAD)
   if (clusteringReady) {
-    const defaultClusterId = clustering._assignments[DEFAULT_HEAD];
-    selectedCluster = defaultClusterId !== undefined ? defaultClusterId : null;
-    if (selectedCluster === null) {
-      // Fall back to largest cluster
-      const sizes = await clustering.getClusterSizes();
-      const sorted = Object.entries(sizes).sort((a, b) => b[1] - a[1]);
-      if (sorted.length > 0) selectedCluster = parseInt(sorted[0][0]);
-    }
+    selectDefaultCluster();
   }
 
   // Initial render
@@ -204,6 +205,56 @@ function showError(msg) {
 
 // === UI Setup ===
 
+async function setupClusteringControls() {
+  const availableMethods = clustering.getAvailableMethods();
+  const methodSelect = document.getElementById("cluster-method-select");
+
+  // Populate method dropdown
+  methodSelect.innerHTML = availableMethods
+    .map((m) => `<option value="${m}">${m}</option>`)
+    .join("");
+
+  // Restore saved method or default to first available
+  const savedMethod = ClusteringConfig.getMethod();
+  const initialMethod =
+    savedMethod && availableMethods.includes(savedMethod)
+      ? savedMethod
+      : availableMethods[0];
+  methodSelect.value = initialMethod;
+
+  // Initialize the clustering method
+  if (initialMethod === "hierarchical") {
+    const savedCutHeight = ClusteringConfig.getCutHeight();
+    const initialCutHeight = savedCutHeight || DEFAULT_CUT_HEIGHT;
+    await clustering.setCutHeight(initialCutHeight);
+    setupCutHeightSlider(initialCutHeight);
+  } else {
+    clustering.setMethod(initialMethod);
+  }
+
+  updateClusteringControlVisibility();
+  updateClusterStats();
+
+  // Bind method change
+  methodSelect.addEventListener("change", async () => {
+    clustering.setMethod(methodSelect.value);
+    if (clustering.isHierarchical()) {
+      const savedCutHeight = ClusteringConfig.getCutHeight();
+      const h = savedCutHeight || DEFAULT_CUT_HEIGHT;
+      await clustering.setCutHeight(h);
+      setupCutHeightSlider(h);
+    }
+    updateClusteringControlVisibility();
+    updateClusterStats();
+    selectDefaultCluster();
+    renderClusterChips();
+    renderCharts();
+    renderTable();
+  });
+}
+
+let _cutHeightSliderBound = false;
+
 function setupCutHeightSlider(initialValue) {
   const slider = document.getElementById("cut-height-slider");
   const maxH = clustering.getMaxCutHeight() || 20;
@@ -213,8 +264,9 @@ function setupCutHeightSlider(initialValue) {
   slider.value = initialValue;
   document.getElementById("cut-height-value").textContent =
     initialValue.toFixed(2);
-  document.getElementById("n-clusters-label").textContent =
-    `(${clustering.getNClusters()} clusters)`;
+
+  if (_cutHeightSliderBound) return;
+  _cutHeightSliderBound = true;
 
   let _sliderTimeout = null;
   slider.addEventListener("input", () => {
@@ -224,8 +276,7 @@ function setupCutHeightSlider(initialValue) {
     _sliderTimeout = setTimeout(async () => {
       await clustering.setCutHeight(h);
       ClusteringConfig.setCutHeight(h);
-      document.getElementById("n-clusters-label").textContent =
-        `(${clustering.getNClusters()} clusters)`;
+      updateClusterStats();
 
       // Update selected cluster to follow DEFAULT_HEAD
       const newClusterId = clustering._assignments[DEFAULT_HEAD];
@@ -236,6 +287,82 @@ function setupCutHeightSlider(initialValue) {
       renderTable();
     }, 50);
   });
+}
+
+function updateClusteringControlVisibility() {
+  const isHier = clustering.isHierarchical();
+  document.getElementById("cluster-hier-controls").style.display = isHier
+    ? ""
+    : "none";
+  document.getElementById("cluster-param-controls").style.display = isHier
+    ? "none"
+    : "";
+
+  if (!isHier) {
+    setupParamSelect();
+  }
+}
+
+function setupParamSelect() {
+  const info = clustering.getFlatParamInfo();
+  if (!info) return;
+
+  const paramLabel = document.getElementById("cluster-param-label");
+  const oldSelect = document.getElementById("cluster-param-select");
+
+  paramLabel.textContent = info.paramName + ":";
+
+  // Replace select element to avoid duplicate listeners
+  const paramSelect = oldSelect.cloneNode(false);
+  paramSelect.id = "cluster-param-select";
+  oldSelect.parentNode.replaceChild(paramSelect, oldSelect);
+
+  paramSelect.innerHTML = info.paramKeys
+    .map((pk) => {
+      const meta = info.meta[pk];
+      const extra = meta
+        ? ` (${meta.n_clusters} clusters${meta.n_outliers ? `, ${meta.n_outliers} outliers` : ""})`
+        : "";
+      return `<option value="${pk}">${pk}${extra}</option>`;
+    })
+    .join("");
+
+  const savedKey = ClusteringConfig.getParamKey();
+  paramSelect.value =
+    savedKey && info.paramKeys.includes(savedKey)
+      ? savedKey
+      : info.paramKeys[0];
+
+  // Apply initial param key
+  clustering.setParamKey(paramSelect.value);
+
+  paramSelect.addEventListener("change", async () => {
+    await clustering.setParamKey(paramSelect.value);
+    updateClusterStats();
+    selectDefaultCluster();
+    renderClusterChips();
+    renderCharts();
+    renderTable();
+  });
+}
+
+function updateClusterStats() {
+  const n = clustering.getNClusters();
+  const unclustered = clustering.getUnclusteredCount();
+  let text = `(${n} clusters`;
+  if (unclustered > 0) text += `, ${unclustered} unclustered`;
+  text += ")";
+  document.getElementById("n-clusters-label").textContent = text;
+}
+
+async function selectDefaultCluster() {
+  const defaultClusterId = clustering._assignments[DEFAULT_HEAD];
+  selectedCluster = defaultClusterId !== undefined ? defaultClusterId : null;
+  if (selectedCluster === null) {
+    const sizes = await clustering.getClusterSizes();
+    const sorted = Object.entries(sizes).sort((a, b) => b[1] - a[1]);
+    if (sorted.length > 0) selectedCluster = parseInt(sorted[0][0]);
+  }
 }
 
 function setupMethodSelect(methods) {
@@ -759,7 +886,6 @@ function renderConfigSummary() {
 
 function getVisibleColumns() {
   const cols = ["head", "cluster"];
-  // Only add classifications column if any visible head has classifications
   if (hasAnyClassifications()) cols.push("classifications");
   cols.push("ablation_method");
   for (const [group, fields] of Object.entries(METRIC_GROUPS)) {
@@ -777,117 +903,132 @@ function hasAnyClassifications() {
   return false;
 }
 
+function buildTableColumns() {
+  const visibleCols = getVisibleColumns();
+  return visibleCols.map((col) => {
+    const label = COLUMN_LABELS[col] || col;
+    const base = { key: col, label };
+
+    if (col === "head") {
+      return {
+        ...base,
+        type: "string",
+        renderer: (val) => {
+          const encoded = String(val).replace(/:/g, "~");
+          const a = document.createElement("a");
+          a.href = `../vis/attnpedia/index.html?head_viewing=${encoded}`;
+          a.target = "_blank";
+          a.textContent = val;
+          a.style.color = "#1565c0";
+          a.style.textDecoration = "none";
+          return a;
+        },
+      };
+    }
+
+    if (col === "cluster") {
+      return {
+        ...base,
+        type: "string",
+        id: "cluster",
+        renderer: (val, row) => {
+          const cid = row._clusterId;
+          if (cid === undefined || cid === null || cid === -1) return "\u2014";
+          const color = clustering.getClusterColor(cid);
+          const span = document.createElement("span");
+          span.className = "cluster-badge";
+          span.style.background = color;
+          span.textContent = val;
+          return span;
+        },
+        sortFunction: (val, row) =>
+          row._clusterId !== undefined ? row._clusterId : -999,
+      };
+    }
+
+    if (col === "classifications") {
+      return {
+        ...base,
+        type: "string",
+        renderer: (val) => {
+          if (!val) return "";
+          const types = val.split(", ").filter((t) => t);
+          if (types.length === 0) return "";
+          const container = document.createElement("span");
+          for (const t of types) {
+            const badge = document.createElement("span");
+            badge.className = "class-badge";
+            badge.textContent = t;
+            container.appendChild(badge);
+            container.appendChild(document.createTextNode(" "));
+          }
+          return container;
+        },
+      };
+    }
+
+    if (col === "ablation_method") {
+      return { ...base, type: "string" };
+    }
+
+    // Numeric metric column
+    return {
+      ...base,
+      type: "number",
+      align: "right",
+      renderer: (val) => {
+        const cls = getCellClass(col, val);
+        const span = document.createElement("span");
+        if (cls) span.className = cls;
+        span.textContent = formatNumber(val);
+        return span;
+      },
+    };
+  });
+}
+
+function buildTableData() {
+  const results = getFilteredResults();
+  return results.map((r) => {
+    const clusterId =
+      clusteringAvailable && clustering._is_loaded
+        ? clustering._assignments[r.head]
+        : undefined;
+    const classifications =
+      apData && apData.head_to_types ? apData.head_to_types[r.head] || [] : [];
+
+    // Build cluster display name
+    let clusterName = "\u2014";
+    if (clusterId !== undefined && clusterId !== null && clusterId !== -1) {
+      const clLabel = clustering.getClusterLabel(clusterId);
+      clusterName =
+        clLabel && clLabel.name
+          ? `${clusterId}: ${clLabel.name}`
+          : `${clusterId}`;
+    }
+
+    return {
+      ...r,
+      _clusterId: clusterId,
+      cluster: clusterName,
+      classifications: classifications.join(", "),
+    };
+  });
+}
+
 function renderTable() {
-  const columns = getVisibleColumns();
-  let rows = getFilteredResults();
+  const container = document.getElementById("results-table-container");
+  container.innerHTML = "";
 
-  // Sort
-  rows = sortResults(rows, sortColumn, sortDescending);
+  const columns = buildTableColumns();
+  const data = buildTableData();
 
-  // Thead
-  const thead = document.getElementById("results-thead");
-  thead.innerHTML =
-    "<tr>" +
-    columns
-      .map((col) => {
-        const label = COLUMN_LABELS[col] || col;
-        const isSorted = col === sortColumn;
-        const arrow = isSorted ? (sortDescending ? " \u25BC" : " \u25B2") : "";
-        const cls = isSorted ? ' class="sorted"' : "";
-        return `<th${cls} onclick="sortBy('${col}')">${label}<span class="sort-arrow">${arrow}</span></th>`;
-      })
-      .join("") +
-    "</tr>";
-
-  // Tbody
-  const tbody = document.getElementById("results-tbody");
-  if (rows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${columns.length}" style="text-align:center;color:#999;padding:30px;">No results match filters.</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = rows
-    .map((row) => {
-      const clusterId =
-        clusteringAvailable && clustering._is_loaded
-          ? clustering._assignments[row.head]
-          : undefined;
-      const isInSelected = clusterId === selectedCluster;
-      const rowClass = isInSelected ? ' class="row-in-cluster"' : "";
-
-      return (
-        `<tr${rowClass}>` +
-        columns.map((col) => renderCell(col, row, clusterId)).join("") +
-        "</tr>"
-      );
-    })
-    .join("");
-}
-
-function renderCell(col, row, clusterId) {
-  if (col === "head") {
-    const encoded = row.head.replace(/:/g, "~");
-    return `<td class="cell-head"><a href="../vis/attnpedia/index.html?head_viewing=${encoded}" target="_blank">${escapeHTML(row.head)}</a></td>`;
-  }
-
-  if (col === "cluster") {
-    if (!clusteringAvailable || clusterId === undefined || clusterId === null) {
-      return '<td class="cell-cluster">\u2014</td>';
-    }
-    const color = clustering.getClusterColor(clusterId);
-    const label = clustering.getClusterLabel(clusterId);
-    const name =
-      label && label.name ? `${clusterId}: ${label.name}` : `${clusterId}`;
-    return `<td class="cell-cluster"><span class="cluster-badge" style="background:${color}">${escapeHTML(name)}</span></td>`;
-  }
-
-  if (col === "classifications") {
-    const types =
-      apData && apData.head_to_types
-        ? apData.head_to_types[row.head] || []
-        : [];
-    if (types.length === 0) return "<td></td>";
-    return `<td class="cell-class">${types.map((t) => `<span class="class-badge">${escapeHTML(t)}</span>`).join(" ")}</td>`;
-  }
-
-  const val = row[col];
-  const cls = getCellClass(col, val);
-  const display =
-    val == null
-      ? "\u2014"
-      : typeof val === "number"
-        ? formatNumber(val)
-        : val || "";
-  return `<td class="${cls}">${escapeHTML(display)}</td>`;
-}
-
-function sortBy(column) {
-  if (column === "cluster" || column === "classifications") return;
-  if (sortColumn === column) {
-    sortDescending = !sortDescending;
-  } else {
-    sortColumn = column;
-    sortDescending = true;
-  }
-  renderTable();
-}
-
-function sortResults(results, column, descending) {
-  return [...results].sort((a, b) => {
-    let va = a[column];
-    let vb = b[column];
-
-    // Special sort for cluster column
-    if (column === "cluster" && clusteringAvailable && clustering._is_loaded) {
-      va = clustering._assignments[a.head] ?? -999;
-      vb = clustering._assignments[b.head] ?? -999;
-    }
-
-    if (typeof va === "string" && typeof vb === "string") {
-      return descending ? vb.localeCompare(va) : va.localeCompare(vb);
-    }
-    const diff = (va || 0) - (vb || 0);
-    return descending ? -diff : diff;
+  dataTable = new DataTable(container, {
+    data,
+    columns,
+    pageSize: 50,
+    showFilters: true,
+    showInfo: true,
   });
 }
 
