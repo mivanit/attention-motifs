@@ -3595,7 +3595,8 @@
     let apData = null;
     let clusteringAvailable = false;
     
-    let selectedCluster = null;
+    let selectedCluster = null; // null = "show all", number = single cluster
+    let hoveredCluster = null; // used in show-all mode for highlight
     let modelFilter = "all"; // "all" | "gpt2" | "pythia"
     let selectedMethod = null; // null = first available
     let chartType = "histogram"; // "histogram" | "boxplot"
@@ -3686,6 +3687,7 @@
     
       // Initial render
       renderClusterChips();
+      setupClusterChipHandler();
       createChartContainers();
       renderCharts();
       renderConfigSummary();
@@ -3958,8 +3960,12 @@
     
       // Sort by size descending
       const sorted = Object.entries(sizes).sort((a, b) => b[1] - a[1]);
+      const totalHeads = Object.values(sizes).reduce((a, b) => a + b, 0);
     
-      container.innerHTML = sorted
+      // "Show All" chip + per-cluster chips
+      const showAllChip = `<button class="cluster-chip${selectedCluster === null ? " selected" : ""}" data-cluster="all" title="Show all clusters">All <span class="chip-count">${totalHeads}</span></button>`;
+    
+      const clusterChips = sorted
         .map(([cid, size]) => {
           const id = parseInt(cid);
           const color = clustering.getClusterColor(id);
@@ -3970,11 +3976,16 @@
         })
         .join("");
     
+      container.innerHTML = showAllChip + clusterChips;
+    }
+    
+    function setupClusterChipHandler() {
+      const container = document.getElementById("cluster-chips");
       container.addEventListener("click", (e) => {
         const btn = e.target.closest(".cluster-chip");
         if (!btn) return;
-        selectedCluster = parseInt(btn.dataset.cluster);
-        // Re-render chips to update selection
+        const val = btn.dataset.cluster;
+        selectedCluster = val === "all" ? null : parseInt(val);
         renderClusterChips();
         renderCharts();
         renderTable();
@@ -4025,6 +4036,34 @@
      */
     function extractValues(results, metric) {
       return results.map((r) => r[metric]).filter((v) => v != null && !isNaN(v));
+    }
+    
+    /**
+     * Group results by cluster ID. Returns array of { clusterId, color, label, results }.
+     * Sorted by cluster size descending. Skips unclustered heads (cid === -1).
+     */
+    function groupByCluster(results) {
+      if (!clustering || !clustering._is_loaded) return [];
+      const groups = {};
+      for (const r of results) {
+        const cid = clustering._assignments[r.head];
+        if (cid === undefined || cid === -1) continue;
+        if (!groups[cid]) groups[cid] = [];
+        groups[cid].push(r);
+      }
+      return Object.entries(groups)
+        .sort((a, b) => b[1].length - a[1].length)
+        .map(([cid, res]) => {
+          const id = parseInt(cid);
+          const clLabel = clustering.getClusterLabel(id);
+          const name = clLabel && clLabel.name ? clLabel.name : `${id}`;
+          return {
+            clusterId: id,
+            color: clustering.getClusterColor(id),
+            label: name,
+            results: res,
+          };
+        });
     }
     
     // === KS Test ===
@@ -4092,22 +4131,48 @@
           uniqueResults.push(r);
         }
       }
-      const { inCluster, outCluster } = splitByCluster(uniqueResults);
     
-      for (const metric of DISTRIBUTION_METRICS) {
-        const inValues = extractValues(inCluster, metric);
-        const outValues = extractValues(outCluster, metric);
+      const showAll = selectedCluster === null && clusteringAvailable;
     
-        if (inValues.length === 0 && outValues.length === 0) {
-          const container = document.getElementById(`chart-container-${metric}`);
-          if (container) container.innerHTML = "";
-          continue;
+      if (showAll) {
+        const clusterGroups = groupByCluster(uniqueResults);
+        for (const metric of DISTRIBUTION_METRICS) {
+          const groupData = clusterGroups
+            .map((cg) => ({
+              ...cg,
+              values: extractValues(cg.results, metric),
+            }))
+            .filter((cg) => cg.values.length > 0);
+    
+          if (groupData.length === 0) {
+            const container = document.getElementById(`chart-container-${metric}`);
+            if (container) container.innerHTML = "";
+            continue;
+          }
+    
+          if (chartType === "histogram") {
+            renderHistogramAll(metric, groupData);
+          } else {
+            renderBoxPlotAll(metric, groupData);
+          }
         }
+      } else {
+        const { inCluster, outCluster } = splitByCluster(uniqueResults);
+        for (const metric of DISTRIBUTION_METRICS) {
+          const inValues = extractValues(inCluster, metric);
+          const outValues = extractValues(outCluster, metric);
     
-        if (chartType === "histogram") {
-          renderHistogram(metric, inValues, outValues);
-        } else {
-          renderBoxPlot(metric, inValues, outValues);
+          if (inValues.length === 0 && outValues.length === 0) {
+            const container = document.getElementById(`chart-container-${metric}`);
+            if (container) container.innerHTML = "";
+            continue;
+          }
+    
+          if (chartType === "histogram") {
+            renderHistogram(metric, inValues, outValues);
+          } else {
+            renderBoxPlot(metric, inValues, outValues);
+          }
         }
       }
     }
@@ -4344,6 +4409,26 @@
         });
       }
     
+      // X-axis labels below boxes
+      if (inValues.length > 0) {
+        g.append("text")
+          .attr("x", centerX - boxWidth / 2 - gap / 2)
+          .attr("y", innerHeight + 20)
+          .attr("text-anchor", "middle")
+          .attr("font-size", CHART_STYLES.labelFontSize)
+          .attr("fill", CHART_STYLES.labelColor)
+          .text(clusterLabel);
+      }
+      if (outValues.length > 0) {
+        g.append("text")
+          .attr("x", centerX + boxWidth / 2 + gap / 2)
+          .attr("y", innerHeight + 20)
+          .attr("text-anchor", "middle")
+          .attr("font-size", CHART_STYLES.labelFontSize)
+          .attr("fill", CHART_STYLES.labelColor)
+          .text("Other");
+      }
+    
       // Title
       svg
         .append("text")
@@ -4354,6 +4439,20 @@
         .attr("font-weight", "bold")
         .attr("fill", "#333")
         .text(METRIC_DISPLAY_NAMES[metric] || metric);
+    
+      // KS p-value
+      const ks = ksTest(inValues, outValues);
+      const pText = formatPValue(ks.pValue);
+      if (pText) {
+        svg
+          .append("text")
+          .attr("x", margin.left + innerWidth - 4)
+          .attr("y", margin.top + 14)
+          .attr("text-anchor", "end")
+          .attr("font-size", 11)
+          .attr("fill", ks.pValue < 0.05 ? "#c33" : "#888")
+          .text(pText);
+      }
     
       // Legend
       const legendG = svg
@@ -4390,6 +4489,285 @@
         .text(`Other (${outValues.length})`);
     
       addExportButton(containerId, `ablation-boxplot-${metric}`);
+    }
+    
+    // === Show-All mode renderers ===
+    
+    /**
+     * Apply hover highlight: emphasize the hovered group, dim all others.
+     * @param {d3.Selection} svg - root SVG
+     * @param {number|null} activeClusterId - cluster to highlight (null = reset)
+     */
+    function applyHoverHighlight(svg, activeClusterId) {
+      svg.selectAll("[data-cluster-id]").each(function () {
+        const el = d3.select(this);
+        const cid = parseInt(el.attr("data-cluster-id"));
+        if (activeClusterId === null) {
+          el.attr("opacity", 0.5);
+        } else if (cid === activeClusterId) {
+          el.attr("opacity", 1);
+        } else {
+          el.attr("opacity", 0.1);
+        }
+      });
+    }
+    
+    function attachClusterHover(svg) {
+      svg.selectAll("[data-cluster-id]").on("mouseenter", function () {
+        const cid = parseInt(d3.select(this).attr("data-cluster-id"));
+        applyHoverHighlight(svg, cid);
+      });
+      svg.on("mouseleave", () => applyHoverHighlight(svg, null));
+    }
+    
+    function renderHistogramAll(metric, groupData) {
+      const containerId = `chart-container-${metric}`;
+      const margin = ABLATION_CHART_MARGIN;
+      const { svg, g, innerWidth, innerHeight } = createChartSVG(
+        containerId,
+        margin,
+      );
+    
+      // Compute shared domain from all groups
+      const allValues = groupData.flatMap((cg) => cg.values);
+      if (allValues.length === 0) return;
+    
+      const rawMin = Math.min(...allValues);
+      const rawMax = Math.max(...allValues);
+      const min = rawMin === rawMax ? rawMin - 0.5 : rawMin;
+      const max = rawMin === rawMax ? rawMax + 0.5 : rawMax;
+      const nBins = rawMin === rawMax ? 1 : 20;
+      const binWidth = (max - min) / nBins;
+    
+      function histogram(values) {
+        const counts = new Array(nBins).fill(0);
+        for (const v of values) {
+          let bin = Math.floor((v - min) / binWidth);
+          if (bin >= nBins) bin = nBins - 1;
+          if (bin < 0) bin = 0;
+          counts[bin]++;
+        }
+        return counts;
+      }
+    
+      // Compute frequencies for all groups and find max
+      const groupFreqs = groupData.map((cg) => {
+        const counts = histogram(cg.values);
+        const total = cg.values.length || 1;
+        return counts.map((c) => c / total);
+      });
+      const maxFreq = Math.max(...groupFreqs.flat(), 0.01);
+    
+      const xScale = d3.scaleLinear().domain([min, max]).range([0, innerWidth]);
+      const yScale = d3
+        .scaleLinear()
+        .domain([0, maxFreq * 1.1])
+        .range([innerHeight, 0]);
+    
+      createXAxis(g, xScale, { height: innerHeight, label: metric, ticks: 6 });
+      createYAxis(g, yScale, { label: "Frequency", ticks: 5 });
+    
+      const binMidpoints = Array.from(
+        { length: nBins },
+        (_, i) => min + (i + 0.5) * binWidth,
+      );
+    
+      // Draw one line+area per cluster
+      for (let idx = 0; idx < groupData.length; idx++) {
+        const cg = groupData[idx];
+        const freqs = groupFreqs[idx];
+        const strokeColor = clusterColorToRGBA(cg.color, 1);
+        const fillColor = clusterColorToRGBA(cg.color, 0.15);
+    
+        const clusterG = g
+          .append("g")
+          .attr("data-cluster-id", cg.clusterId)
+          .attr("opacity", 0.5)
+          .style("cursor", "default");
+    
+        const areaGen = d3
+          .area()
+          .x((_, i) => xScale(binMidpoints[i]))
+          .y0(innerHeight)
+          .y1((d) => yScale(d))
+          .curve(d3.curveMonotoneX);
+    
+        clusterG
+          .append("path")
+          .datum(freqs)
+          .attr("d", areaGen)
+          .attr("fill", fillColor)
+          .attr("stroke", "none");
+    
+        const lineGen = d3
+          .line()
+          .x((_, i) => xScale(binMidpoints[i]))
+          .y((d) => yScale(d))
+          .curve(d3.curveMonotoneX);
+    
+        clusterG
+          .append("path")
+          .datum(freqs)
+          .attr("d", lineGen)
+          .attr("fill", "none")
+          .attr("stroke", strokeColor)
+          .attr("stroke-width", 2);
+    
+        // Invisible wider hit area for easier hover
+        clusterG
+          .append("path")
+          .datum(freqs)
+          .attr("d", lineGen)
+          .attr("fill", "none")
+          .attr("stroke", "transparent")
+          .attr("stroke-width", 12);
+      }
+    
+      // Pre-compute per-cluster p-values (cluster vs all others)
+      const clusterPValues = {};
+      for (const cg of groupData) {
+        const otherValues = groupData
+          .filter((other) => other.clusterId !== cg.clusterId)
+          .flatMap((other) => other.values);
+        const ks = ksTest(cg.values, otherValues);
+        clusterPValues[cg.clusterId] = ks.pValue;
+      }
+    
+      // Title
+      svg
+        .append("text")
+        .attr("x", margin.left + innerWidth / 2)
+        .attr("y", 16)
+        .attr("text-anchor", "middle")
+        .attr("font-size", CHART_STYLES.titleFontSize)
+        .attr("font-weight", "bold")
+        .attr("fill", "#333")
+        .text(METRIC_DISPLAY_NAMES[metric] || metric);
+    
+      // P-value text element (shown on hover)
+      const pValueText = svg
+        .append("text")
+        .attr("x", margin.left + innerWidth - 4)
+        .attr("y", margin.top + 14)
+        .attr("text-anchor", "end")
+        .attr("font-size", 11)
+        .attr("opacity", 0);
+    
+      // Extended hover: also update p-value display
+      svg.selectAll("[data-cluster-id]").on("mouseenter", function () {
+        const cid = parseInt(d3.select(this).attr("data-cluster-id"));
+        applyHoverHighlight(svg, cid);
+        const p = clusterPValues[cid];
+        const text = formatPValue(p);
+        if (text) {
+          pValueText
+            .text(text)
+            .attr("fill", p < 0.05 ? "#c33" : "#888")
+            .attr("opacity", 1);
+        }
+      });
+      svg.on("mouseleave", () => {
+        applyHoverHighlight(svg, null);
+        pValueText.attr("opacity", 0);
+      });
+    
+      addExportButton(containerId, `ablation-histogram-all-${metric}`);
+    }
+    
+    function renderBoxPlotAll(metric, groupData) {
+      const containerId = `chart-container-${metric}`;
+      const margin = { ...ABLATION_CHART_MARGIN, bottom: 60 };
+      const { svg, g, innerWidth, innerHeight } = createChartSVG(
+        containerId,
+        margin,
+      );
+    
+      if (groupData.length === 0) return;
+    
+      // Compute Y domain from all values
+      const allValues = groupData.flatMap((cg) => cg.values);
+      const yMin = Math.min(...allValues);
+      const yMax = Math.max(...allValues);
+      const yPad = (yMax - yMin) * 0.1 || 1;
+    
+      const yScale = d3
+        .scaleLinear()
+        .domain([yMin - yPad, yMax + yPad])
+        .range([innerHeight, 0]);
+    
+      createYAxis(g, yScale, { ticks: 6 });
+    
+      // X positioning via scaleBand
+      const xScale = d3
+        .scaleBand()
+        .domain(groupData.map((cg) => cg.clusterId))
+        .range([0, innerWidth])
+        .padding(0.2);
+    
+      const boxWidth = Math.min(xScale.bandwidth(), 50);
+    
+      for (const cg of groupData) {
+        const stats = computeBoxplotStats(cg.values);
+        const xPos = xScale(cg.clusterId) + (xScale.bandwidth() - boxWidth) / 2;
+        const strokeColor = clusterColorToRGBA(cg.color, 1);
+        const fillColor = clusterColorToRGBA(cg.color, 0.4);
+    
+        const clusterG = g
+          .append("g")
+          .attr("data-cluster-id", cg.clusterId)
+          .attr("opacity", 0.5)
+          .style("cursor", "default");
+    
+        drawBoxplot(clusterG, {
+          stats,
+          x: xPos,
+          width: boxWidth,
+          yScale,
+          fillColor,
+          strokeColor,
+        });
+    
+        const xCenter = xScale(cg.clusterId) + xScale.bandwidth() / 2;
+    
+        // X-axis label: cluster name
+        g.append("text")
+          .attr("x", xCenter)
+          .attr("y", innerHeight + 14)
+          .attr("text-anchor", "middle")
+          .attr("font-size", Math.min(CHART_STYLES.labelFontSize, 10))
+          .attr("fill", CHART_STYLES.labelColor)
+          .text(cg.label.length > 12 ? cg.label.slice(0, 11) + "\u2026" : cg.label);
+    
+        // X-axis label: p-value (cluster vs all others)
+        const otherValues = groupData
+          .filter((other) => other.clusterId !== cg.clusterId)
+          .flatMap((other) => other.values);
+        const ks = ksTest(cg.values, otherValues);
+        const pText = formatPValue(ks.pValue);
+        if (pText) {
+          g.append("text")
+            .attr("x", xCenter)
+            .attr("y", innerHeight + 26)
+            .attr("text-anchor", "middle")
+            .attr("font-size", 9)
+            .attr("fill", ks.pValue < 0.05 ? "#c33" : "#888")
+            .text(pText);
+        }
+      }
+    
+      // Title
+      svg
+        .append("text")
+        .attr("x", margin.left + innerWidth / 2)
+        .attr("y", 16)
+        .attr("text-anchor", "middle")
+        .attr("font-size", CHART_STYLES.titleFontSize)
+        .attr("font-weight", "bold")
+        .attr("fill", "#333")
+        .text(METRIC_DISPLAY_NAMES[metric] || metric);
+    
+      attachClusterHover(svg);
+      addExportButton(containerId, `ablation-boxplot-all-${metric}`);
     }
     
     function getClusterChipLabel() {
