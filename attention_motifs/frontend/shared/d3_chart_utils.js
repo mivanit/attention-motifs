@@ -42,8 +42,11 @@ function createChartSVG(containerId, margin) {
   if (existingBtn) existingBtn.remove();
 
   const rect = container.getBoundingClientRect();
-  const width = rect.width;
-  const height = rect.height;
+  const cs = getComputedStyle(container);
+  const width =
+    rect.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const height =
+    rect.height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
