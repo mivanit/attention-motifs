@@ -78,6 +78,17 @@ h1 {
   width: 180px;
 }
 
+#chart-width-slider {
+  width: 100px;
+}
+
+.slider-value {
+  font-family: "Menlo", "Consolas", monospace;
+  font-size: 11px;
+  color: #888;
+  min-width: 36px;
+}
+
 #cut-height-value {
   font-family: "Menlo", "Consolas", monospace;
   font-size: 12px;
@@ -182,7 +193,10 @@ h1 {
 
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(var(--chart-min-width, 340px), 1fr)
+  );
   gap: 12px;
   margin-bottom: 16px;
 }

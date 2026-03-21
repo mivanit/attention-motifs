@@ -81,7 +81,7 @@ const METRIC_DISPLAY_NAMES = {
 };
 
 // === Chart margins ===
-const ABLATION_CHART_MARGIN = { top: 28, right: 12, bottom: 40, left: 44 };
+const ABLATION_CHART_MARGIN = { top: 28, right: 20, bottom: 40, left: 50 };
 
 // === Helpers ===
 
@@ -106,6 +106,7 @@ let hoveredCluster = null; // used in show-all mode for highlight
 let modelFilter = "all"; // "all" | "gpt2" | "pythia"
 let selectedMethod = null; // null = first available
 let chartType = "histogram"; // "histogram" | "boxplot"
+let logScale = false; // log frequency axis for histograms
 let visibleGroups = new Set(DEFAULT_VISIBLE_GROUPS);
 let dataTable = null;
 
@@ -184,6 +185,8 @@ async function init() {
   // Set up UI
   setupModelFamilyButtons();
   setupChartTypeButtons();
+  setupLogScaleButton();
+  setupChartWidthSlider();
   setupColumnToggles();
 
   // Find default cluster (containing DEFAULT_HEAD)
@@ -431,6 +434,32 @@ function setupChartTypeButtons() {
   });
 }
 
+function setupLogScaleButton() {
+  const container = document.getElementById("log-scale-button");
+  const btn = document.createElement("button");
+  btn.className = "chart-type-btn" + (logScale ? " active" : "");
+  btn.textContent = "Log";
+  btn.addEventListener("click", () => {
+    logScale = !logScale;
+    btn.classList.toggle("active", logScale);
+    renderCharts();
+  });
+  container.appendChild(btn);
+}
+
+function setupChartWidthSlider() {
+  const slider = document.getElementById("chart-width-slider");
+  const label = document.getElementById("chart-width-value");
+  slider.addEventListener("input", () => {
+    const val = slider.value;
+    label.textContent = val + "px";
+    document
+      .querySelector(".charts-grid")
+      .style.setProperty("--chart-min-width", val + "px");
+    renderCharts();
+  });
+}
+
 function setupColumnToggles() {
   const groups = Object.keys(METRIC_GROUPS);
   document.getElementById("column-toggles").innerHTML = groups
@@ -607,10 +636,13 @@ function ksTest(sample1, sample2) {
   return { D: maxD, pValue: Math.min(pValue, 1) };
 }
 
-function formatPValue(p) {
-  if (isNaN(p)) return "";
-  if (p < 0.001) return "KS p < 0.001";
-  return `KS p = ${p.toFixed(3)}`;
+function formatKsStat(ks) {
+  if (isNaN(ks.D)) return "";
+  return `D = ${ks.D.toFixed(2)}`;
+}
+
+function isKsSignificant(ks) {
+  return ks.D >= 0.15;
 }
 
 // === Charts (D3 SVG) ===
@@ -723,10 +755,25 @@ function renderHistogram(metric, inValues, outValues) {
   const maxFreq = Math.max(...inFreqs, ...outFreqs, 0.01);
 
   const xScale = d3.scaleLinear().domain([min, max]).range([0, innerWidth]);
-  const yScale = d3
-    .scaleLinear()
-    .domain([0, maxFreq * 1.1])
-    .range([innerHeight, 0]);
+  const epsilon = maxFreq * 0.005 || 0.001;
+  const yScale = logScale
+    ? d3
+        .scaleLog()
+        .domain([epsilon, maxFreq * 1.1])
+        .range([innerHeight, 0])
+        .clamp(true)
+    : d3
+        .scaleLinear()
+        .domain([0, maxFreq * 1.1])
+        .range([innerHeight, 0]);
+
+  // Clamp zero-frequency bins for log scale
+  if (logScale) {
+    for (let i = 0; i < inFreqs.length; i++)
+      if (inFreqs[i] === 0) inFreqs[i] = epsilon;
+    for (let i = 0; i < outFreqs.length; i++)
+      if (outFreqs[i] === 0) outFreqs[i] = epsilon;
+  }
 
   createXAxis(g, xScale, {
     height: innerHeight,
@@ -734,7 +781,7 @@ function renderHistogram(metric, inValues, outValues) {
     ticks: 6,
   });
   createYAxis(g, yScale, {
-    label: "Frequency",
+    label: logScale ? "Frequency (log)" : "Frequency",
     ticks: 5,
   });
 
@@ -801,18 +848,18 @@ function renderHistogram(metric, inValues, outValues) {
     .attr("fill", "#333")
     .text(METRIC_DISPLAY_NAMES[metric] || metric);
 
-  // KS p-value
+  // KS D statistic
   const ks = ksTest(inValues, outValues);
-  const pText = formatPValue(ks.pValue);
-  if (pText) {
+  const ksText = formatKsStat(ks);
+  if (ksText) {
     svg
       .append("text")
       .attr("x", margin.left + innerWidth - 4)
       .attr("y", margin.top + 14)
       .attr("text-anchor", "end")
       .attr("font-size", 11)
-      .attr("fill", ks.pValue < 0.05 ? "#c33" : "#888")
-      .text(pText);
+      .attr("fill", isKsSignificant(ks) ? "#c33" : "#888")
+      .text(ksText);
   }
 
   // Legend (line swatches)
@@ -946,18 +993,18 @@ function renderBoxPlot(metric, inValues, outValues) {
     .attr("fill", "#333")
     .text(METRIC_DISPLAY_NAMES[metric] || metric);
 
-  // KS p-value
+  // KS D statistic
   const ks = ksTest(inValues, outValues);
-  const pText = formatPValue(ks.pValue);
-  if (pText) {
+  const ksText = formatKsStat(ks);
+  if (ksText) {
     svg
       .append("text")
       .attr("x", margin.left + innerWidth - 4)
       .attr("y", margin.top + 14)
       .attr("text-anchor", "end")
       .attr("font-size", 11)
-      .attr("fill", ks.pValue < 0.05 ? "#c33" : "#888")
-      .text(pText);
+      .attr("fill", isKsSignificant(ks) ? "#c33" : "#888")
+      .text(ksText);
   }
 
   // Legend
@@ -1065,13 +1112,31 @@ function renderHistogramAll(metric, groupData) {
   const maxFreq = Math.max(...groupFreqs.flat(), 0.01);
 
   const xScale = d3.scaleLinear().domain([min, max]).range([0, innerWidth]);
-  const yScale = d3
-    .scaleLinear()
-    .domain([0, maxFreq * 1.1])
-    .range([innerHeight, 0]);
+  const epsilon = maxFreq * 0.005 || 0.001;
+  const yScale = logScale
+    ? d3
+        .scaleLog()
+        .domain([epsilon, maxFreq * 1.1])
+        .range([innerHeight, 0])
+        .clamp(true)
+    : d3
+        .scaleLinear()
+        .domain([0, maxFreq * 1.1])
+        .range([innerHeight, 0]);
+
+  // Clamp zero-frequency bins for log scale
+  if (logScale) {
+    for (const freqs of groupFreqs) {
+      for (let i = 0; i < freqs.length; i++)
+        if (freqs[i] === 0) freqs[i] = epsilon;
+    }
+  }
 
   createXAxis(g, xScale, { height: innerHeight, label: metric, ticks: 6 });
-  createYAxis(g, yScale, { label: "Frequency", ticks: 5 });
+  createYAxis(g, yScale, {
+    label: logScale ? "Frequency (log)" : "Frequency",
+    ticks: 5,
+  });
 
   const binMidpoints = Array.from(
     { length: nBins },
@@ -1129,14 +1194,13 @@ function renderHistogramAll(metric, groupData) {
       .attr("stroke-width", 12);
   }
 
-  // Pre-compute per-cluster p-values (cluster vs all others)
-  const clusterPValues = {};
+  // Pre-compute per-cluster KS stats (cluster vs all others)
+  const clusterKsStats = {};
   for (const cg of groupData) {
     const otherValues = groupData
       .filter((other) => other.clusterId !== cg.clusterId)
       .flatMap((other) => other.values);
-    const ks = ksTest(cg.values, otherValues);
-    clusterPValues[cg.clusterId] = ks.pValue;
+    clusterKsStats[cg.clusterId] = ksTest(cg.values, otherValues);
   }
 
   // Title
@@ -1150,8 +1214,8 @@ function renderHistogramAll(metric, groupData) {
     .attr("fill", "#333")
     .text(METRIC_DISPLAY_NAMES[metric] || metric);
 
-  // P-value text element (shown on hover)
-  const pValueText = svg
+  // KS D text element (shown on hover)
+  const ksStatText = svg
     .append("text")
     .attr("x", margin.left + innerWidth - 4)
     .attr("y", margin.top + 14)
@@ -1159,22 +1223,22 @@ function renderHistogramAll(metric, groupData) {
     .attr("font-size", 11)
     .attr("opacity", 0);
 
-  // Extended hover: also update p-value display
+  // Extended hover: also update KS D display
   svg.selectAll("[data-cluster-id]").on("mouseenter", function () {
     const cid = parseInt(d3.select(this).attr("data-cluster-id"));
     applyHoverHighlight(svg, cid);
-    const p = clusterPValues[cid];
-    const text = formatPValue(p);
+    const ks = clusterKsStats[cid];
+    const text = formatKsStat(ks);
     if (text) {
-      pValueText
+      ksStatText
         .text(text)
-        .attr("fill", p < 0.05 ? "#c33" : "#888")
+        .attr("fill", isKsSignificant(ks) ? "#c33" : "#888")
         .attr("opacity", 1);
     }
   });
   svg.on("mouseleave", () => {
     applyHoverHighlight(svg, null);
-    pValueText.attr("opacity", 0);
+    ksStatText.attr("opacity", 0);
   });
 
   addExportButton(containerId, `ablation-histogram-all-${metric}`);
@@ -1244,20 +1308,20 @@ function renderBoxPlotAll(metric, groupData) {
       .attr("fill", CHART_STYLES.labelColor)
       .text(cg.label.length > 12 ? cg.label.slice(0, 11) + "\u2026" : cg.label);
 
-    // X-axis label: p-value (cluster vs all others)
+    // X-axis label: KS D (cluster vs all others)
     const otherValues = groupData
       .filter((other) => other.clusterId !== cg.clusterId)
       .flatMap((other) => other.values);
     const ks = ksTest(cg.values, otherValues);
-    const pText = formatPValue(ks.pValue);
-    if (pText) {
+    const ksText = formatKsStat(ks);
+    if (ksText) {
       g.append("text")
         .attr("x", xCenter)
         .attr("y", innerHeight + 26)
         .attr("text-anchor", "middle")
         .attr("font-size", 9)
-        .attr("fill", ks.pValue < 0.05 ? "#c33" : "#888")
-        .text(pText);
+        .attr("fill", isKsSignificant(ks) ? "#c33" : "#888")
+        .text(ksText);
     }
   }
 
