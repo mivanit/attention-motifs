@@ -65,13 +65,13 @@ header p {
 
 /* Main tools cards */
 .main-tools {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
   margin-top: 24px;
 }
 
 .main-tool-card {
-  flex: 1;
   display: flex;
   flex-direction: column;
   background: #f8f9fa;
@@ -105,6 +105,12 @@ header p {
   font-size: 0.9em;
   color: #666;
   line-height: 1.5;
+}
+
+.interface-map-link {
+  margin-top: 20px;
+  font-size: 0.95em;
+  color: #666;
 }
 
 .section {
@@ -307,7 +313,7 @@ footer {
 
 @media (max-width: 900px) {
   .main-tools {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 }
 
