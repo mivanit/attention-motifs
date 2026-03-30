@@ -31,7 +31,7 @@ def get_model_family(model_name: str, except_on_missing: bool = True) -> str:
 		return "gpt2"
 	if model_name.startswith("pythia"):
 		return "pythia"
-	if model_name.startswith("tiny-stories"):
+	if "tinystories" in model_name.lower().replace("-", ""):
 		return "tiny-stories"
 	if model_name.startswith("gemma-3"):
 		return "gemma-3"
