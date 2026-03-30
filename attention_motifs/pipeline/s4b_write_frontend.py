@@ -54,6 +54,9 @@ def write_frontend(cfg: PipelineConfig) -> None:
 	cluster_utils_js: str = (
 		frontend_resources_path / "shared/cluster_utils.js"
 	).read_text()
+	clustering_config_js: str = (
+		frontend_resources_path / "shared/clustering_config.js"
+	).read_text()
 	clustering_js: str = (
 		frontend_resources_path / "attnpedia/src/clustering.js"
 	).read_text()
@@ -64,6 +67,8 @@ def write_frontend(cfg: PipelineConfig) -> None:
 		cluster_engine_js
 		+ "\n"
 		+ cluster_utils_js
+		+ "\n"
+		+ clustering_config_js
 		+ "\n"
 		+ clustering_js
 		+ "\n"
