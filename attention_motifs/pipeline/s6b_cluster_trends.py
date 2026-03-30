@@ -19,10 +19,13 @@ import polars as pl
 from attention_motifs.pipeline.cfg import PipelineConfig, pipeline_step_major
 
 
-def get_model_family(model_name: str) -> str:
+def get_model_family(model_name: str, except_on_missing: bool = True) -> str:
 	"""Extract model family from model name.
 
 	Uses simple heuristics to group models into families.
+
+	If `except_on_missing` is True (default), raises ValueError when no
+	known family matches.  If False, returns ``"unknown"`` instead.
 	"""
 	if model_name.startswith("gpt2") or model_name == "distillgpt2":
 		return "gpt2"
@@ -36,8 +39,9 @@ def get_model_family(model_name: str) -> str:
 		return "gemma"
 	if "llama" in model_name.lower():
 		return "llama"
-	# fallback: first segment before dash
-	return model_name.split("-")[0]
+	if except_on_missing:
+		raise ValueError(f"Unknown model family for {model_name!r}")
+	return "unknown"
 
 
 def _shannon_entropy(counts: list[int]) -> float:
