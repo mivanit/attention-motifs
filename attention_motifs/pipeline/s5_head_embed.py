@@ -131,10 +131,15 @@ def head_embed(cfg: PipelineConfig) -> None:
 			lambda m: get_model_family(m, except_on_missing=False), return_dtype=pl.Utf8
 		)
 		.alias("model_family"),
-		(pl.col("layer") / pl.col("model").replace(model_n_layers)).alias(
-			"layer_depth"
-		),
-		pl.col("model").replace(model_n_params).alias("model_size"),
+		(
+			pl.col("layer")
+			/ pl.col("model").replace_strict(
+				model_n_layers, default=None, return_dtype=pl.Int64
+			)
+		).alias("layer_depth"),
+		pl.col("model")
+		.replace_strict(model_n_params, default=None, return_dtype=pl.Int64)
+		.alias("model_size"),
 	)
 
 	# Reorder: put new columns right after "head", before "type.*"
