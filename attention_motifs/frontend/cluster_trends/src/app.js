@@ -281,7 +281,7 @@ function updateFromFlatParam(method, paramKey) {
   if (method === "hdbscan") {
     trendKey = `hdbscan.mcs${paramKey}`;
   } else if (method === "leiden") {
-    trendKey = `leiden.r${paramKey}`;
+    trendKey = `leiden.r${parseFloat(paramKey).toFixed(3)}`;
   } else {
     return;
   }
@@ -1164,8 +1164,22 @@ function renderClusterChips() {
         ClusteringConfig.setCutHeight(gridState.currentCutHeight);
       }
       ClusteringConfig.setHighlightCluster(clusterId);
-      window.location.href = "../clustering/index.html";
+      window.location.href = `../clustering/index.html?highlight=${clusterId}`;
     });
+  });
+
+  // Middle-click: open clustering page in new tab with cluster selected
+  container.addEventListener("auxclick", (e) => {
+    if (e.button !== 1) return;
+    const chip = e.target.closest(".cluster-chip");
+    if (!chip) return;
+    e.preventDefault();
+    const clusterId = parseInt(chip.dataset.clusterId);
+    if (gridState.currentCutHeight != null) {
+      ClusteringConfig.setCutHeight(gridState.currentCutHeight);
+    }
+    ClusteringConfig.setHighlightCluster(clusterId);
+    window.open(`../clustering/index.html?highlight=${clusterId}`, "_blank");
   });
 }
 
@@ -1343,7 +1357,9 @@ async function init() {
     currentMethod =
       savedMethod && methodsWithData.includes(savedMethod)
         ? savedMethod
-        : "hierarchical";
+        : methodsWithData.includes("leiden")
+          ? "leiden"
+          : "hierarchical";
     methodSelect.value = currentMethod;
   }
 
@@ -1366,10 +1382,14 @@ async function init() {
           flatParamSelect.appendChild(opt);
         }
         const savedPK = ClusteringConfig.getParamKey();
+        const defaultPK = currentMethod === "leiden" ? "1" : null;
+        const pvStrings = methodData.param_values.map(String);
         flatParamSelect.value =
-          savedPK && methodData.param_values.map(String).includes(savedPK)
+          savedPK && pvStrings.includes(savedPK)
             ? savedPK
-            : String(methodData.param_values[0]);
+            : defaultPK && pvStrings.includes(defaultPK)
+              ? defaultPK
+              : String(methodData.param_values[0]);
       }
     }
   }

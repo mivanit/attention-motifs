@@ -531,7 +531,7 @@ async function initGridView(config) {
       }
     }
 
-    // Determine initial method and parameters
+    // Determine initial method: saved > leiden > hierarchical
     const savedMethod = ClusteringConfig.getMethod();
     if (
       savedMethod &&
@@ -539,6 +539,8 @@ async function initGridView(config) {
         gridState.flatData[savedMethod] !== undefined)
     ) {
       gridState.currentMethod = savedMethod;
+    } else if (gridState.flatData["leiden"]) {
+      gridState.currentMethod = "leiden";
     }
 
     // Determine initial cut height: shared config > labels > default
@@ -583,10 +585,14 @@ async function initGridView(config) {
       const flat = gridState.flatData[gridState.currentMethod];
       if (flat && flat.meta.param_keys.length) {
         const savedParamKey = ClusteringConfig.getParamKey();
+        const defaultKey =
+          gridState.currentMethod === "leiden" ? "1.000" : null;
         const paramKey =
           savedParamKey && flat.meta.param_keys.includes(savedParamKey)
             ? savedParamKey
-            : flat.meta.param_keys[0];
+            : defaultKey && flat.meta.param_keys.includes(defaultKey)
+              ? defaultKey
+              : flat.meta.param_keys[0];
         // Update param dropdown
         const paramSelect = document.getElementById("clustering-param-select");
         if (paramSelect) paramSelect.value = paramKey;
@@ -608,9 +614,14 @@ async function initGridView(config) {
       }
     }
 
-    // Handle highlight cluster from shared config (e.g. navigated from cluster_trends)
-    const highlightId = ClusteringConfig.getHighlightCluster();
-    if (highlightId !== null) {
+    // Handle highlight cluster from URL param or shared config
+    const params = new URLSearchParams(window.location.search);
+    const highlightParam = params.get("highlight");
+    const highlightId =
+      highlightParam !== null
+        ? parseInt(highlightParam)
+        : ClusteringConfig.getHighlightCluster();
+    if (highlightId !== null && !isNaN(highlightId)) {
       ClusteringConfig.clearHighlightCluster();
       selectCluster(highlightId);
     }
@@ -672,10 +683,14 @@ function setupControls() {
             paramSelect.appendChild(opt);
           }
           const savedParamKey = ClusteringConfig.getParamKey();
+          const defaultPK =
+            gridState.currentMethod === "leiden" ? "1.000" : null;
           paramSelect.value =
             savedParamKey && flat.meta.param_keys.includes(savedParamKey)
               ? savedParamKey
-              : flat.meta.param_keys[0];
+              : defaultPK && flat.meta.param_keys.includes(defaultPK)
+                ? defaultPK
+                : flat.meta.param_keys[0];
         }
       }
     }
@@ -1157,7 +1172,12 @@ function exportFamilyRowSvg(family, models) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `cluster_family_${family}.svg`;
+  const method = gridState.currentMethod;
+  const threshold =
+    method === "hierarchical"
+      ? gridState.currentCutHeight
+      : gridState.currentParamKey;
+  a.download = `cluster-f_${family}-c_${method}_${threshold}.svg`;
   a.click();
   URL.revokeObjectURL(url);
 }
