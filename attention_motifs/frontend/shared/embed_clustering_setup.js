@@ -44,11 +44,24 @@ HOOKS.onReady = async (pointCloud, uiManager) => {
     methodSelect.value = clustering.getMethod();
   }
 
-  // Show/hide controls based on method
+  // Show/hide controls based on method and (re-)configure sliders
   function updateControlVisibility() {
     const isHier = clustering.isHierarchical();
     if (cutHeightRow) cutHeightRow.style.display = isHier ? "" : "none";
     if (paramRow) paramRow.style.display = isHier ? "none" : "";
+
+    if (isHier && clustering.getMaxCutHeight()) {
+      // (Re-)configure cut height slider (capped at 10, default 5)
+      const maxHeight = Math.min(clustering.getMaxCutHeight(), 10);
+      cutSlider.max = maxHeight;
+      cutSlider.step = maxHeight / 1000;
+      if (!cutSlider.dataset.initialized) {
+        cutSlider.value = 5;
+        cutValue.textContent = "5.00";
+        clustering._computeAssignmentsByCutHeight(5);
+        cutSlider.dataset.initialized = "1";
+      }
+    }
 
     if (!isHier) {
       const info = clustering.getFlatParamInfo();
@@ -68,16 +81,6 @@ HOOKS.onReady = async (pointCloud, uiManager) => {
         paramSelect.value = clustering.getParamKey() || info.paramKeys[0];
       }
     }
-  }
-
-  // Configure cut height slider (capped at 10, default 5)
-  if (clustering.isHierarchical() && clustering.getMaxCutHeight()) {
-    const maxHeight = Math.min(clustering.getMaxCutHeight(), 10);
-    cutSlider.max = maxHeight;
-    cutSlider.step = maxHeight / 1000;
-    cutSlider.value = 5;
-    cutValue.textContent = "5.00";
-    clustering._computeAssignmentsByCutHeight(5);
   }
 
   updateControlVisibility();
