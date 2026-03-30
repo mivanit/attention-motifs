@@ -118,21 +118,39 @@ def head_embed(cfg: PipelineConfig) -> None:
 
 	# Add model metadata columns
 	model_table: dict[str, ModelInfo] = fetch_model_table()
-	model_n_layers: dict[str, int] = {name: info.n_layers for name, info in model_table.items()}
-	model_n_params: dict[str, int] = {name: info.n_params for name, info in model_table.items()}
+	model_n_layers: dict[str, int] = {
+		name: info.n_layers for name, info in model_table.items()
+	}
+	model_n_params: dict[str, int] = {
+		name: info.n_params for name, info in model_table.items()
+	}
 
 	head_embed_df = head_embed_df.with_columns(
-		pl.col("model").map_elements(
+		pl.col("model")
+		.map_elements(
 			lambda m: get_model_family(m, except_on_missing=False), return_dtype=pl.Utf8
-		).alias("model_family"),
-		(pl.col("layer") / pl.col("model").replace(model_n_layers)).alias("layer_depth"),
+		)
+		.alias("model_family"),
+		(pl.col("layer") / pl.col("model").replace(model_n_layers)).alias(
+			"layer_depth"
+		),
 		pl.col("model").replace(model_n_params).alias("model_size"),
 	)
 
 	# Reorder: put new columns right after "head", before "type.*"
-	base_cols: list[str] = ["cls", "model", "layer", "head", "model_family", "layer_depth", "model_size"]
+	base_cols: list[str] = [
+		"cls",
+		"model",
+		"layer",
+		"head",
+		"model_family",
+		"layer_depth",
+		"model_size",
+	]
 	type_cols: list[str] = [c for c in head_embed_df.columns if c.startswith("type.")]
-	embed_cols_ordered: list[str] = [c for c in head_embed_df.columns if c.startswith("embed.")]
+	embed_cols_ordered: list[str] = [
+		c for c in head_embed_df.columns if c.startswith("embed.")
+	]
 	head_embed_df = head_embed_df.select(base_cols + type_cols + embed_cols_ordered)
 
 	# Save embeddings for frontend visualization
