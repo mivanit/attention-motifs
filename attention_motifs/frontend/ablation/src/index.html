@@ -23,6 +23,7 @@
         <a href="../vis/clustering/index.html">Clustering</a>
         <a href="../vis/cluster_trends/index.html">Cluster Trends</a>
         <span class="nav-current">Ablation</span>
+        <a href="correlations.html">Correlations</a>
       </div>
     </nav>
 
@@ -80,6 +81,9 @@
             <option value="median">Sort Median</option>
             <option value="ks-d">Sort KS D</option>
           </select>
+          <label class="toggle-label"
+            ><input type="checkbox" id="show-ref-boxplot" /> Ref.</label
+          >
         </div>
         <div class="control-group">
           <label>Width:</label>
@@ -88,9 +92,9 @@
             id="chart-width-slider"
             min="250"
             max="800"
-            value="340"
+            value="800"
           />
-          <span id="chart-width-value" class="slider-value">340px</span>
+          <span id="chart-width-value" class="slider-value">800px</span>
         </div>
       </div>
 
@@ -107,6 +111,10 @@
         <summary>Experiment Config</summary>
         <div class="config-summary" id="config-summary"></div>
       </details>
+
+      <!-- Cluster statistics summary -->
+      <h2 class="section-heading">Cluster Statistics</h2>
+      <div id="cluster-stats-container"></div>
 
       <!-- Head table -->
       <div class="table-controls-row">

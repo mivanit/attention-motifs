@@ -100,14 +100,16 @@ let clustering = null;
 let attnpedia = null;
 let apData = null;
 let clusteringAvailable = false;
+let clusterStatsTable = null;
 
 let selectedCluster = null; // null = "show all", number = single cluster
 let hoveredCluster = null; // used in show-all mode for highlight
 let modelFilter = "all"; // "all" | "gpt2" | "pythia"
 let selectedMethod = null; // null = first available
-let chartType = "histogram"; // "histogram" | "boxplot"
+let chartType = "boxplot"; // "histogram" | "boxplot" | "sina" | "lettervalue"
 let logScale = false; // log frequency axis for histograms
-let sortMode = "none"; // "none" | "mean" | "median" | "ks-d"
+let sortMode = "ks-d"; // "none" | "mean" | "median" | "ks-d"
+let showRefBoxplot = false; // show grey reference boxplot for all clusters combined
 let visibleGroups = new Set(DEFAULT_VISIBLE_GROUPS);
 let tableClusterFilter = false; // filter table to selected cluster only
 let dataTable = null;
@@ -189,6 +191,7 @@ async function init() {
   setupChartTypeButtons();
   setupLogScaleButton();
   setupSortSelect();
+  setupRefBoxplotToggle();
   setupChartWidthSlider();
   if (clusteringReady) setupMinClusterSizeSlider();
   setupColumnToggles();
@@ -199,7 +202,7 @@ async function init() {
   createChartContainers();
   renderCharts();
   renderConfigSummary();
-  renderTable();
+  renderTables();
 }
 
 function showError(msg) {
@@ -218,12 +221,14 @@ async function setupClusteringControls() {
     .map((m) => `<option value="${m}">${m}</option>`)
     .join("");
 
-  // Restore saved method or default to first available
+  // Restore saved method, default to leiden, then first available
   const savedMethod = ClusteringConfig.getMethod();
   const initialMethod =
     savedMethod && availableMethods.includes(savedMethod)
       ? savedMethod
-      : availableMethods[0];
+      : availableMethods.includes("leiden")
+        ? "leiden"
+        : availableMethods[0];
   methodSelect.value = initialMethod;
 
   // Initialize the clustering method
@@ -253,7 +258,7 @@ async function setupClusteringControls() {
     selectedCluster = null;
     renderClusterChips();
     renderCharts();
-    renderTable();
+    renderTables();
   });
 }
 
@@ -285,7 +290,7 @@ function setupCutHeightSlider(initialValue) {
       selectedCluster = null;
       renderClusterChips();
       renderCharts();
-      renderTable();
+      renderTables();
     }, 50);
   });
 }
@@ -343,7 +348,7 @@ function setupParamSelect() {
     selectedCluster = null;
     renderClusterChips();
     renderCharts();
-    renderTable();
+    renderTables();
   });
 }
 
@@ -367,7 +372,7 @@ function setupMethodSelect(methods) {
   select.addEventListener("change", () => {
     selectedMethod = select.value;
     renderCharts();
-    renderTable();
+    renderTables();
   });
 }
 
@@ -391,7 +396,7 @@ function setupModelFamilyButtons() {
         b.classList.toggle("active", b.dataset.family === modelFilter),
       );
     renderCharts();
-    renderTable();
+    renderTables();
   });
 }
 
@@ -400,6 +405,8 @@ function setupChartTypeButtons() {
   const types = [
     { id: "histogram", label: "Histogram" },
     { id: "boxplot", label: "Box Plot" },
+    { id: "sina", label: "Sina" },
+    { id: "lettervalue", label: "Letter-Value" },
   ];
   container.innerHTML = types
     .map(
@@ -442,6 +449,16 @@ function setupSortSelect() {
   });
 }
 
+function setupRefBoxplotToggle() {
+  const cb = document.getElementById("show-ref-boxplot");
+  if (!cb) return;
+  cb.checked = showRefBoxplot;
+  cb.addEventListener("change", () => {
+    showRefBoxplot = cb.checked;
+    renderCharts();
+  });
+}
+
 function setupMinClusterSizeSlider() {
   const slider = document.getElementById("min-cluster-size");
   const label = document.getElementById("min-cluster-size-value");
@@ -459,7 +476,7 @@ function setupMinClusterSizeSlider() {
     selectedCluster = null;
     renderClusterChips();
     renderCharts();
-    renderTable();
+    renderTables();
   });
 }
 
@@ -489,12 +506,12 @@ function setupColumnToggles() {
 function toggleGroup(group) {
   if (visibleGroups.has(group)) visibleGroups.delete(group);
   else visibleGroups.add(group);
-  renderTable();
+  renderTables();
 }
 
 function toggleTableClusterFilter() {
   tableClusterFilter = document.getElementById("table-cluster-filter").checked;
-  renderTable();
+  renderTables();
 }
 
 // === Cluster Chips ===
@@ -544,7 +561,20 @@ function setupClusterChipHandler() {
     selectedCluster = val === "all" ? null : parseInt(val);
     renderClusterChips();
     renderCharts();
-    renderTable();
+    renderTables();
+  });
+
+  // Middle-click: open clustering frontend with this cluster selected
+  container.addEventListener("auxclick", (e) => {
+    if (e.button !== 1) return;
+    const btn = e.target.closest(".cluster-chip");
+    if (!btn) return;
+    const val = btn.dataset.cluster;
+    if (val === "all") return;
+    e.preventDefault();
+    const id = parseInt(val);
+    ClusteringConfig.setHighlightCluster(id);
+    window.open(`../vis/clustering/index.html?highlight=${id}`, "_blank");
   });
 }
 
@@ -663,7 +693,7 @@ function formatKsStat(ks) {
 }
 
 function isKsSignificant(ks) {
-  return ks.D >= 0.15;
+  return ks.D >= 0.25;
 }
 
 // === Charts (D3 SVG) ===
@@ -711,6 +741,10 @@ function renderCharts() {
 
       if (chartType === "histogram") {
         renderHistogramAll(metric, groupData);
+      } else if (chartType === "sina") {
+        renderSinaAll(metric, groupData);
+      } else if (chartType === "lettervalue") {
+        renderLetterValueAll(metric, groupData);
       } else {
         renderBoxPlotAll(metric, groupData);
       }
@@ -729,6 +763,10 @@ function renderCharts() {
 
       if (chartType === "histogram") {
         renderHistogram(metric, inValues, outValues);
+      } else if (chartType === "sina") {
+        renderSina(metric, inValues, outValues);
+      } else if (chartType === "lettervalue") {
+        renderLetterValue(metric, inValues, outValues);
       } else {
         renderBoxPlot(metric, inValues, outValues);
       }
@@ -858,9 +896,10 @@ function renderHistogram(metric, inValues, outValues) {
     clusterColorToRGBA(clusterColorStr, 0.2),
   );
 
-  // Title
+  // Title (excluded from SVG export)
   svg
     .append("text")
+    .attr("class", "no-export")
     .attr("x", margin.left + innerWidth / 2)
     .attr("y", 16)
     .attr("text-anchor", "middle")
@@ -947,7 +986,10 @@ function renderBoxPlot(metric, inValues, outValues) {
     .domain([yMin - yPad, yMax + yPad])
     .range([innerHeight, 0]);
 
-  createYAxis(g, yScale, { ticks: 6 });
+  createYAxis(g, yScale, {
+    ticks: 6,
+    label: METRIC_DISPLAY_NAMES[metric] || metric,
+  });
 
   const clusterColorStr =
     selectedCluster !== null && clusteringAvailable
@@ -1003,9 +1045,10 @@ function renderBoxPlot(metric, inValues, outValues) {
       .text("Other");
   }
 
-  // Title
+  // Title (excluded from SVG export)
   svg
     .append("text")
+    .attr("class", "no-export")
     .attr("x", margin.left + innerWidth / 2)
     .attr("y", 16)
     .attr("text-anchor", "middle")
@@ -1098,7 +1141,7 @@ function attachClusterHover(svg) {
       selectedCluster = cid;
       renderClusterChips();
       renderCharts();
-      renderTable();
+      renderTables();
     })
     .style("cursor", "pointer");
   svg.on("mouseleave", () => applyHoverHighlight(svg, null));
@@ -1234,9 +1277,10 @@ function renderHistogramAll(metric, groupData) {
     clusterKsStats[cg.clusterId] = ksTest(cg.values, otherValues);
   }
 
-  // Title
+  // Title (excluded from SVG export)
   svg
     .append("text")
+    .attr("class", "no-export")
     .attr("x", margin.left + innerWidth / 2)
     .attr("y", 16)
     .attr("text-anchor", "middle")
@@ -1274,7 +1318,7 @@ function renderHistogramAll(metric, groupData) {
       selectedCluster = cid;
       renderClusterChips();
       renderCharts();
-      renderTable();
+      renderTables();
     })
     .style("cursor", "pointer");
   svg.on("mouseleave", () => {
@@ -1287,7 +1331,7 @@ function renderHistogramAll(metric, groupData) {
 
 function renderBoxPlotAll(metric, groupData) {
   const containerId = `chart-container-${metric}`;
-  const margin = { ...ABLATION_CHART_MARGIN, bottom: 60 };
+  const margin = { ...ABLATION_CHART_MARGIN, bottom: 96 };
   const { svg, g, innerWidth, innerHeight } = createChartSVG(
     containerId,
     margin,
@@ -1330,16 +1374,71 @@ function renderBoxPlotAll(metric, groupData) {
     .domain([yMin - yPad, yMax + yPad])
     .range([innerHeight, 0]);
 
-  createYAxis(g, yScale, { ticks: 6 });
+  createYAxis(g, yScale, {
+    ticks: 6,
+    label: METRIC_DISPLAY_NAMES[metric] || metric,
+  });
 
-  // X positioning via scaleBand
+  // X positioning via scaleBand — prepend "all" column when ref toggle is on
+  const xDomain = showRefBoxplot
+    ? ["all", ...groupData.map((cg) => cg.clusterId)]
+    : groupData.map((cg) => cg.clusterId);
   const xScale = d3
     .scaleBand()
-    .domain(groupData.map((cg) => cg.clusterId))
+    .domain(xDomain)
     .range([0, innerWidth])
     .padding(0.2);
 
   const boxWidth = Math.min(xScale.bandwidth(), 50);
+
+  // Reference boxplot: single "All" column for overall distribution
+  if (showRefBoxplot) {
+    const refStats = computeBoxplotStats(allValues);
+    const xPos = xScale("all") + (xScale.bandwidth() - boxWidth) / 2;
+    const refG = g.append("g").attr("class", "ref-boxplot");
+    drawBoxplot(refG, {
+      stats: refStats,
+      x: xPos,
+      width: boxWidth,
+      yScale,
+      fillColor: "rgba(0,0,0,0.06)",
+      strokeColor: "rgba(0,0,0,0.18)",
+    });
+
+    const xCenter = xScale("all") + xScale.bandwidth() / 2;
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 14)
+      .attr("text-anchor", "end")
+      .attr("font-size", Math.min(CHART_STYLES.labelFontSize, 10))
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text("All");
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 38)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(allValues.length);
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 50)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(d3.mean(allValues).toFixed(3));
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 62)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(d3.median(allValues).toFixed(3));
+  }
 
   for (const cg of groupData) {
     const stats = computeBoxplotStats(cg.values);
@@ -1366,39 +1465,99 @@ function renderBoxPlotAll(metric, groupData) {
 
     // X-axis label: cluster name
     g.append("text")
-      .attr("x", xCenter)
+      .attr("x", xCenter + xScale.bandwidth() / 2)
       .attr("y", innerHeight + 14)
-      .attr("text-anchor", "middle")
+      .attr("text-anchor", "end")
       .attr("font-size", Math.min(CHART_STYLES.labelFontSize, 10))
+      .attr("font-family", "monospace")
       .attr("fill", CHART_STYLES.labelColor)
       .text(cg.label.length > 12 ? cg.label.slice(0, 11) + "\u2026" : cg.label);
 
-    // X-axis label: KS D (cluster vs all others)
+    // X-axis label: KS D value (cluster vs all others)
     const ks = clusterKsMap[cg.clusterId];
-    const ksText = formatKsStat(ks);
-    if (ksText) {
+    if (!isNaN(ks.D)) {
       g.append("text")
-        .attr("x", xCenter)
+        .attr("x", xCenter + xScale.bandwidth() / 2)
         .attr("y", innerHeight + 26)
-        .attr("text-anchor", "middle")
+        .attr("text-anchor", "end")
         .attr("font-size", 9)
-        .attr("fill", isKsSignificant(ks) ? "#c33" : "#888")
-        .text(ksText);
+        .attr("font-family", "monospace")
+        .attr("fill", "#c33")
+        .text(ks.D.toFixed(2));
     }
+
+    // X-axis label: cluster size (number of heads)
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 38)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(cg.results.length);
+
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 50)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(d3.mean(cg.values).toFixed(3));
+
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 62)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(d3.median(cg.values).toFixed(3));
   }
 
-  // X-axis title
+  // Row header labels on the left
   g.append("text")
-    .attr("x", innerWidth / 2)
-    .attr("y", innerHeight + 46)
-    .attr("text-anchor", "middle")
-    .attr("font-size", CHART_STYLES.labelFontSize)
+    .attr("x", -4)
+    .attr("y", innerHeight + 14)
+    .attr("text-anchor", "end")
+    .attr("font-size", 9)
     .attr("fill", CHART_STYLES.labelColor)
     .text("Cluster ID");
 
-  // Title
+  g.append("text")
+    .attr("x", -4)
+    .attr("y", innerHeight + 26)
+    .attr("text-anchor", "end")
+    .attr("font-size", 9)
+    .attr("fill", "#c33")
+    .text("D-score");
+
+  g.append("text")
+    .attr("x", -4)
+    .attr("y", innerHeight + 38)
+    .attr("text-anchor", "end")
+    .attr("font-size", 9)
+    .attr("fill", CHART_STYLES.labelColor)
+    .text("Size");
+  g.append("text")
+    .attr("x", -4)
+    .attr("y", innerHeight + 50)
+    .attr("text-anchor", "end")
+    .attr("font-size", 9)
+    .attr("fill", CHART_STYLES.labelColor)
+    .text("Mean");
+  g.append("text")
+    .attr("x", -4)
+    .attr("y", innerHeight + 62)
+    .attr("text-anchor", "end")
+    .attr("font-size", 9)
+    .attr("fill", CHART_STYLES.labelColor)
+    .text("Median");
+
+  // Title (excluded from SVG export)
   svg
     .append("text")
+    .attr("class", "no-export")
     .attr("x", margin.left + innerWidth / 2)
     .attr("y", 16)
     .attr("text-anchor", "middle")
@@ -1409,6 +1568,707 @@ function renderBoxPlotAll(metric, groupData) {
 
   attachClusterHover(svg);
   addExportButton(containerId, `ablation-boxplot-all-${metric}`);
+}
+
+// === Sina Plot (single cluster) ===
+
+function renderSina(metric, inValues, outValues) {
+  const containerId = `chart-container-${metric}`;
+  const margin = ABLATION_CHART_MARGIN;
+  const { svg, g, innerWidth, innerHeight } = createChartSVG(
+    containerId,
+    margin,
+  );
+
+  if (inValues.length === 0 && outValues.length === 0) return;
+
+  const allVals = [...inValues, ...outValues];
+  const yMin = Math.min(...allVals);
+  const yMax = Math.max(...allVals);
+  const yPad = (yMax - yMin) * 0.1 || 1;
+  const yScale = d3
+    .scaleLinear()
+    .domain([yMin - yPad, yMax + yPad])
+    .range([innerHeight, 0]);
+
+  createYAxis(g, yScale, {
+    ticks: 6,
+    label: METRIC_DISPLAY_NAMES[metric] || metric,
+  });
+
+  const clusterColorStr =
+    selectedCluster !== null && clusteringAvailable
+      ? clustering.getClusterColor(selectedCluster)
+      : "hsl(210, 70%, 50%)";
+  const clusterLabel = getClusterChipLabel();
+
+  const boxWidth = Math.min(innerWidth * 0.3, 60);
+  const centerX = innerWidth / 2;
+  const gap = 10;
+
+  function drawSinaPoints(values, xCenter, halfWidth, fill, stroke) {
+    if (values.length === 0) return;
+    const kde = createKDE(values);
+    const densities = values.map((v) => kde(v));
+    const maxD = Math.max(...densities) || 1;
+    // Seeded jitter for stability across re-renders
+    let seed = 12345;
+    function pseudoRandom() {
+      seed = (seed * 16807) % 2147483647;
+      return (seed - 1) / 2147483646;
+    }
+    for (let i = 0; i < values.length; i++) {
+      const jitterWidth = (densities[i] / maxD) * halfWidth;
+      const jx = xCenter + (pseudoRandom() * 2 - 1) * jitterWidth;
+      g.append("circle")
+        .attr("cx", jx)
+        .attr("cy", yScale(values[i]))
+        .attr("r", 2)
+        .attr("fill", fill)
+        .attr("opacity", 0.5);
+    }
+  }
+
+  drawSinaPoints(
+    inValues,
+    centerX - boxWidth / 2 - gap / 2,
+    boxWidth / 2,
+    clusterColorToRGBA(clusterColorStr, 0.6),
+    clusterColorToRGBA(clusterColorStr, 1),
+  );
+  drawSinaPoints(
+    outValues,
+    centerX + boxWidth / 2 + gap / 2,
+    boxWidth / 2,
+    "rgba(150, 150, 150, 0.4)",
+    "rgba(150, 150, 150, 0.7)",
+  );
+
+  if (inValues.length > 0) {
+    g.append("text")
+      .attr("x", centerX - boxWidth / 2 - gap / 2)
+      .attr("y", innerHeight + 20)
+      .attr("text-anchor", "middle")
+      .attr("font-size", CHART_STYLES.labelFontSize)
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(clusterLabel);
+  }
+  if (outValues.length > 0) {
+    g.append("text")
+      .attr("x", centerX + boxWidth / 2 + gap / 2)
+      .attr("y", innerHeight + 20)
+      .attr("text-anchor", "middle")
+      .attr("font-size", CHART_STYLES.labelFontSize)
+      .attr("fill", CHART_STYLES.labelColor)
+      .text("Other");
+  }
+
+  svg
+    .append("text")
+    .attr("class", "no-export")
+    .attr("x", margin.left + innerWidth / 2)
+    .attr("y", 16)
+    .attr("text-anchor", "middle")
+    .attr("font-size", CHART_STYLES.titleFontSize)
+    .attr("font-weight", "bold")
+    .attr("fill", "#333")
+    .text(METRIC_DISPLAY_NAMES[metric] || metric);
+
+  const ks = ksTest(inValues, outValues);
+  const ksText = formatKsStat(ks);
+  if (ksText) {
+    svg
+      .append("text")
+      .attr("class", "no-export")
+      .attr("x", margin.left + innerWidth / 2)
+      .attr("y", 30)
+      .attr("text-anchor", "middle")
+      .attr("font-size", 10)
+      .attr("fill", ks.D >= 0.25 ? "#c33" : "#888")
+      .text(ksText);
+  }
+
+  addExportButton(containerId, `ablation-sina-${metric}`);
+}
+
+// === Sina Plot (all clusters) ===
+
+function renderSinaAll(metric, groupData) {
+  const containerId = `chart-container-${metric}`;
+  const margin = { ...ABLATION_CHART_MARGIN, bottom: 96 };
+  const { svg, g, innerWidth, innerHeight } = createChartSVG(
+    containerId,
+    margin,
+  );
+
+  if (groupData.length === 0) return;
+
+  const clusterKsMap = {};
+  for (const cg of groupData) {
+    const otherValues = groupData
+      .filter((other) => other.clusterId !== cg.clusterId)
+      .flatMap((other) => other.values);
+    clusterKsMap[cg.clusterId] = ksTest(cg.values, otherValues);
+  }
+
+  if (sortMode === "mean") {
+    groupData = [...groupData].sort(
+      (a, b) => d3.mean(a.values) - d3.mean(b.values),
+    );
+  } else if (sortMode === "median") {
+    groupData = [...groupData].sort(
+      (a, b) => d3.median(a.values) - d3.median(b.values),
+    );
+  } else if (sortMode === "ks-d") {
+    groupData = [...groupData].sort(
+      (a, b) => clusterKsMap[b.clusterId].D - clusterKsMap[a.clusterId].D,
+    );
+  }
+
+  const allValues = groupData.flatMap((cg) => cg.values);
+  const yMin = Math.min(...allValues);
+  const yMax = Math.max(...allValues);
+  const yPad = (yMax - yMin) * 0.1 || 1;
+  const yScale = d3
+    .scaleLinear()
+    .domain([yMin - yPad, yMax + yPad])
+    .range([innerHeight, 0]);
+
+  createYAxis(g, yScale, {
+    ticks: 6,
+    label: METRIC_DISPLAY_NAMES[metric] || metric,
+  });
+
+  const xDomain = showRefBoxplot
+    ? ["all", ...groupData.map((cg) => cg.clusterId)]
+    : groupData.map((cg) => cg.clusterId);
+  const xScale = d3
+    .scaleBand()
+    .domain(xDomain)
+    .range([0, innerWidth])
+    .padding(0.2);
+  const boxWidth = Math.min(xScale.bandwidth(), 50);
+
+  // Reference "All" column
+  if (showRefBoxplot) {
+    const xPos = xScale("all") + (xScale.bandwidth() - boxWidth) / 2;
+    const xCenter = xScale("all") + xScale.bandwidth() / 2;
+    const kde = createKDE(allValues);
+    const densities = allValues.map((v) => kde(v));
+    const maxD = Math.max(...densities) || 1;
+    let seed = 12345;
+    function pseudoRandom() {
+      seed = (seed * 16807) % 2147483647;
+      return (seed - 1) / 2147483646;
+    }
+    const refG = g.append("g").attr("class", "ref-boxplot");
+    for (let i = 0; i < allValues.length; i++) {
+      const jw = (densities[i] / maxD) * (boxWidth / 2);
+      refG
+        .append("circle")
+        .attr("cx", xCenter + (pseudoRandom() * 2 - 1) * jw)
+        .attr("cy", yScale(allValues[i]))
+        .attr("r", 1.5)
+        .attr("fill", "rgba(0,0,0,0.15)");
+    }
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 14)
+      .attr("text-anchor", "end")
+      .attr("font-size", Math.min(CHART_STYLES.labelFontSize, 10))
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text("All");
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 38)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(allValues.length);
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 50)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(d3.mean(allValues).toFixed(3));
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 62)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(d3.median(allValues).toFixed(3));
+  }
+
+  for (const cg of groupData) {
+    const xCenter = xScale(cg.clusterId) + xScale.bandwidth() / 2;
+    const fillColor = clusterColorToRGBA(cg.color, 0.6);
+    const strokeColor = clusterColorToRGBA(cg.color, 1);
+
+    const kde = createKDE(cg.values);
+    const densities = cg.values.map((v) => kde(v));
+    const maxD = Math.max(...densities) || 1;
+
+    let seed = 12345 + cg.clusterId * 9999;
+    function pseudoRandom() {
+      seed = (seed * 16807) % 2147483647;
+      return (seed - 1) / 2147483646;
+    }
+
+    const clusterG = g
+      .append("g")
+      .attr("data-cluster-id", cg.clusterId)
+      .attr("opacity", 0.5)
+      .style("cursor", "default");
+
+    for (let i = 0; i < cg.values.length; i++) {
+      const jw = (densities[i] / maxD) * (boxWidth / 2);
+      clusterG
+        .append("circle")
+        .attr("cx", xCenter + (pseudoRandom() * 2 - 1) * jw)
+        .attr("cy", yScale(cg.values[i]))
+        .attr("r", 2)
+        .attr("fill", fillColor);
+    }
+
+    // Labels
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 14)
+      .attr("text-anchor", "end")
+      .attr("font-size", Math.min(CHART_STYLES.labelFontSize, 10))
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(cg.label.length > 12 ? cg.label.slice(0, 11) + "\u2026" : cg.label);
+
+    const ks = clusterKsMap[cg.clusterId];
+    if (!isNaN(ks.D)) {
+      g.append("text")
+        .attr("x", xCenter + xScale.bandwidth() / 2)
+        .attr("y", innerHeight + 26)
+        .attr("text-anchor", "end")
+        .attr("font-size", 9)
+        .attr("font-family", "monospace")
+        .attr("fill", "#c33")
+        .text(ks.D.toFixed(2));
+    }
+
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 38)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(cg.results.length);
+
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 50)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(d3.mean(cg.values).toFixed(3));
+
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 62)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(d3.median(cg.values).toFixed(3));
+  }
+
+  // Row headers
+  g.append("text")
+    .attr("x", -4)
+    .attr("y", innerHeight + 14)
+    .attr("text-anchor", "end")
+    .attr("font-size", 9)
+    .attr("fill", CHART_STYLES.labelColor)
+    .text("Cluster ID");
+  g.append("text")
+    .attr("x", -4)
+    .attr("y", innerHeight + 26)
+    .attr("text-anchor", "end")
+    .attr("font-size", 9)
+    .attr("fill", "#c33")
+    .text("D-score");
+  g.append("text")
+    .attr("x", -4)
+    .attr("y", innerHeight + 38)
+    .attr("text-anchor", "end")
+    .attr("font-size", 9)
+    .attr("fill", CHART_STYLES.labelColor)
+    .text("Size");
+  g.append("text")
+    .attr("x", -4)
+    .attr("y", innerHeight + 50)
+    .attr("text-anchor", "end")
+    .attr("font-size", 9)
+    .attr("fill", CHART_STYLES.labelColor)
+    .text("Mean");
+  g.append("text")
+    .attr("x", -4)
+    .attr("y", innerHeight + 62)
+    .attr("text-anchor", "end")
+    .attr("font-size", 9)
+    .attr("fill", CHART_STYLES.labelColor)
+    .text("Median");
+
+  svg
+    .append("text")
+    .attr("class", "no-export")
+    .attr("x", margin.left + innerWidth / 2)
+    .attr("y", 16)
+    .attr("text-anchor", "middle")
+    .attr("font-size", CHART_STYLES.titleFontSize)
+    .attr("font-weight", "bold")
+    .attr("fill", "#333")
+    .text(METRIC_DISPLAY_NAMES[metric] || metric);
+
+  attachClusterHover(svg);
+  addExportButton(containerId, `ablation-sina-all-${metric}`);
+}
+
+// === Letter-Value Plot (single cluster) ===
+
+function renderLetterValue(metric, inValues, outValues) {
+  const containerId = `chart-container-${metric}`;
+  const margin = ABLATION_CHART_MARGIN;
+  const { svg, g, innerWidth, innerHeight } = createChartSVG(
+    containerId,
+    margin,
+  );
+
+  if (inValues.length === 0 && outValues.length === 0) return;
+
+  const allVals = [...inValues, ...outValues];
+  const yMin = Math.min(...allVals);
+  const yMax = Math.max(...allVals);
+  const yPad = (yMax - yMin) * 0.1 || 1;
+  const yScale = d3
+    .scaleLinear()
+    .domain([yMin - yPad, yMax + yPad])
+    .range([innerHeight, 0]);
+
+  createYAxis(g, yScale, {
+    ticks: 6,
+    label: METRIC_DISPLAY_NAMES[metric] || metric,
+  });
+
+  const clusterColorStr =
+    selectedCluster !== null && clusteringAvailable
+      ? clustering.getClusterColor(selectedCluster)
+      : "hsl(210, 70%, 50%)";
+  const clusterLabel = getClusterChipLabel();
+
+  const boxWidth = Math.min(innerWidth * 0.3, 60);
+  const centerX = innerWidth / 2;
+  const gap = 10;
+
+  if (inValues.length > 0) {
+    drawLetterValuePlot(g, {
+      values: inValues,
+      x: centerX - boxWidth - gap / 2,
+      width: boxWidth,
+      yScale,
+      fillColor: clusterColorToRGBA(clusterColorStr, 0.4),
+      strokeColor: clusterColorToRGBA(clusterColorStr, 1),
+    });
+  }
+
+  if (outValues.length > 0) {
+    drawLetterValuePlot(g, {
+      values: outValues,
+      x: centerX + gap / 2,
+      width: boxWidth,
+      yScale,
+      fillColor: "rgba(150, 150, 150, 0.25)",
+      strokeColor: "rgba(150, 150, 150, 0.7)",
+    });
+  }
+
+  if (inValues.length > 0) {
+    g.append("text")
+      .attr("x", centerX - boxWidth / 2 - gap / 2)
+      .attr("y", innerHeight + 20)
+      .attr("text-anchor", "middle")
+      .attr("font-size", CHART_STYLES.labelFontSize)
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(clusterLabel);
+  }
+  if (outValues.length > 0) {
+    g.append("text")
+      .attr("x", centerX + boxWidth / 2 + gap / 2)
+      .attr("y", innerHeight + 20)
+      .attr("text-anchor", "middle")
+      .attr("font-size", CHART_STYLES.labelFontSize)
+      .attr("fill", CHART_STYLES.labelColor)
+      .text("Other");
+  }
+
+  svg
+    .append("text")
+    .attr("class", "no-export")
+    .attr("x", margin.left + innerWidth / 2)
+    .attr("y", 16)
+    .attr("text-anchor", "middle")
+    .attr("font-size", CHART_STYLES.titleFontSize)
+    .attr("font-weight", "bold")
+    .attr("fill", "#333")
+    .text(METRIC_DISPLAY_NAMES[metric] || metric);
+
+  const ks = ksTest(inValues, outValues);
+  const ksText = formatKsStat(ks);
+  if (ksText) {
+    svg
+      .append("text")
+      .attr("class", "no-export")
+      .attr("x", margin.left + innerWidth / 2)
+      .attr("y", 30)
+      .attr("text-anchor", "middle")
+      .attr("font-size", 10)
+      .attr("fill", ks.D >= 0.25 ? "#c33" : "#888")
+      .text(ksText);
+  }
+
+  addExportButton(containerId, `ablation-lettervalue-${metric}`);
+}
+
+// === Letter-Value Plot (all clusters) ===
+
+function renderLetterValueAll(metric, groupData) {
+  const containerId = `chart-container-${metric}`;
+  const margin = { ...ABLATION_CHART_MARGIN, bottom: 96 };
+  const { svg, g, innerWidth, innerHeight } = createChartSVG(
+    containerId,
+    margin,
+  );
+
+  if (groupData.length === 0) return;
+
+  const clusterKsMap = {};
+  for (const cg of groupData) {
+    const otherValues = groupData
+      .filter((other) => other.clusterId !== cg.clusterId)
+      .flatMap((other) => other.values);
+    clusterKsMap[cg.clusterId] = ksTest(cg.values, otherValues);
+  }
+
+  if (sortMode === "mean") {
+    groupData = [...groupData].sort(
+      (a, b) => d3.mean(a.values) - d3.mean(b.values),
+    );
+  } else if (sortMode === "median") {
+    groupData = [...groupData].sort(
+      (a, b) => d3.median(a.values) - d3.median(b.values),
+    );
+  } else if (sortMode === "ks-d") {
+    groupData = [...groupData].sort(
+      (a, b) => clusterKsMap[b.clusterId].D - clusterKsMap[a.clusterId].D,
+    );
+  }
+
+  const allValues = groupData.flatMap((cg) => cg.values);
+  const yMin = Math.min(...allValues);
+  const yMax = Math.max(...allValues);
+  const yPad = (yMax - yMin) * 0.1 || 1;
+  const yScale = d3
+    .scaleLinear()
+    .domain([yMin - yPad, yMax + yPad])
+    .range([innerHeight, 0]);
+
+  createYAxis(g, yScale, {
+    ticks: 6,
+    label: METRIC_DISPLAY_NAMES[metric] || metric,
+  });
+
+  const xDomain = showRefBoxplot
+    ? ["all", ...groupData.map((cg) => cg.clusterId)]
+    : groupData.map((cg) => cg.clusterId);
+  const xScale = d3
+    .scaleBand()
+    .domain(xDomain)
+    .range([0, innerWidth])
+    .padding(0.2);
+  const boxWidth = Math.min(xScale.bandwidth(), 50);
+
+  // Reference "All" column
+  if (showRefBoxplot) {
+    const xPos = xScale("all") + (xScale.bandwidth() - boxWidth) / 2;
+    const xCenter = xScale("all") + xScale.bandwidth() / 2;
+    const refG = g.append("g").attr("class", "ref-boxplot");
+    drawLetterValuePlot(refG, {
+      values: allValues,
+      x: xPos,
+      width: boxWidth,
+      yScale,
+      fillColor: "rgba(0,0,0,0.06)",
+      strokeColor: "rgba(0,0,0,0.18)",
+    });
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 14)
+      .attr("text-anchor", "end")
+      .attr("font-size", Math.min(CHART_STYLES.labelFontSize, 10))
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text("All");
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 38)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(allValues.length);
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 50)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(d3.mean(allValues).toFixed(3));
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 62)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(d3.median(allValues).toFixed(3));
+  }
+
+  for (const cg of groupData) {
+    const xPos = xScale(cg.clusterId) + (xScale.bandwidth() - boxWidth) / 2;
+    const strokeColor = clusterColorToRGBA(cg.color, 1);
+    const fillColor = clusterColorToRGBA(cg.color, 0.4);
+
+    const clusterG = g
+      .append("g")
+      .attr("data-cluster-id", cg.clusterId)
+      .attr("opacity", 0.5)
+      .style("cursor", "default");
+
+    drawLetterValuePlot(clusterG, {
+      values: cg.values,
+      x: xPos,
+      width: boxWidth,
+      yScale,
+      fillColor,
+      strokeColor,
+    });
+
+    const xCenter = xScale(cg.clusterId) + xScale.bandwidth() / 2;
+
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 14)
+      .attr("text-anchor", "end")
+      .attr("font-size", Math.min(CHART_STYLES.labelFontSize, 10))
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(cg.label.length > 12 ? cg.label.slice(0, 11) + "\u2026" : cg.label);
+
+    const ks = clusterKsMap[cg.clusterId];
+    if (!isNaN(ks.D)) {
+      g.append("text")
+        .attr("x", xCenter + xScale.bandwidth() / 2)
+        .attr("y", innerHeight + 26)
+        .attr("text-anchor", "end")
+        .attr("font-size", 9)
+        .attr("font-family", "monospace")
+        .attr("fill", "#c33")
+        .text(ks.D.toFixed(2));
+    }
+
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 38)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(cg.results.length);
+
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 50)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(d3.mean(cg.values).toFixed(3));
+
+    g.append("text")
+      .attr("x", xCenter + xScale.bandwidth() / 2)
+      .attr("y", innerHeight + 62)
+      .attr("text-anchor", "end")
+      .attr("font-size", 9)
+      .attr("font-family", "monospace")
+      .attr("fill", CHART_STYLES.labelColor)
+      .text(d3.median(cg.values).toFixed(3));
+  }
+
+  // Row headers
+  g.append("text")
+    .attr("x", -4)
+    .attr("y", innerHeight + 14)
+    .attr("text-anchor", "end")
+    .attr("font-size", 9)
+    .attr("fill", CHART_STYLES.labelColor)
+    .text("Cluster ID");
+  g.append("text")
+    .attr("x", -4)
+    .attr("y", innerHeight + 26)
+    .attr("text-anchor", "end")
+    .attr("font-size", 9)
+    .attr("fill", "#c33")
+    .text("D-score");
+  g.append("text")
+    .attr("x", -4)
+    .attr("y", innerHeight + 38)
+    .attr("text-anchor", "end")
+    .attr("font-size", 9)
+    .attr("fill", CHART_STYLES.labelColor)
+    .text("Size");
+  g.append("text")
+    .attr("x", -4)
+    .attr("y", innerHeight + 50)
+    .attr("text-anchor", "end")
+    .attr("font-size", 9)
+    .attr("fill", CHART_STYLES.labelColor)
+    .text("Mean");
+  g.append("text")
+    .attr("x", -4)
+    .attr("y", innerHeight + 62)
+    .attr("text-anchor", "end")
+    .attr("font-size", 9)
+    .attr("fill", CHART_STYLES.labelColor)
+    .text("Median");
+
+  svg
+    .append("text")
+    .attr("class", "no-export")
+    .attr("x", margin.left + innerWidth / 2)
+    .attr("y", 16)
+    .attr("text-anchor", "middle")
+    .attr("font-size", CHART_STYLES.titleFontSize)
+    .attr("font-weight", "bold")
+    .attr("fill", "#333")
+    .text(METRIC_DISPLAY_NAMES[metric] || metric);
+
+  attachClusterHover(svg);
+  addExportButton(containerId, `ablation-lettervalue-all-${metric}`);
 }
 
 function getClusterChipLabel() {
@@ -1671,6 +2531,207 @@ function getCellClass(column, value) {
   const isBad = spec.higher_is_worse ? isPositive : !isPositive;
   if (isBad) return isStrong ? "cell-bad-strong" : "cell-bad-mild";
   return isStrong ? "cell-good-strong" : "cell-good-mild";
+}
+
+// === Cluster Statistics Table ===
+
+const CLUSTER_STATS_METRICS = [
+  "prefix_score",
+  "copying_score",
+  "loss_increase",
+  "ov_copying_score",
+];
+
+function computeStats(values) {
+  if (values.length === 0) {
+    return {
+      count: 0,
+      mean: NaN,
+      median: NaN,
+      min: NaN,
+      max: NaN,
+      stdDev: NaN,
+    };
+  }
+  const n = values.length;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mean = values.reduce((a, b) => a + b, 0) / n;
+  const mid = Math.floor(n / 2);
+  const median =
+    n % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / n;
+  return {
+    count: n,
+    mean,
+    median,
+    min: sorted[0],
+    max: sorted[n - 1],
+    stdDev: Math.sqrt(variance),
+  };
+}
+
+function buildClusterStatsColumns() {
+  const statKeys = ["mean", "median", "min", "max", "stdDev"];
+  const statLabels = {
+    mean: "Mean",
+    median: "Med",
+    min: "Min",
+    max: "Max",
+    stdDev: "Std",
+  };
+
+  const columns = [
+    {
+      key: "cluster",
+      label: "Cluster",
+      type: "string",
+      renderer: (val, row) => {
+        if (row._clusterId === null) {
+          const b = document.createElement("strong");
+          b.textContent = "All";
+          return b;
+        }
+        if (row._clusterId === -2) {
+          const em = document.createElement("em");
+          em.innerHTML = `<strong>${val}</strong>`;
+          return em;
+        }
+        if (row._color) {
+          const span = document.createElement("span");
+          span.className = "cluster-badge";
+          span.style.setProperty("--badge-color", row._color);
+          span.textContent = val;
+          return span;
+        }
+        return val;
+      },
+      sortFunction: (_val, row) =>
+        row._clusterId === null
+          ? -1
+          : row._clusterId === -2
+            ? -0.5
+            : row._clusterId,
+    },
+    { key: "count", label: "n", type: "number", align: "right" },
+  ];
+
+  for (const metric of CLUSTER_STATS_METRICS) {
+    const metricLabel = COLUMN_LABELS[metric] || metric;
+    for (const sk of statKeys) {
+      columns.push({
+        key: `${metric}_${sk}`,
+        label: `${metricLabel} ${statLabels[sk]}`,
+        type: "number",
+        align: "right",
+        renderer: (val) => {
+          const cls =
+            sk === "mean" || sk === "median" ? getCellClass(metric, val) : "";
+          const span = document.createElement("span");
+          if (cls) span.className = cls;
+          span.textContent = formatNumber(val);
+          return span;
+        },
+      });
+    }
+  }
+
+  return columns;
+}
+
+function buildClusterStatsData() {
+  const results = getFilteredResults();
+  if (results.length === 0) return [];
+
+  const hasClustering =
+    clusteringAvailable && clustering && clustering._is_loaded;
+  const groups = hasClustering ? groupByCluster(results) : [];
+
+  const rows = [];
+
+  // "All" row
+  const allRow = {
+    cluster: "All",
+    count: results.length,
+    _clusterId: null,
+    _color: null,
+  };
+  for (const metric of CLUSTER_STATS_METRICS) {
+    const stats = computeStats(extractValues(results, metric));
+    for (const sk of ["mean", "median", "min", "max", "stdDev"]) {
+      allRow[`${metric}_${sk}`] = stats[sk];
+    }
+  }
+  rows.push(allRow);
+
+  // "Everything except selected cluster" row
+  if (selectedCluster !== null && hasClustering) {
+    const excludedResults = results.filter((r) => {
+      const cid = clustering._assignments[r.head];
+      return cid !== selectedCluster;
+    });
+    const selLabel = clustering.getClusterLabel(selectedCluster);
+    const selName =
+      selLabel && selLabel.name ? selLabel.name : `${selectedCluster}`;
+    const excRow = {
+      cluster: `Excl. ${selName}`,
+      count: excludedResults.length,
+      _clusterId: -2,
+      _color: null,
+    };
+    for (const metric of CLUSTER_STATS_METRICS) {
+      const stats = computeStats(extractValues(excludedResults, metric));
+      for (const sk of ["mean", "median", "min", "max", "stdDev"]) {
+        excRow[`${metric}_${sk}`] = stats[sk];
+      }
+    }
+    rows.push(excRow);
+  }
+
+  // Per-cluster rows
+  for (const g of groups) {
+    const row = {
+      cluster: g.label,
+      count: g.results.length,
+      _clusterId: g.clusterId,
+      _color: g.color,
+    };
+    for (const metric of CLUSTER_STATS_METRICS) {
+      const stats = computeStats(extractValues(g.results, metric));
+      for (const sk of ["mean", "median", "min", "max", "stdDev"]) {
+        row[`${metric}_${sk}`] = stats[sk];
+      }
+    }
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+function renderClusterStats() {
+  const container = document.getElementById("cluster-stats-container");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const data = buildClusterStatsData();
+  if (data.length === 0) {
+    container.innerHTML = '<p style="color:#999">No data available</p>';
+    return;
+  }
+
+  const columns = buildClusterStatsColumns();
+
+  clusterStatsTable = new DataTable(container, {
+    data,
+    columns,
+    pageSize: 100,
+    showFilters: true,
+    showInfo: true,
+  });
+}
+
+function renderTables() {
+  renderClusterStats();
+  renderTable();
 }
 
 // === Boot ===

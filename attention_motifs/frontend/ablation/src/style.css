@@ -74,6 +74,12 @@ h1 {
   white-space: nowrap;
 }
 
+.toggle-label {
+  font-weight: normal;
+  cursor: pointer;
+  user-select: none;
+}
+
 #cut-height-slider {
   width: 180px;
 }
@@ -200,7 +206,7 @@ h1 {
   display: grid;
   grid-template-columns: repeat(
     auto-fit,
-    minmax(var(--chart-min-width, 340px), 1fr)
+    minmax(var(--chart-min-width, 800px), 1fr)
   );
   gap: 12px;
   margin-bottom: 16px;
@@ -279,6 +285,69 @@ h1 {
 
 .chip:hover {
   background: #e0e0e0;
+}
+
+/* === Cluster Statistics Table === */
+
+.section-heading {
+  margin: 24px 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.cluster-stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 24px;
+}
+
+.cluster-stats-table thead th {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  padding: 4px 6px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.cluster-stats-table thead th.stat-sub {
+  font-weight: 500;
+  font-size: 11px;
+  color: #666;
+}
+
+.cluster-stats-table td {
+  border: 1px solid #e0e0e0;
+  padding: 3px 6px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cluster-stats-table td.cluster-stats-label {
+  text-align: left;
+  font-weight: 500;
+}
+
+.cluster-stats-table td.stat-count {
+  text-align: center;
+  color: #666;
+}
+
+.cluster-stats-table tr.cluster-stats-all {
+  background: #fafafa;
+  border-bottom: 2px solid #ccc;
+}
+
+.cluster-stats-table tr.cluster-stats-selected {
+  background: #e3f2fd;
+}
+
+.cluster-stats-table tbody tr:hover {
+  background: #f0f4ff;
 }
 
 /* === DataTable overrides === */
