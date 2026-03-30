@@ -870,6 +870,7 @@ am-frontend-bundle: _am-frontend-format _am-frontend-gen-ap _am-frontend-fetch-l
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/clustering/src/index.html --output $(FRONTEND_DIR)/clustering/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/cluster_trends/src/index.html --output $(FRONTEND_DIR)/cluster_trends/index.html
 	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/ablation/src/index.html --output $(FRONTEND_DIR)/ablation/index.html
+	$(PYTHON) -m muutils.web.bundle_html $(FRONTEND_DIR)/correlations/src/index.html --output $(FRONTEND_DIR)/correlations/index.html
 
 .PHONY: am-frontend-deploy
 am-frontend-deploy: am-frontend-bundle
