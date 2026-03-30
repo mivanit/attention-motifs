@@ -132,12 +132,21 @@ class ClusteringLoader {
 
       this._is_loaded = true;
 
-      // Compute initial assignments
-      if (this._linkage && this._meta) {
+      // Compute initial assignments: prefer saved method, then leiden, then hierarchical
+      const savedMethod = ClusteringConfig.getMethod();
+      if (
+        savedMethod &&
+        this._availableMethods.includes(savedMethod) &&
+        (savedMethod === "hierarchical" ||
+          this._flatData[savedMethod] !== undefined)
+      ) {
+        this._setMethodInternal(savedMethod);
+      } else if (this._flatData["leiden"]) {
+        this._setMethodInternal("leiden");
+      } else if (this._linkage && this._meta) {
         this._method = "hierarchical";
         this._computeAssignmentsByNClusters(this._nClusters);
       } else if (Object.keys(this._flatData).length > 0) {
-        // Use first available flat method
         const firstFlat = Object.keys(this._flatData)[0];
         this._setMethodInternal(firstFlat);
       }
@@ -203,12 +212,15 @@ class ClusteringLoader {
       const flat = this._flatData[method];
       if (!flat || !flat.meta.param_keys.length) return;
 
-      // Use saved param key or first available
+      // Use saved param key, then method-specific default, then first available
       const savedKey = ClusteringConfig.getParamKey();
+      const defaultKey = method === "leiden" ? "1.000" : null;
       const paramKey =
         savedKey && flat.meta.param_keys.includes(savedKey)
           ? savedKey
-          : flat.meta.param_keys[0];
+          : defaultKey && flat.meta.param_keys.includes(defaultKey)
+            ? defaultKey
+            : flat.meta.param_keys[0];
       this._setFlatParam(method, paramKey);
     }
   }

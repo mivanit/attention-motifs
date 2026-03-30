@@ -1,3 +1,7 @@
+[x-cloak] {
+  display: none !important;
+}
+
 body {
   font-family: -apple-system, sans-serif;
   margin: 0;
@@ -833,8 +837,7 @@ a {
   z-index: 1000;
 }
 
-.help-menu:hover .help-content,
-.help-menu-corner:hover .help-content {
+.help-menu:hover .help-content {
   display: block;
 }
 
@@ -858,6 +861,89 @@ a {
 
 .help-content ul:last-child {
   margin-bottom: 0;
+}
+
+/* Settings menu */
+.settings-menu {
+  position: relative;
+}
+
+.settings-button {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  text-align: center;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.settings-button:hover {
+  background: #565e64;
+}
+
+.settings-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 180px;
+  margin-top: 5px;
+  font-size: 12px;
+}
+
+.settings-section-label {
+  font-weight: 600;
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.settings-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.settings-checkbox input[type="checkbox"] {
+  margin: 0;
+}
+
+.settings-divider {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 8px 0;
+}
+
+.settings-export-btn {
+  display: block;
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 11px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #f8f9fa;
+  color: #555;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.settings-export-btn:hover {
+  background: #e9ecef;
 }
 
 .prompt-header {

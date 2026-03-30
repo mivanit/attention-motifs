@@ -43,11 +43,23 @@ document.addEventListener("alpine:init", () => {
       classifications: { failed: 0, total: 0 },
     },
 
+    // Column visibility
+    column_visibility: {
+      distance: true,
+      classifications: true,
+      cluster: true,
+    },
+    settings_open: false,
+
     // Clustering state
     clustering: null,
     clustering_available: false,
+    clustering_method: "leiden",
+    clustering_methods: [],
+    clustering_param_label: "",
+    clustering_param_key: null,
+    clustering_param_keys: [],
     n_clusters: 10,
-    show_cluster_colors: true,
     cluster_stats: null,
     cluster_cut_height: null,
     cluster_max_height: null,
@@ -117,6 +129,17 @@ document.addEventListener("alpine:init", () => {
         this.table.n_distant = CONFIG.table?.n_distant || 0;
         this.table.n_random = CONFIG.table?.n_random || 0;
 
+        // Load column visibility from config
+        if (CONFIG.column_visibility) {
+          const cv = CONFIG.column_visibility;
+          if (cv.distance !== undefined)
+            this.column_visibility.distance = cv.distance;
+          if (cv.classifications !== undefined)
+            this.column_visibility.classifications = cv.classifications;
+          if (cv.cluster !== undefined)
+            this.column_visibility.cluster = cv.cluster;
+        }
+
         // Handle classification mode
         if (this.classification_mode && this.current_classification) {
           await this.setupClassificationMode(this.current_classification);
@@ -150,10 +173,19 @@ document.addEventListener("alpine:init", () => {
         // Initialize clustering (non-blocking)
         this.clustering_available = await this.clustering.isAvailable();
         if (this.clustering_available) {
-          this.n_clusters = CONFIG.default_n_clusters || 10;
-          await this.clustering.setNClusters(this.n_clusters);
-          this.cluster_cut_height = this.clustering.getCutHeight();
-          this.cluster_max_height = this.clustering.getMaxCutHeight();
+          // ClusteringLoader already picked the best default method
+          const methods = this.clustering.getAvailableMethods();
+          this.clustering_methods = methods;
+          this.clustering_method = this.clustering.getMethod();
+
+          if (this.clustering.isHierarchical()) {
+            this.n_clusters = CONFIG.default_n_clusters || 10;
+            await this.clustering.setNClusters(this.n_clusters);
+            this.cluster_cut_height = this.clustering.getCutHeight();
+            this.cluster_max_height = this.clustering.getMaxCutHeight();
+          } else {
+            this._updateFlatParamUI();
+          }
           await this.updateClusterInfo();
         }
 
@@ -1189,7 +1221,7 @@ document.addEventListener("alpine:init", () => {
 
     // Clustering methods
     async getClusterColor(headId) {
-      if (!this.clustering_available || !this.show_cluster_colors) {
+      if (!this.clustering_available) {
         return "transparent";
       }
       return await this.clustering.getColor(headId);
@@ -1276,10 +1308,6 @@ document.addEventListener("alpine:init", () => {
       this.cluster_stats = statsText;
     },
 
-    toggleClusterColors() {
-      this.show_cluster_colors = !this.show_cluster_colors;
-    },
-
     getClusterPageUrl(highlightClusterId = null) {
       if (typeof ClusteringConfig !== "undefined") {
         ClusteringConfig.setCutHeight(this.cluster_cut_height);
@@ -1288,14 +1316,139 @@ document.addEventListener("alpine:init", () => {
         }
       }
       const url = new URL("../clustering/index.html", window.location.href);
+      if (highlightClusterId !== null) {
+        url.searchParams.set("highlight", highlightClusterId);
+      }
       return url.toString();
     },
 
-    getClusterTrendsUrl() {
-      if (typeof ClusteringConfig !== "undefined") {
-        ClusteringConfig.setCutHeight(this.cluster_cut_height);
+    // --- Clustering method switching ---
+
+    async updateClusteringMethod(method) {
+      this.clustering_method = method;
+      this.clustering.setMethod(method);
+      ClusteringConfig.setMethod(method);
+
+      if (method === "hierarchical") {
+        this.n_clusters = CONFIG.default_n_clusters || 10;
+        await this.clustering.setNClusters(this.n_clusters);
+        this.cluster_cut_height = this.clustering.getCutHeight();
+        this.cluster_max_height = this.clustering.getMaxCutHeight();
+      } else {
+        this._updateFlatParamUI();
       }
-      return "../cluster_trends/index.html";
+      await this.updateClusterInfo();
+      await this.updateHeadsWithDistances();
+    },
+
+    async updateClusteringParam(paramKey) {
+      this.clustering_param_key = paramKey;
+      await this.clustering.setParamKey(paramKey);
+      ClusteringConfig.setParamKey(paramKey);
+      this.n_clusters = this.clustering.getNClustersActual();
+      await this.updateClusterInfo();
+      await this.updateHeadsWithDistances();
+    },
+
+    _updateFlatParamUI() {
+      const info = this.clustering.getFlatParamInfo();
+      if (!info) return;
+      this.clustering_param_label = info.paramName;
+      this.clustering_param_keys = info.paramKeys;
+      this.clustering_param_key =
+        this.clustering.getParamKey() || info.paramKeys[0];
+      this.n_clusters = this.clustering.getNClustersActual();
+    },
+
+    // --- Column visibility ---
+
+    toggleColumn(col) {
+      this.column_visibility[col] = !this.column_visibility[col];
+      setConfigValue(`column_visibility.${col}`, this.column_visibility[col]);
+    },
+
+    /** Number of visible fixed columns (Head always visible). */
+    get visibleColCount() {
+      return (
+        1 +
+        (this.column_visibility.distance ? 1 : 0) +
+        (this.column_visibility.classifications ? 1 : 0) +
+        (this.clustering_available && this.column_visibility.cluster ? 1 : 0) +
+        this.prompts.length
+      );
+    },
+
+    // --- Table SVG export ---
+
+    exportTableSVG() {
+      const table = document.querySelector(".pattern-table");
+      if (!table) return;
+
+      const clone = table.cloneNode(true);
+
+      // Inline computed styles onto every element for standalone SVG
+      const inlineStyles = (source, target) => {
+        const cs = window.getComputedStyle(source);
+        const dominated = [
+          "font",
+          "color",
+          "background",
+          "border",
+          "padding",
+          "margin",
+          "text-align",
+          "vertical-align",
+          "white-space",
+          "font-size",
+          "font-weight",
+          "font-family",
+          "line-height",
+        ];
+        for (const prop of dominated) {
+          target.style.setProperty(prop, cs.getPropertyValue(prop));
+        }
+        const srcChildren = source.children;
+        const tgtChildren = target.children;
+        for (let i = 0; i < srcChildren.length; i++) {
+          if (tgtChildren[i]) inlineStyles(srcChildren[i], tgtChildren[i]);
+        }
+      };
+      inlineStyles(table, clone);
+
+      // XHTML namespace required for foreignObject content
+      clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+
+      // Remove hidden elements (Alpine x-show sets display:none)
+      clone
+        .querySelectorAll("[style*='display: none']")
+        .forEach((el) => el.remove());
+
+      const rect = table.getBoundingClientRect();
+      const width = Math.ceil(rect.width);
+      const height = Math.ceil(rect.height);
+
+      const svgNS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(svgNS, "svg");
+      svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      svg.setAttribute("width", width);
+      svg.setAttribute("height", height);
+
+      const fo = document.createElementNS(svgNS, "foreignObject");
+      fo.setAttribute("width", "100%");
+      fo.setAttribute("height", "100%");
+      fo.appendChild(clone);
+      svg.appendChild(fo);
+
+      const serializer = new XMLSerializer();
+      const svgStr = serializer.serializeToString(svg);
+      const blob = new Blob([svgStr], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const headLabel = this.current_head || "table";
+      a.download = `attnpedia-${headLabel}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
     },
   }));
 });
