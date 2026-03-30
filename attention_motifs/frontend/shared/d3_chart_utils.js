@@ -323,8 +323,10 @@ function addExportButton(containerId, filename) {
   btn.addEventListener("click", () => {
     const svgEl = container.querySelector("svg");
     if (!svgEl) return;
+    const clone = svgEl.cloneNode(true);
+    clone.querySelectorAll(".no-export").forEach((el) => el.remove());
     const serializer = new XMLSerializer();
-    const svgStr = serializer.serializeToString(svgEl);
+    const svgStr = serializer.serializeToString(clone);
     const blob = new Blob([svgStr], { type: "image/svg+xml" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -334,6 +336,195 @@ function addExportButton(containerId, filename) {
     URL.revokeObjectURL(url);
   });
   container.appendChild(btn);
+
+  // Remove existing PNG button
+  const existingPng = container.querySelector(".export-png-btn");
+  if (existingPng) existingPng.remove();
+
+  const pngBtn = document.createElement("button");
+  pngBtn.className = "export-png-btn";
+  pngBtn.textContent = "Export PNG";
+  pngBtn.style.cssText = `
+    position: absolute;
+    top: 4px;
+    right: 80px;
+    padding: 3px 8px;
+    font-size: 11px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: #f8f9fa;
+    color: #555;
+    cursor: pointer;
+    z-index: 10;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+  `;
+  pngBtn.addEventListener("mouseenter", () => (pngBtn.style.opacity = "1"));
+  pngBtn.addEventListener("mouseleave", () => (pngBtn.style.opacity = "0.6"));
+  pngBtn.addEventListener("click", () => {
+    const svgEl = container.querySelector("svg");
+    if (!svgEl) return;
+    const clone = svgEl.cloneNode(true);
+    clone.querySelectorAll(".no-export").forEach((el) => el.remove());
+    const w = parseFloat(svgEl.getAttribute("width"));
+    const h = parseFloat(svgEl.getAttribute("height"));
+    const scale = 8;
+    const canvas = document.createElement("canvas");
+    canvas.width = w * scale;
+    canvas.height = h * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+    const svgStr = new XMLSerializer().serializeToString(clone);
+    const blob = new Blob([svgStr], {
+      type: "image/svg+xml;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((pngBlob) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(pngBlob);
+        a.download = `${filename}.png`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+    };
+    img.src = url;
+  });
+  container.appendChild(pngBtn);
+}
+
+// ── KDE ─────────────────────────────────────────────────────────
+
+/**
+ * Gaussian kernel density estimator.
+ * Returns a function that evaluates density at any point x.
+ *
+ * @param {number[]} values - Sample data
+ * @param {number} [bandwidth] - Bandwidth (uses Silverman's rule if omitted)
+ * @returns {(x: number) => number} Density function
+ */
+function createKDE(values, bandwidth) {
+  const n = values.length;
+  if (n === 0) return () => 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  if (!bandwidth || bandwidth <= 0) {
+    const mean = d3.mean(sorted);
+    const std = Math.sqrt(d3.mean(sorted.map((v) => (v - mean) ** 2)));
+    const q1 = d3.quantile(sorted, 0.25);
+    const q3 = d3.quantile(sorted, 0.75);
+    const iqr = q3 - q1;
+    bandwidth = 0.9 * Math.min(std, iqr / 1.34) * n ** -0.2;
+    if (bandwidth <= 0) bandwidth = std * 0.5 || 1;
+  }
+  const factor = 1 / (n * bandwidth * Math.sqrt(2 * Math.PI));
+  return function (x) {
+    let sum = 0;
+    for (let i = 0; i < n; i++) {
+      const u = (x - sorted[i]) / bandwidth;
+      sum += Math.exp(-0.5 * u * u);
+    }
+    return sum * factor;
+  };
+}
+
+// ── Letter-Value Plot ───────────────────────────────────────────
+
+/**
+ * Compute letter-value levels from sorted values.
+ * Returns array of {lower, upper, depth} from outermost to innermost.
+ *
+ * @param {number[]} sorted - Pre-sorted values
+ * @returns {Array<{lower: number, upper: number, depth: number}>}
+ */
+function computeLetterValues(sorted) {
+  const n = sorted.length;
+  if (n === 0) return [];
+
+  function quantile(arr, q) {
+    const pos = (arr.length - 1) * q;
+    const base = Math.floor(pos);
+    const rest = pos - base;
+    if (base + 1 < arr.length)
+      return arr[base] + rest * (arr[base + 1] - arr[base]);
+    return arr[base];
+  }
+
+  const levels = [];
+  const maxDepth = Math.max(1, Math.floor(Math.log2(n)) - 1);
+
+  for (let k = 1; k <= maxDepth; k++) {
+    const p = 0.5 ** k;
+    const lower = quantile(sorted, p);
+    const upper = quantile(sorted, 1 - p);
+    levels.push({ lower, upper, depth: k });
+    // Stop if the level covers fewer than ~4 data points on each tail
+    if (n * p < 4) break;
+  }
+  return levels;
+}
+
+/**
+ * Draw a letter-value (boxen) plot as SVG elements.
+ *
+ * @param {d3.Selection} g - Parent group
+ * @param {{values: number[], x: number, width: number, yScale: d3.Scale, fillColor: string, strokeColor: string}} opts
+ */
+function drawLetterValuePlot(g, opts) {
+  const { values, x, width, yScale, fillColor, strokeColor } = opts;
+  if (values.length === 0) return;
+  const sorted = [...values].sort((a, b) => a - b);
+  const levels = computeLetterValues(sorted);
+  const nLevels = levels.length;
+  const lvG = g.append("g").attr("class", "lettervalue");
+
+  // Parse base color for alpha blending
+  const baseColor = fillColor;
+
+  // Draw levels from outermost (narrowest box) to innermost (widest box)
+  for (let i = 0; i < nLevels; i++) {
+    const lv = levels[i];
+    const boxW = width * ((i + 1) / nLevels);
+    const xOff = x + (width - boxW) / 2;
+    const alpha = 0.2 + 0.6 * ((i + 1) / nLevels);
+
+    lvG
+      .append("rect")
+      .attr("x", xOff)
+      .attr("y", yScale(lv.upper))
+      .attr("width", boxW)
+      .attr("height", Math.max(0, yScale(lv.lower) - yScale(lv.upper)))
+      .attr("fill", fillColor)
+      .attr("fill-opacity", alpha)
+      .attr("stroke", strokeColor)
+      .attr("stroke-opacity", 0.4)
+      .attr("stroke-width", 0.5);
+  }
+
+  // Median line
+  const median = d3.quantile(sorted, 0.5);
+  lvG
+    .append("line")
+    .attr("x1", x)
+    .attr("y1", yScale(median))
+    .attr("x2", x + width)
+    .attr("y2", yScale(median))
+    .attr("stroke", strokeColor)
+    .attr("stroke-width", 2);
+
+  // Whisker line spanning full data range
+  lvG
+    .append("line")
+    .attr("x1", x + width / 2)
+    .attr("y1", yScale(sorted[0]))
+    .attr("x2", x + width / 2)
+    .attr("y2", yScale(sorted[sorted.length - 1]))
+    .attr("stroke", strokeColor)
+    .attr("stroke-width", 0.5);
+
+  return lvG;
 }
 
 // ── Boxplot ─────────────────────────────────────────────────────
