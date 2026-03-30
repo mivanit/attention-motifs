@@ -203,15 +203,16 @@ methods = ["hierarchical", "hdbscan", "leiden"]
 # -- HDBSCAN (density-based, sklearn) --
 # min_cluster_size values to sweep; controls cluster granularity.
 # Heads not assigned to any cluster become outliers (label -1).
-# hdbscan_min_cluster_sizes = [3, 5, 10, 20]
+hdbscan_min_cluster_sizes = [3, 5, 10, 20]
 
 # -- Leiden (graph community detection, igraph) --
 # Builds a mutual k-NN graph from the distance matrix with Gaussian
 # kernel edge weights, then runs Leiden at each resolution.
 # Higher resolution = more / smaller clusters.
-# leiden_resolutions = [0.1, 0.25, 0.5, 1.0, 2.0]
+leiden_resolutions = [0.1, 0.25, 0.5, 1.0, 2.0]
 # k for k-NN graph construction
-# leiden_n_neighbors = 10
+# TODO: sweep over n_neighbors???
+leiden_n_neighbors = 10
 
 # ablation experiments (step s7)
 # ============================================================
