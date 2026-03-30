@@ -92,6 +92,19 @@ def deploy_ablation_frontend(
 	libs_dst.parent.mkdir(parents=True, exist_ok=True)
 	libs_dst.write_bytes(libs_src.read_bytes())
 
+	# Copy correlations page (sibling frontend)
+	correlations_src: Path = frontend_resources_path / "correlations" / "index.html"
+	if correlations_src.exists():
+		corr_html: str = correlations_src.read_text()
+		corr_html = corr_html.replace(
+			'src="../../libs/d3.min.js"',
+			'src="../libs/d3.min.js"',
+		)
+		corr_out: Path = output_dir / "correlations.html"
+		corr_out.write_text(corr_html)
+		if verbose > 0:
+			print(f"Wrote correlations frontend to {corr_out}")
+
 	if verbose > 0:
 		print(f"Wrote ablation frontend to {html_path}")
 		print(f"Wrote d3.min.js to {libs_dst}")
