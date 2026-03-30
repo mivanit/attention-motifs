@@ -121,3 +121,25 @@ Ablation is performed one head at a time (single-head ablation), matching the pa
 | Repetition boundary exclusion | Not discussed | First token of each repetition excluded from induction mask | Avoids confounding boundary effects; consistent between conditions |
 | Number of samples | 10 | 50--100 | Reduces variance without changing metric definitions |
 | Mean ablation | Not described | Included as additional method | Provides a less aggressive baseline for comparison |
+
+## Metric Usability Notes
+
+### Metrics used in the paper
+
+| Metric | Type | Status | Notes |
+|---|---|---|---|
+| `loss_increase` | Causal (ablation impact) | **Used** | Primary metric. Correctly implemented. |
+| `prefix_score` (offset $+1$) | Head characterization | **Used** | Measures attention to induction target. Offset $+1$ diverges from paper (see table above) but matches the K-composition mechanism. |
+| `copying_score` | Head characterization | **Used** | Measures logit increase for the correct next token at induction positions via direct path $z \cdot W_O \cdot W_U$. Clean induction-specific measure. |
+| `icl_degradation` | Causal (ablation impact) | **Used** | Single-position measurement (tokens 50 and 500) gives high variance; averaged over 50 prompts. |
+
+### Metrics not used in the paper
+
+| Metric | Status | Reason |
+|---|---|---|
+| `ov_copying_score` | **Not used** | The paper's "Copying" evaluator specifies a single *non-repeated* sequence. Our implementation reuses the repeated test sequences, so induction heads' attention patterns are dominated by offset$+1$ positions. This conflates QK-circuit behavior with OV-circuit behavior, making the score redundant with `copying_score` (which directly measures induction-specific copying more cleanly). See `TODO.md` for planned fix. |
+| `prefix_score_legacy` (offset $-1$) | **Not used** | Tracked for reference. The offset $+1$ metric is preferred (see divergence table). |
+
+### D-score threshold
+
+The frontend uses the KS D statistic (maximum absolute CDF difference) as an effect-size measure for comparing metric distributions between clusters. The significance threshold is set to $D \geq 0.25$, which is conservative: for two groups of size $n_1$ and $n_2$, the critical $D$ at $\alpha = 0.05$ is approximately $1.36 \times \sqrt{(n_1 + n_2) / (n_1 \times n_2)}$. At $D \geq 0.25$, significance requires groups of roughly 30+ heads each. The cluster of interest shows $D > 0.8$ for prefix matching and copying scores, well above any reasonable threshold.
