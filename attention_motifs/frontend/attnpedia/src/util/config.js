@@ -21,7 +21,12 @@ const URL_UPDATE_DEBOUNCE_DELAY = 500; // ms
 const FLOAT_COMPARISON_EPSILON = 0.001;
 
 // Keys to skip during URL serialization
-const URL_SKIP_PATHS = ["data.cache", "network.headers", "tempData"];
+const URL_SKIP_PATHS = [
+  "data.cache",
+  "network.headers",
+  "tempData",
+  "middleClick.content",
+];
 
 // Keys to skip during config comparison
 const COMPARISON_SKIP_KEYS = ["timestamp", "sessionId", "tempData"];
