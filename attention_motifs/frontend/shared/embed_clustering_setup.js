@@ -8,6 +8,12 @@
  */
 
 HOOKS.onReady = async (pointCloud, uiManager) => {
+  // Match info-box background to figure background
+  const bgColor = CONFIG.rendering?.clearColor || "#000011";
+  const infoBoxStyle = document.createElement("style");
+  infoBoxStyle.textContent = `.info-box { background: ${bgColor} !important; }`;
+  document.head.appendChild(infoBoxStyle);
+
   const clustering = new ClusteringLoader();
   const available = await clustering.isAvailable();
   if (!available) {
