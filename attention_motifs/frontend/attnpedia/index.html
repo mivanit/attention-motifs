@@ -468,6 +468,7 @@
       margin: 0 auto;
       width: var(--pattern-size, 120px);
       height: var(--pattern-size, 120px);
+      overflow: hidden;
     }
     
     .pattern-image {
@@ -945,6 +946,15 @@
       border: none;
       border-top: 1px solid #e0e0e0;
       margin: 8px 0;
+    }
+    
+    .settings-number-input {
+      width: 52px;
+      padding: 2px 4px;
+      font-size: 11px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      margin-left: auto;
     }
     
     .settings-export-btn {
@@ -5211,6 +5221,7 @@
           cluster: true,
         },
         settings_open: false,
+        max_ctx: 0, // 0 = no limit
     
         // Clustering state
         clustering: null,
@@ -5300,6 +5311,9 @@
               if (cv.cluster !== undefined)
                 this.column_visibility.cluster = cv.cluster;
             }
+    
+            // Load max context window size
+            this.max_ctx = CONFIG.max_ctx || 0;
     
             // Handle classification mode
             if (this.classification_mode && this.current_classification) {
@@ -5896,6 +5910,7 @@
             imageUrl: null,
             error: null,
             patternLink: null,
+            naturalSize: 0,
     
             async init() {
               app.failureTracker.patterns.total++;
@@ -5913,7 +5928,25 @@
                 );
               }
             },
+    
+            onImageLoad(event) {
+              this.naturalSize = event.target.naturalWidth;
+            },
+    
+            get cropStyle() {
+              const maxCtx = app.max_ctx;
+              if (!maxCtx || maxCtx <= 0 || !this.naturalSize) return "";
+              if (maxCtx >= this.naturalSize) return "";
+              const scale = this.naturalSize / maxCtx;
+              const size = `calc(var(--pattern-size, 120px) * ${scale})`;
+              return `width: ${size}; height: ${size};`;
+            },
           };
+        },
+    
+        updateMaxCtx() {
+          this.max_ctx = Math.max(0, this.max_ctx);
+          setConfigValue("max_ctx", this.max_ctx);
         },
     
         classificationComponent(headId) {
@@ -6729,6 +6762,18 @@
               </label>
             </template>
             <hr class="settings-divider" />
+            <label class="settings-checkbox">
+              <span>Max context:</span>
+              <input
+                type="number"
+                x-model.number="max_ctx"
+                @change="updateMaxCtx()"
+                min="0"
+                placeholder="0 = all"
+                class="settings-number-input"
+              />
+            </label>
+            <hr class="settings-divider" />
             <button class="settings-export-btn" @click="exportTableSVG()">
               Export table SVG
             </button>
@@ -7410,6 +7455,8 @@
                         <img
                           :src="imageUrl"
                           class="pattern-image"
+                          :style="cropStyle"
+                          @load="onImageLoad($event)"
                           :alt="`Pattern for ${headRow.headId} on ${prompt.hash}`"
                         />
                       </a>
