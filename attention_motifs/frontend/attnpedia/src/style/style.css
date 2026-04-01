@@ -450,6 +450,7 @@ a {
   margin: 0 auto;
   width: var(--pattern-size, 120px);
   height: var(--pattern-size, 120px);
+  overflow: hidden;
 }
 
 .pattern-image {
@@ -927,6 +928,15 @@ a {
   border: none;
   border-top: 1px solid #e0e0e0;
   margin: 8px 0;
+}
+
+.settings-number-input {
+  width: 52px;
+  padding: 2px 4px;
+  font-size: 11px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  margin-left: auto;
 }
 
 .settings-export-btn {

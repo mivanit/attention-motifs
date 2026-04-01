@@ -148,6 +148,18 @@
               </label>
             </template>
             <hr class="settings-divider" />
+            <label class="settings-checkbox">
+              <span>Max context:</span>
+              <input
+                type="number"
+                x-model.number="max_ctx"
+                @change="updateMaxCtx()"
+                min="0"
+                placeholder="0 = all"
+                class="settings-number-input"
+              />
+            </label>
+            <hr class="settings-divider" />
             <button class="settings-export-btn" @click="exportTableSVG()">
               Export table SVG
             </button>
@@ -829,6 +841,8 @@
                         <img
                           :src="imageUrl"
                           class="pattern-image"
+                          :style="cropStyle"
+                          @load="onImageLoad($event)"
                           :alt="`Pattern for ${headRow.headId} on ${prompt.hash}`"
                         />
                       </a>

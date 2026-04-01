@@ -50,6 +50,7 @@ document.addEventListener("alpine:init", () => {
       cluster: true,
     },
     settings_open: false,
+    max_ctx: 0, // 0 = no limit
 
     // Clustering state
     clustering: null,
@@ -139,6 +140,9 @@ document.addEventListener("alpine:init", () => {
           if (cv.cluster !== undefined)
             this.column_visibility.cluster = cv.cluster;
         }
+
+        // Load max context window size
+        this.max_ctx = CONFIG.max_ctx || 0;
 
         // Handle classification mode
         if (this.classification_mode && this.current_classification) {
@@ -735,6 +739,7 @@ document.addEventListener("alpine:init", () => {
         imageUrl: null,
         error: null,
         patternLink: null,
+        naturalSize: 0,
 
         async init() {
           app.failureTracker.patterns.total++;
@@ -752,7 +757,25 @@ document.addEventListener("alpine:init", () => {
             );
           }
         },
+
+        onImageLoad(event) {
+          this.naturalSize = event.target.naturalWidth;
+        },
+
+        get cropStyle() {
+          const maxCtx = app.max_ctx;
+          if (!maxCtx || maxCtx <= 0 || !this.naturalSize) return "";
+          if (maxCtx >= this.naturalSize) return "";
+          const scale = this.naturalSize / maxCtx;
+          const size = `calc(var(--pattern-size, 120px) * ${scale})`;
+          return `width: ${size}; height: ${size};`;
+        },
       };
+    },
+
+    updateMaxCtx() {
+      this.max_ctx = Math.max(0, this.max_ctx);
+      setConfigValue("max_ctx", this.max_ctx);
     },
 
     classificationComponent(headId) {
