@@ -8,21 +8,21 @@ body {
 
 .nav-bar {
   background: white;
+  padding: 8px 16px;
   border-bottom: 1px solid #ddd;
-  padding: 12px 0;
-  margin-bottom: 20px;
 }
 
 .nav-bar-content {
+  display: flex;
+  gap: 16px;
+  align-items: center;
   max-width: 1400px;
   margin: 0 auto;
-  text-align: center;
 }
 
 .nav-bar a {
   color: #1565c0;
-  text-decoration: underline;
-  margin: 0 15px;
+  text-decoration: none;
   font-size: 14px;
 }
 
@@ -32,9 +32,8 @@ body {
 
 .nav-current {
   color: #666;
-  margin: 0 15px;
-  font-size: 14px;
   font-weight: bold;
+  font-size: 14px;
 }
 
 .container {

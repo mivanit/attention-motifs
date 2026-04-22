@@ -35,26 +35,32 @@
     /* Navigation bar styles */
     .nav-bar {
       background: white;
+      padding: 8px 16px;
       border-bottom: 1px solid #ddd;
-      padding: 12px 0;
-      margin-bottom: 20px;
     }
     
     .nav-bar-content {
+      display: flex;
+      gap: 16px;
+      align-items: center;
       max-width: 1400px;
       margin: 0 auto;
-      text-align: center;
     }
     
     .nav-bar a {
       color: #1565c0;
-      text-decoration: underline;
-      margin: 0 15px;
+      text-decoration: none;
       font-size: 14px;
     }
     
     .nav-bar a:hover {
       color: #0d47a1;
+    }
+    
+    .nav-current {
+      color: #666;
+      font-weight: bold;
+      font-size: 14px;
     }
     
     .container {
@@ -6657,13 +6663,15 @@
     <nav class="nav-bar">
       <div class="nav-bar-content">
         <a href="../../index.html">Home</a>
-        <a href="../../patterns/index.html">Pattern Lens</a>
+        <span class="nav-current">AttentionPedia</span>
+        <a href="../embeds/patterns/index.html">Pattern Embeddings</a>
+        <a href="../embeds/heads/index.html">Head Embeddings</a>
+        <a href="../../figures/head_embed_table.html">Head Embed Table</a>
         <a href="../../figures/classifications.html">Classifications</a>
-        <a href="../../vis/embeds/patterns/index.html">Pattern Embeddings</a>
-        <a href="../../vis/embeds/heads/index.html">Head Embeddings</a>
-        <a href="../../figures/head_embed_table.html">Head Embedding Table</a>
         <a href="../clustering/index.html">Clustering</a>
         <a href="../cluster_trends/index.html">Cluster Trends</a>
+        <a href="../../ablations/index.html">Ablation</a>
+        <a href="../../ablations/correlations.html">Correlations</a>
       </div>
     </nav>
 
