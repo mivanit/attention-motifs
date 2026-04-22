@@ -774,7 +774,7 @@ document.addEventListener("alpine:init", () => {
     },
 
     updateMaxCtx() {
-      this.max_ctx = Math.max(0, this.max_ctx);
+      this.max_ctx = Math.max(0, Math.floor(this.max_ctx));
       setConfigValue("max_ctx", this.max_ctx);
     },
 
@@ -1426,6 +1426,10 @@ document.addEventListener("alpine:init", () => {
           "font-weight",
           "font-family",
           "line-height",
+          "overflow",
+          "width",
+          "height",
+          "display",
         ];
         for (const prop of dominated) {
           target.style.setProperty(prop, cs.getPropertyValue(prop));
