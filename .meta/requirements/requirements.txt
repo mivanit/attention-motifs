@@ -7,7 +7,7 @@ accelerate==1.13.0
     # via transformer-lens
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.13.3
+aiohttp==3.13.5
     # via fsspec
 aiosignal==1.4.0
     # via aiohttp
@@ -15,20 +15,20 @@ annotated-doc==0.0.4
     # via typer
 annotated-types==0.7.0
     # via pydantic
-anyio==4.12.1
+anyio==4.13.0
     # via httpx
 appnope==0.1.4 ; sys_platform == 'darwin'
     # via ipykernel
 asttokens==3.0.1
     # via stack-data
-attrs==25.4.0
+attrs==26.1.0
     # via
     #   aiohttp
     #   igittigitt
     #   jsonschema
     #   referencing
-basedpyright==1.38.3
-beartype==0.14.1
+basedpyright==1.39.3
+beartype==0.22.9
     # via
     #   attention-motifs
     #   pattern-lens
@@ -41,7 +41,7 @@ bleach==6.3.0
     # via nbconvert
 bracex==2.6
     # via wcmatch
-certifi==2026.2.25
+certifi==2026.4.22
     # via
     #   httpcore
     #   httpx
@@ -49,11 +49,11 @@ certifi==2026.2.25
     #   sentry-sdk
 cffi==2.0.0 ; implementation_name == 'pypy'
     # via pyzmq
-charset-normalizer==3.4.6
+charset-normalizer==3.4.7
     # via requests
 cli-exit-tools==1.2.7
     # via igittigitt
-click==8.3.1
+click==8.3.3
     # via
     #   cli-exit-tools
     #   igittigitt
@@ -80,7 +80,7 @@ coverage==7.13.5
 coverage-badge==1.1.2
 cycler==0.12.1
     # via matplotlib
-datasets==4.8.2
+datasets==4.8.4
     # via
     #   attention-motifs
     #   pattern-lens
@@ -107,7 +107,7 @@ fancy-einsum==0.0.3
     # via transformer-lens
 fastjsonschema==2.21.2
     # via nbformat
-filelock==3.25.2
+filelock==3.29.0
     # via
     #   datasets
     #   huggingface-hub
@@ -125,15 +125,15 @@ fsspec==2026.2.0
     #   torch
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.46
+gitpython==3.1.47
     # via wandb
-greenlet==3.3.2
+greenlet==3.4.0
     # via playwright
-grpcio==1.78.0
+grpcio==1.80.0
     # via tensorboard
 h11==0.16.0
     # via httpcore
-hf-xet==1.4.2 ; platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'
+hf-xet==1.4.3 ; platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'
     # via huggingface-hub
 httpcore==1.0.9
     # via httpx
@@ -141,13 +141,14 @@ httpx==0.28.1
     # via
     #   datasets
     #   huggingface-hub
-huggingface-hub==1.7.1
+huggingface-hub==1.11.0
     # via
     #   accelerate
     #   datasets
     #   tokenizers
+    #   transformer-lens
     #   transformers
-idna==3.11
+idna==3.13
     # via
     #   anyio
     #   httpx
@@ -163,7 +164,7 @@ ipykernel==7.2.0
     # via
     #   attention-motifs
     #   pattern-lens
-ipython==9.11.0
+ipython==9.12.0
     # via
     #   ipykernel
     #   ipywidgets
@@ -173,7 +174,7 @@ ipywidgets==8.1.8
     # via
     #   attention-motifs
     #   pattern-lens
-jaxtyping==0.2.19
+jaxtyping==0.3.9
     # via
     #   attention-motifs
     #   pattern-lens
@@ -190,7 +191,7 @@ joblib==1.5.3
     # via
     #   pynndescent
     #   scikit-learn
-js-embedding-vis @ git+https://github.com/mivanit/js-embedding-vis@2eb9ba0e34f6b6d214aa4a0b6b5ec61b90dfbb4a
+js-embedding-vis @ git+https://github.com/mivanit/js-embedding-vis@3facd57bbd596c090f02cf1d63a9cb0c2a665659
     # via attention-motifs
 jsonschema==4.26.0
     # via nbformat
@@ -217,9 +218,9 @@ lib-detect-testenv==3.0.1
     # via
     #   cli-exit-tools
     #   igittigitt
-librt==0.8.1 ; platform_python_implementation != 'PyPy'
+librt==0.9.0 ; platform_python_implementation != 'PyPy'
     # via mypy
-llvmlite==0.46.0
+llvmlite==0.47.0
     # via
     #   numba
     #   pynndescent
@@ -263,14 +264,14 @@ muutils==0.9.1
     #   pattern-lens
     #   trnbl
     #   zanj
-mypy==1.19.1
+mypy==1.20.2
 mypy-extensions==1.1.0
     # via mypy
-narwhals==2.18.0
+narwhals==2.20.0
     # via plotly
 nbclient==0.10.4
     # via nbconvert
-nbconvert==7.17.0
+nbconvert==7.17.1
 nbformat==5.10.4
     # via
     #   attention-motifs
@@ -280,9 +281,9 @@ nest-asyncio==1.6.0
     # via ipykernel
 networkx==3.6.1
     # via torch
-nodejs-wheel-binaries==24.14.0
+nodejs-wheel-binaries==24.15.0
     # via basedpyright
-numba==0.64.0
+numba==0.65.0
     # via
     #   pynndescent
     #   umap-learn
@@ -292,7 +293,6 @@ numpy==1.26.4
     #   attention-motifs
     #   contourpy
     #   datasets
-    #   jaxtyping
     #   matplotlib
     #   numba
     #   numpy-typing-compat
@@ -347,7 +347,7 @@ nvidia-nvtx-cu12==12.4.127 ; platform_machine == 'x86_64' and sys_platform == 'l
     # via torch
 optype==0.17.0
     # via scipy-stubs
-packaging==26.0
+packaging==26.1
     # via
     #   accelerate
     #   datasets
@@ -360,7 +360,7 @@ packaging==26.0
     #   tensorboard
     #   transformers
     #   wandb
-pandas==3.0.1
+pandas==3.0.2
     # via
     #   datasets
     #   pattern-lens
@@ -377,26 +377,26 @@ pattern-lens @ git+https://github.com/mivanit/pattern-lens@0c50ad2469d2ddb1e9200
 pdoc==16.0.0
 pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
     # via ipython
-pillow==12.1.1
+pillow==12.2.0
     # via
     #   matplotlib
     #   pattern-lens
     #   tensorboard
-platformdirs==4.9.4
+platformdirs==4.9.6
     # via
     #   jupyter-core
     #   wandb
 playwright==1.58.0
     # via pytest-playwright
-plotly==6.6.0
+plotly==6.7.0
     # via attention-motifs
 pluggy==1.6.0
     # via
     #   pytest
     #   pytest-cov
-polars==1.39.2
+polars==1.40.1
     # via attention-motifs
-polars-runtime-32==1.39.2
+polars-runtime-32==1.40.1
     # via polars
 prompt-toolkit==3.0.52
     # via ipython
@@ -404,9 +404,10 @@ propcache==0.4.1
     # via
     #   aiohttp
     #   yarl
-protobuf==6.33.5
+protobuf==7.34.1
     # via
     #   tensorboard
+    #   transformer-lens
     #   wandb
 psutil==7.2.2
     # via
@@ -416,7 +417,7 @@ ptyprocess==0.7.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
-pyarrow==23.0.1
+pyarrow==24.0.0
     # via datasets
 pycparser==3.0 ; implementation_name == 'pypy'
     # via cffi
@@ -428,7 +429,7 @@ pydantic-core==2.27.2
     # via pydantic
 pyee==13.0.1
     # via playwright
-pygments==2.19.2
+pygments==2.20.0
     # via
     #   ipython
     #   ipython-pygments-lexers
@@ -440,7 +441,7 @@ pynndescent==0.6.0
     # via umap-learn
 pyparsing==3.3.2
     # via matplotlib
-pytest==9.0.2
+pytest==9.0.3
     # via
     #   pytest-base-url
     #   pytest-cov
@@ -448,7 +449,7 @@ pytest==9.0.2
     #   pytest-xdist
 pytest-base-url==2.1.0
     # via pytest-playwright
-pytest-cov==7.0.0
+pytest-cov==7.1.0
 pytest-playwright==0.7.2
 pytest-xdist==3.8.0
 python-dateutil==2.9.0.post0
@@ -475,14 +476,14 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-regex==2026.2.28
+regex==2026.4.4
     # via transformers
-requests==2.32.5
+requests==2.33.1
     # via
     #   datasets
     #   pytest-base-url
     #   wandb
-rich==14.3.3
+rich==15.0.0
     # via
     #   rich-click
     #   transformer-lens
@@ -493,7 +494,7 @@ rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
-ruff==0.15.6
+ruff==0.15.11
 safetensors==0.7.0
     # via
     #   accelerate
@@ -510,10 +511,10 @@ scipy==1.17.1
     #   pynndescent
     #   scikit-learn
     #   umap-learn
-scipy-stubs==1.17.1.2
+scipy-stubs==1.17.1.4
 sentencepiece==0.2.1
     # via transformer-lens
-sentry-sdk==2.55.0
+sentry-sdk==2.58.0
     # via wandb
 setuptools==82.0.1
     # via
@@ -577,11 +578,11 @@ traitlets==5.14.3
     #   nbclient
     #   nbconvert
     #   nbformat
-transformer-lens @ git+https://github.com/TransformerLensOrg/TransformerLens@04ccabfaad2f8e1055a9f3099229af817d602397
+transformer-lens @ git+https://github.com/TransformerLensOrg/TransformerLens@2a7d5c49795789218d372409c6911ab12b07aaa8
     # via
     #   attention-motifs
     #   pattern-lens
-transformers==5.3.0
+transformers==5.6.0
     # via
     #   attention-motifs
     #   transformer-lens
@@ -592,21 +593,20 @@ triton==3.2.0 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
 trnbl==0.1.1
     # via attention-motifs
-ty==0.0.23
+ty==0.0.32
 typeguard==4.4.2
     # via
     #   attention-motifs
-    #   jaxtyping
     #   pattern-lens
     #   transformer-lens
-typer==0.24.1
+typer==0.24.2
     # via
     #   huggingface-hub
     #   transformers
-types-psutil==7.2.2.20260130
-types-requests==2.32.4.20260107
+types-psutil==7.2.2.20260408
+types-requests==2.33.0.20260408
     # via types-tqdm
-types-tqdm==4.67.3.20260303
+types-tqdm==4.67.3.20260408
 typing-extensions==4.12.2
     # via
     #   aiosignal
@@ -615,7 +615,6 @@ typing-extensions==4.12.2
     #   beautifulsoup4
     #   grpcio
     #   huggingface-hub
-    #   jaxtyping
     #   mypy
     #   optype
     #   pydantic
@@ -626,16 +625,18 @@ typing-extensions==4.12.2
     #   transformer-lens
     #   typeguard
     #   wandb
-tzdata==2025.3 ; sys_platform == 'emscripten' or sys_platform == 'win32'
+tzdata==2026.1 ; sys_platform == 'emscripten' or sys_platform == 'win32'
     # via pandas
-umap-learn==0.5.11
+umap-learn==0.5.12
     # via attention-motifs
 urllib3==2.6.3
     # via
     #   requests
     #   sentry-sdk
     #   types-requests
-wandb==0.25.1
+wadler-lindig==0.1.7
+    # via jaxtyping
+wandb==0.26.0
     # via transformer-lens
 wcmatch==10.1
     # via igittigitt
@@ -645,7 +646,7 @@ webencodings==0.5.1
     # via
     #   bleach
     #   tinycss2
-werkzeug==3.1.6
+werkzeug==3.1.8
     # via tensorboard
 widgetsnbextension==4.0.15
     # via ipywidgets
