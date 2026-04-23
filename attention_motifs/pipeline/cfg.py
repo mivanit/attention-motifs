@@ -213,7 +213,21 @@ DEFAULT_VIS_CONFIGS: dict[str, dict[str, Any]] = dict(
 						"</div>"
 						'<div id="clusterStats" style="font-size:11px;color:#888;margin-top:8px;"></div>'
 					),
-				}
+				},
+				{
+					"id": "familyScale",
+					"title": "Family × Scale",
+					"key": "Digit2",
+					"shortcutText": "2 \u2013 family\u00d7scale",
+					"visible": False,
+					"position": {"top": "20px", "right": "320px"},
+					"html": (
+						'<div style="margin-bottom:8px;">'
+						'<label><input type="checkbox" id="familyScaleEnabled"> Enable family\u00d7scale coloring</label>'
+						"</div>"
+						'<div id="familyScaleLegend" style="font-size:11px;color:#ccc;margin-top:8px;"></div>'
+					),
+				},
 			],
 		},
 	),

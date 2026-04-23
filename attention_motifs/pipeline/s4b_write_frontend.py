@@ -60,6 +60,9 @@ def write_frontend(cfg: PipelineConfig) -> None:
 	clustering_js: str = (
 		frontend_resources_path / "attnpedia/src/clustering.js"
 	).read_text()
+	family_scale_js: str = (
+		frontend_resources_path / "shared/family_scale_color.js"
+	).read_text()
 	setup_js: str = (
 		frontend_resources_path / "shared/embed_clustering_setup.js"
 	).read_text()
@@ -71,6 +74,8 @@ def write_frontend(cfg: PipelineConfig) -> None:
 		+ clustering_config_js
 		+ "\n"
 		+ clustering_js
+		+ "\n"
+		+ family_scale_js
 		+ "\n"
 		+ setup_js
 	)

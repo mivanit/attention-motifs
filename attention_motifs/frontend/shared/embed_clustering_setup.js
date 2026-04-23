@@ -1,17 +1,24 @@
 /**
  * Embedding clustering hook setup.
  *
- * Assumes ClusteringLoader is already defined (concatenated before this file).
+ * Assumes ClusteringLoader and initFamilyScaleColor are already defined
+ * (concatenated before this file).
  * Sets HOOKS.onReady to wire clustering controls into the js-embedding-vis
  * custom panel: method selector, cut height slider, param selector,
  * min cluster size slider, enable checkbox.
+ * Also initializes the family×scale color mode.
  */
 
 HOOKS.onReady = async (pointCloud, uiManager) => {
+  // --- Family×Scale color mode (independent of clustering availability) ---
+  const familyScale = initFamilyScaleColor(pointCloud);
+
   const clustering = new ClusteringLoader();
   const available = await clustering.isAvailable();
   if (!available) {
     console.warn("Clustering data not available, disabling clustering panel");
+    // Still set up colorOverrideFn for family-scale only
+    HOOKS.colorOverrideFn = (rowIndex, row) => familyScale.getColor(row);
     return;
   }
 
@@ -101,12 +108,13 @@ HOOKS.onReady = async (pointCloud, uiManager) => {
     pointCloud._updateColors();
   }
 
-  // Color override hook: return cluster RGB for each point
+  // Color override hook: cluster takes priority, then family-scale, then null (built-in)
   HOOKS.colorOverrideFn = (rowIndex, row) => {
-    if (!enabled) return null;
-    const cid = clustering._assignments[row.cls];
-    if (cid === undefined) return null;
-    return clustering.getClusterColorRGB(cid);
+    if (enabled) {
+      const cid = clustering._assignments[row.cls];
+      if (cid !== undefined) return clustering.getClusterColorRGB(cid);
+    }
+    return familyScale.getColor(row);
   };
 
   // Hover extension hook: show cluster ID, name, and desc
