@@ -271,6 +271,12 @@ Output: data/vis/*/index.html  ← DON'T EDIT (generated)
 | `make am-serve-patterns` | Serve pattern lens on localhost |
 | `make am-clean` | Delete ALL generated files in data/ (careful!) |
 
+**Standalone scripts:**
+
+| Command | Description |
+|---------|-------------|
+| `uv run python attention_motifs/pipeline/s5_head_embed.py --add-metadata [path]` | Fast-add `model_family`/`model_size`/`layer_depth` columns to existing `head_embed.jsonl` without re-running full s5 |
+
 **Typical workflows:**
 
 - Edit frontend source → `make am-frontend-bundle` → `make am-frontend-deploy`
