@@ -1,5 +1,6 @@
 import polars as pl
 import json
+from pathlib import Path
 from typing import Any
 
 # attention-motifs
@@ -89,6 +90,86 @@ def create_plots_metadata(prefixes: list[str]) -> dict[str, Any]:
 	}
 
 
+def add_model_metadata_columns(df: pl.DataFrame) -> pl.DataFrame:
+	"""Add model_family, layer_depth, and model_size columns to a head embedding DataFrame.
+
+	Drops existing metadata columns if present (idempotent), then adds fresh ones
+	from the model table. Returns a new DataFrame with columns reordered:
+	cls, model, layer, head, model_family, layer_depth, model_size, type.*, embed.*
+
+	Args:
+		df: DataFrame with at least 'model' and 'layer' columns.
+
+	Returns:
+		DataFrame with metadata columns added and reordered.
+	"""
+	# Drop existing metadata columns if present (makes this idempotent)
+	existing_meta: list[str] = [
+		c for c in ("model_family", "layer_depth", "model_size") if c in df.columns
+	]
+	if existing_meta:
+		df = df.drop(existing_meta)
+
+	model_table: dict[str, ModelInfo] = fetch_model_table()
+	model_n_layers: dict[str, int] = {
+		name: info.n_layers for name, info in model_table.items()
+	}
+	model_n_params: dict[str, int] = {
+		name: info.n_params for name, info in model_table.items()
+	}
+
+	df = df.with_columns(
+		pl.col("model")
+		.map_elements(
+			lambda m: get_model_family(m, except_on_missing=False), return_dtype=pl.Utf8
+		)
+		.alias("model_family"),
+		(
+			pl.col("layer")
+			/ pl.col("model").replace_strict(
+				model_n_layers, default=None, return_dtype=pl.Int64
+			)
+		).alias("layer_depth"),
+		pl.col("model")
+		.replace_strict(model_n_params, default=None, return_dtype=pl.Int64)
+		.alias("model_size"),
+	)
+
+	# Reorder: put new columns right after "head", before "type.*"
+	base_cols: list[str] = [
+		"cls",
+		"model",
+		"layer",
+		"head",
+		"model_family",
+		"layer_depth",
+		"model_size",
+	]
+	type_cols: list[str] = [c for c in df.columns if c.startswith("type.")]
+	embed_cols_ordered: list[str] = [
+		c for c in df.columns if c.startswith("embed.")
+	]
+	return df.select(base_cols + type_cols + embed_cols_ordered)
+
+
+def add_metadata_to_existing(path: str | Path) -> None:
+	"""Load an existing head_embed.jsonl, add/refresh metadata columns, write back.
+
+	This is a fast alternative to re-running the full s5 pipeline step when only
+	the metadata columns (model_family, layer_depth, model_size) need updating.
+
+	Args:
+		path: Path to the head_embed.jsonl file.
+	"""
+	jsonl_path: Path = Path(path)
+	df: pl.DataFrame = pl.read_ndjson(jsonl_path)
+	print(f"Loaded {df.shape[0]} rows, {df.shape[1]} cols from {jsonl_path}")
+
+	df = add_model_metadata_columns(df)
+	df.write_ndjson(jsonl_path)
+	print(f"Written {df.shape[0]} rows, {df.shape[1]} cols to {jsonl_path}")
+
+
 def head_embed(cfg: PipelineConfig) -> None:
 	"""Generate head embeddings from distance matrix.
 
@@ -116,47 +197,7 @@ def head_embed(cfg: PipelineConfig) -> None:
 		save_path=None,  # We'll save manually to follow pipeline conventions
 	)
 
-	# Add model metadata columns
-	model_table: dict[str, ModelInfo] = fetch_model_table()
-	model_n_layers: dict[str, int] = {
-		name: info.n_layers for name, info in model_table.items()
-	}
-	model_n_params: dict[str, int] = {
-		name: info.n_params for name, info in model_table.items()
-	}
-
-	head_embed_df = head_embed_df.with_columns(
-		pl.col("model")
-		.map_elements(
-			lambda m: get_model_family(m, except_on_missing=False), return_dtype=pl.Utf8
-		)
-		.alias("model_family"),
-		(
-			pl.col("layer")
-			/ pl.col("model").replace_strict(
-				model_n_layers, default=None, return_dtype=pl.Int64
-			)
-		).alias("layer_depth"),
-		pl.col("model")
-		.replace_strict(model_n_params, default=None, return_dtype=pl.Int64)
-		.alias("model_size"),
-	)
-
-	# Reorder: put new columns right after "head", before "type.*"
-	base_cols: list[str] = [
-		"cls",
-		"model",
-		"layer",
-		"head",
-		"model_family",
-		"layer_depth",
-		"model_size",
-	]
-	type_cols: list[str] = [c for c in head_embed_df.columns if c.startswith("type.")]
-	embed_cols_ordered: list[str] = [
-		c for c in head_embed_df.columns if c.startswith("embed.")
-	]
-	head_embed_df = head_embed_df.select(base_cols + type_cols + embed_cols_ordered)
+	head_embed_df = add_model_metadata_columns(head_embed_df)
 
 	# Save embeddings for frontend visualization
 	head_embed_df.write_ndjson(cfg.data_path("head_embed"))
@@ -197,5 +238,23 @@ def head_embed(cfg: PipelineConfig) -> None:
 if __name__ == "__main__":
 	import sys
 
-	cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv[1:])
-	head_embed(cfg)
+	if len(sys.argv) >= 2 and sys.argv[1] == "--add-metadata":
+		# Fast path: just add metadata columns to existing JSONL
+		if len(sys.argv) > 3:
+			print(
+				"Usage: python -m attention_motifs.pipeline.s5_head_embed --add-metadata [path]",
+				file=sys.stderr,
+			)
+			sys.exit(1)
+		path: str = sys.argv[2] if len(sys.argv) > 2 else "data/features/head_embed.jsonl"
+		if path.startswith("-"):
+			print(
+				f"Error: expected a file path, got flag '{path}'\n"
+				"Usage: python -m attention_motifs.pipeline.s5_head_embed --add-metadata [path]",
+				file=sys.stderr,
+			)
+			sys.exit(1)
+		add_metadata_to_existing(path)
+	else:
+		cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv[1:])
+		head_embed(cfg)
