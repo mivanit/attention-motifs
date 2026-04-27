@@ -1,4 +1,5 @@
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Callable
 
@@ -12,7 +13,7 @@ from attention_motifs.util.model_name import cached_sanitize_model_name
 
 
 def prefix_dict[T_key](
-	d: dict[str, T_key],
+	d: Mapping[str, T_key],
 	prefix: str | list[str],
 	sep: str = ".",
 ) -> dict[str, T_key]:

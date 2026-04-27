@@ -13,7 +13,7 @@ from attention_motifs.pipeline.cfg import PipelineConfig
 def write_frontend(cfg: PipelineConfig) -> None:
 	"""Writes the indexes for the attention patterns."""
 	frontend_resources_path: Path = Path(
-		importlib.resources.files(attention_motifs).joinpath("frontend"),  # type: ignore[arg-type]
+		importlib.resources.files(attention_motifs).joinpath("frontend"),  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 	)
 
 	ap_html: str = (frontend_resources_path / "attnpedia/index.html").read_text()

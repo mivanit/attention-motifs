@@ -76,8 +76,7 @@ def process_prompt(
 							prefix="activation",
 						),
 						**prefix_dict(
-							# returns dict[str, int|float], but type checker expects dict[str, int|float|str] (dict is invariant)
-							features_func(A),  # type: ignore[arg-type]
+							features_func(A),
 							prefix="feat",
 						),
 					}

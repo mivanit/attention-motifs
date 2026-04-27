@@ -47,7 +47,7 @@ class StepRecord:
 	def load(cls, data: dict[str, str | float]) -> "StepRecord":
 		"""Create instance from dict."""
 		return cls(
-			name=data["name"],  # type: ignore[arg-type]
+			name=data["name"],  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 			completed_at=str(data["completed_at"]),
 			duration_seconds=float(data["duration_seconds"]),
 		)

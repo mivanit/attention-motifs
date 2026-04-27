@@ -7,7 +7,7 @@ their causal role in model behavior.
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Iterable, Iterator
+from typing import Callable, Iterable, Iterator, cast
 
 import torch
 from torch import Tensor
@@ -227,11 +227,10 @@ class HeadAblator:
 
 				# Tokenize if needed
 				if isinstance(batch[0], str):
-					# we can safely assume everything in the batch is str
-					tokens: Tensor = self.model.to_tokens(batch)  # type: ignore[arg-type]
+					# isinstance on batch[0] doesn't narrow the list type
+					tokens: Tensor = self.model.to_tokens(cast(list[str], batch))
 				else:
-					# isinstance on batch[0] doesn't narrow the list type for mypy
-					tokens = torch.stack(batch) if isinstance(batch, list) else batch  # type: ignore[arg-type]
+					tokens = torch.stack(cast(list[Tensor], batch)) if isinstance(batch, list) else batch
 
 				# Run with hooks
 

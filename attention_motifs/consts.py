@@ -210,6 +210,6 @@ def tensor_batches_indexed(
 			)
 			break
 		# @overload narrows return type for callers; generator yields union which checker can't verify
-		yield idx_start, idx_end, arr_slice  # type: ignore[misc]  # pyright: ignore[reportReturnType]
+		yield idx_start, idx_end, arr_slice  # type: ignore[misc]  # pyright: ignore[reportReturnType]  # ty: ignore[invalid-yield]
 		# increment index
 		idx_start += batch_size

@@ -204,7 +204,7 @@ def create_head_embedding_df(
 		df = df.with_columns(pl.Series(f"embed.{i}", embedding[:, i]))
 
 	# HACK: add metadata
-	df._embed_meta = dict(  # type: ignore[attr-defined]
+	df._embed_meta = dict(  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
 		embedding_method=embedding_method,
 		n_components=n_components,
 		n_neighbors=n_neighbors,

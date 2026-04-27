@@ -18,7 +18,7 @@ def _get_bundled_html() -> str:
 	    Bundled HTML string.
 	"""
 	frontend_resources_path: Path = Path(
-		importlib.resources.files(attention_motifs).joinpath("frontend"),  # type: ignore[arg-type]
+		importlib.resources.files(attention_motifs).joinpath("frontend"),  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 	)
 	html_path: Path = frontend_resources_path / "ablation" / "index.html"
 	return html_path.read_text()
@@ -85,7 +85,7 @@ def deploy_ablation_frontend(
 
 	# Ensure d3.min.js is available at data/libs/
 	frontend_resources_path: Path = Path(
-		importlib.resources.files(attention_motifs).joinpath("frontend"),  # type: ignore[arg-type]
+		importlib.resources.files(attention_motifs).joinpath("frontend"),  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 	)
 	libs_src: Path = frontend_resources_path / "libs" / "d3.min.js"
 	libs_dst: Path = output_dir.parent / "libs" / "d3.min.js"

@@ -19,7 +19,7 @@ def write_cluster_frontend(cfg: PipelineConfig) -> None:
 	pipeline_step_major("pipeline step 6c: write cluster frontends")
 
 	frontend_resources_path: Path = Path(
-		importlib.resources.files(attention_motifs).joinpath("frontend"),  # type: ignore[arg-type]
+		importlib.resources.files(attention_motifs).joinpath("frontend"),  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 	)
 
 	# clustering frontend
