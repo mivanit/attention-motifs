@@ -178,10 +178,9 @@ def feat_proc(cfg: PipelineConfig) -> None:
 
 
 def add_metadata_to_pattern_files(data_dir: str | Path) -> None:
-	"""Add/refresh activation.model_family and activation.model_size on existing pattern files.
+	"""Add/refresh activation.model_family and activation.model_size on pca_web.csv.
 
-	Patches all pattern embedding data files in *data_dir* (JSONL, CSV, Parquet)
-	without re-running the full s3 pipeline step.
+	Patches ``pca_web.csv`` in *data_dir* without re-running the full s3 pipeline step.
 
 	Args:
 		data_dir: Directory containing the pattern embedding files
@@ -191,40 +190,19 @@ def add_metadata_to_pattern_files(data_dir: str | Path) -> None:
 
 	data_dir_path: Path = Path(data_dir)
 
-	# Patch JSONL files
-	for filename in ("raw.jsonl", "scaled.jsonl", "pca.jsonl"):
-		path: Path = data_dir_path / filename
-		if not path.exists():
-			print(f"  Skipping {path} (not found)")
-			continue
-		df: pl.DataFrame = pl.read_ndjson(path)
-		print(f"  Loaded {df.shape[0]} rows, {df.shape[1]} cols from {path}")
-		df = add_pattern_metadata_columns(df)
-		df.write_ndjson(path)
-		print(f"  Written {df.shape[0]} rows, {df.shape[1]} cols to {path}")
-
-	# Patch CSV files
-	for filename in ("pca.csv", "pca_web.csv"):
-		path = data_dir_path / filename
-		if not path.exists():
-			print(f"  Skipping {path} (not found)")
-			continue
-		df = pl.read_csv(path)
-		print(f"  Loaded {df.shape[0]} rows, {df.shape[1]} cols from {path}")
-		df = add_pattern_metadata_columns(df)
-		df.write_csv(path, float_precision=6)
-		print(f"  Written {df.shape[0]} rows, {df.shape[1]} cols to {path}")
-
-	# Patch Parquet
-	pca_parquet: Path = data_dir_path / "pca.parquet"
-	if pca_parquet.exists():
-		df = pl.read_parquet(pca_parquet)
-		print(f"  Loaded {df.shape[0]} rows, {df.shape[1]} cols from {pca_parquet}")
-		df = add_pattern_metadata_columns(df)
-		df.write_parquet(pca_parquet)
-		print(f"  Written {df.shape[0]} rows, {df.shape[1]} cols to {pca_parquet}")
-	else:
-		print(f"  Skipping {pca_parquet} (not found)")
+	# NOTE: to also patch other files, add them here:
+	# JSONL: "raw.jsonl", "scaled.jsonl", "pca.jsonl"
+	# CSV: "pca.csv"
+	# Parquet: "pca.parquet"
+	path: Path = data_dir_path / "pca_web.csv"
+	if not path.exists():
+		print(f"  Skipping {path} (not found)")
+		return
+	df: pl.DataFrame = pl.read_csv(path)
+	print(f"  Loaded {df.shape[0]} rows, {df.shape[1]} cols from {path}")
+	df = add_pattern_metadata_columns(df)
+	df.write_csv(path, float_precision=6)
+	print(f"  Written {df.shape[0]} rows, {df.shape[1]} cols to {path}")
 
 
 if __name__ == "__main__":
