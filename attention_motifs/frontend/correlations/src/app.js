@@ -22,7 +22,7 @@ const CONFIG = {
   clustering_leiden_labels_url:
     "../features/clustering_leiden/cluster_labels.json",
   attnpedia_url: "../vis/attnpedia/ap.json",
-  headDistsnpy_url: "../features/head_dists_raw/distances.npy",
+  headDistsnpy_url: "../features/head_dists_raw/distances_f32.npy",
   headDistsmeta_url: "../features/head_dists_raw/dists_meta.json",
 };
 
