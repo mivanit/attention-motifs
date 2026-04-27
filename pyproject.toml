@@ -155,6 +155,10 @@ ignore_missing_imports = true
 [tool.basedpyright]
 	typeCheckingMode = "standard"
 	include = ["attention_motifs", "tests", "notebooks"]
+	# torch re-exports public API (tensor, zeros, cat, etc.) from C extensions
+	# (_C/_VariableFunctions), which basedpyright flags as private imports.
+	# These are all false positives.
+	reportPrivateImportUsage = false
 
 # ty config
 [tool.ty.src]
