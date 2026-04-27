@@ -63,7 +63,7 @@ function getDefaultConfig() {
     prompts_url: "../../patterns/gpt2-small/prompts.jsonl",
     patterns_path: "../../patterns/",
     attnpedia_url: "ap.json",
-    headDistsnpy_url: "../../features/head_dists_raw/distances.npy",
+    headDistsnpy_url: "../../features/head_dists_raw/distances_f32.npy",
     headDistsmeta_url: "../../features/head_dists_raw/dists_meta.json",
     pattern_url_template:
       "../../patterns/single.html?prompt={prompt_hash}&head={model}.L{layer}.H{head}",

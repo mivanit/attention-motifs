@@ -87,7 +87,7 @@ DEFAULT_VIS_CONFIGS: dict[str, dict[str, Any]] = dict(
 			"attnpedia_url": "ap.json",
 			"headDistsmeta_url": "../../features/head_dists_raw/dists_meta.json",
 			"prompts_url": "../../patterns/gpt2-small/prompts.jsonl",
-			"headDistsnpy_url": "../../features/head_dists_raw/distances.npy",
+			"headDistsnpy_url": "../../features/head_dists_raw/distances_f32.npy",
 			"patterns_path": "../../patterns/",
 		},
 	),
