@@ -64,7 +64,7 @@ class TestLogBins:
 
 class TestInvalidScale:
 	def test_invalid_scale_raises(self) -> None:
-		bins: Bins = Bins(n_bins=8, start=0.0, stop=1.0, scale="xyz")  # type: ignore[arg-type]
+		bins: Bins = Bins(n_bins=8, start=0.0, stop=1.0, scale="xyz")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 		with pytest.raises(ValueError, match="Invalid scale"):
 			_ = bins.edges
 

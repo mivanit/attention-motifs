@@ -66,7 +66,7 @@ class TestPatternType:
 
 	def test_load_defaults(self) -> None:
 		"""Missing name/description default to 'none'."""
-		data: PatternTypeDict = {"id": 0}  # type: ignore[typeddict-item]
+		data: PatternTypeDict = {"id": 0}  # type: ignore[typeddict-item]  # ty: ignore[missing-typed-dict-key]
 		pt: PatternType = PatternType.load(data)
 		assert pt.name == "none"
 		assert pt.description == "none"

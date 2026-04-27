@@ -75,7 +75,7 @@ def _make_handler_factory(
 	class BoundHandler(QuietHTTPRequestHandler):
 		def __init__(self, *args: object, **kwargs: object) -> None:
 			super().__init__(
-				*args,  # type: ignore[arg-type]
+				*args,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 				directory=directory,
 				**kwargs,  # type: ignore[arg-type]
 			)

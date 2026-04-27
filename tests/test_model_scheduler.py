@@ -1087,8 +1087,8 @@ class TestPollRunning:
 		scheduler.running.append(rm)
 
 		log_messages: list[str] = []
-		scheduler._log = lambda msg: log_messages.append(msg)  # type: ignore[assignment]
-		scheduler._log_error = lambda msg: log_messages.append(msg)  # type: ignore[assignment]
+		scheduler._log = lambda msg: log_messages.append(msg)  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
+		scheduler._log_error = lambda msg: log_messages.append(msg)  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 
 		scheduler._poll_running()
 
@@ -1733,7 +1733,7 @@ class TestPrintStatus:
 		"""No output when nothing is running."""
 		scheduler: ModelScheduler = _make_scheduler(models=[])
 		log_messages: list[str] = []
-		scheduler._log = lambda msg: log_messages.append(msg)  # type: ignore[assignment]
+		scheduler._log = lambda msg: log_messages.append(msg)  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 		scheduler._print_status()
 		assert log_messages == []
 
@@ -1777,7 +1777,7 @@ class TestPrintStatus:
 		scheduler.running.append(rm)
 
 		log_messages: list[str] = []
-		scheduler._log = lambda msg: log_messages.append(msg)  # type: ignore[assignment]
+		scheduler._log = lambda msg: log_messages.append(msg)  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 		scheduler._print_status()
 
 		# header + VRAM line + 1 model line
@@ -1823,7 +1823,7 @@ class TestPrintStatus:
 		scheduler.running.append(rm)
 
 		log_messages: list[str] = []
-		scheduler._log = lambda msg: log_messages.append(msg)  # type: ignore[assignment]
+		scheduler._log = lambda msg: log_messages.append(msg)  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 		scheduler._print_status()
 
 		assert len(log_messages) == 3
