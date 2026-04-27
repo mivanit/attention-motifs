@@ -99,7 +99,13 @@ DEFAULT_VIS_CONFIGS: dict[str, dict[str, Any]] = dict(
 			"numericalPrefix": "pc.",
 			"defaultColorColumn": "activation.model",
 			"defaultSelectionColumn": "activation.model",
-			"hoverColumns": ["activation.cls", "activation.prompt", "activation.n_ctx"],
+			"hoverColumns": [
+				"activation.cls",
+				"activation.prompt",
+				"activation.n_ctx",
+				"activation.model_family",
+				"activation.model_size",
+			],
 			"selectedPoints": {
 				"size": 5,
 				"sizeMin": 0.1,

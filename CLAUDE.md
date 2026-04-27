@@ -276,6 +276,7 @@ Output: data/vis/*/index.html  ← DON'T EDIT (generated)
 | Command | Description |
 |---------|-------------|
 | `uv run python attention_motifs/pipeline/s5_head_embed.py --add-metadata [path]` | Fast-add `model_family`/`model_size`/`layer_depth` columns to existing `head_embed.jsonl` without re-running full s5 |
+| `uv run python attention_motifs/pipeline/s3_feat_proc.py --add-metadata [dir]` | Fast-add `activation.model_family`/`activation.model_size` columns to existing pattern embedding files (raw, scaled, pca) in `dir` (default: `data/features/`) |
 
 **Typical workflows:**
 

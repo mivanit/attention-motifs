@@ -92,6 +92,51 @@ def get_layer_depth(row: dict, model_configs: dict[str, HTConfigMock]) -> float:
 	return float(layer_idx) / float(model_n_layers - 1)
 
 
+def add_pattern_metadata_columns(df: pl.DataFrame) -> pl.DataFrame:
+	"""Add activation.model_family and activation.model_size to a pattern DataFrame.
+
+	Drops existing metadata columns if present (idempotent), then adds fresh ones
+	from the model table. Uses lazy imports to avoid features->pipeline circular
+	import at module level.
+
+	Args:
+		df: DataFrame with at least an ``activation.model`` column.
+
+	Returns:
+		DataFrame with metadata columns added.
+	"""
+	from attention_motifs.pipeline.model_table import ModelInfo, fetch_model_table
+	from attention_motifs.pipeline.s6b_cluster_trends import get_model_family
+
+	# Drop existing metadata columns if present (makes this idempotent)
+	existing_meta: list[str] = [
+		c
+		for c in ("activation.model_family", "activation.model_size")
+		if c in df.columns
+	]
+	if existing_meta:
+		df = df.drop(existing_meta)
+
+	model_table: dict[str, ModelInfo] = fetch_model_table()
+	model_n_params: dict[str, int] = {
+		name: info.n_params for name, info in model_table.items()
+	}
+
+	df = df.with_columns(
+		pl.col("activation.model")
+		.map_elements(
+			lambda m: get_model_family(m, except_on_missing=False),
+			return_dtype=pl.Utf8,
+		)
+		.alias("activation.model_family"),
+		pl.col("activation.model")
+		.replace_strict(model_n_params, default=None, return_dtype=pl.Int64)
+		.alias("activation.model_size"),
+	)
+
+	return df
+
+
 def _checkpoint_path(out_path: Path, model: str) -> Path:
 	"""Per-model checkpoint file path for scalar_feature_table."""
 	return out_path.parent / f"{out_path.stem}.checkpoint.{model}.jsonl"
@@ -234,6 +279,9 @@ def scalar_feature_table(
 	)
 	dfs: list[pl.DataFrame] = [pl.read_ndjson(p) for p in checkpoint_paths]
 	df: pl.DataFrame = pl.concat(dfs)
+
+	# Add model metadata columns (model_family, model_size)
+	df = add_pattern_metadata_columns(df)
 
 	print_log(f"# output shape: {df.shape}")
 	print_log(f"# saving to {out_path}")
