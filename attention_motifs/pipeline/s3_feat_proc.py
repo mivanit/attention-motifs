@@ -238,9 +238,7 @@ if __name__ == "__main__":
 				file=sys.stderr,
 			)
 			sys.exit(1)
-		path_arg: str = (
-			sys.argv[2] if len(sys.argv) > 2 else "data/features/"
-		)
+		path_arg: str = sys.argv[2] if len(sys.argv) > 2 else "data/features/"
 		if path_arg.startswith("-"):
 			print(
 				f"Error: expected a directory path, got flag '{path_arg}'\n"
