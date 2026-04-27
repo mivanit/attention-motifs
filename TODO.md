@@ -56,3 +56,19 @@ On repeated sequences, induction heads attend strongly to offset+1 positions, so
 ### Fix
 
 Generate a separate batch of non-repeated random sequences (25 tokens each, same vocab exclusion rules) and pass them to `ov_copying_score`. This requires a new experiment run, which is computationally expensive.
+
+## Minor fixes
+
+### transition_tensor.py:146 — off-by-one in residuals loop
+`range(n_idxs)` should be `range(1, n_idxs)`. When `i_idx == 0`, `tt_resampled[-1]` grabs the last element (highest power) via negative indexing instead of identity. Only affects the numpy plotting path, not the pipeline (which uses the torch version).
+
+### s3b_feat_fig.py:93 — `handles` possibly unbound
+`handles` is set inside a loop over embedding methods. If the list were empty, `handles` would be unbound at the `plt.legend()` call. Currently masked by `pyright: ignore[reportPossiblyUnboundVariable]`. Should initialize `handles = []` before the loop.
+
+## Code quality
+
+### head_analysis.py:206 — `_embed_meta` private attribute hack
+`df._embed_meta = dict(...)` stashes metadata on a polars DataFrame via a private attribute. Works but fragile across polars versions. Could return a tuple or wrapper dataclass instead.
+
+### cfg.py:432 — validate model names at config time
+`validate_cfg()` checks models are strings but doesn't verify they exist in TransformerLens. Invalid names fail much later in the pipeline.
