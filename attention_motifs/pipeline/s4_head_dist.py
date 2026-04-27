@@ -13,12 +13,14 @@ def head_dists(cfg: PipelineConfig) -> None:
 	pipeline_step_major("pipeline step 4: compute head distances")
 	df_pca: pl.DataFrame = pl.read_ndjson(cfg.data_path("pca"))
 
+	n_proc: int = cfg.s4_n_proc if cfg.s4_n_proc is not None else cfg.n_proc
 	head_dists: DistanceTensorResult = DistanceTensorResult.build_distance_tensor(
 		df_pca,
 		feature_prefix="pc.",
+		parallel=n_proc > 1,
+		n_proc=n_proc,
 	)
 	dbg_tensor(head_dists.distances)
-	dbg_tensor(head_dists.mean_dists)
 	head_dists.save(cfg.data_path("head_dists_zanj"))
 	cfg.data_path("head_dists_raw").mkdir(parents=True, exist_ok=True)
 	head_dists.save_raw(cfg.data_path("head_dists_raw"))

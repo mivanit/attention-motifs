@@ -1,6 +1,6 @@
 import warnings
 from pathlib import Path
-from typing import Any, Literal, Sequence
+from typing import Any, Sequence, cast
 import itertools
 
 from jaxtyping import Float
@@ -8,17 +8,21 @@ import numpy as np
 import polars as pl
 import matplotlib.pyplot as plt
 import matplotlib.colors
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 from tqdm import tqdm
 
 # scipy
 from sklearn.manifold import TSNE, Isomap
 from sklearn.decomposition import PCA
 import sklearn.base
-import umap
+import umap  # type: ignore[import-untyped]
 
 # attention-motifs
 from attention_motifs.features.analysis import parse_cls, DistanceTensorResult
 from attention_motifs.attnpedia.attnpedia import AttentionPedia
+from attention_motifs.pipeline.cfg import EmbeddingMethod
 
 
 def filter_umap_warns():
@@ -40,9 +44,6 @@ def filter_umap_warns():
 		message=r"n_jobs value .* overridden .* random_state",
 		module=r"^umap\.umap_$",
 	)
-
-
-EmbeddingMethod = Literal["isomap", "umap", "tsne", "pca"]
 
 
 def create_head_embedding_df(
@@ -97,6 +98,7 @@ def create_head_embedding_df(
 
 	# Create embedding based on specified method
 	reducer: sklearn.base.BaseEstimator
+	similarity_matrix: np.ndarray | None = None
 	match embedding_method:
 		case "isomap":
 			reducer = Isomap(
@@ -133,6 +135,7 @@ def create_head_embedding_df(
 				np.max(similarity_matrix) - np.min(similarity_matrix)
 			)
 			# set diagonal to 1 (self is most similar to self)
+			assert similarity_matrix is not None
 			np.fill_diagonal(similarity_matrix, 1.0)
 			# Create PCA reducer
 			reducer = PCA(
@@ -143,10 +146,18 @@ def create_head_embedding_df(
 			raise ValueError(f"Unknown embedding method: {embedding_method}")
 
 	# Perform embedding
+	embedding: np.ndarray
 	if embedding_method == "pca":
-		embedding: np.ndarray = reducer.fit_transform(similarity_matrix)
+		assert similarity_matrix is not None  # guaranteed by case "pca" above
+		embedding_result = reducer.fit_transform(similarity_matrix)
 	else:
-		embedding: np.ndarray = reducer.fit_transform(distance_matrix)
+		embedding_result = reducer.fit_transform(distance_matrix)
+	# Ensure dense array output (sklearn can return sparse matrices in some cases)
+	embedding = (
+		embedding_result
+		if isinstance(embedding_result, np.ndarray)
+		else np.asarray(embedding_result)
+	)
 
 	# Parse cls values
 	parsed_cls: list[tuple[str, int, int]] = [
@@ -193,7 +204,7 @@ def create_head_embedding_df(
 		df = df.with_columns(pl.Series(f"embed.{i}", embedding[:, i]))
 
 	# HACK: add metadata
-	df._embed_meta = dict(
+	df._embed_meta = dict(  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
 		embedding_method=embedding_method,
 		n_components=n_components,
 		n_neighbors=n_neighbors,
@@ -305,12 +316,12 @@ def plot_head_embeddings(
 	dims: tuple[int, int] = (0, 1),
 	alphas: tuple[float, float] = (0.7, 0.3),
 	sizes: tuple[int, int] = (60, 20),
-	ax: plt.Axes | None = None,
+	ax: Axes | None = None,
 	figsize: tuple[int, int] = (12, 10),
 	title: str | None = None,
 	xlim: tuple[float, float] | None = None,
 	ylim: tuple[float, float] | None = None,
-) -> tuple[plt.Figure | None, plt.Axes]:
+) -> tuple[Figure | None, Axes]:
 	"""Plot head embeddings colored by the specified column"""
 
 	# Create AttentionPedia if not provided
@@ -318,7 +329,7 @@ def plot_head_embeddings(
 		attnpedia = AttentionPedia()
 
 	# Get unique values for color assignment
-	categories: list = df[color_by].unique().to_list()
+	categories: list[str] = df[color_by].unique().to_list()
 
 	# Get colors based on the color_by column
 	cmap: matplotlib.colors.Colormap
@@ -357,10 +368,12 @@ def plot_head_embeddings(
 		)
 
 	# Create figure and axes if not provided
-	fig: plt.Figure | None = None
+	fig: Figure | None = None
 	ax_provided: bool = ax is not None
 	if not ax_provided:
 		fig, ax = plt.subplots(figsize=figsize)
+	assert ax is not None  # guaranteed after above logic
+	ax_: Axes = ax  # narrowed type for mypy
 
 	# Create scatter plot
 	for cat in categories:
@@ -378,7 +391,7 @@ def plot_head_embeddings(
 			scatter_kwargs["color"] = unknown_color
 		else:
 			scatter_kwargs["color"] = color_map[cat]
-		ax.plot(
+		ax_.plot(
 			cat_df[x_col],
 			cat_df[y_col],
 			label=cat,
@@ -391,39 +404,39 @@ def plot_head_embeddings(
 	method: str = parts[1]
 	n_neighbors: int = int(parts[3][1:])
 
-	ax.set_xlabel(f"Dimension {dims[0]}")
-	ax.set_ylabel(f"Dimension {dims[1]}")
+	ax_.set_xlabel(f"Dimension {dims[0]}")
+	ax_.set_ylabel(f"Dimension {dims[1]}")
 
 	# Simpler title if inside a grid
 	if title is None:
 		if ax_provided:
-			ax.set_title(f"{method}, n_neighbors={n_neighbors}")
+			ax_.set_title(f"{method}, n_neighbors={n_neighbors}")
 		else:
 			title = (
 				f"Head Embeddings via {method}\n"
 				f"colored by '{color_by}' ({len(categories)} categories), n_neighbors={n_neighbors}"
 			)
-			ax.set_title(title)
+			ax_.set_title(title)
 	else:
-		ax.set_title(title)
+		ax_.set_title(title)
 
 	# Add legend (potentially outside plot for many categories)
 	if not ax_provided:  # Only add legend to individual plots
 		if len(categories) > 10:
-			ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
+			ax_.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
 		else:
-			ax.legend()
+			ax_.legend()
 
 	# Set x and y limits if provided
 	if xlim is not None:
-		ax.set_xlim(xlim)
+		ax_.set_xlim(xlim)
 	if ylim is not None:
-		ax.set_ylim(ylim)
+		ax_.set_ylim(ylim)
 
 	if fig is not None:
 		plt.tight_layout()
 
-	return fig, ax
+	return fig, ax_
 
 
 def plot_head_embeddings_multi(
@@ -433,10 +446,10 @@ def plot_head_embeddings_multi(
 	dims: tuple[int, int] = (0, 1),
 	alphas: tuple[float, float] = (0.7, 0.3),
 	sizes: tuple[int, int] = (60, 20),
-	methods: list[str] | None = None,
+	methods: list[EmbeddingMethod] | None = None,
 	n_neighbors_list: list[int] | None = None,
 	figsize: tuple[int, int] = (20, 16),
-) -> tuple[plt.Figure, np.ndarray]:
+) -> tuple[Figure, np.ndarray]:
 	"""Plot a grid of head embeddings for different methods and parameters
 
 	# Parameters:
@@ -462,7 +475,7 @@ def plot_head_embeddings_multi(
 	    Figure size (default: (20, 16))
 
 	# Returns:
-	 - `tuple[plt.Figure, np.ndarray]`
+	 - `tuple[Figure, np.ndarray]`
 	    Figure and array of Axes objects
 	"""
 	# Create AttentionPedia if not provided
@@ -497,9 +510,9 @@ def plot_head_embeddings_multi(
 	unknown_color: str = attnpedia._unknown_color
 
 	# Find all available methods and n_neighbors values
-	methods_found: set[str] = set()
+	methods_found: set[EmbeddingMethod] = set()
 	n_neighbors_found: set[int] = set()
-	match_model_str: str = None
+	match_model_str: str | None = None
 
 	# Simple pattern matching to find all embedding columns and extract their metadata
 	embed_cols: list[str] = [col for col in df.columns if col.startswith("embed.")]
@@ -510,7 +523,8 @@ def plot_head_embeddings_multi(
 		# Extract information
 		# f"embed.{method}.d{n_components_val}.b{n_neighbors}"
 		try:
-			methods_found.add(parts[1])
+			assert parts[1] in EmbeddingMethod.__args__  # type: ignore[attr-defined]
+			methods_found.add(cast(EmbeddingMethod, parts[1]))
 			n_neighbors_found.add(int(parts[3][1:]))
 		except (ValueError, IndexError):
 			continue
@@ -519,13 +533,12 @@ def plot_head_embeddings_multi(
 	if not methods_found:
 		raise ValueError("No embedding columns found in DataFrame")
 
-	methods_list: list[str] = sorted(methods_found) if methods is None else methods
+	methods_list: list[EmbeddingMethod] = (
+		sorted(methods_found) if methods is None else methods
+	)
 	n_neighbors_vals: list[int] = (
 		sorted(n_neighbors_found) if n_neighbors_list is None else n_neighbors_list
 	)
-
-	if match_model_str is None:
-		match_model_str = "ALL"
 
 	# Create the grid of plots
 	n_rows: int = len(n_neighbors_vals)
@@ -558,7 +571,7 @@ def plot_head_embeddings_multi(
 
 	for cat in categories:
 		if cat == "unknown":
-			handle = plt.Line2D(
+			handle = Line2D(
 				[0],
 				[0],
 				marker="o",
@@ -569,7 +582,7 @@ def plot_head_embeddings_multi(
 				alpha=alphas[1],
 			)
 		else:
-			handle = plt.Line2D(
+			handle = Line2D(
 				[0],
 				[0],
 				marker="o",

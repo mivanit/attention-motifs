@@ -8,44 +8,65 @@ This module provides tools to:
 """
 
 from attention_motifs.ablation.candidates import (
-    CandidateHeads,
-    get_known_induction_heads,
-    find_candidate_induction_heads,
-    get_control_heads,
+	CandidateHeads,
+	DistanceCandidates,
+	get_known_induction_heads,
+	find_candidate_induction_heads,
+	get_control_heads,
 )
 from attention_motifs.ablation.ablate import (
-    AblationMethod,
-    HeadAblator,
+	AblationMethod,
+	HeadAblator,
 )
 from attention_motifs.ablation.metrics import (
-    repeated_sequence_loss,
-    prefix_matching_score,
-    icl_score,
-    AblationResult,
+	repeated_sequence_loss,
+	prefix_matching_score,
+	preceding_token_score,
+	icl_score,
+	copying_score,
+	ov_copying_score,
+	AblationResult,
 )
 from attention_motifs.ablation.data import (
-    generate_repeated_sequences,
+	generate_repeated_sequences,
+	load_icl_texts,
 )
 from attention_motifs.ablation.experiment import (
-    run_ablation_experiment,
+	AblationConfig,
+	AblationResults,
+	run_ablation_experiment,
+	evaluate_induction_scores,
+	get_all_head_scores,
 )
+from attention_motifs.ablation.frontend import write_ablation_frontend
 
 __all__ = [
-    # candidates
-    "CandidateHeads",
-    "get_known_induction_heads",
-    "find_candidate_induction_heads",
-    "get_control_heads",
-    # ablate
-    "AblationMethod",
-    "HeadAblator",
-    # metrics
-    "repeated_sequence_loss",
-    "prefix_matching_score",
-    "icl_score",
-    "AblationResult",
-    # data
-    "generate_repeated_sequences",
-    # experiment
-    "run_ablation_experiment",
+	# candidates
+	"CandidateHeads",
+	"DistanceCandidates",
+	"get_known_induction_heads",
+	"find_candidate_induction_heads",
+	"get_control_heads",
+	# ablate
+	"AblationMethod",
+	"HeadAblator",
+	# metrics
+	"repeated_sequence_loss",
+	"prefix_matching_score",
+	"preceding_token_score",
+	"icl_score",
+	"copying_score",
+	"ov_copying_score",
+	"AblationResult",
+	# data
+	"generate_repeated_sequences",
+	"load_icl_texts",
+	# experiment
+	"AblationConfig",
+	"AblationResults",
+	"run_ablation_experiment",
+	"evaluate_induction_scores",
+	"get_all_head_scores",
+	# frontend
+	"write_ablation_frontend",
 ]

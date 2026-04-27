@@ -15,7 +15,7 @@
       src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"
     ></script>
     <link rel="stylesheet" href="style/style.css" />
-    <link rel="stylesheet" href="style/notif.css" />
+    <link rel="stylesheet" href="../../libs/notif.css" />
     <script src="util/config.js"></script>
     <script>
       getConfig();
@@ -23,13 +23,17 @@
     <script>
       console.log(CONFIG);
     </script>
-    <script src="util/notif.js"></script>
-    <script src="util/array.js"></script>
+    <script src="../../libs/notif.js"></script>
+    <script src="../../libs/array.js"></script>
     <script src="AttentionPedia.js"></script>
     <script src="head_embeds.js"></script>
     <script src="prompts.js"></script>
     <script src="headInfo.js"></script>
     <script src="autocomplete.js"></script>
+    <script src="../../shared/cluster_engine.js"></script>
+    <script src="../../shared/cluster_utils.js"></script>
+    <script src="../../shared/clustering_config.js"></script>
+    <script src="clustering.js"></script>
     <script src="app.js"></script>
   </head>
   <!-- body -->
@@ -39,61 +43,67 @@
     <nav class="nav-bar">
       <div class="nav-bar-content">
         <a href="../../index.html">Home</a>
-        <a href="../../patterns/index.html">Pattern Lens</a>
+        <span class="nav-current">AttentionPedia</span>
+        <a href="../embeds/patterns/index.html">Pattern Embeddings</a>
+        <a href="../embeds/heads/index.html">Head Embeddings</a>
+        <a href="../../figures/head_embed_table.html">Head Embed Table</a>
         <a href="../../figures/classifications.html">Classifications</a>
-        <a href="../../vis/embeds/patterns/index.html">Pattern Embeddings</a>
-        <a href="../../vis/embeds/heads/index.html">Head Embeddings</a>
-        <a href="../../figures/head_embed_table.html">Head Embedding Table</a>
+        <a href="../clustering/index.html">Clustering</a>
+        <a href="../cluster_trends/index.html">Cluster Trends</a>
+        <a href="../../ablations/index.html">Ablation</a>
+        <a href="../../ablations/correlations.html">Correlations</a>
       </div>
     </nav>
 
     <div class="container" x-data="attentionApp" x-init="await init()">
       <!-- Help button in top right -->
       <div class="help-menu-corner">
-        <span class="help-button">?</span>
-        <div class="help-content">
-          <h3>Controls</h3>
-          <ul>
-            <li>
-              <strong>Top right controls:</strong> Adjust which heads and
-              prompts are displayed
-            </li>
-          </ul>
-          <h3>Navigation</h3>
-          <ul>
-            <li>Click head IDs to navigate between heads</li>
-            <li>
-              <strong>Classification tags:</strong> Hover for info, click to
-              view all heads of that type
-            </li>
-            <li>Click pattern images to view detailed pattern</li>
-            <li>
-              <strong>Pattern Lens links (top):</strong> Compare patterns across
-              many heads/prompts more flexibly
-            </li>
-          </ul>
-          <h3>Interface</h3>
-          <ul>
-            <li>
-              <strong>Distance column:</strong> lighter colors correspond to a
-              head which is closer
-            </li>
-            <li>
-              <strong>Classification column highlight:</strong> Orange for heads
-              sharing classifications with the current head
-            </li>
-            <li>
-              <strong>Prompt tooltips:</strong> Hover column headers for full
-              text, clicking the pattern also gives full text
-            </li>
-          </ul>
-          <h3>Reset</h3>
-          <ul>
-            <li>
-              <strong>Reset button (🔄):</strong> Resets all settings to default
-              while preserving current head
-            </li>
-          </ul>
+        <div class="help-menu">
+          <span class="help-button">?</span>
+          <div class="help-content">
+            <h3>Controls</h3>
+            <ul>
+              <li>
+                <strong>Top right controls:</strong> Adjust which heads and
+                prompts are displayed
+              </li>
+            </ul>
+            <h3>Navigation</h3>
+            <ul>
+              <li>Click head IDs to navigate between heads</li>
+              <li>
+                <strong>Classification tags:</strong> Hover for info, click to
+                view all heads of that type
+              </li>
+              <li>Click pattern images to view detailed pattern</li>
+              <li>
+                <strong>Pattern Lens links (top):</strong> Compare patterns
+                across many heads/prompts more flexibly
+              </li>
+            </ul>
+            <h3>Interface</h3>
+            <ul>
+              <li>
+                <strong>Distance column:</strong> lighter colors correspond to a
+                head which is closer
+              </li>
+              <li>
+                <strong>Classification column highlight:</strong> Orange for
+                heads sharing classifications with the current head
+              </li>
+              <li>
+                <strong>Prompt tooltips:</strong> Hover column headers for full
+                text, clicking the pattern also gives full text
+              </li>
+            </ul>
+            <h3>Reset</h3>
+            <ul>
+              <li>
+                <strong>Reset button (🔄):</strong> Resets all settings to
+                default while preserving current head
+              </li>
+            </ul>
+          </div>
         </div>
         <button
           class="reset-button"
@@ -102,6 +112,61 @@
         >
           🔄
         </button>
+        <!-- Settings gear -->
+        <div class="settings-menu" @click.outside="settings_open = false">
+          <button
+            class="settings-button"
+            @click="settings_open = !settings_open"
+            title="Table settings"
+          >
+            ⚙
+          </button>
+          <div class="settings-dropdown" x-show="settings_open" x-cloak>
+            <div class="settings-section-label">Visible columns</div>
+            <label class="settings-checkbox">
+              <input
+                type="checkbox"
+                :checked="column_visibility.distance"
+                @change="toggleColumn('distance')"
+              />
+              Distance
+            </label>
+            <label class="settings-checkbox">
+              <input
+                type="checkbox"
+                :checked="column_visibility.classifications"
+                @change="toggleColumn('classifications')"
+              />
+              Classifications
+            </label>
+            <template x-if="clustering_available">
+              <label class="settings-checkbox">
+                <input
+                  type="checkbox"
+                  :checked="column_visibility.cluster"
+                  @change="toggleColumn('cluster')"
+                />
+                Cluster
+              </label>
+            </template>
+            <hr class="settings-divider" />
+            <label class="settings-checkbox">
+              <span>Max context:</span>
+              <input
+                type="number"
+                x-model.number="max_ctx"
+                @change="updateMaxCtx()"
+                min="0"
+                placeholder="0 = all"
+                class="settings-number-input"
+              />
+            </label>
+            <hr class="settings-divider" />
+            <button class="settings-export-btn" @click="exportTableSVG()">
+              Export table SVG
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Page Title Section -->
@@ -161,6 +226,145 @@
               >
             </div>
           </template>
+
+          <!-- Clustering Panel -->
+          <template x-if="clustering_available">
+            <div class="clustering-panel">
+              <div class="clustering-panel-header">
+                <h3>Clustering</h3>
+                <select
+                  class="control-input"
+                  x-model="clustering_method"
+                  @change="updateClusteringMethod($event.target.value)"
+                >
+                  <template x-for="m in clustering_methods" :key="m">
+                    <option :value="m" x-text="m"></option>
+                  </template>
+                </select>
+              </div>
+
+              <!-- Flat method parameter selector (hdbscan/leiden) -->
+              <template x-if="clustering_method !== 'hierarchical'">
+                <div class="cluster-control-group">
+                  <label x-text="clustering_param_label + ':'"></label>
+                  <select
+                    class="control-input"
+                    x-model="clustering_param_key"
+                    @change="updateClusteringParam($event.target.value)"
+                  >
+                    <template x-for="pk in clustering_param_keys" :key="pk">
+                      <option :value="pk" x-text="pk"></option>
+                    </template>
+                  </select>
+                </div>
+              </template>
+
+              <!-- Hierarchical controls -->
+              <template x-if="clustering_method === 'hierarchical'">
+                <div class="cluster-control-group">
+                  <label>Clusters:</label>
+                  <input
+                    type="range"
+                    x-model.number="n_clusters"
+                    @input="updateNClusters()"
+                    min="2"
+                    max="200"
+                    class="cluster-slider"
+                  />
+                  <input
+                    type="number"
+                    x-model.number="n_clusters"
+                    @change="updateNClusters()"
+                    min="2"
+                    max="200"
+                    class="control-input"
+                  />
+                </div>
+              </template>
+
+              <template
+                x-if="clustering_method === 'hierarchical' && cluster_max_height !== null"
+              >
+                <div class="cluster-control-group">
+                  <label>Cut height:</label>
+                  <input
+                    type="range"
+                    x-model.number="cluster_cut_height"
+                    @input="updateCutHeight()"
+                    min="0"
+                    :max="cluster_max_height"
+                    :step="cluster_max_height / 1000"
+                    class="cluster-slider"
+                  />
+                  <input
+                    type="number"
+                    x-model.number="cluster_cut_height"
+                    @change="updateCutHeight()"
+                    min="0"
+                    :max="cluster_max_height"
+                    :step="cluster_max_height / 1000"
+                    class="control-input"
+                  />
+                </div>
+              </template>
+
+              <div class="cluster-control-group">
+                <label>Min size:</label>
+                <input
+                  type="range"
+                  x-model.number="cluster_min_size"
+                  @input="updateMinClusterSize()"
+                  min="0"
+                  max="100"
+                  class="cluster-slider"
+                />
+                <input
+                  type="number"
+                  x-model.number="cluster_min_size"
+                  @change="updateMinClusterSize()"
+                  min="0"
+                  class="control-input"
+                />
+              </div>
+
+              <!-- Cluster statistics -->
+              <template x-if="cluster_stats">
+                <div class="cluster-stats-line" x-text="cluster_stats"></div>
+              </template>
+
+              <!-- Top clusters -->
+              <template x-if="top_clusters.length > 0">
+                <div class="top-clusters-section">
+                  <div class="top-clusters-label">Top clusters:</div>
+                  <div class="top-clusters-row">
+                    <template x-for="cluster in top_clusters" :key="cluster.id">
+                      <span
+                        class="cluster-chip"
+                        :style="`background-color: ${cluster.color}`"
+                        @click="window.open(getClusterPageUrl(cluster.id), '_blank')"
+                        :title="cluster.label?.desc || ''"
+                        x-text="`#${cluster.id} (${cluster.size})${cluster.label?.name ? ' — ' + cluster.label.name : ''}`"
+                      ></span>
+                    </template>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Current head cluster info -->
+              <template x-if="current_head_cluster && !classification_mode">
+                <div class="current-head-cluster">
+                  This head: cluster
+                  <span
+                    class="cluster-chip cluster-chip-inline"
+                    :style="`background-color: ${current_head_cluster.color}`"
+                    @click="window.open(getClusterPageUrl(current_head_cluster.id), '_blank')"
+                    :title="current_head_cluster.label?.desc || ''"
+                    x-text="`#${current_head_cluster.id} (${current_head_cluster.size} heads)${current_head_cluster.label?.name ? ' — ' + current_head_cluster.label.name : ''}`"
+                  ></span>
+                </div>
+              </template>
+            </div>
+          </template>
         </div>
 
         <div class="controls-section">
@@ -210,7 +414,7 @@
               >
                 <div
                   class="autocomplete-suggestion"
-                  :class="{ 
+                  :class="{
                                      'selected': index === selected_suggestion_index,
                                      'error': !suggestion.valid
                                  }"
@@ -351,6 +555,7 @@
             </div>
           </div>
 
+          <!-- Head Selection Controls -->
           <div class="controls-grid">
             <div class="control-item">
               <label>Prompts:</label>
@@ -361,6 +566,14 @@
                 min="1"
                 class="control-input"
               />
+            </div>
+            <div class="control-item">
+              <button
+                @click="randomizePrompts()"
+                class="control-button full-width"
+              >
+                Randomize prompts
+              </button>
             </div>
             <template x-if="!classification_mode">
               <div
@@ -394,14 +607,6 @@
                 />
               </div>
             </template>
-            <div class="control-item">
-              <button
-                @click="randomizePrompts()"
-                class="control-button full-width"
-              >
-                Randomize prompts
-              </button>
-            </div>
             <template x-if="!classification_mode">
               <div
                 class="control-item"
@@ -434,6 +639,23 @@
                 />
               </div>
             </template>
+            <!-- Same-cluster heads control -->
+            <template x-if="clustering_available && !classification_mode">
+              <div
+                class="control-item"
+                :class="{ 'disabled': hasExplicitHeads }"
+              >
+                <label>Same-cluster heads:</label>
+                <input
+                  type="number"
+                  x-model.number="table.n_same_cluster"
+                  @change="updateHeadsDisplay()"
+                  min="0"
+                  class="control-input"
+                  :disabled="hasExplicitHeads"
+                />
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -443,12 +665,19 @@
           <thead>
             <tr>
               <th>Head</th>
-              <th>
+              <th x-show="column_visibility.distance">
                 Distance<br /><span style="font-size: 10px; font-weight: normal"
                   >rank /n_heads</span
                 >
               </th>
-              <th>Classifications</th>
+              <th x-show="column_visibility.classifications">
+                Classifications
+              </th>
+              <template
+                x-if="clustering_available && column_visibility.cluster"
+              >
+                <th>Cluster</th>
+              </template>
               <template x-for="prompt in prompts" :key="prompt.hash">
                 <th
                   class="prompt-header"
@@ -468,7 +697,7 @@
             <!-- Loading state -->
             <tr x-show="loading">
               <td
-                :colspan="3 + prompts.length"
+                :colspan="visibleColCount"
                 style="text-align: center; padding: 20px; color: #666"
               >
                 Loading attention heads data...
@@ -477,7 +706,7 @@
             <!-- Classification error state -->
             <tr x-show="!loading && classificationError">
               <td
-                :colspan="3 + prompts.length"
+                :colspan="visibleColCount"
                 style="text-align: center; padding: 40px"
               >
                 <div
@@ -510,7 +739,7 @@
               x-show="!loading && !classificationError && heads_display_with_distances.length === 0"
             >
               <td
-                :colspan="3 + prompts.length"
+                :colspan="visibleColCount"
                 style="text-align: center; padding: 20px; color: #666"
               >
                 No heads data available
@@ -530,6 +759,7 @@
                 </td>
                 <td
                   class="distance-cell"
+                  x-show="column_visibility.distance"
                   :style="`background-color: ${headRow.distanceColor}`"
                 >
                   <div
@@ -542,6 +772,7 @@
                 </td>
                 <td
                   class="classifications-cell"
+                  x-show="column_visibility.classifications"
                   :class="headRow.hasMatchingClassification ? 'matching-classification' : ''"
                   x-data="classificationComponent(headRow.headId)"
                   x-init="await loadData()"
@@ -567,6 +798,31 @@
                     <span class="no-classifications">No classifications</span>
                   </template>
                 </td>
+                <template
+                  x-if="clustering_available && column_visibility.cluster"
+                >
+                  <td class="cluster-cell">
+                    <template x-if="headRow.clusterInfo">
+                      <span
+                        class="cluster-column-chip"
+                        :style="`background-color: ${headRow.clusterInfo.color}`"
+                        @click="window.open(getClusterPageUrl(), '_blank')"
+                        :title="headRow.clusterInfo.label?.desc || ''"
+                        x-text="`#${headRow.clusterInfo.id}`"
+                      ></span>
+                    </template>
+                    <template x-if="headRow.clusterInfo">
+                      <div
+                        class="cluster-cell-size"
+                        :title="headRow.clusterInfo.label?.desc || ''"
+                        x-text="`(${headRow.clusterInfo.size} heads)${headRow.clusterInfo.label?.name ? ' ' + headRow.clusterInfo.label.name : ''}`"
+                      ></div>
+                    </template>
+                    <template x-if="!headRow.clusterInfo">
+                      <span class="cluster-cell-misc">misc</span>
+                    </template>
+                  </td>
+                </template>
                 <template x-for="prompt in prompts" :key="prompt.hash">
                   <td
                     x-data="patternComponent(headRow.headId, prompt.hash)"
@@ -587,6 +843,8 @@
                         <img
                           :src="imageUrl"
                           class="pattern-image"
+                          :style="cropStyle"
+                          @load="onImageLoad($event)"
                           :alt="`Pattern for ${headRow.headId} on ${prompt.hash}`"
                         />
                       </a>

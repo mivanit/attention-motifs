@@ -41,7 +41,7 @@ The functionality of the pipeline, along with some extras, is also found in the 
 
 - `01` loads the attention patterns from the previous step, and computes a table of features about them
 - `02` reads the big table of raw features, does some filtering, covariance analysis, and dimensionality reduction. This was used for figures 3, 9, 10, and 12.
-- (optional) run `make am-server-embed` to view the embeddings in a web interface. Identical to https://attention-motifs.github.io/embed and was used for figure 4.
+- (optional) run `make am-serve` to view the embeddings in a web interface. Identical to https://attention-motifs.github.io/embed and was used for figure 4.
 - `03` computes and saves distances between heads according to equation 5, and was used for figure 5.
 - `04` loads the distances between heads, labelling some and projecting them to a 2D space. This was used for figures 6, 12, and 13.
 

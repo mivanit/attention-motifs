@@ -1,3 +1,6 @@
+import random
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
@@ -17,6 +20,25 @@ from attention_motifs.features.analysis import (
 from attention_motifs.features.plotting import (
 	apply_pca,
 )
+
+
+def _sample_prompts(
+	df: pl.DataFrame,
+	n_prompts: int,
+	seed: int,
+	prompt_col: str = "activation.prompt",
+) -> pl.DataFrame:
+	"""Deterministically sample a subset of prompts, keeping all rows for each sampled prompt.
+
+	All models share the same prompt subset. Models with fewer prompts than
+	`n_prompts` keep all their rows.
+	"""
+	unique_prompts: list[str] = sorted(df[prompt_col].unique().to_list())
+	if len(unique_prompts) <= n_prompts:
+		return df
+	rng: random.Random = random.Random(seed)
+	sampled: list[str] = rng.sample(unique_prompts, n_prompts)
+	return df.filter(pl.col(prompt_col).is_in(sampled))
 
 
 def compute_normalization(cfg: PipelineConfig) -> tuple[pl.DataFrame, list[str]]:
@@ -60,7 +82,7 @@ def compute_pca(
 	feature_cols: list[str],
 ) -> tuple[pl.DataFrame, np.ndarray]:
 	if data_scaled is None:
-		data_scaled: pl.DataFrame = pl.read_ndjson(cfg.data_path("scaled"))
+		data_scaled = pl.read_ndjson(cfg.data_path("scaled"))
 
 	meta_cols: list[str] = [
 		col for col in data_scaled.columns if col.startswith("activation.")
@@ -110,6 +132,19 @@ def compute_pca(
 		float_precision=6,
 	)
 
+	# write a reduced CSV for the web visualization (sampled prompts)
+	df_pca_web: pl.DataFrame = df_pca
+	if cfg.web_pca_n_prompts is not None:
+		df_pca_web = _sample_prompts(
+			df_pca,
+			n_prompts=cfg.web_pca_n_prompts,
+			seed=cfg.web_pca_seed,
+		)
+	df_pca_web.write_csv(
+		cfg.data_path("pca_web"),
+		float_precision=6,
+	)
+
 	# importance table
 	df_importance: pl.DataFrame = pca_importance_table(
 		pca_obj,
@@ -126,6 +161,7 @@ def feat_proc(cfg: PipelineConfig) -> None:
 	pipeline_step_major("pipeline step 3: process attention features")
 
 	if cfg.do_figures:
+		assert cfg.figures_dir is not None
 		cfg.figures_dir.mkdir(parents=True, exist_ok=True)
 
 	# compute normalization
@@ -141,8 +177,54 @@ def feat_proc(cfg: PipelineConfig) -> None:
 	)
 
 
+def add_metadata_to_pattern_files(data_dir: str | Path) -> None:
+	"""Add/refresh activation.model_family and activation.model_size on pca_web.csv.
+
+	Patches ``pca_web.csv`` in *data_dir* without re-running the full s3 pipeline step.
+
+	Args:
+		data_dir: Directory containing the pattern embedding files
+			(default ``data/features/``).
+	"""
+	from attention_motifs.features.feature_table import add_pattern_metadata_columns
+
+	data_dir_path: Path = Path(data_dir)
+
+	# NOTE: to also patch other files, add them here:
+	# JSONL: "raw.jsonl", "scaled.jsonl", "pca.jsonl"
+	# CSV: "pca.csv"
+	# Parquet: "pca.parquet"
+	path: Path = data_dir_path / "pca_web.csv"
+	if not path.exists():
+		print(f"  Skipping {path} (not found)")
+		return
+	df: pl.DataFrame = pl.read_csv(path)
+	print(f"  Loaded {df.shape[0]} rows, {df.shape[1]} cols from {path}")
+	df = add_pattern_metadata_columns(df)
+	df.write_csv(path, float_precision=6)
+	print(f"  Written {df.shape[0]} rows, {df.shape[1]} cols to {path}")
+
+
 if __name__ == "__main__":
 	import sys
 
-	cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv[1:])
-	feat_proc(cfg)
+	if len(sys.argv) >= 2 and sys.argv[1] == "--add-metadata":
+		# Fast path: just add metadata columns to existing pattern files
+		if len(sys.argv) > 3:
+			print(
+				"Usage: python -m attention_motifs.pipeline.s3_feat_proc --add-metadata [dir]",
+				file=sys.stderr,
+			)
+			sys.exit(1)
+		path_arg: str = sys.argv[2] if len(sys.argv) > 2 else "data/features/"
+		if path_arg.startswith("-"):
+			print(
+				f"Error: expected a directory path, got flag '{path_arg}'\n"
+				"Usage: python -m attention_motifs.pipeline.s3_feat_proc --add-metadata [dir]",
+				file=sys.stderr,
+			)
+			sys.exit(1)
+		add_metadata_to_pattern_files(path_arg)
+	else:
+		cfg: PipelineConfig = PipelineConfig.from_cli(sys.argv[1:])
+		feat_proc(cfg)

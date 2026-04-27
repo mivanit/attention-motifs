@@ -6,6 +6,7 @@ document.addEventListener("alpine:init", () => {
     prompts: [],
     allPrompts: [],
     allPromptsCount: 0,
+    renderedPromptsCount: null, // null = all rendered, number = subset
     heads_display: [],
     heads_display_with_distances: [],
     current_head: null,
@@ -15,6 +16,7 @@ document.addEventListener("alpine:init", () => {
     table: {
       n_nearby: 2,
       n_share_class: 2,
+      n_same_cluster: 2,
       n_distant: 0,
       n_random: 0,
     },
@@ -41,14 +43,54 @@ document.addEventListener("alpine:init", () => {
       classifications: { failed: 0, total: 0 },
     },
 
+    // Column visibility
+    column_visibility: {
+      distance: true,
+      classifications: true,
+      cluster: true,
+    },
+    settings_open: false,
+    max_ctx: 0, // 0 = no limit
+
+    // Clustering state
+    clustering: null,
+    clustering_available: false,
+    clustering_method: "leiden",
+    clustering_methods: [],
+    clustering_param_label: "",
+    clustering_param_key: null,
+    clustering_param_keys: [],
+    n_clusters: 10,
+    cluster_stats: null,
+    cluster_cut_height: null,
+    cluster_max_height: null,
+    cluster_min_size: 0,
+    top_clusters: [],
+    current_head_cluster: null, // {id, size, color}
+    _updateGeneration: 0, // guards against stale async updates
+
     async init() {
       await getConfig();
       try {
         this.attention_pedia = new AttentionPedia();
         this.head_distances = new HeadDistances();
+        this.clustering = new ClusteringLoader();
         this.prompts_loader = new PromptsLoader();
         this.allPrompts = await this.prompts_loader.get_all();
         this.allPromptsCount = this.allPrompts.length;
+
+        // Filter to only rendered prompts if rendered_prompts.jsonl exists
+        const renderedHashes = await this.prompts_loader.loadRenderedHashes();
+        if (renderedHashes) {
+          this.allPrompts = this.allPrompts.filter((p) =>
+            renderedHashes.has(p.hash),
+          );
+          this.renderedPromptsCount = this.allPrompts.length;
+          console.log(
+            `Filtered to ${this.renderedPromptsCount}/${this.allPromptsCount} rendered prompts`,
+          );
+        }
+
         this.n_prompts = CONFIG.n_prompts || 5;
 
         // Load model data for filtering
@@ -84,8 +126,23 @@ document.addEventListener("alpine:init", () => {
         this.current_classification = CONFIG.current_classification || null;
         this.table.n_nearby = CONFIG.table?.n_nearby || 2;
         this.table.n_share_class = CONFIG.table?.n_share_class || 2;
+        this.table.n_same_cluster = CONFIG.table?.n_same_cluster || 2;
         this.table.n_distant = CONFIG.table?.n_distant || 0;
         this.table.n_random = CONFIG.table?.n_random || 0;
+
+        // Load column visibility from config
+        if (CONFIG.column_visibility) {
+          const cv = CONFIG.column_visibility;
+          if (cv.distance !== undefined)
+            this.column_visibility.distance = cv.distance;
+          if (cv.classifications !== undefined)
+            this.column_visibility.classifications = cv.classifications;
+          if (cv.cluster !== undefined)
+            this.column_visibility.cluster = cv.cluster;
+        }
+
+        // Load max context window size
+        this.max_ctx = CONFIG.max_ctx || 0;
 
         // Handle classification mode
         if (this.classification_mode && this.current_classification) {
@@ -116,6 +173,25 @@ document.addEventListener("alpine:init", () => {
             this.selected_suggestion_index = -1;
           }
         });
+
+        // Initialize clustering (non-blocking)
+        this.clustering_available = await this.clustering.isAvailable();
+        if (this.clustering_available) {
+          // ClusteringLoader already picked the best default method
+          const methods = this.clustering.getAvailableMethods();
+          this.clustering_methods = methods;
+          this.clustering_method = this.clustering.getMethod();
+
+          if (this.clustering.isHierarchical()) {
+            this.n_clusters = CONFIG.default_n_clusters || 10;
+            await this.clustering.setNClusters(this.n_clusters);
+            this.cluster_cut_height = this.clustering.getCutHeight();
+            this.cluster_max_height = this.clustering.getMaxCutHeight();
+          } else {
+            this._updateFlatParamUI();
+          }
+          await this.updateClusterInfo();
+        }
 
         await this.updateHeadsWithDistances();
         this.loading = false;
@@ -172,6 +248,8 @@ document.addEventListener("alpine:init", () => {
     },
 
     async updateHeadsWithDistances() {
+      const generation = ++this._updateGeneration;
+
       if (!this.current_head) {
         this.heads_display_with_distances = [];
         return;
@@ -188,6 +266,7 @@ document.addEventListener("alpine:init", () => {
           rank: 1,
           totalHeads: 1,
           isLoadingOthers: true,
+          clusterInfo: await this.getClusterInfo(this.current_head),
         },
       ];
 
@@ -258,9 +337,12 @@ document.addEventListener("alpine:init", () => {
             hasMatchingClassification: shouldHighlight,
             rank: headRankMap.get(item.head_name) || 0,
             totalHeads: totalHeads,
+            clusterInfo: await this.getClusterInfo(item.head_name),
           });
         }
 
+        // Discard if a newer update was started while we were computing
+        if (generation !== this._updateGeneration) return;
         // Assign the complete array at once to trigger Alpine.js reactivity
         this.heads_display_with_distances = newHeadsArray;
         return;
@@ -339,6 +421,26 @@ document.addEventListener("alpine:init", () => {
         }
       }
 
+      // Add same-cluster heads
+      const n_same_cluster = this.table.n_same_cluster;
+      if (n_same_cluster > 0 && this.clustering_available) {
+        const currentClusterId = await this.clustering.getClusterId(
+          this.current_head,
+        );
+        if (currentClusterId !== undefined) {
+          const sameClusterHeads =
+            await this.clustering.getHeadsInCluster(currentClusterId);
+          const filteredClusterHeads = sameClusterHeads.filter(
+            (head) => head !== this.current_head && this.shouldShowHead(head),
+          );
+          filteredClusterHeads.slice(0, n_same_cluster).forEach((head) => {
+            if (!headsToShow.has(head)) {
+              headsToShow.add(head);
+            }
+          });
+        }
+      }
+
       // Get final distances for selected heads
       const finalHeadsWithDistances =
         await this.head_distances.getHeadDistances(
@@ -387,9 +489,12 @@ document.addEventListener("alpine:init", () => {
           hasMatchingClassification: shouldHighlight,
           rank: headRankMap.get(item.head_name) || 0,
           totalHeads: totalHeads,
+          clusterInfo: await this.getClusterInfo(item.head_name),
         });
       }
 
+      // Discard if a newer update was started while we were computing
+      if (generation !== this._updateGeneration) return;
       // Assign the complete array at once to trigger Alpine.js reactivity
       this.heads_display_with_distances = newHeadsArray;
     },
@@ -416,6 +521,10 @@ document.addEventListener("alpine:init", () => {
       url.searchParams.set(
         "table.n_share_class",
         this.table.n_share_class.toString(),
+      );
+      url.searchParams.set(
+        "table.n_same_cluster",
+        this.table.n_same_cluster.toString(),
       );
       url.searchParams.set("table.n_distant", this.table.n_distant.toString());
       url.searchParams.set("table.n_random", this.table.n_random.toString());
@@ -630,6 +739,7 @@ document.addEventListener("alpine:init", () => {
         imageUrl: null,
         error: null,
         patternLink: null,
+        naturalSize: 0,
 
         async init() {
           app.failureTracker.patterns.total++;
@@ -647,7 +757,25 @@ document.addEventListener("alpine:init", () => {
             );
           }
         },
+
+        onImageLoad(event) {
+          this.naturalSize = event.target.naturalWidth;
+        },
+
+        get cropStyle() {
+          const maxCtx = app.max_ctx;
+          if (!maxCtx || maxCtx <= 0 || !this.naturalSize) return "";
+          if (maxCtx >= this.naturalSize) return "";
+          const scale = this.naturalSize / maxCtx;
+          const size = `calc(var(--pattern-size, 120px) * ${scale})`;
+          return `width: ${size}; height: ${size};`;
+        },
       };
+    },
+
+    updateMaxCtx() {
+      this.max_ctx = Math.max(0, Math.floor(this.max_ctx));
+      setConfigValue("max_ctx", this.max_ctx);
     },
 
     classificationComponent(headId) {
@@ -793,6 +921,7 @@ document.addEventListener("alpine:init", () => {
       // Update URL
       setConfigValue("table.n_nearby", this.table.n_nearby);
       setConfigValue("table.n_share_class", this.table.n_share_class);
+      setConfigValue("table.n_same_cluster", this.table.n_same_cluster);
       setConfigValue("table.n_distant", this.table.n_distant);
       setConfigValue("table.n_random", this.table.n_random);
 
@@ -926,7 +1055,7 @@ document.addEventListener("alpine:init", () => {
       }
 
       // Also search existing heads for partial matches
-      await this.head_distances._ensureLoaded();
+      await this.head_distances._ensureMetaLoaded();
       const query = this.head_search_query.toLowerCase();
       const allHeads = this.head_distances.head_dists_meta.cls_values;
 
@@ -1111,6 +1240,242 @@ document.addEventListener("alpine:init", () => {
         Array.isArray(this.heads_display) &&
         this.heads_display.length > 0
       );
+    },
+
+    // Clustering methods
+    async getClusterColor(headId) {
+      if (!this.clustering_available) {
+        return "transparent";
+      }
+      return await this.clustering.getColor(headId);
+    },
+
+    async getClusterInfo(headId) {
+      if (!this.clustering_available) return null;
+      const clusterId = await this.clustering.getClusterId(headId);
+      if (clusterId === undefined || clusterId === -1) return null;
+      const sizes = await this.clustering.getClusterSizes();
+      return {
+        id: clusterId,
+        size: sizes[clusterId] || 0,
+        color: this.clustering.getClusterColor(clusterId),
+        label: this.clustering.getClusterLabel(clusterId),
+      };
+    },
+
+    async updateNClusters() {
+      if (!this.clustering_available) return;
+      this.n_clusters = Math.max(2, Math.min(200, this.n_clusters));
+      await this.clustering.setNClusters(this.n_clusters);
+      this.cluster_cut_height = this.clustering.getCutHeight();
+      await this.updateClusterInfo();
+      await this.updateHeadsWithDistances();
+    },
+
+    async updateCutHeight() {
+      if (!this.clustering_available) return;
+      this.cluster_cut_height = Math.max(
+        0,
+        Math.min(this.cluster_max_height, this.cluster_cut_height),
+      );
+      await this.clustering.setCutHeight(this.cluster_cut_height);
+      this.n_clusters = this.clustering.getNClusters();
+      await this.updateClusterInfo();
+      await this.updateHeadsWithDistances();
+    },
+
+    async updateMinClusterSize() {
+      if (!this.clustering_available) return;
+      this.cluster_min_size = Math.max(0, this.cluster_min_size);
+      await this.clustering.setMinClusterSize(this.cluster_min_size);
+      this.n_clusters = this.clustering.getNClustersActual();
+      await this.updateClusterInfo();
+      await this.updateHeadsWithDistances();
+    },
+
+    async updateClusterInfo() {
+      await this.updateClusterStats();
+      this.top_clusters = await this.clustering.getTopClusters(10);
+      await this.updateCurrentHeadCluster();
+    },
+
+    async updateCurrentHeadCluster() {
+      if (!this.clustering_available || !this.current_head) {
+        this.current_head_cluster = null;
+        return;
+      }
+      this.current_head_cluster = await this.getClusterInfo(this.current_head);
+    },
+
+    async updateClusterStats() {
+      if (!this.clustering_available) {
+        this.cluster_stats = null;
+        return;
+      }
+      const sizesObj = await this.clustering.getClusterSizes();
+      const sizes = Object.values(sizesObj);
+      if (!sizes || sizes.length === 0) {
+        this.cluster_stats = null;
+        return;
+      }
+      const minSize = Math.min(...sizes);
+      const maxSize = Math.max(...sizes);
+      const avgSize = (sizes.reduce((a, b) => a + b, 0) / sizes.length).toFixed(
+        1,
+      );
+      const unclustered = this.clustering.getUnclusteredCount();
+      let statsText = `${sizes.length} clusters (min: ${minSize}, max: ${maxSize}, avg: ${avgSize})`;
+      if (unclustered > 0) {
+        statsText += ` · ${unclustered} unclustered`;
+      }
+      this.cluster_stats = statsText;
+    },
+
+    getClusterPageUrl(highlightClusterId = null) {
+      if (typeof ClusteringConfig !== "undefined") {
+        ClusteringConfig.setCutHeight(this.cluster_cut_height);
+        if (highlightClusterId !== null) {
+          ClusteringConfig.setHighlightCluster(highlightClusterId);
+        }
+      }
+      const url = new URL("../clustering/index.html", window.location.href);
+      if (highlightClusterId !== null) {
+        url.searchParams.set("highlight", highlightClusterId);
+      }
+      return url.toString();
+    },
+
+    // --- Clustering method switching ---
+
+    async updateClusteringMethod(method) {
+      this.clustering_method = method;
+      this.clustering.setMethod(method);
+      ClusteringConfig.setMethod(method);
+
+      if (method === "hierarchical") {
+        this.n_clusters = CONFIG.default_n_clusters || 10;
+        await this.clustering.setNClusters(this.n_clusters);
+        this.cluster_cut_height = this.clustering.getCutHeight();
+        this.cluster_max_height = this.clustering.getMaxCutHeight();
+      } else {
+        this._updateFlatParamUI();
+      }
+      await this.updateClusterInfo();
+      await this.updateHeadsWithDistances();
+    },
+
+    async updateClusteringParam(paramKey) {
+      this.clustering_param_key = paramKey;
+      await this.clustering.setParamKey(paramKey);
+      ClusteringConfig.setParamKey(paramKey);
+      this.n_clusters = this.clustering.getNClustersActual();
+      await this.updateClusterInfo();
+      await this.updateHeadsWithDistances();
+    },
+
+    _updateFlatParamUI() {
+      const info = this.clustering.getFlatParamInfo();
+      if (!info) return;
+      this.clustering_param_label = info.paramName;
+      this.clustering_param_keys = info.paramKeys;
+      this.clustering_param_key =
+        this.clustering.getParamKey() || info.paramKeys[0];
+      this.n_clusters = this.clustering.getNClustersActual();
+    },
+
+    // --- Column visibility ---
+
+    toggleColumn(col) {
+      this.column_visibility[col] = !this.column_visibility[col];
+      setConfigValue(`column_visibility.${col}`, this.column_visibility[col]);
+    },
+
+    /** Number of visible fixed columns (Head always visible). */
+    get visibleColCount() {
+      return (
+        1 +
+        (this.column_visibility.distance ? 1 : 0) +
+        (this.column_visibility.classifications ? 1 : 0) +
+        (this.clustering_available && this.column_visibility.cluster ? 1 : 0) +
+        this.prompts.length
+      );
+    },
+
+    // --- Table SVG export ---
+
+    exportTableSVG() {
+      const table = document.querySelector(".pattern-table");
+      if (!table) return;
+
+      const clone = table.cloneNode(true);
+
+      // Inline computed styles onto every element for standalone SVG
+      const inlineStyles = (source, target) => {
+        const cs = window.getComputedStyle(source);
+        const dominated = [
+          "font",
+          "color",
+          "background",
+          "border",
+          "padding",
+          "margin",
+          "text-align",
+          "vertical-align",
+          "white-space",
+          "font-size",
+          "font-weight",
+          "font-family",
+          "line-height",
+          "overflow",
+          "width",
+          "height",
+          "display",
+        ];
+        for (const prop of dominated) {
+          target.style.setProperty(prop, cs.getPropertyValue(prop));
+        }
+        const srcChildren = source.children;
+        const tgtChildren = target.children;
+        for (let i = 0; i < srcChildren.length; i++) {
+          if (tgtChildren[i]) inlineStyles(srcChildren[i], tgtChildren[i]);
+        }
+      };
+      inlineStyles(table, clone);
+
+      // XHTML namespace required for foreignObject content
+      clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+
+      // Remove hidden elements (Alpine x-show sets display:none)
+      clone
+        .querySelectorAll("[style*='display: none']")
+        .forEach((el) => el.remove());
+
+      const rect = table.getBoundingClientRect();
+      const width = Math.ceil(rect.width);
+      const height = Math.ceil(rect.height);
+
+      const svgNS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(svgNS, "svg");
+      svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      svg.setAttribute("width", width);
+      svg.setAttribute("height", height);
+
+      const fo = document.createElementNS(svgNS, "foreignObject");
+      fo.setAttribute("width", "100%");
+      fo.setAttribute("height", "100%");
+      fo.appendChild(clone);
+      svg.appendChild(fo);
+
+      const serializer = new XMLSerializer();
+      const svgStr = serializer.serializeToString(svg);
+      const blob = new Blob([svgStr], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const headLabel = this.current_head || "table";
+      a.download = `attnpedia-${headLabel}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
     },
   }));
 });

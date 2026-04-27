@@ -1,19 +1,22 @@
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Callable
 
 import numpy as np
+from numpy.lib.npyio import NpzFile
 from jaxtyping import Float
 import matplotlib.pyplot as plt
 
 from muutils.dbg import dbg
+from attention_motifs.util.model_name import cached_sanitize_model_name
 
 
-def prefix_dict(
-	d: dict[str, float],
+def prefix_dict[T_key](
+	d: Mapping[str, T_key],
 	prefix: str | list[str],
 	sep: str = ".",
-) -> dict[str, float]:
+) -> dict[str, T_key]:
 	prefix_str: str = prefix if isinstance(prefix, str) else sep.join(prefix)
 	return {f"{prefix_str}{sep}{k}": v for k, v in d.items()}
 
@@ -24,17 +27,17 @@ def load_activations(
 ) -> tuple[
 	dict,
 	list[dict],
-	list[np.lib.npyio.NpzFile],
+	list[NpzFile],
 ]:
 	"returns (model_config, prompts, activations)"
-	model_path: Path = base_path / model_name
+	model_path: Path = base_path / cached_sanitize_model_name(model_name)
 
 	# prompts
 	with open(model_path / "prompts.jsonl") as f:
 		prompts = [json.loads(line) for line in f]
 
 	# activations
-	activations: list[np.ndarray] = [
+	activations: list[NpzFile] = [
 		np.load(model_path / "prompts" / p["hash"] / "activations.npz") for p in prompts
 	]
 
@@ -57,9 +60,9 @@ def plot_figs(
 	n_figures: int,
 	model_cfg: dict,
 	prompt_dicts: list[dict],
-	activations: list[np.lib.npyio.NpzFile],
+	activations: list[NpzFile],
 	figure_func: Callable,
-	prompts: list[int] = None,
+	prompts: list[int] | None = None,
 	layers: list[int] | None = None,
 	heads: list[int] | None = None,
 ):

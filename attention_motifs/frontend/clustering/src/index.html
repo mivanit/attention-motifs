@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clustering - Attention Heads</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <nav class="nav-bar">
+      <div class="nav-bar-content">
+        <a href="../../index.html">Home</a>
+        <a href="../attnpedia/index.html">AttentionPedia</a>
+        <a href="../embeds/patterns/index.html">Pattern Embeddings</a>
+        <a href="../embeds/heads/index.html">Head Embeddings</a>
+        <a href="../../figures/head_embed_table.html">Head Embed Table</a>
+        <a href="../../figures/classifications.html">Classifications</a>
+        <span class="nav-current">Clustering</span>
+        <a href="../cluster_trends/index.html">Cluster Trends</a>
+        <a href="../../ablations/index.html">Ablation</a>
+        <a href="../../ablations/correlations.html">Correlations</a>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h1>Clustering of Attention Heads</h1>
+
+      <div class="controls-header">
+        <div class="controls-left">
+          <div class="controls clustering-controls">
+            <div class="control-group">
+              <label for="clustering-method-select">Method:</label>
+              <select id="clustering-method-select" class="dropdown"></select>
+            </div>
+            <div id="hierarchical-controls">
+              <div class="control-group" id="cut-height-container"></div>
+            </div>
+            <div id="flat-param-controls" style="display: none">
+              <div class="control-group">
+                <label id="clustering-param-label" for="clustering-param-select"
+                  >Parameter:</label
+                >
+                <select id="clustering-param-select" class="dropdown"></select>
+              </div>
+            </div>
+            <div class="control-group">
+              <label for="min-cluster-size">Min Cluster Size:</label>
+              <input
+                type="range"
+                id="min-cluster-size"
+                min="0"
+                max="100"
+                value="0"
+              />
+              <input
+                type="number"
+                id="min-cluster-size-input"
+                value="0"
+                min="0"
+                class="control-input"
+              />
+            </div>
+            <div class="control-group">
+              <button id="export-pattern-types" class="toggle-btn">
+                Export Pattern Types
+              </button>
+            </div>
+          </div>
+
+          <div class="controls display-controls">
+            <div class="control-group">
+              <label for="scale">Model Map Scale:</label>
+              <input
+                type="range"
+                id="scale"
+                min="0.5"
+                max="2"
+                value="1"
+                step="0.1"
+              />
+              <span id="scale-value">1.0</span>
+            </div>
+            <div class="control-group">
+              <label>Sort Heads:</label>
+              <button id="sort-toggle" class="toggle-btn">By Index</button>
+            </div>
+            <div class="control-group">
+              <label for="model-order">Model Order:</label>
+              <select id="model-order" class="dropdown">
+                <option value="data">Data Order</option>
+                <option value="size">By Size</option>
+                <option value="family">By Family</option>
+              </select>
+            </div>
+            <span class="help-icon" id="model-data-help">❓</span>
+          </div>
+        </div>
+
+        <div class="controls-right">
+          <div id="mini-dendrogram-container">
+            <svg id="mini-dendrogram"></svg>
+            <button
+              id="dendrogram-toggle"
+              class="toggle-btn"
+              style="font-size: 10px; padding: 2px 6px"
+            >
+              Show All
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats" id="stats"></div>
+      <div class="top-clusters" id="top-clusters"></div>
+      <div class="cluster-labels" id="cluster-labels"></div>
+
+      <div class="split-container">
+        <div class="left-pane" id="left-pane">
+          <div id="model-grids-container"></div>
+        </div>
+        <div class="divider" id="divider"></div>
+        <div class="right-pane" id="right-pane">
+          <div class="right-pane-header">
+            <h3>Selected Heads <span id="selected-count">(0)</span></h3>
+            <div class="right-pane-controls">
+              <label>Size:</label>
+              <input
+                type="range"
+                id="pattern-size"
+                min="60"
+                max="200"
+                value="100"
+              />
+              <button id="randomize-prompts" class="toggle-btn">
+                Randomize
+              </button>
+              <button id="clear-selection" class="toggle-btn">Clear</button>
+            </div>
+          </div>
+          <div id="pattern-images"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../libs/d3.min.js"></script>
+    <script src="../../libs/DataFrame.js"></script>
+    <script src="../../libs/yaml.js"></script>
+    <script src="../../libs/sparklines.js"></script>
+    <script src="../../shared/cluster_engine.js"></script>
+    <script src="../../shared/cluster_utils.js"></script>
+    <script src="../../shared/clustering_config.js"></script>
+    <script src="../../shared/cut_height_control.js"></script>
+    <script src="clusterState.js"></script>
+    <script src="gridView.js"></script>
+    <script>
+      // Initialize with config from URL or defaults
+      const urlParams = new URLSearchParams(window.location.search);
+      const config = {
+        clusteringMetaUrl:
+          urlParams.get("meta") ||
+          "../../features/clustering/clustering_meta.json",
+        linkageUrl:
+          urlParams.get("linkage") || "../../features/clustering/linkage.json",
+        modelsUrl: urlParams.get("models") || "../../patterns/models.jsonl",
+        patternsBaseUrl: urlParams.get("patterns") || "../../patterns",
+      };
+
+      // Initialize grid view
+      initGridView(config);
+    </script>
+  </body>
+</html>

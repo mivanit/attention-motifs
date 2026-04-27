@@ -1,0 +1,5037 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clustering - Attention Heads</title>
+        <!-- begin 'style.css' -->
+    <style>
+    body {
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f8f9fa;
+    }
+    
+    .nav-bar {
+      background: white;
+      padding: 8px 16px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .nav-bar-content {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .nav-bar a {
+      color: #1565c0;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    
+    .nav-bar a:hover {
+      color: #0d47a1;
+    }
+    
+    .nav-current {
+      color: #666;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    
+    .container {
+      max-width: 2400px;
+      margin: 0 auto;
+      padding: 0 20px 40px;
+    }
+    
+    h1 {
+      font-size: 24px;
+      color: #333;
+      margin-bottom: 20px;
+    }
+    
+    .controls-header {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .controls-left {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .controls-left .controls {
+      margin-bottom: 12px;
+    }
+    
+    .controls-left .controls:last-child {
+      margin-bottom: 0;
+    }
+    
+    .controls-right {
+      flex: 0 0 400px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #mini-dendrogram-container {
+      width: 100%;
+      height: 160px;
+    }
+    
+    #mini-dendrogram {
+      width: 100%;
+      height: 100%;
+    }
+    
+    .controls {
+      background: white;
+      padding: 16px 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: center;
+    }
+    
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .control-group label {
+      font-size: 14px;
+      color: #555;
+      white-space: nowrap;
+    }
+    
+    .control-group input[type="range"] {
+      width: 150px;
+    }
+    
+    .clustering-controls input[type="range"] {
+      width: 250px;
+    }
+    
+    .control-group span {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      min-width: 50px;
+    }
+    
+    .control-input {
+      width: 70px;
+      padding: 4px 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      text-align: center;
+    }
+    
+    .control-input:focus {
+      outline: none;
+      border-color: #1565c0;
+    }
+    
+    .control-group button {
+      padding: 8px 16px;
+      font-size: 14px;
+      background: #1565c0;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .control-group button:hover {
+      background: #0d47a1;
+    }
+    
+    .toggle-btn {
+      padding: 6px 14px;
+      font-size: 13px;
+      background: #f5f5f5;
+      color: #555;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .toggle-btn:hover {
+      background: #e8e8e8;
+    }
+    
+    .toggle-btn.active {
+      background: #1565c0;
+      color: white;
+      border-color: #1565c0;
+    }
+    
+    .dropdown {
+      padding: 6px 10px;
+      font-size: 13px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: white;
+      cursor: pointer;
+    }
+    
+    .dropdown:hover {
+      border-color: #1565c0;
+    }
+    
+    .dropdown:focus {
+      outline: none;
+      border-color: #1565c0;
+      box-shadow: 0 0 0 2px rgba(21, 101, 192, 0.2);
+    }
+    
+    /* Separate control boxes */
+    .clustering-controls {
+      margin-bottom: 10px;
+    }
+    
+    .display-controls {
+      position: relative;
+    }
+    
+    /* Help icon with tooltip */
+    .help-icon {
+      cursor: help;
+      font-size: 14px;
+      margin-left: auto;
+      padding: 4px;
+      position: relative;
+    }
+    
+    .help-tooltip {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 100%;
+      background: #333;
+      color: #fff;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 11px;
+      white-space: pre;
+      max-height: 400px;
+      max-width: 500px;
+      overflow: auto;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .help-icon:hover .help-tooltip {
+      display: block;
+    }
+    
+    /* Family row container for "By Family" mode */
+    .family-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .family-row:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    
+    .family-label {
+      width: 100%;
+      font-size: 14px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .family-export-btn {
+      font-size: 11px;
+      padding: 2px 8px;
+      background: #f5f5f5;
+      color: #888;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    
+    .family-row:hover .family-export-btn {
+      opacity: 1;
+    }
+    
+    .family-export-btn:hover {
+      background: #e8e8e8;
+      color: #555;
+    }
+    
+    .stats {
+      background: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: #555;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .stats-text {
+      display: flex;
+      gap: 20px;
+    }
+    
+    .stats-text span {
+      margin-right: 0;
+    }
+    
+    .stats strong {
+      color: #333;
+    }
+    
+    .stats-sparkline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .stats-sparkline-label {
+      font-size: 12px;
+      color: #888;
+    }
+    
+    /* Split layout */
+    .split-container {
+      display: flex;
+      height: calc(100vh - 220px);
+      gap: 0;
+    }
+    
+    .left-pane {
+      flex: 1;
+      overflow: auto;
+      padding: 12px;
+    }
+    
+    .divider {
+      width: 6px;
+      background: #ddd;
+      cursor: col-resize;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    
+    .divider:hover,
+    .divider.dragging {
+      background: #1565c0;
+    }
+    
+    .right-pane {
+      width: 450px;
+      min-width: 200px;
+      max-width: 800px;
+      display: flex;
+      flex-direction: column;
+      background: white;
+      border-left: 1px solid #ddd;
+    }
+    
+    .right-pane-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    
+    .right-pane-header h3 {
+      margin: 0;
+      font-size: 16px;
+      color: #333;
+    }
+    
+    .right-pane-header #selected-count {
+      color: #888;
+      font-weight: normal;
+    }
+    
+    .right-pane-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .right-pane-controls label {
+      font-size: 13px;
+      color: #666;
+    }
+    
+    .right-pane-controls input[type="range"] {
+      width: 80px;
+    }
+    
+    #model-grids-container {
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-content: flex-start;
+    }
+    
+    /* Model box */
+    .model-box {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      padding: 12px;
+    }
+    
+    .model-box-header {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 5px;
+      text-align: center;
+      position: relative;
+      cursor: default;
+    }
+    
+    .model-box-header:hover .model-info-tooltip {
+      display: block;
+    }
+    
+    .model-info-tooltip {
+      display: none;
+      position: absolute;
+      left: 50%;
+      top: 100%;
+      transform: translateX(-50%);
+      background: #333;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: normal;
+      white-space: pre;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      pointer-events: none;
+    }
+    
+    .model-grid-wrapper {
+      display: flex;
+      gap: 4px;
+    }
+    
+    .layer-labels {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      padding-top: calc(16px * var(--scale, 1));
+    }
+    
+    .layer-label {
+      font-size: calc(9px * var(--scale, 1));
+      color: #888;
+      height: calc(14px * var(--scale, 1));
+      line-height: calc(14px * var(--scale, 1));
+      margin: calc(0.5px * var(--scale, 1)) 0;
+      text-align: right;
+      padding-right: 4px;
+    }
+    
+    .grid-content {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .head-labels {
+      display: flex;
+      height: calc(16px * var(--scale, 1));
+    }
+    
+    .head-label {
+      font-size: calc(9px * var(--scale, 1));
+      color: #888;
+      width: calc(14px * var(--scale, 1));
+      text-align: center;
+      margin: 0 calc(0.5px * var(--scale, 1));
+    }
+    
+    .model-grid {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .grid-row {
+      display: flex;
+    }
+    
+    .grid-cell {
+      width: calc(14px * var(--scale, 1));
+      height: calc(14px * var(--scale, 1));
+      margin: calc(0.5px * var(--scale, 1));
+      border-radius: 2px;
+      cursor: pointer;
+      transition:
+        transform 0.1s,
+        box-shadow 0.1s;
+    }
+    
+    .grid-cell:hover {
+      transform: scale(1.2);
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    .grid-cell.selected {
+      outline: 2px solid #333;
+      outline-offset: 1px;
+    }
+    
+    /* Pattern images container */
+    #pattern-images {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+    
+    .pattern-section {
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .pattern-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    
+    .pattern-section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    
+    .pattern-section-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+    
+    .pattern-section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1565c0;
+      text-decoration: none;
+    }
+    
+    .pattern-section-title:hover {
+      text-decoration: underline;
+    }
+    
+    .pattern-section-cluster {
+      font-size: 12px;
+      color: #888;
+    }
+    
+    .pattern-arrow {
+      margin-left: auto;
+      font-size: 18px;
+      color: #1565c0;
+      text-decoration: none;
+      padding: 4px 8px;
+    }
+    
+    .pattern-arrow:hover {
+      background: #e3f2fd;
+      border-radius: 4px;
+    }
+    
+    .pattern-row {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    
+    .pattern-image {
+      width: 100px;
+      height: 100px;
+      object-fit: contain;
+      border-radius: 4px;
+      background: #f5f5f5;
+      flex-shrink: 0;
+    }
+    
+    .pattern-image-placeholder {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #f5f5f5;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #aaa;
+      font-size: 11px;
+    }
+    
+    .pattern-link {
+      display: inline-block;
+      flex-shrink: 0;
+      border-radius: 4px;
+      cursor: pointer;
+      transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
+    }
+    
+    .pattern-link:hover {
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    .pattern-link img {
+      display: block;
+    }
+    
+    /* Tooltip */
+    .tooltip {
+      position: fixed;
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 1000;
+      max-width: 300px;
+    }
+    
+    .tooltip .head-id {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    
+    .tooltip .cluster-info {
+      color: #aaa;
+    }
+    
+    .tooltip .cluster-desc {
+      color: #999;
+      font-size: 11px;
+      margin-top: 2px;
+      font-style: italic;
+    }
+    
+    /* Loading state */
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: #666;
+      font-size: 16px;
+    }
+    
+    /* Error state */
+    .error {
+      text-align: center;
+      padding: 60px;
+      color: #e53935;
+      font-size: 16px;
+    }
+    
+    /* Empty state for side pane */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #888;
+      font-size: 14px;
+    }
+    
+    /* Scale toggle button in stats sparkline */
+    .scale-toggle {
+      margin-left: 8px;
+      padding: 4px 10px;
+      font-size: 11px;
+    }
+    
+    /* D3 cluster size chart */
+    #cluster-size-chart-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    #cluster-size-chart text {
+      font-family: "SF Mono", "Menlo", "Monaco", "Consolas", monospace;
+      fill: #555;
+    }
+    
+    #cluster-size-chart .axis line,
+    #cluster-size-chart .axis path {
+      stroke: #ccc;
+    }
+    
+    /* Top clusters row */
+    .top-clusters {
+      background: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    .top-clusters-label {
+      font-size: 12px;
+      color: #888;
+      margin-right: 4px;
+    }
+    
+    .cluster-chip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid #ddd;
+      background: #fafafa;
+      transition:
+        background 0.15s,
+        border-color 0.15s;
+    }
+    
+    .cluster-chip:hover {
+      background: #f0f0f0;
+    }
+    
+    .cluster-chip.selected {
+      border-color: #333;
+      background: #e8e8e8;
+    }
+    
+    .cluster-chip-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    
+    .cluster-chip-size {
+      font-size: 12px;
+      color: #555;
+      font-weight: 500;
+    }
+    
+    .top-clusters-ellipsis {
+      font-size: 12px;
+      color: #888;
+      font-style: italic;
+    }
+    
+    .cluster-chip-label {
+      font-size: 11px;
+      color: #666;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    /* Cluster labels editor */
+    .cluster-labels {
+      background: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+    
+    .cluster-labels-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    
+    .cluster-labels-title {
+      font-size: 12px;
+      color: #888;
+    }
+    
+    .cluster-labels-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .cluster-label-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .cluster-label-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    
+    .cluster-label-id {
+      font-size: 12px;
+      color: #555;
+      font-weight: 600;
+      min-width: 30px;
+    }
+    
+    .cluster-label-size {
+      font-size: 12px;
+      color: #888;
+      min-width: 40px;
+    }
+    
+    .cluster-label-name,
+    .cluster-label-desc {
+      padding: 3px 8px;
+      font-size: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: inherit;
+    }
+    
+    .cluster-label-name {
+      width: 120px;
+      flex-shrink: 0;
+    }
+    
+    .cluster-label-desc {
+      flex: 1;
+      max-width: 250px;
+    }
+    
+    .cluster-label-name:focus,
+    .cluster-label-desc:focus {
+      outline: none;
+      border-color: #1565c0;
+    }
+    
+    .cluster-label-name:not(:placeholder-shown),
+    .cluster-label-desc:not(:placeholder-shown) {
+      border-color: #90caf9;
+      background: #f0f7ff;
+    }
+    
+    /* Slider with tick marks */
+    .slider-with-ticks {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .clustering-controls .slider-with-ticks input[type="range"] {
+      width: 250px;
+    }
+    
+    .slider-ticks {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 0;
+      pointer-events: none;
+    }
+    
+    .slider-tick {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: #1565c0;
+      border: 2px solid white;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: auto;
+      cursor: pointer;
+      z-index: 1;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    
+    .slider-tick:hover {
+      background: #0d47a1;
+      transform: translate(-50%, -50%) scale(1.3);
+    }
+    
+    </style>
+    <!-- end 'style.css' -->
+  </head>
+  <body>
+    <nav class="nav-bar">
+      <div class="nav-bar-content">
+        <a href="../../index.html">Home</a>
+        <a href="../attnpedia/index.html">AttentionPedia</a>
+        <a href="../embeds/patterns/index.html">Pattern Embeddings</a>
+        <a href="../embeds/heads/index.html">Head Embeddings</a>
+        <a href="../../figures/head_embed_table.html">Head Embed Table</a>
+        <a href="../../figures/classifications.html">Classifications</a>
+        <span class="nav-current">Clustering</span>
+        <a href="../cluster_trends/index.html">Cluster Trends</a>
+        <a href="../../ablations/index.html">Ablation</a>
+        <a href="../../ablations/correlations.html">Correlations</a>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h1>Clustering of Attention Heads</h1>
+
+      <div class="controls-header">
+        <div class="controls-left">
+          <div class="controls clustering-controls">
+            <div class="control-group">
+              <label for="clustering-method-select">Method:</label>
+              <select id="clustering-method-select" class="dropdown"></select>
+            </div>
+            <div id="hierarchical-controls">
+              <div class="control-group" id="cut-height-container"></div>
+            </div>
+            <div id="flat-param-controls" style="display: none">
+              <div class="control-group">
+                <label id="clustering-param-label" for="clustering-param-select"
+                  >Parameter:</label
+                >
+                <select id="clustering-param-select" class="dropdown"></select>
+              </div>
+            </div>
+            <div class="control-group">
+              <label for="min-cluster-size">Min Cluster Size:</label>
+              <input
+                type="range"
+                id="min-cluster-size"
+                min="0"
+                max="100"
+                value="0"
+              />
+              <input
+                type="number"
+                id="min-cluster-size-input"
+                value="0"
+                min="0"
+                class="control-input"
+              />
+            </div>
+            <div class="control-group">
+              <button id="export-pattern-types" class="toggle-btn">
+                Export Pattern Types
+              </button>
+            </div>
+          </div>
+
+          <div class="controls display-controls">
+            <div class="control-group">
+              <label for="scale">Model Map Scale:</label>
+              <input
+                type="range"
+                id="scale"
+                min="0.5"
+                max="2"
+                value="1"
+                step="0.1"
+              />
+              <span id="scale-value">1.0</span>
+            </div>
+            <div class="control-group">
+              <label>Sort Heads:</label>
+              <button id="sort-toggle" class="toggle-btn">By Index</button>
+            </div>
+            <div class="control-group">
+              <label for="model-order">Model Order:</label>
+              <select id="model-order" class="dropdown">
+                <option value="data">Data Order</option>
+                <option value="size">By Size</option>
+                <option value="family">By Family</option>
+              </select>
+            </div>
+            <span class="help-icon" id="model-data-help">❓</span>
+          </div>
+        </div>
+
+        <div class="controls-right">
+          <div id="mini-dendrogram-container">
+            <svg id="mini-dendrogram"></svg>
+            <button
+              id="dendrogram-toggle"
+              class="toggle-btn"
+              style="font-size: 10px; padding: 2px 6px"
+            >
+              Show All
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats" id="stats"></div>
+      <div class="top-clusters" id="top-clusters"></div>
+      <div class="cluster-labels" id="cluster-labels"></div>
+
+      <div class="split-container">
+        <div class="left-pane" id="left-pane">
+          <div id="model-grids-container"></div>
+        </div>
+        <div class="divider" id="divider"></div>
+        <div class="right-pane" id="right-pane">
+          <div class="right-pane-header">
+            <h3>Selected Heads <span id="selected-count">(0)</span></h3>
+            <div class="right-pane-controls">
+              <label>Size:</label>
+              <input
+                type="range"
+                id="pattern-size"
+                min="60"
+                max="200"
+                value="100"
+              />
+              <button id="randomize-prompts" class="toggle-btn">
+                Randomize
+              </button>
+              <button id="clear-selection" class="toggle-btn">Clear</button>
+            </div>
+          </div>
+          <div id="pattern-images"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../libs/d3.min.js"></script>
+        <!-- begin '../../libs/DataFrame.js' -->
+    <script>
+    /**
+     * @fileoverview Tabular data manipulation and display
+     * @module DataFrame
+     * @license GPLv3
+     * @see {@link https://github.com/mivanit/js-dev-toolkit}
+     */
+    
+    class DataFrame {
+    	/**
+    	 * Creates a DataFrame from a list of row objects
+    	 *
+    	 * @param {Array<Object>} data - Array of row objects
+    	 * @param {Array<string>} [columns] - Optional column names (will be inferred from data if not provided)
+    	 */
+    	constructor(data = [], columns = null) {
+    		this.data = data;
+    
+    		// Infer columns from data if not provided
+    		if (!columns && data.length > 0) {
+    			this.columns = Object.keys(data[0]);
+    		} else {
+    			this.columns = columns || [];
+    		}
+    	}
+    
+    	/**
+    	 * Returns the values for a specific column
+    	 *
+    	 * @param {string} name - Column name
+    	 * @returns {Array} - Values in the column
+    	 */
+    	col(name) {
+    		if (!this.columns.includes(name)) {
+    			throw new Error(
+    				`Column '${name}' not found in columns: ${this.columns.join(", ")}`,
+    			);
+    		}
+    
+    		return this.data.map((row) => row[name]);
+    	}
+    
+    	/**
+    	 * Returns the values for a specific cell
+    	 * @param {row_idx} row_idx - Row index
+    	 * @param {col_name} col_name - Column name
+    	 * @returns {any} - Value in the cell
+    	 * @throws {Error} - If row index or column name is invalid
+    	 */
+    	get(row_idx, col_name) {
+    		if (row_idx < 0 || row_idx >= this.data.length) {
+    			throw new Error(
+    				`Row index ${row_idx} out of bounds (0 to ${this.data.length - 1})`,
+    			);
+    		}
+    
+    		if (!this.columns.includes(col_name)) {
+    			throw new Error(
+    				`Column '${col_name}' not found in columns: ${this.columns.join(", ")}`,
+    			);
+    		}
+    
+    		return this.data[row_idx][col_name];
+    	}
+    
+    	/**
+    	 * Returns a specific row as an object
+    	 *
+    	 * @param {number} rowIdx - Row index
+    	 * @returns {Object} - Row as an object
+    	 */
+    	row(rowIdx) {
+    		if (rowIdx < 0 || rowIdx >= this.data.length) {
+    			throw new Error(
+    				`Row index ${rowIdx} out of bounds (0 to ${this.data.length - 1})`,
+    			);
+    		}
+    
+    		return this.data[rowIdx];
+    	}
+    
+    	/**
+    	 * Returns unique values in a specific column
+    	 * @param {string} name - Column name
+    	 * @returns {Set} - Unique values in the column
+    	 */
+    	col_unique(name) {
+    		return new Set(this.col(name));
+    	}
+    
+    	/**
+    	 * Apply a function to transform values in a specific column
+    	 * @param {string} name - Column name
+    	 * @param {Function} fn - Function to apply to each value (value, rowIndex) => newValue
+    	 */
+    	col_apply(name, fn) {
+    		if (!this.columns.includes(name)) {
+    			throw new Error(
+    				`Column '${name}' not found in columns: ${this.columns.join(", ")}`,
+    			);
+    		}
+    
+    		for (let i = 0; i < this.data.length; i++) {
+    			this.data[i][name] = fn(this.data[i][name], i);
+    		}
+    	}
+    
+    	/**
+    	 * Parses a CSV string into a DataFrame
+    	 *
+    	 * @param {string} text - CSV text content
+    	 * @returns {DataFrame} - New DataFrame instance
+    	 */
+    	static from_csv(text) {
+    		// Split text into lines and filter out empty lines
+    		const lines = text.split("\n").filter((line) => line.trim().length > 0);
+    
+    		if (lines.length === 0) {
+    			return new DataFrame();
+    		}
+    
+    		// First line is the header
+    		const header = lines[0].split(",").map((col) => col.trim());
+    
+    		// Parse each line into a row object
+    		const data = [];
+    		for (let i = 1; i < lines.length; i++) {
+    			const values = lines[i].split(",").map((val) => val.trim());
+    
+    			// Create row object mapping column names to values
+    			const row = {};
+    			for (let j = 0; j < header.length; j++) {
+    				// Try to convert to number if possible
+    				const value = values[j];
+    				if (value === undefined) continue;
+    
+    				// Handle quoted strings
+    				if (value.startsWith('"') && value.endsWith('"')) {
+    					row[header[j]] = value.slice(1, -1);
+    				}
+    				// Handle null values
+    				else if (value === "" || value.toLowerCase() === "null") {
+    					row[header[j]] = null;
+    				}
+    				// Try converting to number
+    				else if (!isNaN(value)) {
+    					row[header[j]] = Number(value);
+    				}
+    				// Otherwise keep as string
+    				else {
+    					row[header[j]] = value;
+    				}
+    			}
+    
+    			data.push(row);
+    		}
+    
+    		return new DataFrame(data, header);
+    	}
+    
+    	/**
+    	 * Converts DataFrame to CSV string
+    	 *
+    	 * @returns {string} - CSV representation of the DataFrame
+    	 */
+    	to_csv() {
+    		if (this.data.length === 0) {
+    			return this.columns.join(",");
+    		}
+    
+    		// Start with the header
+    		const lines = [this.columns.join(",")];
+    
+    		// Add each row
+    		for (const row of this.data) {
+    			const values = this.columns.map((col) => {
+    				const val = row[col];
+    
+    				if (val === null || val === undefined) {
+    					return "";
+    				} else if (
+    					typeof val === "string" &&
+    					(val.includes(",") || val.includes('"'))
+    				) {
+    					// Escape quotes and wrap in quotes
+    					return `"${val.replace(/"/g, '""')}"`;
+    				} else {
+    					return String(val);
+    				}
+    			});
+    
+    			lines.push(values.join(","));
+    		}
+    
+    		return lines.join("\n");
+    	}
+    
+    	/**
+    	 * Parses a JSONL string into a DataFrame
+    	 *
+    	 * @param {string} text - JSONL text content
+    	 * @returns {DataFrame} - New DataFrame instance
+    	 */
+    	static from_jsonl(text) {
+    		// Parse each line as JSON
+    		const data = text
+    			.trim()
+    			.split("\n")
+    			.map((line) => JSON.parse(line));
+    
+    		// Extract all unique column names from all rows
+    		const allColumns = new Set();
+    		for (const row of data) {
+    			Object.keys(row).forEach((key) => allColumns.add(key));
+    		}
+    
+    		return new DataFrame(data, Array.from(allColumns));
+    	}
+    
+    	/**
+    	 * Converts DataFrame to JSONL string
+    	 *
+    	 * @returns {string} - JSONL representation of the DataFrame
+    	 */
+    	to_jsonl() {
+    		return this.data.map((row) => JSON.stringify(row)).join("\n");
+    	}
+    
+    	/**
+    	 * Returns the number of rows in the DataFrame
+    	 *
+    	 * @returns {number} - Number of rows
+    	 */
+    	get length() {
+    		return this.data.length;
+    	}
+    
+    	/**
+    	 * Returns a string representation of the DataFrame
+    	 *
+    	 * @returns {string} - String representation
+    	 */
+    	toString() {
+    		if (this.data.length === 0) {
+    			return "Empty DataFrame";
+    		}
+    
+    		return `DataFrame with ${this.data.length} rows and ${this.columns.length} columns: ${this.columns.join(", ")}`;
+    	}
+    
+    	/**
+    	 * Creates a deep copy of the DataFrame
+    	 *
+    	 * @returns {DataFrame} - New DataFrame with copied data
+    	 */
+    	clone() {
+    		// Deep copy the data array and each row object
+    		const clonedData = this.data.map((row) => ({ ...row }));
+    		// Copy the columns array
+    		const clonedColumns = [...this.columns];
+    		return new DataFrame(clonedData, clonedColumns);
+    	}
+    
+    	/**
+    	 * Filters rows based on a predicate function
+    	 *
+    	 * @param {Function} predicate - Function that receives a row and returns boolean
+    	 * @returns {DataFrame} - New DataFrame with filtered rows
+    	 * @example
+    	 * df.filter(row => row.age > 18)
+    	 */
+    	filter(predicate) {
+    		const filteredData = this.data.filter(predicate);
+    		return new DataFrame(filteredData, [...this.columns]);
+    	}
+    
+    	/**
+    	 * Filters rows by a column value or predicate
+    	 *
+    	 * @param {string} column - Column name to filter by
+    	 * @param {any|Function} valueOrPredicate - Value to match, or predicate function for column value
+    	 * @returns {DataFrame} - New DataFrame with filtered rows
+    	 * @example
+    	 * // Filter by exact value
+    	 * df.filterBy('status', 'active')
+    	 *
+    	 * // Filter by predicate
+    	 * df.filterBy('age', age => age > 18)
+    	 */
+    	filterBy(column, valueOrPredicate) {
+    		if (!this.columns.includes(column)) {
+    			throw new Error(
+    				`Column '${column}' not found in columns: ${this.columns.join(", ")}`,
+    			);
+    		}
+    
+    		// If valueOrPredicate is a function, use it as a predicate on the column value
+    		if (typeof valueOrPredicate === "function") {
+    			const filteredData = this.data.filter((row) =>
+    				valueOrPredicate(row[column]),
+    			);
+    			return new DataFrame(filteredData, [...this.columns]);
+    		}
+    		// Otherwise, filter by exact value match
+    		else {
+    			const filteredData = this.data.filter(
+    				(row) => row[column] === valueOrPredicate,
+    			);
+    			return new DataFrame(filteredData, [...this.columns]);
+    		}
+    	}
+    
+    	/**
+    	 * Sorts DataFrame by a column
+    	 *
+    	 * @param {string} column - Column name to sort by
+    	 * @param {boolean} [ascending=true] - Sort in ascending order (default true)
+    	 * @returns {DataFrame} - New DataFrame with sorted rows
+    	 * @example
+    	 * // Sort by age ascending
+    	 * df.sort('age')
+    	 *
+    	 * // Sort by age descending
+    	 * df.sort('age', false)
+    	 */
+    	sort(column, ascending = true) {
+    		if (!this.columns.includes(column)) {
+    			throw new Error(
+    				`Column '${column}' not found in columns: ${this.columns.join(", ")}`,
+    			);
+    		}
+    
+    		// Create a copy of the data array
+    		const sortedData = [...this.data];
+    
+    		// Sort with null handling (nulls at the end)
+    		sortedData.sort((a, b) => {
+    			const aVal = a[column];
+    			const bVal = b[column];
+    
+    			// Handle null/undefined values - place at end
+    			if (aVal === null || aVal === undefined) {
+    				return 1;
+    			}
+    			if (bVal === null || bVal === undefined) {
+    				return -1;
+    			}
+    
+    			// Compare values
+    			let comparison;
+    			if (typeof aVal === "string" && typeof bVal === "string") {
+    				comparison = aVal.localeCompare(bVal);
+    			} else {
+    				comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+    			}
+    
+    			// Apply ascending/descending
+    			return ascending ? comparison : -comparison;
+    		});
+    
+    		return new DataFrame(sortedData, [...this.columns]);
+    	}
+    
+    	/**
+    	 * Sorts DataFrame using a custom comparison function
+    	 *
+    	 * @param {Function} compareFn - Comparison function (a, b) => number
+    	 * @returns {DataFrame} - New DataFrame with sorted rows
+    	 * @example
+    	 * // Sort by multiple columns
+    	 * df.sortBy((a, b) => {
+    	 *   if (a.city !== b.city) return a.city.localeCompare(b.city);
+    	 *   return a.age - b.age;
+    	 * })
+    	 */
+    	sortBy(compareFn) {
+    		// Create a copy of the data array
+    		const sortedData = [...this.data];
+    		sortedData.sort(compareFn);
+    		return new DataFrame(sortedData, [...this.columns]);
+    	}
+    
+    	/**
+    	 * Returns HTML code for displaying the DataFrame as a simple table
+    	 *
+    	 * @returns {string} - HTML table representation
+    	 * @throws {Error} - If the DataFrame is empty
+    	 */
+    	display_simple() {
+    		if (this.data.length === 0) {
+    			throw new Error("Cannot display empty DataFrame");
+    		}
+    
+    		let html = "<table>\n";
+    
+    		html += "  <thead>\n    <tr>\n";
+    		for (const column of this.columns) {
+    			html += `      <th>${column}</th>\n`;
+    		}
+    		html += "    </tr>\n  </thead>\n";
+    
+    		html += "  <tbody>\n";
+    		for (let i = 0; i < this.data.length; i++) {
+    			const row = this.data[i];
+    			html += "    <tr>\n";
+    
+    			for (const column of this.columns) {
+    				const value = row[column];
+    				const displayValue =
+    					value === null || value === undefined ? "" : String(value);
+    				html += `      <td>${displayValue}</td>\n`;
+    			}
+    
+    			html += "    </tr>\n";
+    		}
+    		html += "  </tbody>\n";
+    
+    		html += "</table>";
+    
+    		return html;
+    	}
+    }
+    
+    </script>
+    <!-- end '../../libs/DataFrame.js' -->
+        <!-- begin '../../libs/yaml.js' -->
+    <script>
+    /**
+     * @fileoverview Simple YAML serialization util
+     * @module yaml
+     * @license GPLv3
+     * @see {@link https://github.com/mivanit/js-dev-toolkit}
+     */
+    
+    /**
+     * Convert a JavaScript object to YAML format
+     * Simple implementation - handles basic types, arrays, and nested objects
+     * @param {object} obj - Object to convert
+     * @param {number} indent - Current indentation level
+     * @returns {string} YAML formatted string
+     */
+    function toYAML(obj, indent = 0) {
+    	const lines = [];
+    	const indentStr = "  ".repeat(indent);
+    
+    	for (const [key, value] of Object.entries(obj)) {
+    		if (value === null || value === undefined) {
+    			lines.push(`${indentStr}${key}: null`);
+    		} else if (Array.isArray(value)) {
+    			if (value.length === 0) {
+    				lines.push(`${indentStr}${key}: []`);
+    			} else if (value.every((item) => typeof item !== "object")) {
+    				// Simple array - inline format
+    				lines.push(
+    					`${indentStr}${key}: [${value.map((v) => JSON.stringify(v)).join(", ")}]`,
+    				);
+    			} else {
+    				// Complex array - multiline format
+    				lines.push(`${indentStr}${key}:`);
+    				value.forEach((item) => {
+    					if (typeof item === "object" && item !== null) {
+    						lines.push(`${indentStr}  -`);
+    						const subYaml = toYAML(item, indent + 2);
+    						lines.push(
+    							subYaml
+    								.split("\n")
+    								.map((line) => "  " + line)
+    								.join("\n"),
+    						);
+    					} else {
+    						lines.push(`${indentStr}  - ${JSON.stringify(item)}`);
+    					}
+    				});
+    			}
+    		} else if (typeof value === "object" && value !== null) {
+    			lines.push(`${indentStr}${key}:`);
+    			lines.push(toYAML(value, indent + 1));
+    		} else if (typeof value === "string") {
+    			// Always quote strings
+    			lines.push(`${indentStr}${key}: ${JSON.stringify(value)}`);
+    		} else {
+    			// Number, boolean
+    			lines.push(`${indentStr}${key}: ${value}`);
+    		}
+    	}
+    
+    	return lines.join("\n");
+    }
+    
+    </script>
+    <!-- end '../../libs/yaml.js' -->
+        <!-- begin '../../libs/sparklines.js' -->
+    <script>
+    /**
+     * @fileoverview Generate SVG sparklines and sparkbars from data arrays
+     * @module sparklines
+     * @license GPLv3
+     * @see {@link https://github.com/mivanit/js-dev-toolkit}
+     */
+    
+    const _PLOT_OPTS_DEFAULT = {
+    	// Chart dimensions and basic styling
+    	width: 160, // number: SVG width in pixels
+    	height: 80, // number: SVG height in pixels
+    	color: "#4169E1", // string: CSS color for line/bars/markers
+    	shading: 0.3, // boolean|number: false=none, true=solid fill, 0-1=gradient opacity
+    	lineWidth: 2, // number: stroke width for line charts in pixels
+    	markers: null, // null|number: null=no markers, positive number=circle radius
+    	margin: 5, // number: base margin around chart content in pixels
+    	style: "line", // string: 'line' or 'bar' (internal, set by sparkline/sparkbars)
+    	barWidthRatio: 1, // number: 0-1 ratio, 1=touching bars, <1=gaps between bars
+    	logScale: false, // boolean: use logarithmic scale for y-axis
+    
+    	// X-axis configuration
+    	xAxis: {
+    		line: false, // boolean: show axis line
+    		ticks: false, // boolean: show tick labels (min/max values)
+    		text_offset: 10, // number: pixels below axis for tick labels
+    		text_y_position: 0, // number: additional Y offset for labels (positive = down)
+    		label_margin: 5, // number: extra margin in pixels when ticks shown
+    		limits_length: 2, // number: expected array length for xlims (internal)
+    	},
+    
+    	// Y-axis configuration
+    	yAxis: {
+    		line: false, // boolean: show axis line
+    		ticks: false, // boolean: show tick labels (min/max values)
+    		text_offset: 2, // number: pixels left of axis for tick labels
+    		text_y_offset: 0, // number: pixels down from top edge for max label to prevent cutoff
+    		label_margin: 10, // number: extra margin in pixels when ticks shown
+    		limits_length: 2, // number: expected array length for ylims (internal)
+    	},
+    
+    	xlims: null, // null|array: [min, max] numbers, null values, or null for auto from data
+    	ylims: null, // null|array: [min, max] numbers, null values, or null for auto from data
+    
+    	// Bar chart specific settings
+    	bar: {
+    		opacity: 0.8, // number: 0-1 opacity of bar rectangles
+    		y_axis_shift_ratio: 0.6, // number: Y-axis left shift as ratio of bar width
+    		y_axis_reduction_factor: 1, // number: width reduction factor for Y-axis labels
+    	},
+    
+    	// Axis styling (applies to both X and Y)
+    	axis_style: {
+    		color: "#ccc", // string: CSS color for axis lines
+    		width: 1, // number: axis line stroke width in pixels
+    		font_size: 10, // number: tick label font size in pixels
+    		text_color: "#666", // string: CSS color for tick labels
+    	},
+    
+    	// Gradient fill configuration (when shading is 0-1)
+    	gradient: {
+    		start_offset: "0%", // string: SVG gradient start position
+    		end_offset: "100%", // string: SVG gradient end position
+    		end_opacity: 0, // number: 0-1 opacity at gradient end
+    	},
+    
+    	min_range: 1, // number: minimum range when max equals min in data
+    };
+    /**
+     * Deep merge options with defaults
+     */
+    function merge_options(options = {}) {
+    	return {
+    		..._PLOT_OPTS_DEFAULT,
+    		...options,
+    		xAxis: { ..._PLOT_OPTS_DEFAULT.xAxis, ...(options.xAxis || {}) },
+    		yAxis: { ..._PLOT_OPTS_DEFAULT.yAxis, ...(options.yAxis || {}) },
+    		bar: { ..._PLOT_OPTS_DEFAULT.bar, ...(options.bar || {}) },
+    		axis_style: {
+    			..._PLOT_OPTS_DEFAULT.axis_style,
+    			...(options.axis_style || {}),
+    		},
+    		gradient: {
+    			..._PLOT_OPTS_DEFAULT.gradient,
+    			...(options.gradient || {}),
+    		},
+    	};
+    }
+    
+    /**
+     * Process and validate input values
+     * Returns { xvalues, yvalues } arrays
+     */
+    function process_values(values, yvalues = null) {
+    	// Validate inputs
+    	if (!Array.isArray(values)) {
+    		throw new Error(
+    			`First parameter must be an array, got: ${typeof values}`,
+    		);
+    	}
+    
+    	if (values.length === 0) {
+    		throw new Error("Values array cannot be empty");
+    	}
+    
+    	let xvals, yvals;
+    
+    	if (yvalues === null) {
+    		// values is y-values, generate x-values as 0..n-1
+    		yvals = values;
+    		xvals = Array.from({ length: values.length }, (_, i) => i);
+    	} else {
+    		// values is x-values, yvalues is y-values
+    		if (!Array.isArray(yvalues)) {
+    			throw new Error(
+    				`Second parameter must be an array or null, got: ${typeof yvalues}`,
+    			);
+    		}
+    		xvals = values;
+    		yvals = yvalues;
+    	}
+    
+    	// Validate that x and y arrays have same length
+    	if (xvals.length !== yvals.length) {
+    		throw new Error(
+    			`x-values length (${xvals.length}) must match y-values length (${yvals.length})`,
+    		);
+    	}
+    
+    	return { xvalues: xvals, yvalues: yvals };
+    }
+    
+    function plot(values, yvalues = null, options = {}) {
+    	const opts = merge_options(options);
+    	const { xvalues, yvalues: yvals } = process_values(values, yvalues);
+    
+    	// Calculate margins based on what's shown
+    	const needsLeftMargin = opts.yAxis.ticks;
+    	const needsBottomMargin = opts.xAxis.ticks;
+    	// For bar charts with Y-axis, we need extra left margin since axis is shifted left
+    	const barChartExtraMargin =
+    		opts.style === "bar" && (opts.yAxis.line || opts.yAxis.ticks)
+    			? ((opts.width - 2 * opts.margin) / yvals.length) *
+    				opts.bar.y_axis_shift_ratio
+    			: 0;
+    	const leftMargin =
+    		(needsLeftMargin
+    			? opts.margin + opts.yAxis.label_margin
+    			: opts.margin) + barChartExtraMargin;
+    	const bottomMargin = needsBottomMargin
+    		? opts.margin + opts.xAxis.label_margin
+    		: opts.margin;
+    
+    	// Calculate axis limits - use custom limits if provided, otherwise data range
+    	const dataYmin = Math.min(...yvals);
+    	const dataYmax = Math.max(...yvals);
+    	let ymin = opts.ylims && opts.ylims[0] !== null ? opts.ylims[0] : dataYmin;
+    	let ymax = opts.ylims && opts.ylims[1] !== null ? opts.ylims[1] : dataYmax;
+    
+    	// For log scale, assert all values >= 0
+    	if (opts.logScale) {
+    		if (yvals.some((v) => v < 0) || ymin < 0 || ymax < 0) {
+    			throw new Error("Log scale requires all values >= 0");
+    		}
+    	}
+    
+    	// Transform to log space if needed, handling zeros
+    	// For log scale, we use log10(y) for y > 0, and leave 0 as special case (will skip bars)
+    	const transformY = opts.logScale
+    		? (y) => (y > 0 ? Math.log10(y) : 0)
+    		: (y) => y;
+    
+    	// For axis limits, only use positive values in log scale
+    	const positiveYvals = opts.logScale ? yvals.filter((v) => v > 0) : yvals;
+    	const yminForScale =
+    		opts.logScale && positiveYvals.length > 0
+    			? Math.min(...positiveYvals)
+    			: ymin;
+    	const ymaxForScale =
+    		opts.logScale && positiveYvals.length > 0
+    			? Math.max(...positiveYvals)
+    			: ymax;
+    
+    	const yminTransformed = transformY(yminForScale);
+    	const ymaxTransformed = transformY(ymaxForScale);
+    	const yrange = ymaxTransformed - yminTransformed || opts.min_range;
+    
+    	const dataXmin = Math.min(...xvalues);
+    	const dataXmax = Math.max(...xvalues);
+    	const xmin =
+    		opts.xlims && opts.xlims[0] !== null ? opts.xlims[0] : dataXmin;
+    	const xmax =
+    		opts.xlims && opts.xlims[1] !== null ? opts.xlims[1] : dataXmax;
+    	const xrange = xmax - xmin || opts.min_range;
+    
+    	const chartWidth = opts.width - leftMargin - opts.margin;
+    	const chartHeight = opts.height - opts.margin - bottomMargin;
+    
+    	// Build SVG
+    
+    	// this setup is messy, but syntax highlighting gets confused with template strings??
+    	let svg = "<svg " + `width="${opts.width}" height="${opts.height}"` + ">";
+    
+    	if (opts.style === "bar") {
+    		// Bar chart rendering
+    		const baseY = opts.height - bottomMargin;
+    		// For bars, we position them at centers, with the first at 0 and last at (n-1)/n of the width
+    		// This matches how the X-axis is drawn (ending at center of last bar)
+    		const adjustedChartWidth = chartWidth - chartWidth / yvals.length / 2;
+    
+    		// Calculate bar spacing based on actual x-values
+    		let barSpacing;
+    		if (yvals.length === 1) {
+    			// Single bar: use full available width
+    			barSpacing = adjustedChartWidth;
+    		} else {
+    			// Multiple bars: find minimum spacing between consecutive x-values
+    			const sortedIndices = [...Array(xvalues.length).keys()].sort(
+    				(a, b) => xvalues[a] - xvalues[b],
+    			);
+    			let minSpacing = Infinity;
+    			for (let j = 1; j < sortedIndices.length; j++) {
+    				const prevX = xvalues[sortedIndices[j - 1]];
+    				const currX = xvalues[sortedIndices[j]];
+    				const spacing = ((currX - prevX) / xrange) * adjustedChartWidth;
+    				if (spacing < minSpacing) minSpacing = spacing;
+    			}
+    			// If all x-values are the same, fall back to dividing by count
+    			barSpacing =
+    				minSpacing === Infinity
+    					? adjustedChartWidth / yvals.length
+    					: minSpacing;
+    		}
+    
+    		// Bar width is the spacing times the ratio (1 = touching, <1 = gaps)
+    		const actualBarWidth = barSpacing * opts.barWidthRatio;
+    
+    		yvals.forEach((yval, i) => {
+    			// Skip bars with zero values in log scale
+    			if (opts.logScale && yval === 0) {
+    				return;
+    			}
+    
+    			const xval = xvalues[i];
+    			// Position at bar center
+    			const x =
+    				leftMargin + ((xval - xmin) / xrange) * adjustedChartWidth;
+    			const yvalTransformed = transformY(yval);
+    			const barHeight =
+    				Math.abs((yvalTransformed - yminTransformed) / yrange) *
+    				chartHeight;
+    			const barY = baseY - barHeight;
+    
+    			// Calculate bar x position (offset by half width to center)
+    			const barX = x - actualBarWidth / 2;
+    
+    			svg += `<rect x="${barX}" y="${barY}" width="${actualBarWidth}" height="${barHeight}" fill="${opts.color}" opacity="${opts.bar.opacity}"/>`;
+    		});
+    	} else {
+    		// Line chart rendering (existing code)
+    		let path = "";
+    		let dots = "";
+    		const points = [];
+    
+    		yvals.forEach((yval, i) => {
+    			const xval = xvalues[i];
+    			const x = leftMargin + ((xval - xmin) / xrange) * chartWidth;
+    
+    			// Skip zero values in log scale for line charts (break the line)
+    			if (opts.logScale && yval === 0) {
+    				// Break the line by moving to next point
+    				return;
+    			}
+    
+    			const yvalTransformed = transformY(yval);
+    			const y =
+    				opts.margin +
+    				(1 - (yvalTransformed - yminTransformed) / yrange) *
+    					chartHeight;
+    			points.push({ x, y, xval, yval });
+    
+    			// Start new path segment if previous was skipped
+    			const moveCmd =
+    				i === 0 || (opts.logScale && i > 0 && yvals[i - 1] === 0)
+    					? "M"
+    					: "L";
+    			path += `${moveCmd} ${x} ${y} `;
+    
+    			// Add markers if specified
+    			if (opts.markers !== null && opts.markers > 0) {
+    				dots += `<circle cx="${x}" cy="${y}" r="${opts.markers}" fill="${opts.color}"/>`;
+    			}
+    		});
+    
+    		// Add shading if requested
+    		if (opts.shading !== false) {
+    			if (opts.shading === true) {
+    				// Solid fill
+    				for (let i = 0; i < points.length - 1; i++) {
+    					const p1 = points[i];
+    					const p2 = points[i + 1];
+    					const segmentPath = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p2.x} ${opts.height - bottomMargin} L ${p1.x} ${opts.height - bottomMargin} Z`;
+    					svg += `<path d="${segmentPath}" fill="${opts.color}"/>`;
+    				}
+    			} else {
+    				// Gradient fill
+    				const gradId = `grad${Date.now()}${Math.random()}`;
+    				const opacity = parseFloat(opts.shading);
+    				svg += `
+    	            <defs>
+    	                <linearGradient id="${gradId}" x1="${opts.gradient.start_offset}" y1="${opts.gradient.start_offset}" x2="${opts.gradient.start_offset}" y2="${opts.gradient.end_offset}">
+    	                    <stop offset="${opts.gradient.start_offset}" style="stop-color:${opts.color};stop-opacity:${opacity}"/>
+    	                    <stop offset="${opts.gradient.end_offset}" style="stop-color:${opts.color};stop-opacity:${opts.gradient.end_opacity}"/>
+    	                </linearGradient>
+    	            </defs>`;
+    
+    				for (let i = 0; i < points.length - 1; i++) {
+    					const p1 = points[i];
+    					const p2 = points[i + 1];
+    					const segmentPath = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p2.x} ${opts.height - bottomMargin} L ${p1.x} ${opts.height - bottomMargin} Z`;
+    					svg += `<path d="${segmentPath}" fill="url(#${gradId})"/>`;
+    				}
+    			}
+    		}
+    
+    		// Add the line
+    		svg += `<path d="${path}" stroke="${opts.color}" stroke-width="${opts.lineWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+    
+    		// Add dots
+    		svg += dots;
+    	}
+    
+    	// Format y-axis tick labels (use scientific notation for log scale)
+    	const formatYTick = (value) => {
+    		if (!opts.logScale) {
+    			return value;
+    		}
+    		// For log scale, use scientific notation unless value is 0
+    		if (value === 0) {
+    			return "0";
+    		}
+    		// Convert to scientific notation with 1 decimal place
+    		return value.toExponential(1);
+    	};
+    
+    	// Add y-axis
+    	if (opts.yAxis.line || opts.yAxis.ticks) {
+    		// For bar charts, shift Y-axis left by 0.75 bar widths to avoid overlap
+    		const barShift =
+    			opts.style === "bar"
+    				? (chartWidth / yvals.length) * opts.bar.y_axis_shift_ratio
+    				: 0;
+    		const yAxisX = leftMargin - barShift;
+    
+    		if (opts.yAxis.line) {
+    			svg += `<line x1="${yAxisX}" y1="${opts.margin}" x2="${yAxisX}" y2="${opts.height - bottomMargin}"
+                          stroke="${opts.axis_style.color}" stroke-width="${opts.axis_style.width}"/>`;
+    		}
+    		if (opts.yAxis.ticks) {
+    			svg += `<text x="${yAxisX - opts.yAxis.text_offset}" y="${opts.margin + opts.yAxis.text_y_offset + opts.axis_style.font_size}" font-size="${opts.axis_style.font_size}" fill="${opts.axis_style.text_color}" text-anchor="end">${formatYTick(ymaxForScale)}</text>`;
+    			// For log scale with ymin=0, always show "0" for the lower bound
+    			const lowerLabel =
+    				opts.logScale && ymin === 0 ? "0" : formatYTick(yminForScale);
+    			svg += `<text x="${yAxisX - opts.yAxis.text_offset}" y="${opts.height - bottomMargin + opts.yAxis.text_offset}" font-size="${opts.axis_style.font_size}" fill="${opts.axis_style.text_color}" text-anchor="end">${lowerLabel}</text>`;
+    		}
+    	}
+    
+    	// Add x-axis
+    	if (opts.xAxis.line) {
+    		// For bar charts, end X-axis at center of last bar, not full width
+    		const xAxisEnd =
+    			opts.style === "bar"
+    				? leftMargin + chartWidth - chartWidth / yvals.length / 2
+    				: opts.width - opts.margin;
+    		svg += `<line x1="${leftMargin}" y1="${opts.height - bottomMargin}" x2="${xAxisEnd}" y2="${opts.height - bottomMargin}"
+                          stroke="${opts.axis_style.color}" stroke-width="${opts.axis_style.width}"/>`;
+    	}
+    	if (opts.xAxis.ticks && yvals.length > 0) {
+    		// For bar charts, position end tick at center of last bar
+    		const xTickEnd =
+    			opts.style === "bar"
+    				? leftMargin + chartWidth - chartWidth / yvals.length / 2
+    				: opts.width - opts.margin;
+    		const xLabelY =
+    			opts.height -
+    			bottomMargin +
+    			opts.xAxis.text_offset +
+    			opts.xAxis.text_y_position;
+    		svg += `<text x="${leftMargin}" y="${xLabelY}" font-size="${opts.axis_style.font_size}" fill="${opts.axis_style.text_color}" text-anchor="middle">${xmin}</text>`;
+    		svg += `<text x="${xTickEnd}" y="${xLabelY}" font-size="${opts.axis_style.font_size}" fill="${opts.axis_style.text_color}" text-anchor="middle">${xmax}</text>`;
+    	}
+    
+    	svg += "</svg>";
+    
+    	return svg;
+    }
+    
+    /**
+     * Generate an SVG sparkline (line chart) from data
+     * @param {number[]} values - Y-values or X-values if yvalues provided
+     * @param {number[]|null} yvalues - Y-values (when values becomes x-values)
+     * @param {object} options - Chart options (xlims/ylims can be [min,max] with null for auto)
+     * @returns {string} SVG element as HTML string
+     */
+    function sparkline(values, yvalues = null, options = {}) {
+    	return plot(values, yvalues, { ...options, style: "line" });
+    }
+    
+    /**
+     * Generate an SVG sparkbar chart (bar chart) from data
+     * @param {number[]} values - Y-values or X-values if yvalues provided
+     * @param {number[]|null} yvalues - Y-values (when values becomes x-values)
+     * @param {object} options - Chart options (xlims/ylims can be [min,max] with null for auto)
+     * @returns {string} SVG element as HTML string
+     */
+    function sparkbars(values, yvalues = null, options = {}) {
+    	return plot(values, yvalues, { ...options, style: "bar" });
+    }
+    
+    </script>
+    <!-- end '../../libs/sparklines.js' -->
+        <!-- begin '../../shared/cluster_engine.js' -->
+    <script>
+    /**
+     * Shared clustering computation engine.
+     *
+     * Pure functions for computing cluster assignments from a scipy-format
+     * linkage matrix. Used by clustering, cluster_trends, and attnpedia views.
+     */
+    
+    /**
+     * Compute cluster assignments by cutting the dendrogram at a given height.
+     * Uses union-find with path compression.
+     *
+     * @param {number[][]} linkage - Scipy-format linkage matrix [[idx1, idx2, distance, count], ...]
+     * @param {string[]} clsValues - Head IDs in clustering order
+     * @param {number} cutHeight - Height at which to cut the dendrogram
+     * @returns {Object<string, number>} headId -> clusterId (0-indexed)
+     */
+    function computeClustersByHeight(linkage, clsValues, cutHeight) {
+      if (!linkage || !clsValues) return {};
+    
+      const n = clsValues.length;
+      const parent = Array.from({ length: 2 * n - 1 }, (_, i) => i);
+    
+      function find(x) {
+        if (parent[x] !== x) parent[x] = find(parent[x]);
+        return parent[x];
+      }
+    
+      function union(x, y, newParent) {
+        parent[find(x)] = newParent;
+        parent[find(y)] = newParent;
+      }
+    
+      for (let i = 0; i < linkage.length; i++) {
+        const [idx1, idx2, distance] = linkage[i];
+        if (distance <= cutHeight) {
+          union(Math.floor(idx1), Math.floor(idx2), n + i);
+        }
+      }
+    
+      const rootToCluster = {};
+      let nextCluster = 0;
+      const assignments = {};
+    
+      for (let i = 0; i < n; i++) {
+        const root = find(i);
+        if (!(root in rootToCluster)) {
+          rootToCluster[root] = nextCluster++;
+        }
+        assignments[clsValues[i]] = rootToCluster[root];
+      }
+    
+      return assignments;
+    }
+    
+    /**
+     * Apply minimum-size filtering to cluster assignments.
+     * Clusters smaller than minSize are reassigned to -1 (misc).
+     *
+     * @param {Object<string, number>} assignments - Raw headId -> clusterId
+     * @param {number} minSize - Minimum cluster size (0 = no filtering)
+     * @returns {{ assignments: Object<string, number>, smallClusters: Set<number>, nClusters: number }}
+     */
+    function applyMinSizeFilter(assignments, minSize) {
+      if (minSize <= 0) {
+        return {
+          assignments: assignments,
+          smallClusters: new Set(),
+          nClusters: new Set(Object.values(assignments)).size,
+        };
+      }
+    
+      // Count cluster sizes
+      const clusterCounts = {};
+      for (const cid of Object.values(assignments)) {
+        clusterCounts[cid] = (clusterCounts[cid] || 0) + 1;
+      }
+    
+      // Find small clusters
+      const smallClusters = new Set();
+      for (const [cid, count] of Object.entries(clusterCounts)) {
+        if (count < minSize) {
+          smallClusters.add(parseInt(cid));
+        }
+      }
+    
+      // Reassign small cluster heads to misc (-1)
+      if (smallClusters.size > 0) {
+        const merged = {};
+        for (const [headId, cid] of Object.entries(assignments)) {
+          merged[headId] = smallClusters.has(cid) ? -1 : cid;
+        }
+        return {
+          assignments: merged,
+          smallClusters: smallClusters,
+          nClusters: new Set(Object.values(merged)).size,
+        };
+      }
+    
+      return {
+        assignments: assignments,
+        smallClusters: smallClusters,
+        nClusters: new Set(Object.values(assignments)).size,
+      };
+    }
+    
+    /**
+     * Find the cut height that produces a target number of clusters.
+     *
+     * @param {number[][]} linkage - Scipy-format linkage matrix
+     * @param {number} nHeads - Number of leaf nodes (heads)
+     * @param {number} nClusters - Desired number of clusters
+     * @returns {number} Cut height
+     */
+    function cutHeightForNClusters(linkage, nHeads, nClusters) {
+      if (nClusters >= nHeads) {
+        return Math.max(...linkage.map((row) => row[2]));
+      }
+      const heights = linkage.map((row) => row[2]).sort((a, b) => b - a);
+      return heights[nHeads - nClusters - 1] + 1e-10;
+    }
+    
+    /**
+     * Compute cluster assignments for a target number of clusters.
+     *
+     * @param {number[][]} linkage - Scipy-format linkage matrix
+     * @param {string[]} clsValues - Head IDs in clustering order
+     * @param {number} nClusters - Desired number of clusters
+     * @returns {{ assignments: Object<string, number>, cutHeight: number }}
+     */
+    function computeClustersByNClusters(linkage, clsValues, nClusters) {
+      const n = clsValues.length;
+    
+      if (nClusters >= n) {
+        const assignments = {};
+        clsValues.forEach((cls, i) => {
+          assignments[cls] = i;
+        });
+        return {
+          assignments,
+          cutHeight: Math.max(...linkage.map((row) => row[2])),
+        };
+      }
+    
+      const cutHeight = cutHeightForNClusters(linkage, n, nClusters);
+      return {
+        assignments: computeClustersByHeight(linkage, clsValues, cutHeight),
+        cutHeight,
+      };
+    }
+    
+    /**
+     * Look up precomputed flat partition assignments by parameter key.
+     * Used for HDBSCAN and Leiden methods where assignments are precomputed
+     * at discrete parameter values (not computed client-side like hierarchical).
+     *
+     * @param {Object<string, Object<string, number>>} partitions - paramKey -> { headId: clusterId }
+     * @param {string} paramKey - The parameter key to look up
+     * @returns {Object<string, number>} headId -> clusterId (empty object if key not found)
+     */
+    function getFlatPartitionAssignments(partitions, paramKey) {
+      return partitions[paramKey] || {};
+    }
+    
+    </script>
+    <!-- end '../../shared/cluster_engine.js' -->
+        <!-- begin '../../shared/cluster_utils.js' -->
+    <script>
+    /**
+     * Shared clustering visualization utilities.
+     *
+     * Used by cluster_trends and potentially other frontends that need
+     * cluster coloring and toggle buttons.
+     */
+    
+    // ── Cluster colors (golden angle) ──────────────────────────────
+    
+    const GOLDEN_ANGLE = 137.508;
+    
+    /**
+     * Generate a distinct opaque color for a cluster index.
+     * @param {number} idx
+     * @returns {string} CSS hsl color
+     */
+    function clusterColor(idx) {
+      const hue = (idx * GOLDEN_ANGLE) % 360;
+      const sat = 65 + (idx % 3) * 10;
+      const lit = 45 + (idx % 2) * 10;
+      return `hsl(${hue}, ${sat}%, ${lit}%)`;
+    }
+    
+    /**
+     * Generate a distinct color with alpha for a cluster index.
+     * @param {number} idx
+     * @param {number} alpha - opacity 0..1
+     * @returns {string} CSS hsla color
+     */
+    function clusterColorAlpha(idx, alpha) {
+      const hue = (idx * GOLDEN_ANGLE) % 360;
+      const sat = 65 + (idx % 3) * 10;
+      const lit = 45 + (idx % 2) * 10;
+      return `hsla(${hue}, ${sat}%, ${lit}%, ${alpha})`;
+    }
+    
+    // ── Toggle buttons ─────────────────────────────────────────────
+    
+    /**
+     * Build toggle buttons inside a container element.
+     * Each button toggles a boolean in the shared enabledState object.
+     *
+     * @param {string} containerId - DOM element ID for the container
+     * @param {string[]} items - sorted list of item labels
+     * @param {Object<string, boolean>} enabledState - shared state (mutated in place)
+     * @param {string} cssClass - CSS class for each button (e.g. "family-toggle")
+     * @param {() => void} onChange - callback when any toggle changes
+     */
+    function buildToggleButtons(
+      containerId,
+      items,
+      enabledState,
+      cssClass,
+      onChange,
+    ) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+      for (const item of items) {
+        const btn = document.createElement("span");
+        btn.className = cssClass;
+        btn.textContent = item;
+        if (!enabledState[item]) btn.classList.add("disabled");
+        btn.addEventListener("click", () => {
+          enabledState[item] = !enabledState[item];
+          btn.classList.toggle("disabled", !enabledState[item]);
+          onChange();
+        });
+        container.appendChild(btn);
+      }
+    }
+    
+    // ── Cluster labels ──────────────────────────────────────────────
+    
+    const CLUSTER_LABELS_STORAGE_KEY = "clustering_labels";
+    
+    /**
+     * Load cluster labels from localStorage and optionally from a server URL.
+     * localStorage labels override server labels on merge.
+     *
+     * @param {string|null} [serverUrl] - URL to fetch server-side labels JSON
+     * @returns {Promise<Object>} Merged labels: { cutHeightKey: { clusterIdx: { name, desc, heads } } }
+     */
+    async function loadClusterLabels(serverUrl) {
+      // Load from localStorage
+      let localLabels = {};
+      try {
+        const raw = localStorage.getItem(CLUSTER_LABELS_STORAGE_KEY);
+        if (raw) localLabels = JSON.parse(raw);
+      } catch (e) {
+        console.warn("Failed to load cluster labels from localStorage:", e);
+      }
+    
+      // Load from server (optional)
+      let serverLabels = {};
+      if (serverUrl) {
+        try {
+          const resp = await fetch(serverUrl);
+          if (resp.ok) {
+            serverLabels = await resp.json();
+          } else {
+            console.warn(
+              `Cluster labels not found at ${serverUrl} (${resp.status})`,
+            );
+          }
+        } catch (e) {
+          console.warn("Failed to fetch cluster labels:", e);
+        }
+      }
+    
+      // Merge: server as base, localStorage overrides
+      const merged = {};
+      const allKeys = new Set([
+        ...Object.keys(serverLabels),
+        ...Object.keys(localLabels),
+      ]);
+      for (const heightKey of allKeys) {
+        merged[heightKey] = {
+          ...(serverLabels[heightKey] || {}),
+          ...(localLabels[heightKey] || {}),
+        };
+      }
+      return merged;
+    }
+    
+    /**
+     * Resolve stored labels against current cluster assignments.
+     * Matches each label's heads list to the current cluster with the
+     * highest overlap, returning a map of clusterId -> {name, desc}.
+     *
+     * @param {Object} allLabels - Full labels object keyed by cut height
+     * @param {number} cutHeight - Current cut height
+     * @param {Object<string, number>} assignments - headId -> clusterId
+     * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+     */
+    function resolveClusterLabels(allLabels, cutHeight, assignments) {
+      const heightKey = cutHeight.toFixed(3);
+      return resolveClusterLabelsByKey(allLabels, heightKey, assignments);
+    }
+    
+    /**
+     * Resolve stored labels for a flat clustering method.
+     * Label key format: "{method}:{param_name}={value}"
+     *
+     * @param {Object} allLabels - Full labels object keyed by label key
+     * @param {string} method - Clustering method name (e.g. "hdbscan", "leiden")
+     * @param {string} paramName - Parameter name (e.g. "min_cluster_size", "resolution")
+     * @param {string} paramKey - Parameter value as string
+     * @param {Object<string, number>} assignments - headId -> clusterId
+     * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+     */
+    function resolveClusterLabelsFlat(
+      allLabels,
+      method,
+      paramName,
+      paramKey,
+      assignments,
+    ) {
+      const labelKey = `${method}:${paramName}=${paramKey}`;
+      return resolveClusterLabelsByKey(allLabels, labelKey, assignments);
+    }
+    
+    /**
+     * Resolve stored labels against current cluster assignments using a specific key.
+     * Shared implementation for both hierarchical and flat methods.
+     *
+     * @param {Object} allLabels - Full labels object keyed by label key
+     * @param {string} key - The label key to look up
+     * @param {Object<string, number>} assignments - headId -> clusterId
+     * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+     */
+    function resolveClusterLabelsByKey(allLabels, key, assignments) {
+      const labelsForKey = allLabels[key];
+      if (!labelsForKey) return {};
+    
+      const resolvedCounts = {};
+      const resolved = {};
+    
+      for (const [_origIdx, entry] of Object.entries(labelsForKey)) {
+        if (!entry || !entry.name) continue;
+        const heads = entry.heads || [];
+    
+        // Count overlap with each current cluster
+        const clusterOverlap = {};
+        for (const headId of heads) {
+          const cid = assignments[headId];
+          if (cid !== undefined) {
+            clusterOverlap[cid] = (clusterOverlap[cid] || 0) + 1;
+          }
+        }
+    
+        // Find cluster with most overlap
+        let bestCluster = null;
+        let bestCount = 0;
+        for (const [cid, count] of Object.entries(clusterOverlap)) {
+          if (count > bestCount) {
+            bestCount = count;
+            bestCluster = parseInt(cid);
+          }
+        }
+    
+        if (bestCluster !== null && bestCount > 0) {
+          if (!resolved[bestCluster] || bestCount > resolvedCounts[bestCluster]) {
+            resolved[bestCluster] = { name: entry.name, desc: entry.desc || null };
+            resolvedCounts[bestCluster] = bestCount;
+          }
+        }
+      }
+    
+      return resolved;
+    }
+    
+    /**
+     * Get a short display name for a cluster, using name if available.
+     *
+     * @param {number} clusterId
+     * @param {Object<number, {name: string, desc: string|null}>} resolvedLabels
+     * @returns {string} e.g. "Cluster 3: Induction" or "Cluster 3"
+     */
+    function clusterDisplayName(clusterId, resolvedLabels) {
+      if (clusterId === -1) return "misc";
+      const label = resolvedLabels[clusterId];
+      if (label && label.name) return `Cluster ${clusterId}: ${label.name}`;
+      return `Cluster ${clusterId}`;
+    }
+    
+    </script>
+    <!-- end '../../shared/cluster_utils.js' -->
+        <!-- begin '../../shared/clustering_config.js' -->
+    <script>
+    /**
+     * Shared clustering configuration state.
+     *
+     * Persists clustering UI state (cut height, highlighted cluster, etc.)
+     * to localStorage so it can be shared across cluster_trends and clustering
+     * pages without URL parameters.
+     */
+    
+    const CLUSTERING_CONFIG_KEY = "clustering_config";
+    
+    const ClusteringConfig = {
+      /**
+       * Load full state from localStorage.
+       * @returns {Object} parsed state (empty object if nothing stored)
+       */
+      load() {
+        try {
+          return JSON.parse(localStorage.getItem(CLUSTERING_CONFIG_KEY)) || {};
+        } catch {
+          return {};
+        }
+      },
+    
+      /**
+       * Merge partial state into localStorage.
+       * @param {Object} partial - key/value pairs to merge
+       */
+      save(partial) {
+        const current = this.load();
+        localStorage.setItem(
+          CLUSTERING_CONFIG_KEY,
+          JSON.stringify({ ...current, ...partial }),
+        );
+      },
+    
+      /** @returns {number|null} */
+      getCutHeight() {
+        return this.load().cutHeight ?? null;
+      },
+    
+      /** @param {number} h */
+      setCutHeight(h) {
+        this.save({ cutHeight: h });
+      },
+    
+      /** @returns {number|null} */
+      getHighlightCluster() {
+        return this.load().highlightCluster ?? null;
+      },
+    
+      /** @param {number} id */
+      setHighlightCluster(id) {
+        this.save({ highlightCluster: id });
+      },
+    
+      clearHighlightCluster() {
+        const s = this.load();
+        delete s.highlightCluster;
+        localStorage.setItem(CLUSTERING_CONFIG_KEY, JSON.stringify(s));
+      },
+    
+      /** @returns {string|null} clustering method name ("hierarchical", "hdbscan", "leiden") */
+      getMethod() {
+        return this.load().method ?? null;
+      },
+    
+      /** @param {string} method */
+      setMethod(method) {
+        this.save({ method });
+      },
+    
+      /** @returns {string|null} current parameter key for flat methods */
+      getParamKey() {
+        return this.load().paramKey ?? null;
+      },
+    
+      /** @param {string} key */
+      setParamKey(key) {
+        this.save({ paramKey: key });
+      },
+    };
+    
+    </script>
+    <!-- end '../../shared/clustering_config.js' -->
+        <!-- begin '../../shared/cut_height_control.js' -->
+    <script>
+    /**
+     * Shared cut-height slider + number input control.
+     *
+     * Used by both clustering and cluster_trends views to avoid duplicating
+     * the bidirectional slider/input sync logic.
+     */
+    
+    /**
+     * Create a cut-height control with a range slider and number input.
+     * @param {Object} options
+     * @param {HTMLElement} options.container - DOM element to render into
+     * @param {number} [options.maxHeight=10] - Maximum height value
+     * @param {number} [options.step=0.01] - Step size for the slider
+     * @param {number} [options.initialValue=5] - Initial cut height
+     * @param {string} [options.label="Cut Height:"] - Label text
+     * @param {boolean} [options.showTicks=false] - Whether to include a ticks overlay container
+     * @param {(height: number) => void} options.onChange - Callback when value changes
+     * @returns {{
+     *   setValue: (h: number) => void,
+     *   getValue: () => number,
+     *   setDisabled: (b: boolean) => void,
+     *   getSliderElement: () => HTMLInputElement,
+     *   getTicksContainer: () => HTMLElement|null,
+     * }}
+     */
+    function createCutHeightControl(options) {
+      const {
+        container,
+        maxHeight = 10,
+        step = 0.01,
+        initialValue = 5,
+        label = "Cut Height:",
+        showTicks = false,
+        onChange,
+      } = options;
+    
+      // Create label
+      const labelEl = document.createElement("label");
+      labelEl.setAttribute("for", "cut-height");
+      labelEl.textContent = label;
+      container.appendChild(labelEl);
+    
+      // Create slider wrapper (with optional ticks overlay)
+      let ticksContainer = null;
+      const sliderWrapper = document.createElement("div");
+      sliderWrapper.className = "slider-with-ticks";
+    
+      const slider = document.createElement("input");
+      slider.type = "range";
+      slider.id = "cut-height";
+      slider.min = "0";
+      slider.max = String(maxHeight);
+      slider.step = String(step);
+      slider.value = String(initialValue);
+      sliderWrapper.appendChild(slider);
+    
+      if (showTicks) {
+        ticksContainer = document.createElement("div");
+        ticksContainer.className = "slider-ticks";
+        ticksContainer.id = "cut-height-ticks";
+        sliderWrapper.appendChild(ticksContainer);
+      }
+    
+      container.appendChild(sliderWrapper);
+    
+      // Create number input
+      const numInput = document.createElement("input");
+      numInput.type = "number";
+      numInput.id = "cut-height-input";
+      numInput.min = "0";
+      numInput.max = String(maxHeight);
+      numInput.step = String(step);
+      numInput.value = initialValue.toFixed(3);
+      numInput.className = "control-input";
+      numInput.style.width = "60px";
+      container.appendChild(numInput);
+    
+      // Bidirectional sync
+      slider.addEventListener("input", (e) => {
+        const h = parseFloat(e.target.value);
+        numInput.value = h.toFixed(3);
+        if (onChange) onChange(h);
+      });
+    
+      numInput.addEventListener("change", (e) => {
+        const h = Math.max(0, Math.min(maxHeight, parseFloat(e.target.value) || 0));
+        numInput.value = h.toFixed(3);
+        slider.value = String(h);
+        if (onChange) onChange(h);
+      });
+    
+      return {
+        /** @param {number} h */
+        setValue(h) {
+          slider.value = String(h);
+          numInput.value = h.toFixed(3);
+        },
+        /** @returns {number} */
+        getValue() {
+          return parseFloat(slider.value);
+        },
+        /** @param {boolean} b */
+        setDisabled(b) {
+          slider.disabled = b;
+          numInput.disabled = b;
+        },
+        /** @returns {HTMLInputElement} */
+        getSliderElement() {
+          return slider;
+        },
+        /** @returns {HTMLElement|null} */
+        getTicksContainer() {
+          return ticksContainer;
+        },
+      };
+    }
+    
+    </script>
+    <!-- end '../../shared/cut_height_control.js' -->
+        <!-- begin 'clusterState.js' -->
+    <script>
+    /**
+     * ClusterState - Manages cluster assignments and provides colors
+     *
+     * This is a singleton that can be imported by other frontend components
+     * to get consistent cluster coloring across views.
+     */
+    class ClusterState {
+      constructor() {
+        this.assignments = {}; // headId -> clusterId (0-indexed)
+        this.nClusters = 10;
+        this.listeners = [];
+      }
+    
+      /**
+       * Set cluster assignments from a map
+       * @param {Object.<string, number>} assignments - Map of headId to clusterId
+       * @param {number} nClusters - Number of clusters
+       */
+      setAssignments(assignments, nClusters) {
+        this.assignments = assignments;
+        this.nClusters = nClusters;
+        this._notify();
+      }
+    
+      /**
+       * Get the color for a given head ID
+       * @param {string} headId - The head identifier (e.g., "gpt2-small:L5:H3")
+       * @returns {string} CSS color string
+       */
+      getColor(headId) {
+        const clusterId = this.assignments[headId];
+        if (clusterId === undefined) {
+          return "#888888"; // Gray for unknown heads
+        }
+        if (clusterId === -1) {
+          return "#666666"; // Dark gray for misc cluster
+        }
+        return clusterColor(clusterId);
+      }
+    
+      /**
+       * Get all assignments
+       * @returns {Object.<string, number>} Map of headId to clusterId
+       */
+      getAssignments() {
+        return { ...this.assignments };
+      }
+    
+      /**
+       * Get number of clusters
+       * @returns {number} Number of clusters
+       */
+      getNumClusters() {
+        return this.nClusters;
+      }
+    
+      /**
+       * Get the cluster ID for a given head
+       * @param {string} headId - The head identifier
+       * @returns {number|undefined} Cluster ID or undefined if not found
+       */
+      getClusterId(headId) {
+        return this.assignments[headId];
+      }
+    
+      /**
+       * Get all heads in a specific cluster
+       * @param {number} clusterId - The cluster ID
+       * @returns {string[]} Array of head IDs in the cluster
+       */
+      getHeadsInCluster(clusterId) {
+        return Object.entries(this.assignments)
+          .filter(([_, cid]) => cid === clusterId)
+          .map(([headId, _]) => headId);
+      }
+    
+      /**
+       * Get cluster sizes
+       * @returns {Object.<number, number>} Map of clusterId to count
+       */
+      getClusterSizes() {
+        const sizes = {};
+        for (const clusterId of Object.values(this.assignments)) {
+          sizes[clusterId] = (sizes[clusterId] || 0) + 1;
+        }
+        return sizes;
+      }
+    
+      /**
+       * Add a listener for cluster changes
+       * @param {function} callback - Called with (assignments, nClusters) when clusters change
+       */
+      addListener(callback) {
+        this.listeners.push(callback);
+      }
+    
+      /**
+       * Remove a listener
+       * @param {function} callback - The callback to remove
+       */
+      removeListener(callback) {
+        this.listeners = this.listeners.filter((cb) => cb !== callback);
+      }
+    
+      /**
+       * Notify all listeners of changes
+       */
+      _notify() {
+        for (const callback of this.listeners) {
+          try {
+            callback(this.assignments, this.nClusters);
+          } catch (e) {
+            console.error("ClusterState listener error:", e);
+          }
+        }
+      }
+    }
+    
+    // Global singleton instance
+    window.CLUSTER_STATE = new ClusterState();
+    
+    </script>
+    <!-- end 'clusterState.js' -->
+        <!-- begin 'gridView.js' -->
+    <script>
+    /**
+     * Grid View visualization for clustering
+     *
+     * Renders model grids with cells colored by cluster assignment.
+     * Supports multi-selection of heads with pattern display in side pane.
+     */
+    
+    /**
+     * Debounce a function call.
+     * @param {Function} fn
+     * @param {number} delay - Milliseconds
+     * @returns {Function}
+     */
+    function debounce(fn, delay) {
+      let timer = null;
+      return function (...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), delay);
+      };
+    }
+    
+    let gridState = {
+      linkage: null,
+      clsValues: null,
+      nHeads: 0,
+      modelConfigs: {},
+      selectedHeads: [],
+      prompts: {},
+      renderedHashes: null, // Set<string> or null (all rendered)
+      scale: 1.0,
+      patternsBaseUrl: "",
+      tooltip: null,
+      sortByCluster: false,
+      patternSize: 100,
+      promptIndices: {},
+      logScale: false,
+      currentAssignments: null,
+      currentCutHeight: null,
+      minClusterSize: 10,
+      linkageMethod: "average",
+      modelSizes: {},
+      modelOrder: "data",
+      originalModelOrder: [],
+      modelDataFrame: null,
+      clusterLabels: {}, // merged labels: cutHeightKey -> { clusterIdx: { name, desc, heads } }
+      resolvedLabels: {}, // current cut height resolved: clusterId -> {name, desc}
+      dendrogramFull: false,
+      cutHeightControl: null, // shared cut-height control instance
+      // Multi-method clustering
+      currentMethod: "hierarchical", // "hierarchical" | "hdbscan" | "leiden"
+      availableMethods: [], // methods with data available
+      flatData: {}, // { method: { meta, partitions, labels } }
+      currentParamKey: null, // current param key for flat methods
+    };
+    
+    /**
+     * Sync selected heads to URL search params (debounced).
+     */
+    const syncSelectedHeadsToUrl = debounce(() => {
+      const url = new URL(window.location);
+      if (gridState.selectedHeads.length > 0) {
+        url.searchParams.set("heads", gridState.selectedHeads.join(","));
+      } else {
+        url.searchParams.delete("heads");
+      }
+      history.replaceState(null, "", url);
+    }, 1000);
+    
+    // =====================================================================
+    // Cluster Labels: persistence, matching, and resolution
+    // =====================================================================
+    
+    const LABELS_STORAGE_KEY = "clustering_labels";
+    
+    /**
+     * Get localStorage key suffix for cut height
+     * @param {number} cutHeight
+     * @returns {string} e.g. "5.000"
+     */
+    function getCutHeightKey(cutHeight) {
+      return cutHeight.toFixed(3);
+    }
+    
+    /**
+     * Get the current label key based on the active clustering method.
+     * Hierarchical: cutHeight.toFixed(3)
+     * Flat methods: "{method}:{param_name}={value}"
+     * @returns {string|null}
+     */
+    function getCurrentLabelKey() {
+      if (gridState.currentMethod === "hierarchical") {
+        if (gridState.currentCutHeight === null) return null;
+        return getCutHeightKey(gridState.currentCutHeight);
+      }
+      const flat = gridState.flatData[gridState.currentMethod];
+      if (!flat || !gridState.currentParamKey) return null;
+      return `${flat.meta.method}:${flat.meta.param_name}=${gridState.currentParamKey}`;
+    }
+    
+    /**
+     * Save current labels to localStorage
+     */
+    function saveLabelsToLocalStorage() {
+      try {
+        localStorage.setItem(
+          LABELS_STORAGE_KEY,
+          JSON.stringify(gridState.clusterLabels),
+        );
+      } catch (e) {
+        console.warn("Failed to save cluster labels to localStorage:", e);
+      }
+    }
+    
+    /**
+     * Get labels object for the current clustering state
+     * @returns {Object} Map of clusterIdx string -> { name, desc, heads }
+     */
+    function getCurrentLabels() {
+      const key = getCurrentLabelKey();
+      if (!key) return {};
+      return gridState.clusterLabels[key] || {};
+    }
+    
+    /**
+     * Update resolved labels for the current cut height and store in gridState.
+     * Uses shared resolveClusterLabels() from cluster_utils.js.
+     */
+    function updateResolvedLabels() {
+      if (gridState.currentMethod === "hierarchical") {
+        if (gridState.currentCutHeight === null) {
+          gridState.resolvedLabels = {};
+          return;
+        }
+        gridState.resolvedLabels = resolveClusterLabels(
+          gridState.clusterLabels,
+          gridState.currentCutHeight,
+          window.CLUSTER_STATE.getAssignments(),
+        );
+      } else {
+        const flat = gridState.flatData[gridState.currentMethod];
+        if (flat && gridState.currentParamKey) {
+          gridState.resolvedLabels = resolveClusterLabelsFlat(
+            flat.labels,
+            flat.meta.method,
+            flat.meta.param_name,
+            gridState.currentParamKey,
+            window.CLUSTER_STATE.getAssignments(),
+          );
+        } else {
+          gridState.resolvedLabels = {};
+        }
+      }
+    }
+    
+    /**
+     * Set a cluster label for the current cut height
+     * @param {number} clusterId - Current cluster ID
+     * @param {string|null} name - Short name (null/empty to clear)
+     * @param {string|null} desc - Longer description (null/empty for none)
+     */
+    function setClusterLabel(clusterId, name, desc) {
+      const key = getCurrentLabelKey();
+      if (!key) return;
+    
+      const trimName = name ? name.trim() : "";
+      const trimDesc = desc ? desc.trim() : "";
+    
+      if (!trimName) {
+        // Clear this cluster's label
+        if (
+          gridState.clusterLabels[key] &&
+          gridState.clusterLabels[key][String(clusterId)]
+        ) {
+          gridState.clusterLabels[key][String(clusterId)].name = null;
+          gridState.clusterLabels[key][String(clusterId)].desc = null;
+          // If no cluster at this height has a name, remove the entire height
+          const hasAny = Object.values(gridState.clusterLabels[key]).some(
+            (e) => e && e.name,
+          );
+          if (!hasAny) {
+            delete gridState.clusterLabels[key];
+          }
+        }
+      } else {
+        // Set the label with current heads snapshot
+        if (!gridState.clusterLabels[key]) {
+          gridState.clusterLabels[key] = {};
+        }
+        const heads = window.CLUSTER_STATE.getHeadsInCluster(clusterId);
+        gridState.clusterLabels[key][String(clusterId)] = {
+          name: trimName,
+          desc: trimDesc || null,
+          heads: heads,
+        };
+    
+        // Populate all other clusters at this height with null name/desc
+        const allClusterIds = Object.keys(window.CLUSTER_STATE.getClusterSizes());
+        for (const cid of allClusterIds) {
+          if (!(cid in gridState.clusterLabels[key])) {
+            gridState.clusterLabels[key][cid] = {
+              name: null,
+              desc: null,
+              heads: window.CLUSTER_STATE.getHeadsInCluster(parseInt(cid)),
+            };
+          }
+        }
+      }
+    
+      saveLabelsToLocalStorage();
+      updateResolvedLabels();
+      renderSliderTicks();
+    }
+    
+    /**
+     * Export all cluster labels as JSON download
+     */
+    function exportClusterLabels() {
+      const blob = new Blob([JSON.stringify(gridState.clusterLabels, null, "\t")], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "cluster_labels.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    
+    /**
+     * Get all cut height keys that have at least one label
+     * @returns {number[]} Sorted array of cut heights with labels
+     */
+    function getLabeledCutHeights() {
+      return Object.keys(gridState.clusterLabels)
+        .filter((key) => {
+          const entries = gridState.clusterLabels[key];
+          if (!entries) return false;
+          // Require at least one entry with a non-null name
+          return Object.values(entries).some((e) => e && e.name);
+        })
+        .map((key) => parseFloat(key))
+        .sort((a, b) => a - b);
+    }
+    
+    /**
+     * Render tick marks on the cut-height slider for labeled cut heights
+     */
+    function renderSliderTicks() {
+      if (!gridState.cutHeightControl) return;
+      const ticksContainer = gridState.cutHeightControl.getTicksContainer();
+      if (!ticksContainer) return;
+    
+      ticksContainer.innerHTML = "";
+      const slider = gridState.cutHeightControl.getSliderElement();
+      const maxHeight = parseFloat(slider.max) || 10;
+    
+      const labeledHeights = getLabeledCutHeights();
+      for (const height of labeledHeights) {
+        const pct = (height / maxHeight) * 100;
+        const tick = document.createElement("div");
+        tick.className = "slider-tick";
+        tick.style.left = `${pct}%`;
+        tick.title = `${height.toFixed(3)} (labeled)`;
+        tick.addEventListener("click", () => {
+          gridState.cutHeightControl.setValue(height);
+          updateClustersByHeight(height);
+        });
+        ticksContainer.appendChild(tick);
+      }
+    }
+    
+    // =====================================================================
+    
+    /**
+     * Generate single pattern viewer URL for a specific head and prompt
+     * @param {string} headId - Head ID in format "model:Llayer:Hhead"
+     * @param {string} promptHash - The prompt hash
+     * @returns {string} URL to single pattern viewer
+     */
+    function getPatternViewerUrl(headId, promptHash) {
+      const parts = headId.split(":");
+      const model = parts[0];
+      const layer = parts[1].substring(1); // Remove "L" prefix
+      const head = parts[2].substring(1); // Remove "H" prefix
+    
+      // Format: single.html?prompt={hash}&head={model}.L{layer}.H{head}
+      return `../../patterns/single.html?prompt=${promptHash}&head=${model}.L${layer}.H${head}`;
+    }
+    
+    /**
+     * Parse model sizes from TransformerLens CSV
+     * @param {string} csvText - Raw CSV content
+     * @returns {Object.<string, number>} Map of model name to n_params
+     */
+    function parseModelSizes(csvText) {
+      const sizes = {};
+      const lines = csvText.trim().split("\n");
+    
+      // Find column indices from header
+      const header = lines[0].split(",");
+      const nameIdx = header.findIndex((h) => h.includes("default_alias"));
+      const paramsIdx = header.findIndex((h) => h === "n_params.as_int");
+    
+      if (nameIdx === -1 || paramsIdx === -1) {
+        console.warn("Could not find expected columns in CSV");
+        return sizes;
+      }
+    
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(",");
+        const name = cols[nameIdx]?.trim();
+        const params = parseInt(cols[paramsIdx]);
+        if (name && !isNaN(params)) {
+          sizes[name] = params;
+        }
+      }
+    
+      return sizes;
+    }
+    
+    /**
+     * Extract model family/type from model name
+     * @param {string} modelName - e.g., "gpt2-small", "pythia-70m"
+     * @returns {string} Model family - e.g., "gpt2", "pythia"
+     */
+    function getModelFamily(modelName) {
+      const parts = modelName.split("-");
+      if (parts.length > 1) {
+        return parts.slice(0, -1).join("-");
+      }
+      return modelName;
+    }
+    
+    /**
+     * Get model names in current sort order
+     * @returns {string[]} Sorted model names
+     */
+    function getSortedModelNames() {
+      const models = gridState.originalModelOrder;
+    
+      if (gridState.modelOrder === "data") {
+        return models;
+      }
+    
+      if (gridState.modelOrder === "size") {
+        return [...models].sort((a, b) => {
+          const sizeA = gridState.modelSizes[a] ?? Infinity;
+          const sizeB = gridState.modelSizes[b] ?? Infinity;
+          return sizeA - sizeB;
+        });
+      }
+    
+      if (gridState.modelOrder === "family") {
+        // Group by family, sort families alphabetically, sort by size within family
+        const byFamily = {};
+        for (const model of models) {
+          const family = getModelFamily(model);
+          if (!byFamily[family]) byFamily[family] = [];
+          byFamily[family].push(model);
+        }
+    
+        // Sort each family by size
+        for (const family of Object.keys(byFamily)) {
+          byFamily[family].sort((a, b) => {
+            const sizeA = gridState.modelSizes[a] ?? Infinity;
+            const sizeB = gridState.modelSizes[b] ?? Infinity;
+            return sizeA - sizeB;
+          });
+        }
+    
+        // Sort families alphabetically and flatten
+        const sortedFamilies = Object.keys(byFamily).sort();
+        return sortedFamilies.flatMap((f) => byFamily[f]);
+      }
+    
+      return models;
+    }
+    
+    /**
+     * Initialize the grid view visualization
+     * @param {Object} config - Configuration object
+     */
+    async function initGridView(config) {
+      const container = document.getElementById("model-grids-container");
+      container.innerHTML = '<div class="loading">Loading clustering data...</div>';
+    
+      gridState.patternsBaseUrl = config.patternsBaseUrl;
+    
+      try {
+        // Load all data in parallel
+        const [metaResponse, linkageResponse, modelsText] = await Promise.all([
+          fetch(config.clusteringMetaUrl),
+          fetch(config.linkageUrl),
+          fetch(config.modelsUrl).then((r) => r.text()),
+        ]);
+    
+        if (!metaResponse.ok || !linkageResponse.ok) {
+          throw new Error("Failed to load clustering data");
+        }
+    
+        const meta = await metaResponse.json();
+        const linkage = await linkageResponse.json();
+    
+        gridState.clsValues = meta.cls_values;
+        gridState.linkage = linkage;
+        gridState.nHeads = meta.cls_values.length;
+    
+        // Parse model configs from JSONL
+        gridState.modelConfigs = {};
+        for (const line of modelsText.trim().split("\n")) {
+          if (line.trim()) {
+            const cfg = JSON.parse(line);
+            gridState.modelConfigs[cfg.sanitized_name || cfg.model_name] = {
+              n_layers: cfg.n_layers,
+              n_heads: cfg.n_heads,
+            };
+          }
+        }
+    
+        // Store original model order, filtering out models not in clustering data
+        const modelsInClustering = new Set(
+          gridState.clsValues.map((headId) => headId.split(":")[0]),
+        );
+        gridState.originalModelOrder = Object.keys(gridState.modelConfigs).filter(
+          (m) => modelsInClustering.has(m),
+        );
+        const filteredConfigs = {};
+        for (const m of gridState.originalModelOrder) {
+          if (gridState.modelConfigs[m])
+            filteredConfigs[m] = gridState.modelConfigs[m];
+        }
+        gridState.modelConfigs = filteredConfigs;
+    
+        // Fetch model data using DataFrame
+        try {
+          const csvUrl =
+            "https://raw.githubusercontent.com/mivanit/transformerlens-model-table/refs/heads/main/docs/model_table.csv";
+          const csvResponse = await fetch(csvUrl);
+          const csvText = await csvResponse.text();
+          gridState.modelDataFrame = DataFrame.from_csv(csvText);
+    
+          // Extract model sizes
+          gridState.modelSizes = {};
+          for (let i = 0; i < gridState.modelDataFrame.length; i++) {
+            const row = gridState.modelDataFrame.row(i);
+            const name = row["name.default_alias"];
+            const params = row["n_params.as_int"];
+            if (name && params) {
+              gridState.modelSizes[name] = params;
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to load model data:", e);
+        }
+    
+        // Load rendered prompts filter (if available)
+        try {
+          const renderedUrl = `${config.patternsBaseUrl}/rendered_prompts.jsonl`;
+          const renderedResp = await fetch(renderedUrl);
+          if (renderedResp.ok) {
+            const text = await renderedResp.text();
+            const hashes = new Set();
+            for (const line of text.trim().split("\n")) {
+              if (!line.trim()) continue;
+              try {
+                const prompt = JSON.parse(line);
+                if (prompt.hash) hashes.add(prompt.hash);
+              } catch (e) {
+                // skip malformed lines
+              }
+            }
+            if (hashes.size > 0) {
+              gridState.renderedHashes = hashes;
+              console.log(
+                `Clustering page: filtered to ${hashes.size} rendered prompts`,
+              );
+            }
+          }
+        } catch (e) {
+          console.warn("rendered_prompts.jsonl not available for clustering page");
+        }
+    
+        // Load cluster labels (server + localStorage, merged by shared util)
+        const labelsUrl =
+          config.clusterLabelsUrl ||
+          "../../features/clustering/cluster_labels.json";
+        gridState.clusterLabels = await loadClusterLabels(labelsUrl);
+    
+        // Detect available methods from manifest
+        gridState.availableMethods = ["hierarchical"]; // hierarchical always if linkage loaded
+        try {
+          const methodsUrl = "../../features/clustering_methods.json";
+          const mResp = await fetch(methodsUrl);
+          if (mResp.ok) {
+            const manifest = await mResp.json();
+            gridState.availableMethods = manifest.methods || ["hierarchical"];
+          }
+        } catch (e) {
+          // Fall back to hierarchical only
+        }
+    
+        // Load flat clustering data (HDBSCAN, Leiden)
+        for (const method of ["hdbscan", "leiden"]) {
+          if (!gridState.availableMethods.includes(method)) continue;
+          try {
+            const flatMetaUrl = `../../features/clustering_${method}/clustering_meta.json`;
+            const flatPartitionsUrl = `../../features/clustering_${method}/partitions.json`;
+            const flatLabelsUrl = `../../features/clustering_${method}/cluster_labels.json`;
+            const [fMetaResp, fPartResp] = await Promise.all([
+              fetch(flatMetaUrl),
+              fetch(flatPartitionsUrl),
+            ]);
+            if (fMetaResp.ok && fPartResp.ok) {
+              const fMeta = await fMetaResp.json();
+              const fPartitions = await fPartResp.json();
+              const fLabels = await loadClusterLabels(flatLabelsUrl);
+              gridState.flatData[method] = {
+                meta: fMeta,
+                partitions: fPartitions,
+                labels: fLabels,
+              };
+              // Merge flat labels into clusterLabels for unified storage
+              for (const [k, v] of Object.entries(fLabels)) {
+                if (!gridState.clusterLabels[k]) {
+                  gridState.clusterLabels[k] = v;
+                }
+              }
+            }
+          } catch (e) {
+            console.warn(`Failed to load ${method} clustering data:`, e);
+          }
+        }
+    
+        // Determine initial method: saved > leiden > hierarchical
+        const savedMethod = ClusteringConfig.getMethod();
+        if (
+          savedMethod &&
+          (savedMethod === "hierarchical" ||
+            gridState.flatData[savedMethod] !== undefined)
+        ) {
+          gridState.currentMethod = savedMethod;
+        } else if (gridState.flatData["leiden"]) {
+          gridState.currentMethod = "leiden";
+        }
+    
+        // Determine initial cut height: shared config > labels > default
+        let initialCutHeight = 5;
+        const savedCutHeight = ClusteringConfig.getCutHeight();
+        if (savedCutHeight !== null) {
+          initialCutHeight = savedCutHeight;
+        } else {
+          const labeledHeights = getLabeledCutHeights();
+          if (labeledHeights.length === 1) {
+            initialCutHeight = labeledHeights[0];
+          } else if (labeledHeights.length > 1) {
+            initialCutHeight = labeledHeights[labeledHeights.length - 1]; // largest
+          }
+        }
+    
+        // Set up controls
+        setupControls();
+    
+        // Set up tooltip
+        setupTooltip();
+    
+        // Set up side pane
+        setupSidePane();
+    
+        // Set up resizable divider
+        setupResizableDivider();
+    
+        // Set up help tooltip with model data
+        setupHelpTooltip();
+    
+        // Initial render
+        const initialMinClusterSize = gridState.minClusterSize;
+        document.getElementById("min-cluster-size").value = initialMinClusterSize;
+        document.getElementById("min-cluster-size-input").value =
+          initialMinClusterSize;
+    
+        if (gridState.currentMethod === "hierarchical") {
+          gridState.cutHeightControl.setValue(initialCutHeight);
+          updateClustersByHeight(initialCutHeight);
+        } else {
+          const flat = gridState.flatData[gridState.currentMethod];
+          if (flat && flat.meta.param_keys.length) {
+            const savedParamKey = ClusteringConfig.getParamKey();
+            const defaultKey =
+              gridState.currentMethod === "leiden" ? "1.000" : null;
+            const paramKey =
+              savedParamKey && flat.meta.param_keys.includes(savedParamKey)
+                ? savedParamKey
+                : defaultKey && flat.meta.param_keys.includes(defaultKey)
+                  ? defaultKey
+                  : flat.meta.param_keys[0];
+            // Update param dropdown
+            const paramSelect = document.getElementById("clustering-param-select");
+            if (paramSelect) paramSelect.value = paramKey;
+            updateClustersByParam(paramKey);
+          }
+        }
+    
+        // Restore selected heads from URL
+        const initUrlParams = new URLSearchParams(window.location.search);
+        const headsParam = initUrlParams.get("heads");
+        if (headsParam) {
+          const validHeads = new Set(gridState.clsValues);
+          gridState.selectedHeads = headsParam
+            .split(",")
+            .filter((h) => h.trim() && validHeads.has(h));
+          if (gridState.selectedHeads.length > 0) {
+            updateSelectedCells();
+            updateSidePane();
+          }
+        }
+    
+        // Handle highlight cluster from URL param or shared config
+        const params = new URLSearchParams(window.location.search);
+        const highlightParam = params.get("highlight");
+        const highlightId =
+          highlightParam !== null
+            ? parseInt(highlightParam)
+            : ClusteringConfig.getHighlightCluster();
+        if (highlightId !== null && !isNaN(highlightId)) {
+          ClusteringConfig.clearHighlightCluster();
+          selectCluster(highlightId);
+        }
+      } catch (error) {
+        console.error("Error initializing grid view:", error);
+        container.innerHTML = `<div class="error">Error loading data: ${error.message}</div>`;
+      }
+    }
+    
+    /**
+     * Set up control elements
+     */
+    function setupControls() {
+      const minClusterSizeSlider = document.getElementById("min-cluster-size");
+      const minClusterSizeInput = document.getElementById("min-cluster-size-input");
+      const scaleSlider = document.getElementById("scale");
+      const scaleValue = document.getElementById("scale-value");
+      const exportBtn = document.getElementById("export-pattern-types");
+    
+      // --- Method selector ---
+      const methodSelect = document.getElementById("clustering-method-select");
+      const hierControls = document.getElementById("hierarchical-controls");
+      const paramControls = document.getElementById("flat-param-controls");
+      const paramSelect = document.getElementById("clustering-param-select");
+      const paramLabel = document.getElementById("clustering-param-label");
+    
+      if (methodSelect) {
+        methodSelect.innerHTML = "";
+        const methodsWithData = gridState.availableMethods.filter(
+          (m) => m === "hierarchical" || gridState.flatData[m] !== undefined,
+        );
+        for (const m of methodsWithData) {
+          const opt = document.createElement("option");
+          opt.value = m;
+          opt.textContent = m;
+          methodSelect.appendChild(opt);
+        }
+        methodSelect.value = gridState.currentMethod;
+    
+        // Show/hide method-specific controls
+        function updateMethodControls() {
+          const isHier = gridState.currentMethod === "hierarchical";
+          if (hierControls) hierControls.style.display = isHier ? "" : "none";
+          if (paramControls) paramControls.style.display = isHier ? "none" : "";
+    
+          if (!isHier && paramSelect) {
+            const flat = gridState.flatData[gridState.currentMethod];
+            if (flat) {
+              if (paramLabel) paramLabel.textContent = flat.meta.param_name + ":";
+              paramSelect.innerHTML = "";
+              for (const pk of flat.meta.param_keys) {
+                const opt = document.createElement("option");
+                opt.value = pk;
+                const meta = flat.meta.partition_meta[pk];
+                const extra = meta
+                  ? ` (${meta.n_clusters}cl${meta.n_outliers ? `, ${meta.n_outliers}out` : ""})`
+                  : "";
+                opt.textContent = pk + extra;
+                paramSelect.appendChild(opt);
+              }
+              const savedParamKey = ClusteringConfig.getParamKey();
+              const defaultPK =
+                gridState.currentMethod === "leiden" ? "1.000" : null;
+              paramSelect.value =
+                savedParamKey && flat.meta.param_keys.includes(savedParamKey)
+                  ? savedParamKey
+                  : defaultPK && flat.meta.param_keys.includes(defaultPK)
+                    ? defaultPK
+                    : flat.meta.param_keys[0];
+            }
+          }
+        }
+    
+        updateMethodControls();
+    
+        methodSelect.addEventListener("change", () => {
+          gridState.currentMethod = methodSelect.value;
+          ClusteringConfig.setMethod(methodSelect.value);
+          updateMethodControls();
+          reapplyCurrentClustering();
+        });
+    
+        if (paramSelect) {
+          paramSelect.addEventListener("change", () => {
+            updateClustersByParam(paramSelect.value);
+          });
+        }
+      }
+    
+      // Get max height from linkage, capped at 10
+      const maxHeight = Math.min(
+        Math.max(...gridState.linkage.map((row) => row[2])),
+        10,
+      );
+    
+      // Create shared cut-height control (with tick marks for labeled heights)
+      gridState.cutHeightControl = createCutHeightControl({
+        container: document.getElementById("cut-height-container"),
+        maxHeight,
+        step: maxHeight / 1000,
+        initialValue: 5,
+        label: "Cut Height:",
+        showTicks: true,
+        onChange: (h) => updateClustersByHeight(h),
+      });
+    
+      // min-cluster-size slider and input (bidirectional)
+      minClusterSizeSlider.addEventListener("input", (e) => {
+        const size = parseInt(e.target.value);
+        minClusterSizeInput.value = size;
+        gridState.minClusterSize = size;
+        reapplyCurrentClustering();
+      });
+      minClusterSizeInput.addEventListener("change", (e) => {
+        const size = Math.max(0, parseInt(e.target.value) || 0);
+        minClusterSizeInput.value = size;
+        minClusterSizeSlider.value = size;
+        gridState.minClusterSize = size;
+        reapplyCurrentClustering();
+      });
+    
+      // Scale slider
+      scaleSlider.addEventListener("input", (e) => {
+        gridState.scale = parseFloat(e.target.value);
+        scaleValue.textContent = gridState.scale.toFixed(1);
+        document
+          .getElementById("model-grids-container")
+          .style.setProperty("--scale", gridState.scale);
+      });
+    
+      // Sort toggle button
+      const sortToggle = document.getElementById("sort-toggle");
+      sortToggle.addEventListener("click", () => {
+        gridState.sortByCluster = !gridState.sortByCluster;
+        sortToggle.textContent = gridState.sortByCluster
+          ? "By Cluster"
+          : "By Index";
+        sortToggle.classList.toggle("active", gridState.sortByCluster);
+        renderModelGrids();
+      });
+    
+      // Model order dropdown
+      document.getElementById("model-order").addEventListener("change", (e) => {
+        gridState.modelOrder = e.target.value;
+        renderModelGrids();
+      });
+    
+      // Export pattern types button
+      exportBtn.addEventListener("click", exportPatternTypes);
+    }
+    
+    /**
+     * Set up tooltip element
+     */
+    function setupTooltip() {
+      const tooltip = document.createElement("div");
+      tooltip.className = "tooltip";
+      tooltip.style.display = "none";
+      document.body.appendChild(tooltip);
+      gridState.tooltip = tooltip;
+    }
+    
+    /**
+     * Set up side pane interactions
+     */
+    function setupSidePane() {
+      document.getElementById("clear-selection").addEventListener("click", () => {
+        gridState.selectedHeads = [];
+        updateSelectedCells();
+        updateSidePane();
+      });
+    
+      // Pattern size slider
+      document.getElementById("pattern-size").addEventListener("input", (e) => {
+        gridState.patternSize = parseInt(e.target.value);
+        document.querySelectorAll(".pattern-image").forEach((img) => {
+          img.style.width = gridState.patternSize + "px";
+          img.style.height = gridState.patternSize + "px";
+        });
+      });
+    
+      // Randomize prompts button
+      document.getElementById("randomize-prompts").addEventListener("click", () => {
+        gridState.promptIndices = {};
+        updateSidePane();
+      });
+    
+      // Initial empty state
+      updateSidePane();
+    }
+    
+    /**
+     * Set up resizable divider for split layout
+     */
+    function setupResizableDivider() {
+      const divider = document.getElementById("divider");
+      const rightPane = document.getElementById("right-pane");
+      let isDragging = false;
+    
+      divider.addEventListener("mousedown", (e) => {
+        isDragging = true;
+        divider.classList.add("dragging");
+        document.body.style.cursor = "col-resize";
+        e.preventDefault();
+      });
+    
+      document.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+        const containerRect = divider.parentElement.getBoundingClientRect();
+        const newRightWidth = containerRect.right - e.clientX;
+        const clampedWidth = Math.max(200, Math.min(800, newRightWidth));
+        rightPane.style.width = clampedWidth + "px";
+      });
+    
+      document.addEventListener("mouseup", () => {
+        if (isDragging) {
+          isDragging = false;
+          divider.classList.remove("dragging");
+          document.body.style.cursor = "";
+        }
+      });
+    }
+    
+    /**
+     * Set up help tooltip showing model data as YAML
+     */
+    function setupHelpTooltip() {
+      const helpIcon = document.getElementById("model-data-help");
+      if (!helpIcon || !gridState.modelDataFrame) return;
+    
+      // Get data for models we have
+      const modelData = {};
+      for (const modelName of gridState.originalModelOrder) {
+        // Find row in DataFrame
+        for (let i = 0; i < gridState.modelDataFrame.length; i++) {
+          const row = gridState.modelDataFrame.row(i);
+          if (row["name.default_alias"] === modelName) {
+            modelData[modelName] = {
+              n_params: row["n_params.as_str"],
+              n_layers: row["cfg.n_layers"],
+              n_heads: row["cfg.n_heads"],
+              d_model: row["cfg.d_model"],
+            };
+            break;
+          }
+        }
+      }
+    
+      const tooltip = document.createElement("div");
+      tooltip.className = "help-tooltip";
+      tooltip.textContent = toYAML(modelData);
+      helpIcon.appendChild(tooltip);
+    }
+    
+    /**
+     * Get YAML string with model data for a specific model
+     * @param {string} modelName - Model name to look up
+     * @returns {string|null} YAML string or null if not found
+     */
+    function getModelDataYaml(modelName) {
+      if (!gridState.modelDataFrame) return null;
+    
+      for (let i = 0; i < gridState.modelDataFrame.length; i++) {
+        const row = gridState.modelDataFrame.row(i);
+        if (row["name.default_alias"] === modelName) {
+          return toYAML({
+            n_params: row["n_params.as_str"],
+            n_layers: row["cfg.n_layers"],
+            n_heads: row["cfg.n_heads"],
+            d_model: row["cfg.d_model"],
+          });
+        }
+      }
+      return null;
+    }
+    
+    /**
+     * Reapply current clustering with updated min-cluster-size
+     */
+    function reapplyCurrentClustering() {
+      if (gridState.currentMethod === "hierarchical") {
+        if (gridState.currentCutHeight !== null) {
+          updateClustersByHeight(gridState.currentCutHeight);
+        }
+      } else {
+        if (gridState.currentParamKey !== null) {
+          updateClustersByParam(gridState.currentParamKey);
+        }
+      }
+    }
+    
+    /**
+     * Update visualization for a flat clustering method parameter.
+     * @param {string} paramKey - The parameter value key
+     */
+    function updateClustersByParam(paramKey) {
+      const flat = gridState.flatData[gridState.currentMethod];
+      if (!flat) return;
+    
+      gridState.currentParamKey = paramKey;
+      ClusteringConfig.setParamKey(paramKey);
+    
+      const rawAssignments = getFlatPartitionAssignments(flat.partitions, paramKey);
+      const {
+        assignments,
+        smallClusters,
+        nClusters: finalNClusters,
+      } = applyMinSizeFilter(rawAssignments, gridState.minClusterSize);
+    
+      window.CLUSTER_STATE.setAssignments(assignments, finalNClusters);
+      updateResolvedLabels();
+      renderModelGrids();
+      updateStats(assignments, finalNClusters, smallClusters);
+    }
+    
+    /**
+     * Update visualization for a given cut height.
+     * Uses shared computeClustersByHeight() and applyMinSizeFilter() from cluster_engine.js.
+     * @param {number} cutHeight - Height at which to cut
+     */
+    function updateClustersByHeight(cutHeight) {
+      gridState.currentCutHeight = cutHeight;
+      ClusteringConfig.setCutHeight(cutHeight);
+    
+      const rawAssignments = computeClustersByHeight(
+        gridState.linkage,
+        gridState.clsValues,
+        cutHeight,
+      );
+      const {
+        assignments,
+        smallClusters,
+        nClusters: finalNClusters,
+      } = applyMinSizeFilter(rawAssignments, gridState.minClusterSize);
+    
+      window.CLUSTER_STATE.setAssignments(assignments, finalNClusters);
+      updateResolvedLabels();
+      renderModelGrids();
+      updateStats(assignments, finalNClusters, smallClusters);
+    }
+    
+    /**
+     * Export pattern types JSON
+     */
+    function exportPatternTypes() {
+      const assignments = window.CLUSTER_STATE.getAssignments();
+      const nClusters = window.CLUSTER_STATE.getNumClusters();
+    
+      // Build cluster sizes
+      const clusterSizes = {};
+      for (const cid of Object.values(assignments)) {
+        const key = String(cid);
+        clusterSizes[key] = (clusterSizes[key] || 0) + 1;
+      }
+    
+      // Build types array
+      const clusterIds = [...new Set(Object.values(assignments))].sort(
+        (a, b) => a - b,
+      );
+      const types = clusterIds.map((id) => ({
+        id: id,
+        name: id === -1 ? "misc" : "none",
+        description: id === -1 ? "Merged from small clusters" : "none",
+      }));
+    
+      const patternTypes = {
+        meta: {
+          cut_height: gridState.currentCutHeight,
+          n_clusters: nClusters,
+          linkage_method: gridState.linkageMethod,
+          clustering_path: "browser-export",
+          created_at: new Date().toISOString(),
+          min_cluster_size: gridState.minClusterSize,
+        },
+        stats: {
+          n_heads: Object.keys(assignments).length,
+          cluster_sizes: clusterSizes,
+        },
+        types: types,
+        assignments: assignments,
+        selection: {
+          heads: gridState.selectedHeads,
+        },
+      };
+    
+      // Trigger download
+      const blob = new Blob([JSON.stringify(patternTypes, null, "\t")], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "pattern_types.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    
+    /**
+     * Export a single family row as a clean SVG.
+     * Reconstructs model grids as SVG rects with labels.
+     * @param {string} family - Family name
+     * @param {string[]} models - Model names in this family (sorted)
+     */
+    function exportFamilyRowSvg(family, models) {
+      const cellSize = 14 * gridState.scale;
+      const cellGap = 1 * gridState.scale;
+      const cellStep = cellSize + cellGap;
+      const modelGap = 20;
+      const labelFontSize = 10;
+      const headerFontSize = 12;
+      const labelColWidth = 22;
+      const headerHeight = 18;
+      const headLabelHeight = 14;
+      const topPadding = 24; // family name
+      const padding = 10;
+    
+      // Calculate total width
+      let totalWidth = padding;
+      const modelPositions = [];
+      for (const modelName of models) {
+        const config = gridState.modelConfigs[modelName];
+        if (!config) continue;
+        const { n_layers, n_heads } = config;
+        const boxW = labelColWidth + n_heads * cellStep;
+        const boxH = headerHeight + headLabelHeight + n_layers * cellStep;
+        modelPositions.push({ modelName, x: totalWidth, config, boxW, boxH });
+        totalWidth += boxW + modelGap;
+      }
+      totalWidth += padding - modelGap; // remove last gap, add right padding
+    
+      const maxBoxH = Math.max(...modelPositions.map((m) => m.boxH));
+      const totalHeight = topPadding + maxBoxH + padding;
+    
+      // Build SVG
+      const ns = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(ns, "svg");
+      svg.setAttribute("xmlns", ns);
+      svg.setAttribute("width", totalWidth);
+      svg.setAttribute("height", totalHeight);
+      svg.setAttribute("viewBox", `0 0 ${totalWidth} ${totalHeight}`);
+    
+      // White background
+      const bg = document.createElementNS(ns, "rect");
+      bg.setAttribute("width", totalWidth);
+      bg.setAttribute("height", totalHeight);
+      bg.setAttribute("fill", "white");
+      svg.appendChild(bg);
+    
+      // Family name
+      const familyText = document.createElementNS(ns, "text");
+      familyText.setAttribute("x", padding);
+      familyText.setAttribute("y", 16);
+      familyText.setAttribute("font-size", "14px");
+      familyText.setAttribute("font-weight", "600");
+      familyText.setAttribute("fill", "#555");
+      familyText.setAttribute("font-family", "sans-serif");
+      familyText.textContent = family;
+      svg.appendChild(familyText);
+    
+      for (const { modelName, x, config } of modelPositions) {
+        const { n_layers, n_heads } = config;
+        const g = document.createElementNS(ns, "g");
+        g.setAttribute("transform", `translate(${x}, ${topPadding})`);
+    
+        // Model name
+        const nameText = document.createElementNS(ns, "text");
+        nameText.setAttribute("x", (labelColWidth + n_heads * cellStep) / 2);
+        nameText.setAttribute("y", 12);
+        nameText.setAttribute("text-anchor", "middle");
+        nameText.setAttribute("font-size", `${headerFontSize}px`);
+        nameText.setAttribute("font-weight", "600");
+        nameText.setAttribute("fill", "#333");
+        nameText.setAttribute("font-family", "sans-serif");
+        nameText.textContent = modelName;
+        g.appendChild(nameText);
+    
+        const gridY = headerHeight + headLabelHeight;
+    
+        // Head labels
+        if (!gridState.sortByCluster) {
+          for (let h = 0; h < n_heads; h++) {
+            const ht = document.createElementNS(ns, "text");
+            ht.setAttribute("x", labelColWidth + h * cellStep + cellSize / 2);
+            ht.setAttribute("y", headerHeight + 10);
+            ht.setAttribute("text-anchor", "middle");
+            ht.setAttribute("font-size", "8px");
+            ht.setAttribute("fill", "#888");
+            ht.setAttribute("font-family", "sans-serif");
+            ht.textContent = h;
+            g.appendChild(ht);
+          }
+        }
+    
+        // Layer labels and cells
+        for (let l = 0; l < n_layers; l++) {
+          // Layer label
+          const lt = document.createElementNS(ns, "text");
+          lt.setAttribute("x", labelColWidth - 4);
+          lt.setAttribute("y", gridY + l * cellStep + cellSize * 0.75);
+          lt.setAttribute("text-anchor", "end");
+          lt.setAttribute("font-size", "8px");
+          lt.setAttribute("fill", "#888");
+          lt.setAttribute("font-family", "sans-serif");
+          lt.textContent = `L${l}`;
+          g.appendChild(lt);
+    
+          // Get head ordering
+          let headIndices = Array.from({ length: n_heads }, (_, i) => i);
+          if (gridState.sortByCluster) {
+            const clusterSizes = window.CLUSTER_STATE.getClusterSizes();
+            headIndices.sort((a, b) => {
+              const clusterA =
+                window.CLUSTER_STATE.getClusterId(`${modelName}:L${l}:H${a}`) ??
+                999;
+              const clusterB =
+                window.CLUSTER_STATE.getClusterId(`${modelName}:L${l}:H${b}`) ??
+                999;
+              const sizeA = clusterSizes[clusterA] ?? 0;
+              const sizeB = clusterSizes[clusterB] ?? 0;
+              if (sizeA !== sizeB) return sizeB - sizeA;
+              return clusterA - clusterB;
+            });
+          }
+    
+          for (let col = 0; col < headIndices.length; col++) {
+            const h = headIndices[col];
+            const headId = `${modelName}:L${l}:H${h}`;
+            const color = window.CLUSTER_STATE.getColor(headId);
+    
+            const rect = document.createElementNS(ns, "rect");
+            rect.setAttribute("x", labelColWidth + col * cellStep);
+            rect.setAttribute("y", gridY + l * cellStep);
+            rect.setAttribute("width", cellSize);
+            rect.setAttribute("height", cellSize);
+            rect.setAttribute("rx", "2");
+            rect.setAttribute("fill", color);
+            g.appendChild(rect);
+          }
+        }
+    
+        svg.appendChild(g);
+      }
+    
+      // Trigger download
+      const serializer = new XMLSerializer();
+      const svgStr = serializer.serializeToString(svg);
+      const blob = new Blob([svgStr], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const method = gridState.currentMethod;
+      const threshold =
+        method === "hierarchical"
+          ? gridState.currentCutHeight
+          : gridState.currentParamKey;
+      a.download = `cluster-f_${family}-c_${method}_${threshold}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    
+    /**
+     * Render all model grids
+     */
+    function renderModelGrids() {
+      const container = document.getElementById("model-grids-container");
+      container.innerHTML = "";
+      container.style.setProperty("--scale", gridState.scale);
+    
+      if (gridState.modelOrder === "family") {
+        // Group by family and render each family as a row
+        const byFamily = {};
+        for (const model of gridState.originalModelOrder) {
+          const family = getModelFamily(model);
+          if (!byFamily[family]) byFamily[family] = [];
+          byFamily[family].push(model);
+        }
+    
+        // Sort each family by size
+        for (const family of Object.keys(byFamily)) {
+          byFamily[family].sort((a, b) => {
+            const sizeA = gridState.modelSizes[a] ?? Infinity;
+            const sizeB = gridState.modelSizes[b] ?? Infinity;
+            return sizeA - sizeB;
+          });
+        }
+    
+        // Render each family on its own row
+        const sortedFamilies = Object.keys(byFamily).sort();
+        for (const family of sortedFamilies) {
+          const familyRow = document.createElement("div");
+          familyRow.className = "family-row";
+    
+          const label = document.createElement("div");
+          label.className = "family-label";
+    
+          const labelText = document.createElement("span");
+          labelText.textContent = family;
+          label.appendChild(labelText);
+    
+          const exportBtn = document.createElement("button");
+          exportBtn.className = "family-export-btn";
+          exportBtn.textContent = "Export SVG";
+          exportBtn.addEventListener("click", () =>
+            exportFamilyRowSvg(family, byFamily[family]),
+          );
+          label.appendChild(exportBtn);
+    
+          familyRow.appendChild(label);
+    
+          for (const modelName of byFamily[family]) {
+            renderModelBox(familyRow, modelName);
+          }
+    
+          container.appendChild(familyRow);
+        }
+      } else {
+        for (const modelName of getSortedModelNames()) {
+          renderModelBox(container, modelName);
+        }
+      }
+    }
+    
+    /**
+     * Render a single model box
+     * @param {HTMLElement} container - Parent container
+     * @param {string} modelName - Model name
+     */
+    function renderModelBox(container, modelName) {
+      const config = gridState.modelConfigs[modelName];
+      const { n_layers, n_heads } = config;
+    
+      const box = document.createElement("div");
+      box.className = "model-box";
+    
+      // Header
+      const header = document.createElement("div");
+      header.className = "model-box-header";
+      header.textContent = modelName;
+    
+      // Add hover tooltip with model info
+      const modelYaml = getModelDataYaml(modelName);
+      if (modelYaml) {
+        const tooltip = document.createElement("div");
+        tooltip.className = "model-info-tooltip";
+        tooltip.textContent = modelYaml;
+        header.appendChild(tooltip);
+      }
+    
+      box.appendChild(header);
+    
+      // Grid wrapper (layer labels + grid content)
+      const wrapper = document.createElement("div");
+      wrapper.className = "model-grid-wrapper";
+    
+      // Layer labels
+      const layerLabels = document.createElement("div");
+      layerLabels.className = "layer-labels";
+      for (let l = 0; l < n_layers; l++) {
+        const label = document.createElement("div");
+        label.className = "layer-label";
+        label.textContent = `L${l}`;
+        layerLabels.appendChild(label);
+      }
+      wrapper.appendChild(layerLabels);
+    
+      // Grid content (head labels + grid)
+      const gridContent = document.createElement("div");
+      gridContent.className = "grid-content";
+    
+      // Head labels - only show in index mode
+      const headLabels = document.createElement("div");
+      headLabels.className = "head-labels";
+      if (!gridState.sortByCluster) {
+        for (let h = 0; h < n_heads; h++) {
+          const label = document.createElement("div");
+          label.className = "head-label";
+          label.textContent = `${h}`;
+          headLabels.appendChild(label);
+        }
+      }
+      gridContent.appendChild(headLabels);
+    
+      // Grid
+      const grid = document.createElement("div");
+      grid.className = "model-grid";
+    
+      for (let l = 0; l < n_layers; l++) {
+        const row = document.createElement("div");
+        row.className = "grid-row";
+    
+        // Get head indices - sorted by cluster size if in cluster mode
+        let headIndices = Array.from({ length: n_heads }, (_, i) => i);
+        if (gridState.sortByCluster) {
+          const clusterSizes = window.CLUSTER_STATE.getClusterSizes();
+          headIndices.sort((a, b) => {
+            const clusterA =
+              window.CLUSTER_STATE.getClusterId(`${modelName}:L${l}:H${a}`) ?? 999;
+            const clusterB =
+              window.CLUSTER_STATE.getClusterId(`${modelName}:L${l}:H${b}`) ?? 999;
+            // Sort by cluster size (descending), then by cluster ID for ties
+            const sizeA = clusterSizes[clusterA] ?? 0;
+            const sizeB = clusterSizes[clusterB] ?? 0;
+            if (sizeA !== sizeB) return sizeB - sizeA; // Larger clusters first
+            return clusterA - clusterB; // Tie-breaker by cluster ID
+          });
+        }
+    
+        for (const h of headIndices) {
+          const headId = `${modelName}:L${l}:H${h}`;
+          const cell = document.createElement("div");
+          cell.className = "grid-cell";
+          cell.dataset.headId = headId;
+    
+          // Set color from cluster state
+          const color = window.CLUSTER_STATE.getColor(headId);
+          cell.style.backgroundColor = color;
+    
+          // Check if selected
+          if (gridState.selectedHeads.includes(headId)) {
+            cell.classList.add("selected");
+          }
+    
+          // Click handler - shift-click selects cluster across all models,
+          // ctrl-click selects cluster in current model only
+          cell.addEventListener("click", (e) => {
+            if (e.ctrlKey || e.metaKey) {
+              const clusterId = window.CLUSTER_STATE.getClusterId(headId);
+              if (clusterId !== undefined) {
+                selectClusterForModel(clusterId, modelName);
+              }
+            } else if (e.shiftKey) {
+              const clusterId = window.CLUSTER_STATE.getClusterId(headId);
+              if (clusterId !== undefined) {
+                selectCluster(clusterId);
+              }
+            } else {
+              toggleHeadSelection(headId);
+            }
+          });
+    
+          // Tooltip handlers
+          cell.addEventListener("mouseenter", (e) => showTooltip(e, headId));
+          cell.addEventListener("mousemove", (e) => moveTooltip(e));
+          cell.addEventListener("mouseleave", () => hideTooltip());
+    
+          row.appendChild(cell);
+        }
+    
+        grid.appendChild(row);
+      }
+    
+      gridContent.appendChild(grid);
+      wrapper.appendChild(gridContent);
+      box.appendChild(wrapper);
+      container.appendChild(box);
+    }
+    
+    /**
+     * Toggle head selection
+     * @param {string} headId - Head ID to toggle
+     */
+    function toggleHeadSelection(headId) {
+      const idx = gridState.selectedHeads.indexOf(headId);
+      if (idx >= 0) {
+        gridState.selectedHeads.splice(idx, 1);
+      } else {
+        gridState.selectedHeads.push(headId);
+      }
+      updateSelectedCells();
+      updateSidePane();
+    }
+    
+    /**
+     * Update selected cell styling
+     */
+    function updateSelectedCells() {
+      document.querySelectorAll(".grid-cell").forEach((cell) => {
+        const headId = cell.dataset.headId;
+        if (gridState.selectedHeads.includes(headId)) {
+          cell.classList.add("selected");
+        } else {
+          cell.classList.remove("selected");
+        }
+      });
+    
+      // Update count
+      document.getElementById("selected-count").textContent =
+        `(${gridState.selectedHeads.length})`;
+    
+      // Sync selection to URL (debounced) and update cluster labels
+      syncSelectedHeadsToUrl();
+      renderClusterLabels();
+    }
+    
+    /**
+     * Shuffle array in place using Fisher-Yates algorithm
+     */
+    function shuffleArray(array) {
+      const result = [...array];
+      for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [result[i], result[j]] = [result[j], result[i]];
+      }
+      return result;
+    }
+    
+    /**
+     * Update side pane with selected heads' patterns
+     */
+    async function updateSidePane() {
+      const patternImages = document.getElementById("pattern-images");
+      const selectedCount = document.getElementById("selected-count");
+    
+      selectedCount.textContent = `(${gridState.selectedHeads.length})`;
+    
+      if (gridState.selectedHeads.length === 0) {
+        patternImages.innerHTML =
+          '<div class="empty-state">Click on cells to select heads and view their attention patterns. Shift-click to select all heads in a cluster.</div>';
+        return;
+      }
+    
+      patternImages.innerHTML = "";
+    
+      for (const headId of gridState.selectedHeads) {
+        const section = document.createElement("div");
+        section.className = "pattern-section";
+    
+        // Header with color swatch, clickable title, and arrow link
+        const header = document.createElement("div");
+        header.className = "pattern-section-header";
+    
+        const colorSwatch = document.createElement("div");
+        colorSwatch.className = "pattern-section-color";
+        colorSwatch.style.backgroundColor = window.CLUSTER_STATE.getColor(headId);
+        header.appendChild(colorSwatch);
+    
+        // Clickable head name -> attentionpedia page
+        const titleLink = document.createElement("a");
+        titleLink.className = "pattern-section-title";
+        titleLink.textContent = headId;
+        titleLink.href = `../attnpedia/index.html?head=${encodeURIComponent(headId)}`;
+        header.appendChild(titleLink);
+    
+        const clusterId = window.CLUSTER_STATE.getClusterId(headId);
+        if (clusterId !== undefined) {
+          const clusterBadge = document.createElement("span");
+          clusterBadge.className = "pattern-section-cluster";
+          const label = gridState.resolvedLabels[clusterId];
+          clusterBadge.textContent =
+            label && label.name
+              ? `Cluster ${clusterId}: ${label.name}`
+              : `Cluster ${clusterId}`;
+          if (label && label.desc) clusterBadge.title = label.desc;
+          header.appendChild(clusterBadge);
+        }
+    
+        // Arrow link to attentionpedia
+        const arrowLink = document.createElement("a");
+        arrowLink.className = "pattern-arrow";
+        arrowLink.href = `../attnpedia/index.html?head=${encodeURIComponent(headId)}`;
+        arrowLink.textContent = "\u2192";
+        arrowLink.title = "View in AttentionPedia";
+        header.appendChild(arrowLink);
+    
+        section.appendChild(header);
+    
+        // Pattern row (horizontal scrolling)
+        const patternRow = document.createElement("div");
+        patternRow.className = "pattern-row";
+    
+        // Load prompts for this model if not cached
+        const [modelName, layerPart, headPart] = headId.split(":");
+        const layer = layerPart.substring(1);
+        const head = headPart.substring(1);
+    
+        if (!gridState.prompts[modelName]) {
+          try {
+            const promptsUrl = `${gridState.patternsBaseUrl}/${modelName}/prompts.jsonl`;
+            const response = await fetch(promptsUrl);
+            if (response.ok) {
+              const text = await response.text();
+              let allPrompts = text
+                .trim()
+                .split("\n")
+                .filter((line) => line.trim())
+                .map((line) => JSON.parse(line));
+              // Filter to only rendered prompts if available
+              if (gridState.renderedHashes) {
+                allPrompts = allPrompts.filter(
+                  (p) => p.hash && gridState.renderedHashes.has(p.hash),
+                );
+              }
+              gridState.prompts[modelName] = allPrompts;
+            } else {
+              gridState.prompts[modelName] = [];
+            }
+          } catch (e) {
+            console.warn(`Failed to load prompts for ${modelName}:`, e);
+            gridState.prompts[modelName] = [];
+          }
+        }
+    
+        // Get or generate shuffled prompt indices for this model
+        const prompts = gridState.prompts[modelName] || [];
+        if (!gridState.promptIndices[modelName] && prompts.length > 0) {
+          const indices = Array.from({ length: prompts.length }, (_, i) => i);
+          gridState.promptIndices[modelName] = shuffleArray(indices);
+        }
+    
+        // Show up to 8 patterns using shuffled order
+        const promptOrder = gridState.promptIndices[modelName] || [];
+        const maxPatterns = Math.min(8, promptOrder.length);
+    
+        for (let i = 0; i < maxPatterns; i++) {
+          const promptIdx = promptOrder[i];
+          const prompt = prompts[promptIdx];
+          const hash = prompt?.hash || prompt?.prompt_hash;
+    
+          if (hash) {
+            const imgUrl = `${gridState.patternsBaseUrl}/${modelName}/prompts/${hash}/L${layer}/H${head}/attn.png`;
+    
+            // Create clickable link to pattern viewer
+            const link = document.createElement("a");
+            link.href = getPatternViewerUrl(headId, hash);
+            link.target = "_blank";
+            link.className = "pattern-link";
+            link.title = "Open in pattern viewer";
+    
+            const img = document.createElement("img");
+            img.className = "pattern-image";
+            img.src = imgUrl;
+            img.alt = `Pattern for ${headId}`;
+            img.loading = "lazy";
+            img.style.width = gridState.patternSize + "px";
+            img.style.height = gridState.patternSize + "px";
+            img.onerror = () => {
+              link.style.display = "none";
+            };
+    
+            link.appendChild(img);
+            patternRow.appendChild(link);
+          }
+        }
+    
+        if (maxPatterns === 0) {
+          const placeholder = document.createElement("div");
+          placeholder.className = "pattern-image-placeholder";
+          placeholder.textContent = "No patterns";
+          patternRow.appendChild(placeholder);
+        }
+    
+        section.appendChild(patternRow);
+        patternImages.appendChild(section);
+      }
+    }
+    
+    /**
+     * Show tooltip
+     */
+    function showTooltip(event, headId) {
+      const tooltip = gridState.tooltip;
+      const clusterId = window.CLUSTER_STATE.getClusterId(headId);
+      const label =
+        clusterId !== undefined ? gridState.resolvedLabels[clusterId] : null;
+      const nameStr = label && label.name ? `: ${label.name}` : "";
+      const descStr =
+        label && label.desc ? `<div class="cluster-desc">${label.desc}</div>` : "";
+    
+      tooltip.innerHTML = `
+        <div class="head-id">${headId}</div>
+        <div class="cluster-info">Cluster ${clusterId !== undefined ? clusterId : "?"}${nameStr}</div>
+        ${descStr}
+      `;
+      tooltip.style.display = "block";
+      moveTooltip(event);
+    }
+    
+    /**
+     * Move tooltip to follow cursor
+     */
+    function moveTooltip(event) {
+      const tooltip = gridState.tooltip;
+      tooltip.style.left = event.clientX + 12 + "px";
+      tooltip.style.top = event.clientY + 12 + "px";
+    }
+    
+    /**
+     * Hide tooltip
+     */
+    function hideTooltip() {
+      gridState.tooltip.style.display = "none";
+    }
+    
+    /**
+     * Render a D3 bar chart of cluster sizes, colored by cluster.
+     * @param {Object.<number, number>} sizes - Map of clusterId to count
+     */
+    function renderClusterSizeChart(sizes) {
+      const container = document.getElementById("cluster-size-chart-wrapper");
+      if (!container) return;
+      container.innerHTML = "";
+    
+      // Sort clusters by size descending
+      const entries = Object.entries(sizes)
+        .map(([id, count]) => ({ id: parseInt(id), count }))
+        .sort((a, b) => b.count - a.count);
+    
+      const margin = { top: 8, right: 12, bottom: 22, left: 36 };
+      const width = 400;
+      const height = 120;
+      const innerW = width - margin.left - margin.right;
+      const innerH = height - margin.top - margin.bottom;
+    
+      const svg = d3
+        .select(container)
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .attr("id", "cluster-size-chart")
+        .attr("xmlns", "http://www.w3.org/2000/svg");
+    
+      const g = svg
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+    
+      // X scale — one band per cluster
+      const x = d3
+        .scaleBand()
+        .domain(entries.map((_, i) => i))
+        .range([0, innerW])
+        .padding(0.15);
+    
+      // Y scale — linear or log
+      const maxCount = d3.max(entries, (d) => d.count);
+      const y = gridState.logScale
+        ? d3.scaleLog().domain([0.8, maxCount]).range([innerH, 0]).clamp(true)
+        : d3.scaleLinear().domain([0, maxCount]).range([innerH, 0]).nice();
+    
+      // Bars
+      g.selectAll("rect")
+        .data(entries)
+        .enter()
+        .append("rect")
+        .attr("x", (_, i) => x(i))
+        .attr("y", (d) => y(d.count))
+        .attr("width", x.bandwidth())
+        .attr("height", (d) => innerH - y(d.count))
+        .attr("fill", (d) => clusterColor(d.id))
+        .attr("opacity", 0.85);
+    
+      // Y axis
+      const yAxis = gridState.logScale
+        ? d3.axisLeft(y).ticks(3, "~s")
+        : d3.axisLeft(y).ticks(4);
+      g.append("g")
+        .attr("class", "axis")
+        .call(yAxis)
+        .selectAll("text")
+        .style("font-size", "9px");
+    
+      // X axis — show cluster rank
+      g.append("g")
+        .attr("class", "axis")
+        .attr("transform", `translate(0,${innerH})`)
+        .call(
+          d3
+            .axisBottom(x)
+            .tickValues(
+              entries.length <= 20
+                ? entries.map((_, i) => i)
+                : d3.range(0, entries.length, Math.ceil(entries.length / 10)),
+            )
+            .tickFormat((i) => (entries[i] ? entries[i].id : "")),
+        )
+        .selectAll("text")
+        .style("font-size", "8px");
+    
+      // X axis label
+      g.append("text")
+        .attr("x", innerW / 2)
+        .attr("y", innerH + 20)
+        .attr("text-anchor", "middle")
+        .style("font-size", "9px")
+        .style("fill", "#888")
+        .text("cluster");
+    }
+    
+    /**
+     * Update statistics display with sparkline
+     */
+    function updateStats(assignments, nClusters, smallClusters = new Set()) {
+      // Store for re-rendering when toggling log scale
+      gridState.currentAssignments = assignments;
+      gridState.currentNClusters = nClusters;
+    
+      const sizes = window.CLUSTER_STATE.getClusterSizes();
+      const sortedSizes = Object.values(sizes).sort((a, b) => b - a);
+    
+      const statsEl = document.getElementById("stats");
+      statsEl.innerHTML = `
+        <div class="stats-text">
+          <span><strong>Total Heads:</strong> ${gridState.nHeads}</span>
+          <span><strong>Clusters:</strong> ${nClusters}</span>
+          <span><strong>Largest:</strong> ${sortedSizes[0]}</span>
+          <span><strong>Smallest:</strong> ${sortedSizes[sortedSizes.length - 1]}</span>
+        </div>
+        <div id="cluster-size-chart-container">
+          <button class="scale-toggle toggle-btn" id="scale-toggle">${gridState.logScale ? "Log" : "Linear"}</button>
+          <div id="cluster-size-chart-wrapper"></div>
+          <button class="toggle-btn" id="export-cluster-chart">Export SVG</button>
+        </div>
+      `;
+    
+      // Build D3 bar chart of cluster sizes
+      if (sortedSizes.length > 0) {
+        renderClusterSizeChart(sizes);
+    
+        document.getElementById("scale-toggle").addEventListener("click", () => {
+          gridState.logScale = !gridState.logScale;
+          updateStats(gridState.currentAssignments, gridState.currentNClusters);
+        });
+    
+        document
+          .getElementById("export-cluster-chart")
+          .addEventListener("click", () => {
+            const svgEl = document.querySelector("#cluster-size-chart-wrapper svg");
+            if (!svgEl) return;
+            const serializer = new XMLSerializer();
+            const svgStr = serializer.serializeToString(svgEl);
+            const blob = new Blob([svgStr], { type: "image/svg+xml" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "cluster_sizes.svg";
+            a.click();
+            URL.revokeObjectURL(url);
+          });
+      }
+    
+      // Resolve and render labels
+      updateResolvedLabels();
+    
+      // Render top clusters list
+      renderTopClusters();
+    
+      // Render cluster labels editor
+      renderClusterLabels();
+    
+      // Render slider ticks for labeled cut heights
+      renderSliderTicks();
+    
+      // Render mini dendrogram
+      renderMiniDendrogram();
+    }
+    
+    /**
+     * Build a simplified tree from linkage matrix, collapsed at cluster boundaries
+     * Returns a tree where leaves are clusters (not individual heads)
+     */
+    function buildClusterTree() {
+      const linkage = gridState.linkage;
+      const n = gridState.nHeads;
+      const assignments = window.CLUSTER_STATE.getAssignments();
+    
+      // Build full tree first
+      const nodes = [];
+    
+      // Leaf nodes (individual heads)
+      for (let i = 0; i < n; i++) {
+        const headId = gridState.clsValues[i];
+        nodes.push({
+          id: i,
+          isLeaf: true,
+          height: 0,
+          clusterId: assignments[headId],
+          count: 1,
+        });
+      }
+    
+      // Internal nodes from linkage
+      for (let i = 0; i < linkage.length; i++) {
+        const [idx1, idx2, distance, count] = linkage[i];
+        const left = nodes[Math.floor(idx1)];
+        const right = nodes[Math.floor(idx2)];
+    
+        // If both children have the same cluster, this node has that cluster
+        // If different clusters, this is a merge point (clusterId = null)
+        const clusterId =
+          left.clusterId === right.clusterId ? left.clusterId : null;
+    
+        nodes.push({
+          id: n + i,
+          isLeaf: false,
+          height: distance,
+          clusterId: clusterId,
+          count: count,
+          children: [left, right],
+        });
+      }
+    
+      const root = nodes[nodes.length - 1];
+    
+      // Now collapse: for any node where all descendants have the same cluster,
+      // replace it with a leaf representing that cluster
+      function collapse(node) {
+        if (node.isLeaf) {
+          return {
+            isLeaf: true,
+            clusterId: node.clusterId,
+            count: node.count,
+            height: node.height,
+          };
+        }
+    
+        // If this entire subtree is one cluster, collapse to leaf
+        if (node.clusterId !== null) {
+          return {
+            isLeaf: true,
+            clusterId: node.clusterId,
+            count: node.count,
+            height: node.height,
+          };
+        }
+    
+        // Otherwise, recurse
+        return {
+          isLeaf: false,
+          clusterId: null,
+          height: node.height,
+          count: node.count,
+          children: [collapse(node.children[0]), collapse(node.children[1])],
+        };
+      }
+    
+      return collapse(root);
+    }
+    
+    /**
+     * Truncate a cluster tree to at most maxLeaves leaf nodes.
+     * Collapses subtrees containing only small clusters into aggregate nodes.
+     * @param {Object} tree - Collapsed cluster tree from buildClusterTree()
+     * @param {number} maxLeaves - Maximum number of leaf nodes to show
+     * @returns {Object} Truncated tree
+     */
+    function truncateTree(tree, maxLeaves) {
+      // Count current leaves
+      function countLeaves(node) {
+        if (node.isLeaf || node.isAggregate) return 1;
+        return countLeaves(node.children[0]) + countLeaves(node.children[1]);
+      }
+    
+      if (countLeaves(tree) <= maxLeaves) return tree;
+    
+      const sizes = window.CLUSTER_STATE.getClusterSizes();
+    
+      // Collect all leaves with their sizes
+      /** @type {Array<{clusterId: number, size: number}>} */
+      const allLeaves = [];
+      function collectLeaves(node) {
+        if (node.isLeaf) {
+          allLeaves.push({
+            clusterId: node.clusterId,
+            size: sizes[node.clusterId] || node.count,
+          });
+          return;
+        }
+        collectLeaves(node.children[0]);
+        collectLeaves(node.children[1]);
+      }
+      collectLeaves(tree);
+    
+      // Sort by size descending, keep top (maxLeaves - 1) as "big"
+      allLeaves.sort((a, b) => b.size - a.size);
+      const bigClusterIds = new Set(
+        allLeaves.slice(0, maxLeaves - 1).map((l) => l.clusterId),
+      );
+    
+      // Walk tree: collapse subtrees where ALL leaves are small
+      function truncateNode(node) {
+        if (node.isLeaf) {
+          if (bigClusterIds.has(node.clusterId)) return node;
+          // Small leaf - return as-is, parent will aggregate
+          return node;
+        }
+    
+        const left = truncateNode(node.children[0]);
+        const right = truncateNode(node.children[1]);
+    
+        // Collect all cluster IDs in each subtree
+        function getClusterIds(n) {
+          if (n.isAggregate) return [...n.clusterIds];
+          if (n.isLeaf) return [n.clusterId];
+          return [...getClusterIds(n.children[0]), ...getClusterIds(n.children[1])];
+        }
+    
+        const leftIds = getClusterIds(left);
+        const rightIds = getClusterIds(right);
+        const allIds = [...leftIds, ...rightIds];
+        const allSmall = allIds.every((id) => !bigClusterIds.has(id));
+    
+        if (allSmall) {
+          // Collapse entire subtree into aggregate
+          return {
+            isAggregate: true,
+            isLeaf: false,
+            clusterIds: allIds,
+            totalCount: allIds.reduce((sum, id) => sum + (sizes[id] || 0), 0),
+            height: node.height,
+            count: node.count,
+          };
+        }
+    
+        return {
+          isLeaf: false,
+          clusterId: null,
+          height: node.height,
+          count: node.count,
+          children: [left, right],
+        };
+      }
+    
+      return truncateNode(tree);
+    }
+    
+    /**
+     * Render a simple horizontal dendrogram showing cluster structure
+     */
+    function renderMiniDendrogram() {
+      const svg = document.getElementById("mini-dendrogram");
+      if (!svg) return;
+    
+      const fullTree = buildClusterTree();
+      const tree = gridState.dendrogramFull ? fullTree : truncateTree(fullTree, 10);
+      const sizes = window.CLUSTER_STATE.getClusterSizes();
+    
+      // Update toggle button text
+      const toggleBtn = document.getElementById("dendrogram-toggle");
+      if (toggleBtn) {
+        const fullLeafCount = (function countL(n) {
+          return n.isLeaf ? 1 : countL(n.children[0]) + countL(n.children[1]);
+        })(fullTree);
+        toggleBtn.textContent = gridState.dendrogramFull ? "Truncate" : "Show All";
+        toggleBtn.style.display = fullLeafCount <= 10 ? "none" : "";
+        toggleBtn.onclick = () => {
+          gridState.dendrogramFull = !gridState.dendrogramFull;
+          renderMiniDendrogram();
+        };
+      }
+    
+      // Get dimensions
+      const rect = svg.getBoundingClientRect();
+      const width = rect.width || 380;
+      const height = rect.height || 160;
+      const margin = { top: 5, right: 60, bottom: 5, left: 5 };
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+    
+      // Count leaves and assign y positions
+      let leafCount = 0;
+      function countLeaves(node) {
+        if (node.isLeaf || node.isAggregate) {
+          node.leafIndex = leafCount++;
+          return 1;
+        }
+        return countLeaves(node.children[0]) + countLeaves(node.children[1]);
+      }
+      const totalLeaves = countLeaves(tree);
+    
+      // Get min and max heights for x scaling
+      function getHeightRange(node) {
+        if (node.isLeaf || node.isAggregate) return { min: Infinity, max: 0 };
+        const left = getHeightRange(node.children[0]);
+        const right = getHeightRange(node.children[1]);
+        return {
+          min: Math.min(node.height, left.min, right.min),
+          max: Math.max(node.height, left.max, right.max),
+        };
+      }
+      const { min: minHeight, max: maxHeight } = getHeightRange(tree);
+      const heightRange = maxHeight - minHeight || 1;
+    
+      // Position nodes - compact root line
+      function positionNodes(node) {
+        if (node.isLeaf || node.isAggregate) {
+          node.x = innerWidth;
+          node.y = (node.leafIndex + 0.5) * (innerHeight / totalLeaves);
+          return node.y;
+        }
+    
+        const y0 = positionNodes(node.children[0]);
+        const y1 = positionNodes(node.children[1]);
+        const normalizedHeight = (maxHeight - node.height) / heightRange;
+        node.x = innerWidth * (0.02 + normalizedHeight * 0.98);
+        node.y = (y0 + y1) / 2;
+        return node.y;
+      }
+      positionNodes(tree);
+    
+      // Clear and rebuild SVG
+      svg.innerHTML = "";
+    
+      // Create SVG group
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    
+      function renderNode(node) {
+        if (node.isAggregate) {
+          // Aggregate node: gray circle with "(N clusters)" label
+          const circle = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "circle",
+          );
+          circle.setAttribute("cx", margin.left + node.x);
+          circle.setAttribute("cy", margin.top + node.y);
+          circle.setAttribute("r", 6);
+          circle.setAttribute("fill", "#bbb");
+          circle.setAttribute("stroke", "white");
+          circle.setAttribute("stroke-width", 1);
+          circle.setAttribute("cursor", "pointer");
+    
+          // Hover: highlight corresponding cluster chips
+          circle.addEventListener("mouseenter", () => {
+            const chipContainer = document.getElementById("top-clusters");
+            if (!chipContainer) return;
+            const aggregateIds = new Set(node.clusterIds);
+            chipContainer.querySelectorAll(".cluster-chip").forEach((chip) => {
+              const cid = parseInt(chip.dataset.clusterId);
+              if (aggregateIds.has(cid)) {
+                chip.style.outline = "2px solid #333";
+              }
+            });
+          });
+          circle.addEventListener("mouseleave", () => {
+            const chipContainer = document.getElementById("top-clusters");
+            if (!chipContainer) return;
+            chipContainer.querySelectorAll(".cluster-chip").forEach((chip) => {
+              chip.style.outline = "";
+            });
+          });
+          g.appendChild(circle);
+    
+          // Label
+          const text = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "text",
+          );
+          text.setAttribute("x", margin.left + node.x + 10);
+          text.setAttribute("y", margin.top + node.y + 4);
+          text.setAttribute("font-size", 10);
+          text.setAttribute("fill", "#888");
+          text.textContent = `(${node.clusterIds.length} clusters)`;
+          g.appendChild(text);
+          return;
+        }
+    
+        if (node.isLeaf) {
+          const displayColor =
+            node.clusterId === -1 ? "#666" : clusterColor(node.clusterId);
+          const size = sizes[node.clusterId] || node.count;
+    
+          // Create circle
+          const circle = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "circle",
+          );
+          circle.setAttribute("cx", margin.left + node.x);
+          circle.setAttribute("cy", margin.top + node.y);
+          circle.setAttribute("r", 6);
+          circle.setAttribute("fill", displayColor);
+          circle.setAttribute("stroke", "white");
+          circle.setAttribute("stroke-width", 1);
+          circle.setAttribute("cursor", "pointer");
+          circle.addEventListener("click", () => {
+            selectCluster(node.clusterId);
+            renderTopClusters();
+          });
+          g.appendChild(circle);
+    
+          // Create label
+          const text = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "text",
+          );
+          text.setAttribute("x", margin.left + node.x + 10);
+          text.setAttribute("y", margin.top + node.y + 4);
+          text.setAttribute("font-size", 11);
+          text.setAttribute("fill", "#333");
+          text.textContent = size;
+          g.appendChild(text);
+          return;
+        }
+    
+        // Draw elbow paths to children
+        for (const child of node.children) {
+          const x1 = margin.left + node.x;
+          const y1 = margin.top + node.y;
+          const x2 = margin.left + child.x;
+          const y2 = margin.top + child.y;
+    
+          const path = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "path",
+          );
+          path.setAttribute("d", `M${x1},${y1} H${x2} V${y2}`);
+          path.setAttribute("fill", "none");
+          path.setAttribute("stroke", "#999");
+          path.setAttribute("stroke-width", 1.5);
+          g.appendChild(path);
+    
+          renderNode(child);
+        }
+      }
+    
+      renderNode(tree);
+      svg.appendChild(g);
+    }
+    
+    /**
+     * Render the cluster labels editor section
+     */
+    function renderClusterLabels() {
+      const container = document.getElementById("cluster-labels");
+      if (!container) return;
+    
+      // Only show clusters for currently selected heads
+      const selectedClusterIds = new Set(
+        gridState.selectedHeads
+          .map((h) => window.CLUSTER_STATE.getClusterId(h))
+          .filter((id) => id !== undefined),
+      );
+    
+      if (selectedClusterIds.size === 0) {
+        container.innerHTML =
+          '<div class="cluster-labels-hint" style="color: #888; font-style: italic; padding: 4px 0;">Select heads to edit cluster labels</div>';
+        return;
+      }
+    
+      const sizes = window.CLUSTER_STATE.getClusterSizes();
+      const resolved = gridState.resolvedLabels;
+    
+      // Show only clusters that contain selected heads, sorted by size
+      const sortedClusters = Object.entries(sizes)
+        .map(([clusterId, size]) => ({ clusterId: parseInt(clusterId), size }))
+        .filter(({ clusterId }) => selectedClusterIds.has(clusterId))
+        .sort((a, b) => b.size - a.size);
+    
+      container.innerHTML = `
+        <div class="cluster-labels-header">
+          <span class="cluster-labels-title">Cluster Labels:</span>
+          <button class="toggle-btn" id="export-labels-btn">Export Labels</button>
+        </div>
+        <div class="cluster-labels-grid">
+          ${sortedClusters
+            .map(({ clusterId, size }) => {
+              const color = clusterId === -1 ? "#666" : clusterColor(clusterId);
+              const label = resolved[clusterId];
+              const name = (label && label.name) || "";
+              const desc = (label && label.desc) || "";
+              return `
+                <div class="cluster-label-row" data-cluster-id="${clusterId}">
+                  <span class="cluster-label-color" style="background-color: ${color}"></span>
+                  <span class="cluster-label-id">${clusterId === -1 ? "misc" : clusterId}</span>
+                  <span class="cluster-label-size">(${size})</span>
+                  <input type="text" class="cluster-label-name"
+                    value="${name.replace(/"/g, "&quot;")}"
+                    placeholder="Name"
+                    data-cluster-id="${clusterId}" />
+                  <input type="text" class="cluster-label-desc"
+                    value="${desc.replace(/"/g, "&quot;")}"
+                    placeholder="Description"
+                    data-cluster-id="${clusterId}" />
+                </div>
+              `;
+            })
+            .join("")}
+        </div>
+      `;
+    
+      // Wire up input handlers
+      container.querySelectorAll(".cluster-label-row").forEach((row) => {
+        const clusterId = parseInt(row.dataset.clusterId);
+        const nameInput = row.querySelector(".cluster-label-name");
+        const descInput = row.querySelector(".cluster-label-desc");
+        const onChange = () => {
+          setClusterLabel(clusterId, nameInput.value, descInput.value);
+          renderTopClusters();
+        };
+        nameInput.addEventListener("change", onChange);
+        descInput.addEventListener("change", onChange);
+      });
+    
+      // Wire up export button
+      document
+        .getElementById("export-labels-btn")
+        .addEventListener("click", exportClusterLabels);
+    }
+    
+    /**
+     * Render the top 20 largest clusters as clickable chips
+     */
+    function renderTopClusters() {
+      const container = document.getElementById("top-clusters");
+      if (!container) return;
+    
+      const sizes = window.CLUSTER_STATE.getClusterSizes();
+      const totalClusters = Object.keys(sizes).length;
+    
+      // Sort clusters by size descending, take top 20
+      const sortedClusters = Object.entries(sizes)
+        .map(([clusterId, size]) => ({ clusterId: parseInt(clusterId), size }))
+        .sort((a, b) => b.size - a.size)
+        .slice(0, 20);
+    
+      const hasMore = totalClusters > 20;
+    
+      const resolved = gridState.resolvedLabels;
+    
+      container.innerHTML = `
+        <span class="top-clusters-label">Top ${sortedClusters.length} clusters:</span>
+        ${sortedClusters
+          .map(({ clusterId, size }) => {
+            const color = clusterColor(clusterId);
+            const heads = window.CLUSTER_STATE.getHeadsInCluster(clusterId);
+            const allSelected =
+              heads.length > 0 &&
+              heads.every((h) => gridState.selectedHeads.includes(h));
+            const selectedClass = allSelected ? "selected" : "";
+            const label = resolved[clusterId];
+            const name = (label && label.name) || "";
+            const desc = (label && label.desc) || "";
+            const labelHtml = name
+              ? `<span class="cluster-chip-label" title="${desc.replace(/"/g, "&quot;")}">${name}</span>`
+              : "";
+            return `
+              <div class="cluster-chip ${selectedClass}" data-cluster-id="${clusterId}">
+                <span class="cluster-chip-color" style="background-color: ${color}"></span>
+                <span class="cluster-chip-size">${size}</span>
+                ${labelHtml}
+              </div>
+            `;
+          })
+          .join("")}
+        ${hasMore ? `<span class="top-clusters-ellipsis">... +${totalClusters - 20} more</span>` : ""}
+      `;
+    
+      // Add click handlers
+      container.querySelectorAll(".cluster-chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          const clusterId = parseInt(chip.dataset.clusterId);
+          selectCluster(clusterId);
+          renderTopClusters(); // Re-render to update selection state
+        });
+      });
+    }
+    
+    /**
+     * Select all heads in a cluster
+     * @param {number} clusterId - Cluster ID to select
+     */
+    function selectCluster(clusterId) {
+      const heads = window.CLUSTER_STATE.getHeadsInCluster(clusterId);
+      // Toggle: if all are selected, deselect; otherwise select all
+      const allSelected = heads.every((h) => gridState.selectedHeads.includes(h));
+    
+      if (allSelected) {
+        // Deselect all in this cluster
+        gridState.selectedHeads = gridState.selectedHeads.filter(
+          (h) => !heads.includes(h),
+        );
+      } else {
+        // Add all from this cluster
+        for (const h of heads) {
+          if (!gridState.selectedHeads.includes(h)) {
+            gridState.selectedHeads.push(h);
+          }
+        }
+      }
+    
+      updateSelectedCells();
+      updateSidePane();
+    }
+    
+    /**
+     * Select heads in a cluster belonging to a specific model only
+     * @param {number} clusterId - Cluster ID to select
+     * @param {string} modelName - Model name to filter by
+     */
+    function selectClusterForModel(clusterId, modelName) {
+      const allHeads = window.CLUSTER_STATE.getHeadsInCluster(clusterId);
+      const heads = allHeads.filter((h) => h.split(":")[0] === modelName);
+      if (heads.length === 0) return;
+    
+      // Toggle: if all are selected, deselect; otherwise select all
+      const allSelected = heads.every((h) => gridState.selectedHeads.includes(h));
+    
+      if (allSelected) {
+        gridState.selectedHeads = gridState.selectedHeads.filter(
+          (h) => !heads.includes(h),
+        );
+      } else {
+        for (const h of heads) {
+          if (!gridState.selectedHeads.includes(h)) {
+            gridState.selectedHeads.push(h);
+          }
+        }
+      }
+    
+      updateSelectedCells();
+      updateSidePane();
+    }
+    
+    </script>
+    <!-- end 'gridView.js' -->
+    <script>
+      // Initialize with config from URL or defaults
+      const urlParams = new URLSearchParams(window.location.search);
+      const config = {
+        clusteringMetaUrl:
+          urlParams.get("meta") ||
+          "../../features/clustering/clustering_meta.json",
+        linkageUrl:
+          urlParams.get("linkage") || "../../features/clustering/linkage.json",
+        modelsUrl: urlParams.get("models") || "../../patterns/models.jsonl",
+        patternsBaseUrl: urlParams.get("patterns") || "../../patterns",
+      };
+
+      // Initialize grid view
+      initGridView(config);
+    </script>
+  </body>
+</html>

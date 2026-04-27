@@ -63,4 +63,33 @@ class PromptsLoader {
     await this._ensureLoaded();
     return this._hashToIndex ? Object.keys(this._hashToIndex) : [];
   }
+
+  /**
+   * Load the set of prompt hashes that were actually rendered as PNGs.
+   * Returns null if rendered_prompts.jsonl doesn't exist (all prompts rendered).
+   * @returns {Promise<Set<string>|null>}
+   */
+  async loadRenderedHashes() {
+    try {
+      const url = CONFIG.rendered_prompts_url;
+      if (!url) return null;
+      const resp = await fetch(url);
+      if (!resp.ok) return null;
+      const text = await resp.text();
+      const hashes = new Set();
+      for (const line of text.trim().split("\n")) {
+        if (!line.trim()) continue;
+        try {
+          const prompt = JSON.parse(line);
+          if (prompt.hash) hashes.add(prompt.hash);
+        } catch (e) {
+          console.warn("Failed to parse rendered_prompts line:", line, e);
+        }
+      }
+      return hashes.size > 0 ? hashes : null;
+    } catch (e) {
+      console.warn("rendered_prompts.jsonl not available, using all prompts");
+      return null;
+    }
+  }
 }

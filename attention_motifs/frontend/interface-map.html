@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interface Map - Attention Motifs</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Interface Map</h1>
+        <div class="links">
+          <a href="index.html">Home</a>
+        </div>
+      </header>
+
+      <div class="section">
+        <p>
+          The diagram below shows how all the analysis tools connect together.
+          Click on any component to explore that interface.
+        </p>
+
+        <div class="diagram-container">
+          <object
+            data="diagram.svg"
+            type="image/svg+xml"
+            style="width: 100%; max-height: 600px"
+            id="diagram-svg"
+          >
+            <img
+              src="diagram.svg"
+              alt="Interface Relations Diagram"
+              style="width: 100%; max-height: 600px"
+            />
+          </object>
+        </div>
+
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-line solid-line"></div>
+            <span>Existing connections</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-line dashed-line"></div>
+            <span>Planned connections</span>
+          </div>
+        </div>
+
+        <div class="interface-grid">
+          <div class="interface-category">
+            <h4>Head Analysis</h4>
+            <p>
+              Tools for understanding attention heads and their classifications
+            </p>
+            <ul class="interface-list">
+              <li>
+                <a href="figures/classifications.html">Classifications Page</a>
+                - Browse all head types with links to examples
+              </li>
+              <li>
+                <a href="figures/head_embed_table.html">Head Embedding Table</a>
+                - Compare embedding methods in 2D with SVG previews
+              </li>
+              <li>
+                <a href="vis/embeds/heads/index.html"
+                  >Head Embedding Visualization</a
+                >
+                - 3D exploration of head embeddings
+              </li>
+            </ul>
+          </div>
+
+          <div class="interface-category">
+            <h4>AttentionPedia</h4>
+            <p>The main interface connecting all analysis tools.</p>
+            <ul class="interface-list">
+              <li>
+                <a href="vis/attnpedia/index.html">AttentionPedia</a> - Explore
+                heads with similar patterns and classifications
+              </li>
+            </ul>
+            <p style="margin-top: 15px; font-size: 0.9em; color: #666">
+              <strong>AttentionPedia</strong> serves as the central hub,
+              allowing you to examine any attention head alongside similar (or
+              un-similar!) heads, view multiple attention patterns side-by-side,
+              and navigate to other analysis tools.
+            </p>
+          </div>
+
+          <div class="interface-category">
+            <h4>Pattern Analysis</h4>
+            <p>Tools for examining individual attention patterns</p>
+            <ul class="interface-list">
+              <li>
+                <a href="patterns/index.html">Pattern Lens</a> - Compare
+                patterns across models and heads
+              </li>
+              <li>
+                <a href="patterns/single.html">Single Pattern View</a> -
+                Detailed view of individual attention patterns with their
+                prompts
+              </li>
+              <li>
+                <a href="vis/embeds/patterns/index.html"
+                  >Pattern Embedding Visualization</a
+                >
+                - 3D space of all attention patterns
+              </li>
+            </ul>
+          </div>
+
+          <div class="interface-category">
+            <h4>Clustering</h4>
+            <p>
+              Tools for exploring hierarchical clustering of attention heads
+            </p>
+            <ul class="interface-list">
+              <li>
+                <a href="vis/clustering/index.html">Clustering Visualization</a>
+                - Dendrogram and grid view of cluster assignments
+              </li>
+              <li>
+                <a href="vis/cluster_trends/index.html">Cluster Trends</a> -
+                Cluster composition trends across models and layers
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Handle SVG links to open in new tab instead of iframe
+      document.addEventListener("DOMContentLoaded", function () {
+        const svgObject = document.getElementById("diagram-svg");
+
+        svgObject.addEventListener("load", function () {
+          try {
+            const svgDoc = svgObject.contentDocument;
+            if (svgDoc) {
+              const links = svgDoc.querySelectorAll("a");
+              links.forEach((link) => {
+                link.addEventListener("click", function (e) {
+                  e.preventDefault();
+                  const href =
+                    this.getAttribute("href") ||
+                    this.getAttribute("xlink:href");
+                  if (href) {
+                    window.open(href, "_blank");
+                  }
+                });
+              });
+            }
+          } catch (e) {
+            console.log(
+              "Cannot modify SVG links due to cross-origin restrictions",
+            );
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

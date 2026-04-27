@@ -44,6 +44,8 @@ def head_embed_plots(cfg: PipelineConfig) -> None:
 
 	# Generate figures if enabled
 	if cfg.do_figures:
+		assert cfg.figures_dir is not None
+
 		# Create subdirectory for SVGs
 		head_embed_svgs_dir: Path = cfg.figures_dir / "head-embed-svgs"
 		head_embed_svgs_dir.mkdir(parents=True, exist_ok=True)
@@ -84,7 +86,7 @@ def head_embed_plots(cfg: PipelineConfig) -> None:
 						print(f"  [{i + 1}/{len(prefixes)}] Generating {prefix}")
 
 					# Create individual plot
-					fig, _ = plot_head_embeddings(
+					fig, _ = plot_head_embeddings(  # type: ignore[assignment]
 						head_embed_df,
 						prefix=prefix,
 						color_by="type.group",
@@ -94,6 +96,7 @@ def head_embed_plots(cfg: PipelineConfig) -> None:
 					)
 
 					# Save as SVG
+					assert fig is not None
 					svg_path = head_embed_svgs_dir / f"{prefix}.svg"
 					fig.savefig(
 						svg_path,

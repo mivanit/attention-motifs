@@ -1,0 +1,3162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cluster Trends - Attention Heads</title>
+        <!-- begin 'style.css' -->
+    <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f8f9fa;
+      color: #333;
+      min-height: 100vh;
+    }
+    
+    .nav-bar {
+      background: white;
+      padding: 8px 16px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .nav-bar-content {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .nav-bar a {
+      color: #1565c0;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    
+    .nav-bar a:hover {
+      color: #0d47a1;
+    }
+    
+    .nav-current {
+      color: #666;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    h1 {
+      margin-bottom: 16px;
+      font-size: 1.5em;
+      color: #333;
+    }
+    
+    .global-controls {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 12px 16px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      flex-wrap: wrap;
+    }
+    
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .control-group label {
+      font-size: 13px;
+      color: #555;
+      white-space: nowrap;
+    }
+    
+    select,
+    input[type="number"] {
+      background: white;
+      color: #333;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 13px;
+    }
+    
+    select:focus {
+      outline: 1px solid #1565c0;
+    }
+    
+    .chart-section {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .chart-section h2 {
+      font-size: 1.1em;
+      margin-bottom: 4px;
+      color: #333;
+    }
+    
+    .chart-section .chart-desc {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 12px;
+    }
+    
+    .chart-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    
+    .chart-svg-container {
+      position: relative;
+      width: 100%;
+      height: 400px;
+    }
+    
+    .chart-svg-container svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    
+    /* Family / model toggles */
+    
+    .family-toggles {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    
+    .family-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .family-toggle {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      cursor: pointer;
+      border: 1px solid #ddd;
+      background: #f5f5f5;
+      color: #555;
+      user-select: none;
+    }
+    
+    .family-toggle.disabled {
+      opacity: 0.35;
+      background: #e8e8e8;
+    }
+    
+    .family-toggle.partial {
+      opacity: 0.7;
+      border-style: dashed;
+    }
+    
+    .model-toggles {
+      display: none;
+      flex-wrap: wrap;
+      gap: 2px;
+      padding-left: 4px;
+    }
+    
+    .model-toggles.expanded {
+      display: flex;
+    }
+    
+    .model-toggle {
+      font-size: 10px;
+      padding: 1px 4px;
+      border-radius: 2px;
+      cursor: pointer;
+      border: 1px solid #ddd;
+      background: #fafafa;
+      color: #666;
+      user-select: none;
+    }
+    
+    .model-toggle.disabled {
+      opacity: 0.35;
+      background: #e8e8e8;
+    }
+    
+    /* Cluster chips */
+    
+    .top-clusters {
+      background: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+      display: none;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    .top-clusters.visible {
+      display: flex;
+    }
+    
+    .top-clusters-label {
+      font-size: 12px;
+      color: #888;
+      margin-right: 4px;
+    }
+    
+    .cluster-chip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid #ddd;
+      background: #fafafa;
+      transition:
+        background 0.15s,
+        border-color 0.15s;
+    }
+    
+    .cluster-chip:hover {
+      background: #f0f0f0;
+    }
+    
+    .cluster-chip-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    
+    .cluster-chip-size {
+      font-size: 12px;
+      color: #555;
+      font-weight: 500;
+    }
+    
+    .cluster-chip-label {
+      font-size: 11px;
+      color: #666;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .top-clusters-ellipsis {
+      font-size: 12px;
+      color: #888;
+      font-style: italic;
+    }
+    
+    #loading {
+      text-align: center;
+      padding: 60px;
+      color: #666;
+      font-size: 16px;
+    }
+    
+    </style>
+    <!-- end 'style.css' -->
+  </head>
+  <body>
+    <nav class="nav-bar">
+      <div class="nav-bar-content">
+        <a href="../../index.html">Home</a>
+        <a href="../attnpedia/index.html">AttentionPedia</a>
+        <a href="../embeds/patterns/index.html">Pattern Embeddings</a>
+        <a href="../embeds/heads/index.html">Head Embeddings</a>
+        <a href="../../figures/head_embed_table.html">Head Embed Table</a>
+        <a href="../../figures/classifications.html">Classifications</a>
+        <a href="../clustering/index.html">Clustering</a>
+        <span class="nav-current">Cluster Trends</span>
+        <a href="../../ablations/index.html">Ablation</a>
+        <a href="../../ablations/correlations.html">Correlations</a>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h1>Cluster Trends</h1>
+
+      <div class="global-controls">
+        <div class="control-group">
+          <label for="method-select">Method:</label>
+          <select id="method-select"></select>
+        </div>
+        <div id="hierarchical-controls">
+          <div class="control-group" id="cut-height-container"></div>
+          <div class="control-group">
+            <label for="k-select">K (precomputed):</label>
+            <select id="k-select"></select>
+          </div>
+        </div>
+        <div id="flat-param-controls" style="display: none">
+          <div class="control-group">
+            <label id="flat-param-label" for="flat-param-select"
+              >Parameter:</label
+            >
+            <select id="flat-param-select"></select>
+          </div>
+        </div>
+        <div class="control-group">
+          <label for="show-lines">Lines:</label>
+          <input type="checkbox" id="show-lines" checked />
+        </div>
+        <div class="control-group">
+          <label style="font-size: 12px; color: #555">Families:</label>
+          <div class="family-toggles" id="global-family-toggles"></div>
+        </div>
+      </div>
+
+      <div class="top-clusters" id="cluster-chips"></div>
+
+      <div id="loading">Loading cluster trends data...</div>
+
+      <div id="charts-container" style="display: none">
+        <!-- Chart 1: Layer depth x cluster fraction -->
+        <div class="chart-section">
+          <h2>Cluster Fraction by Layer Depth</h2>
+          <p class="chart-desc">
+            Each point is a (model, layer, cluster). Y-axis shows fraction of
+            heads at that layer belonging to each cluster.
+          </p>
+          <div class="chart-controls">
+            <div class="control-group">
+              <label for="layer-distribution">Distribution:</label>
+              <input type="checkbox" id="layer-distribution" />
+            </div>
+          </div>
+          <div class="chart-svg-container" id="layer-chart-container"></div>
+        </div>
+
+        <!-- Chart 2: Model size x cluster fraction -->
+        <div class="chart-section">
+          <h2>Cluster Fraction by Model Size</h2>
+          <p class="chart-desc">
+            Each point is a (model, cluster). X-axis is parameter count (log
+            scale).
+          </p>
+          <div class="chart-controls">
+            <div class="control-group">
+              <label for="size-distribution">Distribution:</label>
+              <input type="checkbox" id="size-distribution" />
+            </div>
+          </div>
+          <div class="chart-svg-container" id="size-chart-container"></div>
+        </div>
+
+        <!-- Chart 3: Cluster entropy by layer -->
+        <div class="chart-section">
+          <h2>Cluster Entropy by Layer Depth</h2>
+          <p class="chart-desc">
+            Shannon entropy of cluster distribution at each layer. Higher = more
+            diverse clusters, lower = dominated by one cluster.
+          </p>
+          <div class="chart-svg-container" id="entropy-chart-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../libs/d3.min.js"></script>
+        <!-- begin '../../shared/d3_chart_utils.js' -->
+    <script>
+    /**
+     * Shared D3.js chart utilities.
+     *
+     * Provides reusable helpers for creating SVG charts with D3,
+     * including axes, legends, tooltips, boxplots, and SVG export.
+     *
+     * Requires D3.js v7 to be loaded before this script.
+     */
+    
+    // ── Style constants ─────────────────────────────────────────────
+    
+    const CHART_STYLES = {
+      tickColor: "#888",
+      labelColor: "#555",
+      gridColor: "rgba(0,0,0,0.08)",
+      labelFontSize: 11,
+      titleFontSize: 13,
+      legendFontSize: 11,
+      tooltipBg: "rgba(0,0,0,0.82)",
+      tooltipColor: "#fff",
+      tooltipFontSize: "12px",
+      tooltipPadding: "6px 10px",
+      tooltipRadius: "4px",
+    };
+    
+    // ── SVG container ───────────────────────────────────────────────
+    
+    /**
+     * Create an SVG chart container inside a DOM element.
+     * Clears any existing SVG in the container.
+     *
+     * @param {string} containerId - DOM element ID
+     * @param {{top: number, right: number, bottom: number, left: number}} margin
+     * @returns {{svg: d3.Selection, g: d3.Selection, width: number, height: number, innerWidth: number, innerHeight: number}}
+     */
+    function createChartSVG(containerId, margin) {
+      const container = document.getElementById(containerId);
+      // Remove existing SVG and export button
+      const existing = container.querySelector("svg");
+      if (existing) existing.remove();
+      const existingBtn = container.querySelector(".export-svg-btn");
+      if (existingBtn) existingBtn.remove();
+    
+      const rect = container.getBoundingClientRect();
+      const cs = getComputedStyle(container);
+      const width =
+        rect.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const height =
+        rect.height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+    
+      const svg = d3
+        .select(container)
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .attr("xmlns", "http://www.w3.org/2000/svg")
+        .style("font-family", "sans-serif");
+    
+      const g = svg
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+    
+      return { svg, g, width, height, innerWidth, innerHeight };
+    }
+    
+    // ── Axes ────────────────────────────────────────────────────────
+    
+    /**
+     * Render a bottom (X) axis with optional grid lines and label.
+     *
+     * @param {d3.Selection} g - Chart inner group
+     * @param {d3.Scale} scale - D3 scale for the axis
+     * @param {{height: number, label?: string, tickFormat?: Function, gridHeight?: number, ticks?: number}} opts
+     */
+    function createXAxis(g, scale, opts) {
+      const axis = d3.axisBottom(scale);
+      if (opts.tickFormat) axis.tickFormat(opts.tickFormat);
+      if (opts.ticks) axis.ticks(opts.ticks);
+    
+      const axisG = g
+        .append("g")
+        .attr("class", "x-axis")
+        .attr("transform", `translate(0,${opts.height})`)
+        .call(axis);
+    
+      axisG.selectAll("text").attr("fill", CHART_STYLES.tickColor);
+      axisG.selectAll("line").attr("stroke", CHART_STYLES.tickColor);
+      axisG.select(".domain").attr("stroke", CHART_STYLES.tickColor);
+    
+      // Grid lines
+      if (opts.gridHeight) {
+        const gridAxis = d3
+          .axisBottom(scale)
+          .tickSize(-opts.gridHeight)
+          .tickFormat("");
+        if (opts.ticks) gridAxis.ticks(opts.ticks);
+        g.append("g")
+          .attr("class", "x-grid")
+          .attr("transform", `translate(0,${opts.height})`)
+          .call(gridAxis)
+          .selectAll("line")
+          .attr("stroke", CHART_STYLES.gridColor);
+        g.select(".x-grid .domain").remove();
+      }
+    
+      // Label
+      if (opts.label) {
+        g.append("text")
+          .attr("class", "x-label")
+          .attr("x", scale.range()[1] / 2 + (scale.range()[0] || 0) / 2)
+          .attr("y", opts.height + 36)
+          .attr("text-anchor", "middle")
+          .attr("fill", CHART_STYLES.labelColor)
+          .attr("font-size", CHART_STYLES.labelFontSize)
+          .text(opts.label);
+      }
+    }
+    
+    /**
+     * Render a left (Y) axis with optional grid lines and label.
+     *
+     * @param {d3.Selection} g - Chart inner group
+     * @param {d3.Scale} scale - D3 scale for the axis
+     * @param {{label?: string, gridWidth?: number, ticks?: number}} opts
+     */
+    function createYAxis(g, scale, opts) {
+      const axis = d3.axisLeft(scale);
+      if (opts.ticks) axis.ticks(opts.ticks);
+    
+      const axisG = g.append("g").attr("class", "y-axis").call(axis);
+    
+      axisG.selectAll("text").attr("fill", CHART_STYLES.tickColor);
+      axisG.selectAll("line").attr("stroke", CHART_STYLES.tickColor);
+      axisG.select(".domain").attr("stroke", CHART_STYLES.tickColor);
+    
+      // Grid lines
+      if (opts.gridWidth) {
+        const gridAxis = d3
+          .axisLeft(scale)
+          .tickSize(-opts.gridWidth)
+          .tickFormat("");
+        if (opts.ticks) gridAxis.ticks(opts.ticks);
+        g.append("g")
+          .attr("class", "y-grid")
+          .call(gridAxis)
+          .selectAll("line")
+          .attr("stroke", CHART_STYLES.gridColor);
+        g.select(".y-grid .domain").remove();
+      }
+    
+      // Label
+      if (opts.label) {
+        g.append("text")
+          .attr("class", "y-label")
+          .attr("transform", "rotate(-90)")
+          .attr("x", -(scale.range()[0] + scale.range()[1]) / 2)
+          .attr("y", -40)
+          .attr("text-anchor", "middle")
+          .attr("fill", CHART_STYLES.labelColor)
+          .attr("font-size", CHART_STYLES.labelFontSize)
+          .text(opts.label);
+      }
+    }
+    
+    // ── Legend ───────────────────────────────────────────────────────
+    
+    /**
+     * Render an interactive legend inside the SVG.
+     *
+     * @param {d3.Selection} svg - The root SVG selection
+     * @param {{items: Array<{label: string, color: string, dashed?: boolean}>, x: number, y: number, onClick?: (label: string, index: number) => void}} opts
+     */
+    function createLegend(svg, opts) {
+      const items = opts.items.filter((d) => d.label && d.label !== "");
+      const legendG = svg
+        .append("g")
+        .attr("class", "chart-legend")
+        .attr("transform", `translate(${opts.x},${opts.y})`);
+    
+      const itemGs = legendG
+        .selectAll(".legend-item")
+        .data(items)
+        .enter()
+        .append("g")
+        .attr("class", "legend-item")
+        .attr("transform", (_, i) => `translate(0,${i * 18})`)
+        .style("cursor", opts.onClick ? "pointer" : "default");
+    
+      // Color swatch
+      itemGs.each(function (d) {
+        const el = d3.select(this);
+        if (d.dashed) {
+          el.append("line")
+            .attr("x1", 0)
+            .attr("y1", 5)
+            .attr("x2", 14)
+            .attr("y2", 5)
+            .attr("stroke", d.color)
+            .attr("stroke-width", 2)
+            .attr("stroke-dasharray", "4,2");
+        } else {
+          el.append("rect")
+            .attr("width", 12)
+            .attr("height", 12)
+            .attr("rx", 2)
+            .attr("fill", d.color);
+        }
+      });
+    
+      // Label text
+      itemGs
+        .append("text")
+        .attr("x", 18)
+        .attr("y", 10)
+        .attr("fill", CHART_STYLES.labelColor)
+        .attr("font-size", CHART_STYLES.legendFontSize)
+        .text((d) => d.label);
+    
+      // Click handler
+      if (opts.onClick) {
+        itemGs.on("click", (event, d) => {
+          const idx = items.indexOf(d);
+          opts.onClick(d.label, idx, d);
+        });
+      }
+    
+      return legendG;
+    }
+    
+    // ── Tooltip ─────────────────────────────────────────────────────
+    
+    /**
+     * Create a tooltip div attached to a container.
+     * Returns show/hide functions.
+     *
+     * @param {string} containerId - DOM element ID
+     * @returns {{show: (event: MouseEvent, html: string) => void, hide: () => void, el: HTMLElement}}
+     */
+    function createTooltip(containerId) {
+      const container = document.getElementById(containerId);
+    
+      // Remove existing tooltip
+      const existing = container.querySelector(".d3-tooltip");
+      if (existing) existing.remove();
+    
+      const el = document.createElement("div");
+      el.className = "d3-tooltip";
+      el.style.cssText = `
+        position: absolute;
+        background: ${CHART_STYLES.tooltipBg};
+        color: ${CHART_STYLES.tooltipColor};
+        padding: ${CHART_STYLES.tooltipPadding};
+        border-radius: ${CHART_STYLES.tooltipRadius};
+        font-size: ${CHART_STYLES.tooltipFontSize};
+        pointer-events: none;
+        z-index: 100;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.15s;
+      `;
+      container.style.position = "relative";
+      container.appendChild(el);
+    
+      function show(event, html) {
+        el.innerHTML = html;
+        el.style.opacity = "1";
+        const containerRect = container.getBoundingClientRect();
+        let left = event.clientX - containerRect.left + 12;
+        let top = event.clientY - containerRect.top - 10;
+        // Keep within bounds
+        const elRect = el.getBoundingClientRect();
+        if (left + elRect.width > containerRect.width) {
+          left = event.clientX - containerRect.left - elRect.width - 12;
+        }
+        if (top < 0) top = 4;
+        el.style.left = left + "px";
+        el.style.top = top + "px";
+      }
+    
+      function hide() {
+        el.style.opacity = "0";
+      }
+    
+      return { show, hide, el };
+    }
+    
+    // ── SVG Export ───────────────────────────────────────────────────
+    
+    /**
+     * Add an "Export SVG" button below a chart container.
+     *
+     * @param {string} containerId - DOM element ID containing the SVG
+     * @param {string} filename - Download filename (without extension)
+     */
+    function addExportButton(containerId, filename) {
+      const container = document.getElementById(containerId);
+      // Remove existing button
+      const existing = container.querySelector(".export-svg-btn");
+      if (existing) existing.remove();
+    
+      const btn = document.createElement("button");
+      btn.className = "export-svg-btn";
+      btn.textContent = "Export SVG";
+      btn.style.cssText = `
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        padding: 3px 8px;
+        font-size: 11px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        background: #f8f9fa;
+        color: #555;
+        cursor: pointer;
+        z-index: 10;
+        opacity: 0.6;
+        transition: opacity 0.15s;
+      `;
+      btn.addEventListener("mouseenter", () => (btn.style.opacity = "1"));
+      btn.addEventListener("mouseleave", () => (btn.style.opacity = "0.6"));
+      btn.addEventListener("click", () => {
+        const svgEl = container.querySelector("svg");
+        if (!svgEl) return;
+        const clone = svgEl.cloneNode(true);
+        clone.querySelectorAll(".no-export").forEach((el) => el.remove());
+        const serializer = new XMLSerializer();
+        const svgStr = serializer.serializeToString(clone);
+        const blob = new Blob([svgStr], { type: "image/svg+xml" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${filename}.svg`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+      container.appendChild(btn);
+    
+      // Remove existing PNG button
+      const existingPng = container.querySelector(".export-png-btn");
+      if (existingPng) existingPng.remove();
+    
+      const pngBtn = document.createElement("button");
+      pngBtn.className = "export-png-btn";
+      pngBtn.textContent = "Export PNG";
+      pngBtn.style.cssText = `
+        position: absolute;
+        top: 4px;
+        right: 80px;
+        padding: 3px 8px;
+        font-size: 11px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        background: #f8f9fa;
+        color: #555;
+        cursor: pointer;
+        z-index: 10;
+        opacity: 0.6;
+        transition: opacity 0.15s;
+      `;
+      pngBtn.addEventListener("mouseenter", () => (pngBtn.style.opacity = "1"));
+      pngBtn.addEventListener("mouseleave", () => (pngBtn.style.opacity = "0.6"));
+      pngBtn.addEventListener("click", () => {
+        const svgEl = container.querySelector("svg");
+        if (!svgEl) return;
+        const clone = svgEl.cloneNode(true);
+        clone.querySelectorAll(".no-export").forEach((el) => el.remove());
+        const w = parseFloat(svgEl.getAttribute("width"));
+        const h = parseFloat(svgEl.getAttribute("height"));
+        const scale = 8;
+        const canvas = document.createElement("canvas");
+        canvas.width = w * scale;
+        canvas.height = h * scale;
+        const ctx = canvas.getContext("2d");
+        ctx.scale(scale, scale);
+        const svgStr = new XMLSerializer().serializeToString(clone);
+        const blob = new Blob([svgStr], {
+          type: "image/svg+xml;charset=utf-8",
+        });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, w, h);
+          URL.revokeObjectURL(url);
+          canvas.toBlob((pngBlob) => {
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(pngBlob);
+            a.download = `${filename}.png`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+          });
+        };
+        img.src = url;
+      });
+      container.appendChild(pngBtn);
+    }
+    
+    // ── KDE ─────────────────────────────────────────────────────────
+    
+    /**
+     * Gaussian kernel density estimator.
+     * Returns a function that evaluates density at any point x.
+     *
+     * @param {number[]} values - Sample data
+     * @param {number} [bandwidth] - Bandwidth (uses Silverman's rule if omitted)
+     * @returns {(x: number) => number} Density function
+     */
+    function createKDE(values, bandwidth) {
+      const n = values.length;
+      if (n === 0) return () => 0;
+      const sorted = [...values].sort((a, b) => a - b);
+      if (!bandwidth || bandwidth <= 0) {
+        const mean = d3.mean(sorted);
+        const std = Math.sqrt(d3.mean(sorted.map((v) => (v - mean) ** 2)));
+        const q1 = d3.quantile(sorted, 0.25);
+        const q3 = d3.quantile(sorted, 0.75);
+        const iqr = q3 - q1;
+        bandwidth = 0.9 * Math.min(std, iqr / 1.34) * n ** -0.2;
+        if (bandwidth <= 0) bandwidth = std * 0.5 || 1;
+      }
+      const factor = 1 / (n * bandwidth * Math.sqrt(2 * Math.PI));
+      return function (x) {
+        let sum = 0;
+        for (let i = 0; i < n; i++) {
+          const u = (x - sorted[i]) / bandwidth;
+          sum += Math.exp(-0.5 * u * u);
+        }
+        return sum * factor;
+      };
+    }
+    
+    // ── Letter-Value Plot ───────────────────────────────────────────
+    
+    /**
+     * Compute letter-value levels from sorted values.
+     * Returns array of {lower, upper, depth} from outermost to innermost.
+     *
+     * @param {number[]} sorted - Pre-sorted values
+     * @returns {Array<{lower: number, upper: number, depth: number}>}
+     */
+    function computeLetterValues(sorted) {
+      const n = sorted.length;
+      if (n === 0) return [];
+    
+      function quantile(arr, q) {
+        const pos = (arr.length - 1) * q;
+        const base = Math.floor(pos);
+        const rest = pos - base;
+        if (base + 1 < arr.length)
+          return arr[base] + rest * (arr[base + 1] - arr[base]);
+        return arr[base];
+      }
+    
+      const levels = [];
+      const maxDepth = Math.max(1, Math.floor(Math.log2(n)) - 1);
+    
+      for (let k = 1; k <= maxDepth; k++) {
+        const p = 0.5 ** k;
+        const lower = quantile(sorted, p);
+        const upper = quantile(sorted, 1 - p);
+        levels.push({ lower, upper, depth: k });
+        // Stop if the level covers fewer than ~4 data points on each tail
+        if (n * p < 4) break;
+      }
+      return levels;
+    }
+    
+    /**
+     * Draw a letter-value (boxen) plot as SVG elements.
+     *
+     * @param {d3.Selection} g - Parent group
+     * @param {{values: number[], x: number, width: number, yScale: d3.Scale, fillColor: string, strokeColor: string}} opts
+     */
+    function drawLetterValuePlot(g, opts) {
+      const { values, x, width, yScale, fillColor, strokeColor } = opts;
+      if (values.length === 0) return;
+      const sorted = [...values].sort((a, b) => a - b);
+      const levels = computeLetterValues(sorted);
+      const nLevels = levels.length;
+      const lvG = g.append("g").attr("class", "lettervalue");
+    
+      // Parse base color for alpha blending
+      const baseColor = fillColor;
+    
+      // Draw levels from outermost (narrowest box) to innermost (widest box)
+      for (let i = 0; i < nLevels; i++) {
+        const lv = levels[i];
+        const boxW = width * ((i + 1) / nLevels);
+        const xOff = x + (width - boxW) / 2;
+        const alpha = 0.2 + 0.6 * ((i + 1) / nLevels);
+    
+        lvG
+          .append("rect")
+          .attr("x", xOff)
+          .attr("y", yScale(lv.upper))
+          .attr("width", boxW)
+          .attr("height", Math.max(0, yScale(lv.lower) - yScale(lv.upper)))
+          .attr("fill", fillColor)
+          .attr("fill-opacity", alpha)
+          .attr("stroke", strokeColor)
+          .attr("stroke-opacity", 0.4)
+          .attr("stroke-width", 0.5);
+      }
+    
+      // Median line
+      const median = d3.quantile(sorted, 0.5);
+      lvG
+        .append("line")
+        .attr("x1", x)
+        .attr("y1", yScale(median))
+        .attr("x2", x + width)
+        .attr("y2", yScale(median))
+        .attr("stroke", strokeColor)
+        .attr("stroke-width", 2);
+    
+      // Whisker line spanning full data range
+      lvG
+        .append("line")
+        .attr("x1", x + width / 2)
+        .attr("y1", yScale(sorted[0]))
+        .attr("x2", x + width / 2)
+        .attr("y2", yScale(sorted[sorted.length - 1]))
+        .attr("stroke", strokeColor)
+        .attr("stroke-width", 0.5);
+    
+      return lvG;
+    }
+    
+    // ── Boxplot ─────────────────────────────────────────────────────
+    
+    /**
+     * Compute box plot statistics from an array of values.
+     *
+     * @param {number[]} values
+     * @returns {{min: number, q1: number, median: number, q3: number, max: number, whiskerLow: number, whiskerHigh: number, outliers: number[]}}
+     */
+    function computeBoxplotStats(values) {
+      if (values.length === 0) {
+        return {
+          min: 0,
+          q1: 0,
+          median: 0,
+          q3: 0,
+          max: 0,
+          whiskerLow: 0,
+          whiskerHigh: 0,
+          outliers: [],
+        };
+      }
+      const sorted = [...values].sort((a, b) => a - b);
+      const n = sorted.length;
+    
+      function quantile(arr, q) {
+        const pos = (arr.length - 1) * q;
+        const base = Math.floor(pos);
+        const rest = pos - base;
+        if (base + 1 < arr.length) {
+          return arr[base] + rest * (arr[base + 1] - arr[base]);
+        }
+        return arr[base];
+      }
+    
+      const q1 = quantile(sorted, 0.25);
+      const median = quantile(sorted, 0.5);
+      const q3 = quantile(sorted, 0.75);
+      const iqr = q3 - q1;
+      const whiskerLow = Math.max(sorted[0], q1 - 1.5 * iqr);
+      const whiskerHigh = Math.min(sorted[n - 1], q3 + 1.5 * iqr);
+      const outliers = sorted.filter((v) => v < whiskerLow || v > whiskerHigh);
+    
+      return {
+        min: sorted[0],
+        q1,
+        median,
+        q3,
+        max: sorted[n - 1],
+        whiskerLow,
+        whiskerHigh,
+        outliers,
+      };
+    }
+    
+    /**
+     * Draw a single box-and-whisker plot as SVG elements.
+     *
+     * @param {d3.Selection} g - Parent group
+     * @param {{stats: Object, x: number, width: number, yScale: d3.Scale, fillColor: string, strokeColor: string}} opts
+     */
+    function drawBoxplot(g, opts) {
+      const { stats, x, width, yScale, fillColor, strokeColor } = opts;
+      const boxG = g.append("g").attr("class", "boxplot");
+    
+      // Whisker line (vertical)
+      boxG
+        .append("line")
+        .attr("x1", x + width / 2)
+        .attr("y1", yScale(stats.whiskerHigh))
+        .attr("x2", x + width / 2)
+        .attr("y2", yScale(stats.whiskerLow))
+        .attr("stroke", strokeColor)
+        .attr("stroke-width", 1);
+    
+      // Whisker caps
+      const capW = width * 0.5;
+      for (const val of [stats.whiskerLow, stats.whiskerHigh]) {
+        boxG
+          .append("line")
+          .attr("x1", x + width / 2 - capW / 2)
+          .attr("y1", yScale(val))
+          .attr("x2", x + width / 2 + capW / 2)
+          .attr("y2", yScale(val))
+          .attr("stroke", strokeColor)
+          .attr("stroke-width", 1);
+      }
+    
+      // Box (Q1 to Q3)
+      boxG
+        .append("rect")
+        .attr("x", x)
+        .attr("y", yScale(stats.q3))
+        .attr("width", width)
+        .attr("height", Math.max(0, yScale(stats.q1) - yScale(stats.q3)))
+        .attr("fill", fillColor)
+        .attr("stroke", strokeColor)
+        .attr("stroke-width", 1);
+    
+      // Median line
+      boxG
+        .append("line")
+        .attr("x1", x)
+        .attr("y1", yScale(stats.median))
+        .attr("x2", x + width)
+        .attr("y2", yScale(stats.median))
+        .attr("stroke", strokeColor)
+        .attr("stroke-width", 2);
+    
+      // Outliers
+      for (const val of stats.outliers) {
+        boxG
+          .append("circle")
+          .attr("cx", x + width / 2)
+          .attr("cy", yScale(val))
+          .attr("r", 2)
+          .attr("fill", strokeColor)
+          .attr("opacity", 0.6);
+      }
+    
+      return boxG;
+    }
+    
+    </script>
+    <!-- end '../../shared/d3_chart_utils.js' -->
+        <!-- begin '../../shared/cluster_engine.js' -->
+    <script>
+    /**
+     * Shared clustering computation engine.
+     *
+     * Pure functions for computing cluster assignments from a scipy-format
+     * linkage matrix. Used by clustering, cluster_trends, and attnpedia views.
+     */
+    
+    /**
+     * Compute cluster assignments by cutting the dendrogram at a given height.
+     * Uses union-find with path compression.
+     *
+     * @param {number[][]} linkage - Scipy-format linkage matrix [[idx1, idx2, distance, count], ...]
+     * @param {string[]} clsValues - Head IDs in clustering order
+     * @param {number} cutHeight - Height at which to cut the dendrogram
+     * @returns {Object<string, number>} headId -> clusterId (0-indexed)
+     */
+    function computeClustersByHeight(linkage, clsValues, cutHeight) {
+      if (!linkage || !clsValues) return {};
+    
+      const n = clsValues.length;
+      const parent = Array.from({ length: 2 * n - 1 }, (_, i) => i);
+    
+      function find(x) {
+        if (parent[x] !== x) parent[x] = find(parent[x]);
+        return parent[x];
+      }
+    
+      function union(x, y, newParent) {
+        parent[find(x)] = newParent;
+        parent[find(y)] = newParent;
+      }
+    
+      for (let i = 0; i < linkage.length; i++) {
+        const [idx1, idx2, distance] = linkage[i];
+        if (distance <= cutHeight) {
+          union(Math.floor(idx1), Math.floor(idx2), n + i);
+        }
+      }
+    
+      const rootToCluster = {};
+      let nextCluster = 0;
+      const assignments = {};
+    
+      for (let i = 0; i < n; i++) {
+        const root = find(i);
+        if (!(root in rootToCluster)) {
+          rootToCluster[root] = nextCluster++;
+        }
+        assignments[clsValues[i]] = rootToCluster[root];
+      }
+    
+      return assignments;
+    }
+    
+    /**
+     * Apply minimum-size filtering to cluster assignments.
+     * Clusters smaller than minSize are reassigned to -1 (misc).
+     *
+     * @param {Object<string, number>} assignments - Raw headId -> clusterId
+     * @param {number} minSize - Minimum cluster size (0 = no filtering)
+     * @returns {{ assignments: Object<string, number>, smallClusters: Set<number>, nClusters: number }}
+     */
+    function applyMinSizeFilter(assignments, minSize) {
+      if (minSize <= 0) {
+        return {
+          assignments: assignments,
+          smallClusters: new Set(),
+          nClusters: new Set(Object.values(assignments)).size,
+        };
+      }
+    
+      // Count cluster sizes
+      const clusterCounts = {};
+      for (const cid of Object.values(assignments)) {
+        clusterCounts[cid] = (clusterCounts[cid] || 0) + 1;
+      }
+    
+      // Find small clusters
+      const smallClusters = new Set();
+      for (const [cid, count] of Object.entries(clusterCounts)) {
+        if (count < minSize) {
+          smallClusters.add(parseInt(cid));
+        }
+      }
+    
+      // Reassign small cluster heads to misc (-1)
+      if (smallClusters.size > 0) {
+        const merged = {};
+        for (const [headId, cid] of Object.entries(assignments)) {
+          merged[headId] = smallClusters.has(cid) ? -1 : cid;
+        }
+        return {
+          assignments: merged,
+          smallClusters: smallClusters,
+          nClusters: new Set(Object.values(merged)).size,
+        };
+      }
+    
+      return {
+        assignments: assignments,
+        smallClusters: smallClusters,
+        nClusters: new Set(Object.values(assignments)).size,
+      };
+    }
+    
+    /**
+     * Find the cut height that produces a target number of clusters.
+     *
+     * @param {number[][]} linkage - Scipy-format linkage matrix
+     * @param {number} nHeads - Number of leaf nodes (heads)
+     * @param {number} nClusters - Desired number of clusters
+     * @returns {number} Cut height
+     */
+    function cutHeightForNClusters(linkage, nHeads, nClusters) {
+      if (nClusters >= nHeads) {
+        return Math.max(...linkage.map((row) => row[2]));
+      }
+      const heights = linkage.map((row) => row[2]).sort((a, b) => b - a);
+      return heights[nHeads - nClusters - 1] + 1e-10;
+    }
+    
+    /**
+     * Compute cluster assignments for a target number of clusters.
+     *
+     * @param {number[][]} linkage - Scipy-format linkage matrix
+     * @param {string[]} clsValues - Head IDs in clustering order
+     * @param {number} nClusters - Desired number of clusters
+     * @returns {{ assignments: Object<string, number>, cutHeight: number }}
+     */
+    function computeClustersByNClusters(linkage, clsValues, nClusters) {
+      const n = clsValues.length;
+    
+      if (nClusters >= n) {
+        const assignments = {};
+        clsValues.forEach((cls, i) => {
+          assignments[cls] = i;
+        });
+        return {
+          assignments,
+          cutHeight: Math.max(...linkage.map((row) => row[2])),
+        };
+      }
+    
+      const cutHeight = cutHeightForNClusters(linkage, n, nClusters);
+      return {
+        assignments: computeClustersByHeight(linkage, clsValues, cutHeight),
+        cutHeight,
+      };
+    }
+    
+    /**
+     * Look up precomputed flat partition assignments by parameter key.
+     * Used for HDBSCAN and Leiden methods where assignments are precomputed
+     * at discrete parameter values (not computed client-side like hierarchical).
+     *
+     * @param {Object<string, Object<string, number>>} partitions - paramKey -> { headId: clusterId }
+     * @param {string} paramKey - The parameter key to look up
+     * @returns {Object<string, number>} headId -> clusterId (empty object if key not found)
+     */
+    function getFlatPartitionAssignments(partitions, paramKey) {
+      return partitions[paramKey] || {};
+    }
+    
+    </script>
+    <!-- end '../../shared/cluster_engine.js' -->
+        <!-- begin '../../shared/cluster_utils.js' -->
+    <script>
+    /**
+     * Shared clustering visualization utilities.
+     *
+     * Used by cluster_trends and potentially other frontends that need
+     * cluster coloring and toggle buttons.
+     */
+    
+    // ── Cluster colors (golden angle) ──────────────────────────────
+    
+    const GOLDEN_ANGLE = 137.508;
+    
+    /**
+     * Generate a distinct opaque color for a cluster index.
+     * @param {number} idx
+     * @returns {string} CSS hsl color
+     */
+    function clusterColor(idx) {
+      const hue = (idx * GOLDEN_ANGLE) % 360;
+      const sat = 65 + (idx % 3) * 10;
+      const lit = 45 + (idx % 2) * 10;
+      return `hsl(${hue}, ${sat}%, ${lit}%)`;
+    }
+    
+    /**
+     * Generate a distinct color with alpha for a cluster index.
+     * @param {number} idx
+     * @param {number} alpha - opacity 0..1
+     * @returns {string} CSS hsla color
+     */
+    function clusterColorAlpha(idx, alpha) {
+      const hue = (idx * GOLDEN_ANGLE) % 360;
+      const sat = 65 + (idx % 3) * 10;
+      const lit = 45 + (idx % 2) * 10;
+      return `hsla(${hue}, ${sat}%, ${lit}%, ${alpha})`;
+    }
+    
+    // ── Toggle buttons ─────────────────────────────────────────────
+    
+    /**
+     * Build toggle buttons inside a container element.
+     * Each button toggles a boolean in the shared enabledState object.
+     *
+     * @param {string} containerId - DOM element ID for the container
+     * @param {string[]} items - sorted list of item labels
+     * @param {Object<string, boolean>} enabledState - shared state (mutated in place)
+     * @param {string} cssClass - CSS class for each button (e.g. "family-toggle")
+     * @param {() => void} onChange - callback when any toggle changes
+     */
+    function buildToggleButtons(
+      containerId,
+      items,
+      enabledState,
+      cssClass,
+      onChange,
+    ) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+      for (const item of items) {
+        const btn = document.createElement("span");
+        btn.className = cssClass;
+        btn.textContent = item;
+        if (!enabledState[item]) btn.classList.add("disabled");
+        btn.addEventListener("click", () => {
+          enabledState[item] = !enabledState[item];
+          btn.classList.toggle("disabled", !enabledState[item]);
+          onChange();
+        });
+        container.appendChild(btn);
+      }
+    }
+    
+    // ── Cluster labels ──────────────────────────────────────────────
+    
+    const CLUSTER_LABELS_STORAGE_KEY = "clustering_labels";
+    
+    /**
+     * Load cluster labels from localStorage and optionally from a server URL.
+     * localStorage labels override server labels on merge.
+     *
+     * @param {string|null} [serverUrl] - URL to fetch server-side labels JSON
+     * @returns {Promise<Object>} Merged labels: { cutHeightKey: { clusterIdx: { name, desc, heads } } }
+     */
+    async function loadClusterLabels(serverUrl) {
+      // Load from localStorage
+      let localLabels = {};
+      try {
+        const raw = localStorage.getItem(CLUSTER_LABELS_STORAGE_KEY);
+        if (raw) localLabels = JSON.parse(raw);
+      } catch (e) {
+        console.warn("Failed to load cluster labels from localStorage:", e);
+      }
+    
+      // Load from server (optional)
+      let serverLabels = {};
+      if (serverUrl) {
+        try {
+          const resp = await fetch(serverUrl);
+          if (resp.ok) {
+            serverLabels = await resp.json();
+          } else {
+            console.warn(
+              `Cluster labels not found at ${serverUrl} (${resp.status})`,
+            );
+          }
+        } catch (e) {
+          console.warn("Failed to fetch cluster labels:", e);
+        }
+      }
+    
+      // Merge: server as base, localStorage overrides
+      const merged = {};
+      const allKeys = new Set([
+        ...Object.keys(serverLabels),
+        ...Object.keys(localLabels),
+      ]);
+      for (const heightKey of allKeys) {
+        merged[heightKey] = {
+          ...(serverLabels[heightKey] || {}),
+          ...(localLabels[heightKey] || {}),
+        };
+      }
+      return merged;
+    }
+    
+    /**
+     * Resolve stored labels against current cluster assignments.
+     * Matches each label's heads list to the current cluster with the
+     * highest overlap, returning a map of clusterId -> {name, desc}.
+     *
+     * @param {Object} allLabels - Full labels object keyed by cut height
+     * @param {number} cutHeight - Current cut height
+     * @param {Object<string, number>} assignments - headId -> clusterId
+     * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+     */
+    function resolveClusterLabels(allLabels, cutHeight, assignments) {
+      const heightKey = cutHeight.toFixed(3);
+      return resolveClusterLabelsByKey(allLabels, heightKey, assignments);
+    }
+    
+    /**
+     * Resolve stored labels for a flat clustering method.
+     * Label key format: "{method}:{param_name}={value}"
+     *
+     * @param {Object} allLabels - Full labels object keyed by label key
+     * @param {string} method - Clustering method name (e.g. "hdbscan", "leiden")
+     * @param {string} paramName - Parameter name (e.g. "min_cluster_size", "resolution")
+     * @param {string} paramKey - Parameter value as string
+     * @param {Object<string, number>} assignments - headId -> clusterId
+     * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+     */
+    function resolveClusterLabelsFlat(
+      allLabels,
+      method,
+      paramName,
+      paramKey,
+      assignments,
+    ) {
+      const labelKey = `${method}:${paramName}=${paramKey}`;
+      return resolveClusterLabelsByKey(allLabels, labelKey, assignments);
+    }
+    
+    /**
+     * Resolve stored labels against current cluster assignments using a specific key.
+     * Shared implementation for both hierarchical and flat methods.
+     *
+     * @param {Object} allLabels - Full labels object keyed by label key
+     * @param {string} key - The label key to look up
+     * @param {Object<string, number>} assignments - headId -> clusterId
+     * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+     */
+    function resolveClusterLabelsByKey(allLabels, key, assignments) {
+      const labelsForKey = allLabels[key];
+      if (!labelsForKey) return {};
+    
+      const resolvedCounts = {};
+      const resolved = {};
+    
+      for (const [_origIdx, entry] of Object.entries(labelsForKey)) {
+        if (!entry || !entry.name) continue;
+        const heads = entry.heads || [];
+    
+        // Count overlap with each current cluster
+        const clusterOverlap = {};
+        for (const headId of heads) {
+          const cid = assignments[headId];
+          if (cid !== undefined) {
+            clusterOverlap[cid] = (clusterOverlap[cid] || 0) + 1;
+          }
+        }
+    
+        // Find cluster with most overlap
+        let bestCluster = null;
+        let bestCount = 0;
+        for (const [cid, count] of Object.entries(clusterOverlap)) {
+          if (count > bestCount) {
+            bestCount = count;
+            bestCluster = parseInt(cid);
+          }
+        }
+    
+        if (bestCluster !== null && bestCount > 0) {
+          if (!resolved[bestCluster] || bestCount > resolvedCounts[bestCluster]) {
+            resolved[bestCluster] = { name: entry.name, desc: entry.desc || null };
+            resolvedCounts[bestCluster] = bestCount;
+          }
+        }
+      }
+    
+      return resolved;
+    }
+    
+    /**
+     * Get a short display name for a cluster, using name if available.
+     *
+     * @param {number} clusterId
+     * @param {Object<number, {name: string, desc: string|null}>} resolvedLabels
+     * @returns {string} e.g. "Cluster 3: Induction" or "Cluster 3"
+     */
+    function clusterDisplayName(clusterId, resolvedLabels) {
+      if (clusterId === -1) return "misc";
+      const label = resolvedLabels[clusterId];
+      if (label && label.name) return `Cluster ${clusterId}: ${label.name}`;
+      return `Cluster ${clusterId}`;
+    }
+    
+    </script>
+    <!-- end '../../shared/cluster_utils.js' -->
+        <!-- begin '../../shared/clustering_config.js' -->
+    <script>
+    /**
+     * Shared clustering configuration state.
+     *
+     * Persists clustering UI state (cut height, highlighted cluster, etc.)
+     * to localStorage so it can be shared across cluster_trends and clustering
+     * pages without URL parameters.
+     */
+    
+    const CLUSTERING_CONFIG_KEY = "clustering_config";
+    
+    const ClusteringConfig = {
+      /**
+       * Load full state from localStorage.
+       * @returns {Object} parsed state (empty object if nothing stored)
+       */
+      load() {
+        try {
+          return JSON.parse(localStorage.getItem(CLUSTERING_CONFIG_KEY)) || {};
+        } catch {
+          return {};
+        }
+      },
+    
+      /**
+       * Merge partial state into localStorage.
+       * @param {Object} partial - key/value pairs to merge
+       */
+      save(partial) {
+        const current = this.load();
+        localStorage.setItem(
+          CLUSTERING_CONFIG_KEY,
+          JSON.stringify({ ...current, ...partial }),
+        );
+      },
+    
+      /** @returns {number|null} */
+      getCutHeight() {
+        return this.load().cutHeight ?? null;
+      },
+    
+      /** @param {number} h */
+      setCutHeight(h) {
+        this.save({ cutHeight: h });
+      },
+    
+      /** @returns {number|null} */
+      getHighlightCluster() {
+        return this.load().highlightCluster ?? null;
+      },
+    
+      /** @param {number} id */
+      setHighlightCluster(id) {
+        this.save({ highlightCluster: id });
+      },
+    
+      clearHighlightCluster() {
+        const s = this.load();
+        delete s.highlightCluster;
+        localStorage.setItem(CLUSTERING_CONFIG_KEY, JSON.stringify(s));
+      },
+    
+      /** @returns {string|null} clustering method name ("hierarchical", "hdbscan", "leiden") */
+      getMethod() {
+        return this.load().method ?? null;
+      },
+    
+      /** @param {string} method */
+      setMethod(method) {
+        this.save({ method });
+      },
+    
+      /** @returns {string|null} current parameter key for flat methods */
+      getParamKey() {
+        return this.load().paramKey ?? null;
+      },
+    
+      /** @param {string} key */
+      setParamKey(key) {
+        this.save({ paramKey: key });
+      },
+    };
+    
+    </script>
+    <!-- end '../../shared/clustering_config.js' -->
+        <!-- begin '../../shared/cut_height_control.js' -->
+    <script>
+    /**
+     * Shared cut-height slider + number input control.
+     *
+     * Used by both clustering and cluster_trends views to avoid duplicating
+     * the bidirectional slider/input sync logic.
+     */
+    
+    /**
+     * Create a cut-height control with a range slider and number input.
+     * @param {Object} options
+     * @param {HTMLElement} options.container - DOM element to render into
+     * @param {number} [options.maxHeight=10] - Maximum height value
+     * @param {number} [options.step=0.01] - Step size for the slider
+     * @param {number} [options.initialValue=5] - Initial cut height
+     * @param {string} [options.label="Cut Height:"] - Label text
+     * @param {boolean} [options.showTicks=false] - Whether to include a ticks overlay container
+     * @param {(height: number) => void} options.onChange - Callback when value changes
+     * @returns {{
+     *   setValue: (h: number) => void,
+     *   getValue: () => number,
+     *   setDisabled: (b: boolean) => void,
+     *   getSliderElement: () => HTMLInputElement,
+     *   getTicksContainer: () => HTMLElement|null,
+     * }}
+     */
+    function createCutHeightControl(options) {
+      const {
+        container,
+        maxHeight = 10,
+        step = 0.01,
+        initialValue = 5,
+        label = "Cut Height:",
+        showTicks = false,
+        onChange,
+      } = options;
+    
+      // Create label
+      const labelEl = document.createElement("label");
+      labelEl.setAttribute("for", "cut-height");
+      labelEl.textContent = label;
+      container.appendChild(labelEl);
+    
+      // Create slider wrapper (with optional ticks overlay)
+      let ticksContainer = null;
+      const sliderWrapper = document.createElement("div");
+      sliderWrapper.className = "slider-with-ticks";
+    
+      const slider = document.createElement("input");
+      slider.type = "range";
+      slider.id = "cut-height";
+      slider.min = "0";
+      slider.max = String(maxHeight);
+      slider.step = String(step);
+      slider.value = String(initialValue);
+      sliderWrapper.appendChild(slider);
+    
+      if (showTicks) {
+        ticksContainer = document.createElement("div");
+        ticksContainer.className = "slider-ticks";
+        ticksContainer.id = "cut-height-ticks";
+        sliderWrapper.appendChild(ticksContainer);
+      }
+    
+      container.appendChild(sliderWrapper);
+    
+      // Create number input
+      const numInput = document.createElement("input");
+      numInput.type = "number";
+      numInput.id = "cut-height-input";
+      numInput.min = "0";
+      numInput.max = String(maxHeight);
+      numInput.step = String(step);
+      numInput.value = initialValue.toFixed(3);
+      numInput.className = "control-input";
+      numInput.style.width = "60px";
+      container.appendChild(numInput);
+    
+      // Bidirectional sync
+      slider.addEventListener("input", (e) => {
+        const h = parseFloat(e.target.value);
+        numInput.value = h.toFixed(3);
+        if (onChange) onChange(h);
+      });
+    
+      numInput.addEventListener("change", (e) => {
+        const h = Math.max(0, Math.min(maxHeight, parseFloat(e.target.value) || 0));
+        numInput.value = h.toFixed(3);
+        slider.value = String(h);
+        if (onChange) onChange(h);
+      });
+    
+      return {
+        /** @param {number} h */
+        setValue(h) {
+          slider.value = String(h);
+          numInput.value = h.toFixed(3);
+        },
+        /** @returns {number} */
+        getValue() {
+          return parseFloat(slider.value);
+        },
+        /** @param {boolean} b */
+        setDisabled(b) {
+          slider.disabled = b;
+          numInput.disabled = b;
+        },
+        /** @returns {HTMLInputElement} */
+        getSliderElement() {
+          return slider;
+        },
+        /** @returns {HTMLElement|null} */
+        getTicksContainer() {
+          return ticksContainer;
+        },
+      };
+    }
+    
+    </script>
+    <!-- end '../../shared/cut_height_control.js' -->
+        <!-- begin 'app.js' -->
+    <script>
+    /**
+     * Cluster Trends visualization
+     *
+     * Three charts showing how attention head clusters vary across
+     * layer depth and model size:
+     * 1. Layer depth x cluster fraction (scatter/line)
+     * 2. Model size x cluster fraction (scatter)
+     * 3. Cluster entropy by layer depth (line)
+     *
+     * Supports both precomputed K-based data and dynamic cut-height clustering.
+     * All charts render as SVG via D3.js for PDF-quality export.
+     */
+    
+    // ── Config ──────────────────────────────────────────────────────
+    const urlParams = new URLSearchParams(window.location.search);
+    const CONFIG = {
+      dataUrl: urlParams.get("data") || "../../features/cluster_trends.json",
+      defaultK: urlParams.get("k") || null,
+      clusteringMetaUrl:
+        urlParams.get("meta") || "../../features/clustering/clustering_meta.json",
+      linkageUrl:
+        urlParams.get("linkage") || "../../features/clustering/linkage.json",
+    };
+    
+    // ── Chart margins ───────────────────────────────────────────────
+    const CHART_MARGIN = { top: 14, right: 160, bottom: 46, left: 56 };
+    
+    // ── State ───────────────────────────────────────────────────────
+    let DATA = null;
+    let currentK = null;
+    
+    // Which families/models are enabled (true = visible)
+    /** @type {Object<string, boolean>} */ let familyEnabled = {};
+    /** @type {Object<string, boolean>} */ let modelEnabled = {};
+    
+    // Cut-height clustering state
+    /** @type {number[][]|null} */ let linkageData = null;
+    /** @type {string[]|null} */ let clsValues = null;
+    
+    // Current records used by chart builders (either precomputed or dynamic)
+    let currentRecords = { by_layer: [], by_model: [], entropy_by_layer: [] };
+    
+    // Cluster labels state
+    /** @type {Object} */ let allClusterLabels = {};
+    /** @type {Object<number, {name: string, desc: string|null}>} */ let resolvedLabels =
+      {};
+    
+    // Cluster visibility state for legend toggling
+    /** @type {Object<number, boolean>} */ let clusterVisible = {};
+    
+    // Multi-method state
+    /** @type {string} */ let currentMethod = "hierarchical";
+    
+    // ── Colors ──────────────────────────────────────────────────────
+    // clusterColor() and clusterColorAlpha() are provided by cluster_utils.js
+    
+    /**
+     * Generate a color for a model index (different palette from clusters).
+     * @param {number} idx
+     * @param {number} total
+     * @returns {string} CSS hsl color
+     */
+    function modelColor(idx, total) {
+      const hue = (idx / Math.max(total, 1)) * 360;
+      return `hsl(${hue}, 70%, 60%)`;
+    }
+    
+    // ── Data loading ────────────────────────────────────────────────
+    
+    async function loadData() {
+      const resp = await fetch(CONFIG.dataUrl);
+      if (!resp.ok) {
+        throw new Error(`Failed to fetch ${CONFIG.dataUrl}: ${resp.status}`);
+      }
+      DATA = await resp.json();
+    }
+    
+    async function loadClusteringData() {
+      const [metaResp, linkageResp] = await Promise.all([
+        fetch(CONFIG.clusteringMetaUrl),
+        fetch(CONFIG.linkageUrl),
+      ]);
+      if (!metaResp.ok || !linkageResp.ok) {
+        console.warn("Clustering data not available for cut-height mode");
+        return false;
+      }
+      const meta = await metaResp.json();
+      clsValues = meta.cls_values;
+      linkageData = await linkageResp.json();
+      return true;
+    }
+    
+    // ── Cut-height clustering ───────────────────────────────────────
+    // Uses shared computeClustersByHeight() from cluster_engine.js
+    
+    /**
+     * Shannon entropy from a list of counts.
+     * @param {number[]} counts
+     * @returns {number}
+     */
+    function shannonEntropy(counts) {
+      const total = counts.reduce((a, b) => a + b, 0);
+      if (total === 0) return 0;
+      let entropy = 0;
+      for (const c of counts) {
+        if (c > 0) {
+          const p = c / total;
+          entropy -= p * Math.log2(p);
+        }
+      }
+      return entropy;
+    }
+    
+    /**
+     * From head assignments, compute trend records in the same format
+     * as the precomputed DATA (by_layer, by_model, entropy_by_layer).
+     * @param {Object<string, number>} assignments - head ID -> cluster ID
+     * @returns {{by_layer: Array, by_model: Array, entropy_by_layer: Array}}
+     */
+    function computeTrendRecords(assignments) {
+      // Parse cls_values "model:Llayer:Hhead" into per-head metadata
+      const heads = [];
+      for (const cls of clsValues) {
+        const parts = cls.split(":");
+        const model = parts[0];
+        const layer = parseInt(parts[1].substring(1));
+        const cluster = assignments[cls];
+        if (cluster !== undefined) {
+          heads.push({ model, layer, cluster });
+        }
+      }
+    
+      const byLayerRecords = [];
+      const entropyRecords = [];
+      const byModelRecords = [];
+    
+      // Group heads by model
+      const headsByModel = {};
+      for (const h of heads) {
+        if (!headsByModel[h.model]) headsByModel[h.model] = [];
+        headsByModel[h.model].push(h);
+      }
+    
+      for (const [modelName, modelHeads] of Object.entries(headsByModel)) {
+        const meta = DATA.models[modelName];
+        if (!meta) continue;
+    
+        const nLayers = meta.n_layers;
+        const nHeadsPerLayer = meta.n_heads;
+    
+        // --- by_layer: per (model, layer, cluster) ---
+        const layerGroups = {};
+        for (const h of modelHeads) {
+          if (!layerGroups[h.layer]) layerGroups[h.layer] = {};
+          const lg = layerGroups[h.layer];
+          lg[h.cluster] = (lg[h.cluster] || 0) + 1;
+        }
+    
+        for (const [layerStr, clusterCounts] of Object.entries(layerGroups)) {
+          const layerIdx = parseInt(layerStr);
+          const depth = layerIdx / Math.max(nLayers - 1, 1);
+    
+          for (const [clusterStr, count] of Object.entries(clusterCounts)) {
+            const frac = count / nHeadsPerLayer;
+            byLayerRecords.push({
+              model: modelName,
+              layer: layerIdx,
+              depth: Math.round(depth * 10000) / 10000,
+              cluster: parseInt(clusterStr),
+              count: count,
+              frac: Math.round(frac * 10000) / 10000,
+            });
+          }
+    
+          // Shannon entropy at this layer
+          const counts = Object.values(clusterCounts);
+          const ent = shannonEntropy(counts);
+          entropyRecords.push({
+            model: modelName,
+            layer: layerIdx,
+            depth: Math.round(depth * 10000) / 10000,
+            entropy: Math.round(ent * 10000) / 10000,
+          });
+        }
+    
+        // --- by_model: per (model, cluster) ---
+        const totalHeads = modelHeads.length;
+        const modelClusterCounts = {};
+        for (const h of modelHeads) {
+          modelClusterCounts[h.cluster] = (modelClusterCounts[h.cluster] || 0) + 1;
+        }
+    
+        for (const [clusterStr, count] of Object.entries(modelClusterCounts)) {
+          const frac = count / totalHeads;
+          byModelRecords.push({
+            model: modelName,
+            cluster: parseInt(clusterStr),
+            count: count,
+            frac: Math.round(frac * 10000) / 10000,
+          });
+        }
+      }
+    
+      return {
+        by_layer: byLayerRecords,
+        by_model: byModelRecords,
+        entropy_by_layer: entropyRecords,
+      };
+    }
+    
+    /**
+     * Get a legend/tooltip label for a cluster, using name if available.
+     * @param {number} cid
+     * @returns {string}
+     */
+    function clusterLegendLabel(cid) {
+      return clusterDisplayName(cid, resolvedLabels);
+    }
+    
+    /**
+     * Get the desc (long description) for a cluster, if available.
+     * @param {number} cid
+     * @returns {string|null}
+     */
+    function clusterDesc(cid) {
+      const label = resolvedLabels[cid];
+      return label ? label.desc : null;
+    }
+    
+    /**
+     * Update currentRecords from a cut height and rebuild charts.
+     * @param {number} cutHeight
+     */
+    function updateFromCutHeight(cutHeight) {
+      gridState.currentCutHeight = cutHeight;
+      ClusteringConfig.setCutHeight(cutHeight);
+      const assignments = computeClustersByHeight(
+        linkageData,
+        clsValues,
+        cutHeight,
+      );
+      resolvedLabels = resolveClusterLabels(
+        allClusterLabels,
+        cutHeight,
+        assignments,
+      );
+      currentRecords = computeTrendRecords(assignments);
+      clusterVisible = {}; // Reset visibility on new clustering
+      rebuildAll();
+    }
+    
+    /**
+     * Update currentRecords from a precomputed K value and rebuild charts.
+     * @param {number} k
+     */
+    function updateFromK(k) {
+      currentK = k;
+      const key = `k${k}`;
+      resolvedLabels = {}; // labels are keyed by cut height, not K
+      currentRecords = {
+        by_layer: DATA.by_layer[key] || [],
+        by_model: DATA.by_model[key] || [],
+        entropy_by_layer: DATA.entropy_by_layer[key] || [],
+      };
+      clusterVisible = {}; // Reset visibility on new clustering
+      rebuildAll();
+    }
+    
+    /**
+     * Update currentRecords from a flat clustering method's precomputed parameter.
+     * Reads from DATA.hdbscan or DATA.leiden sub-objects.
+     * @param {string} method - "hdbscan" or "leiden"
+     * @param {string} paramKey - The parameter key (e.g. "5", "0.5")
+     */
+    function updateFromFlatParam(method, paramKey) {
+      const methodData = DATA[method];
+      if (!methodData) return;
+    
+      // Build the trend key: for HDBSCAN "hdbscan.mcs{v}", for Leiden "leiden.r{v}"
+      let trendKey;
+      if (method === "hdbscan") {
+        trendKey = `hdbscan.mcs${paramKey}`;
+      } else if (method === "leiden") {
+        trendKey = `leiden.r${parseFloat(paramKey).toFixed(3)}`;
+      } else {
+        return;
+      }
+    
+      resolvedLabels = {};
+      currentRecords = {
+        by_layer: methodData.by_layer[trendKey] || [],
+        by_model: methodData.by_model[trendKey] || [],
+        entropy_by_layer: methodData.entropy_by_layer[trendKey] || [],
+      };
+      clusterVisible = {};
+      rebuildAll();
+    }
+    
+    // ── Toggle helpers ──────────────────────────────────────────────
+    // buildToggleButtons() is provided by cluster_utils.js
+    
+    /**
+     * Check whether a model passes the current family filter.
+     * @param {string} modelName
+     * @returns {boolean}
+     */
+    function isModelEnabled(modelName) {
+      return modelEnabled[modelName] === true;
+    }
+    
+    // ── Chart 1: Layer depth x cluster fraction ─────────────────────
+    
+    function buildLayerChart() {
+      const records = currentRecords.by_layer;
+      const showDist = document.getElementById("layer-distribution").checked;
+      const showLines = document.getElementById("show-lines").checked;
+    
+      // Disable "Lines" checkbox when distribution is active
+      document.getElementById("show-lines").disabled = showDist;
+    
+      // Filter by enabled families
+      const filtered = records.filter((r) => isModelEnabled(r.model));
+    
+      if (showDist) {
+        buildLayerChartDistribution(filtered);
+      } else {
+        buildLayerChartScatter(filtered, showLines);
+      }
+    }
+    
+    /**
+     * Scatter/line mode for the layer chart.
+     * @param {Array} filtered - family-filtered by_layer records
+     * @param {boolean} showLines
+     */
+    function buildLayerChartScatter(filtered, showLines) {
+      const containerId = "layer-chart-container";
+      const { svg, g, innerWidth, innerHeight } = createChartSVG(
+        containerId,
+        CHART_MARGIN,
+      );
+      const tooltip = createTooltip(containerId);
+    
+      // Group by cluster
+      /** @type {Object<number, Array<{x:number, y:number, model:string}>>} */
+      const byCluster = {};
+      for (const r of filtered) {
+        if (!byCluster[r.cluster]) byCluster[r.cluster] = [];
+        byCluster[r.cluster].push({ x: r.depth, y: r.frac, model: r.model });
+      }
+    
+      const clusterIds = Object.keys(byCluster)
+        .map(Number)
+        .sort((a, b) => a - b);
+    
+      // Initialize visibility
+      for (const cid of clusterIds) {
+        if (clusterVisible[cid] === undefined) clusterVisible[cid] = true;
+      }
+    
+      const yMax = d3.max(filtered, (r) => r.frac) || 1;
+    
+      const xScale = d3.scaleLinear().domain([-0.02, 1.02]).range([0, innerWidth]);
+      const yScale = d3
+        .scaleLinear()
+        .domain([0, yMax * 1.05])
+        .range([innerHeight, 0]);
+    
+      createXAxis(g, xScale, {
+        height: innerHeight,
+        label: "Normalized Layer Depth",
+        gridHeight: innerHeight,
+      });
+      createYAxis(g, yScale, {
+        label: "Fraction of Heads",
+        gridWidth: innerWidth,
+      });
+    
+      // Plot data per cluster
+      const models = Object.keys(DATA.models).sort();
+      for (const cid of clusterIds) {
+        const points = byCluster[cid] || [];
+        const color = clusterColor(cid);
+        const clusterG = g
+          .append("g")
+          .attr("class", `cluster-group cluster-${cid}`)
+          .style("display", clusterVisible[cid] ? null : "none");
+    
+        // Group by model for lines
+        /** @type {Object<string, Array<{x:number, y:number}>>} */
+        const byModel = {};
+        for (const p of points) {
+          if (!byModel[p.model]) byModel[p.model] = [];
+          byModel[p.model].push({ x: p.x, y: p.y });
+        }
+    
+        for (const m of models) {
+          const pts = byModel[m];
+          if (!pts) continue;
+          pts.sort((a, b) => a.x - b.x);
+    
+          // Lines
+          if (showLines && pts.length > 1) {
+            const line = d3
+              .line()
+              .x((d) => xScale(d.x))
+              .y((d) => yScale(d.y));
+            clusterG
+              .append("path")
+              .datum(pts)
+              .attr("fill", "none")
+              .attr("stroke", color)
+              .attr("stroke-width", 1.5)
+              .attr("d", line);
+          }
+    
+          // Points
+          clusterG
+            .selectAll(null)
+            .data(pts.map((p) => ({ ...p, model: m, cid })))
+            .enter()
+            .append("circle")
+            .attr("cx", (d) => xScale(d.x))
+            .attr("cy", (d) => yScale(d.y))
+            .attr("r", 3)
+            .attr("fill", color)
+            .on("mouseover", (event, d) => {
+              d3.select(event.target).attr("r", 5);
+              const label = clusterLegendLabel(d.cid);
+              let html = `${d.model} | ${label} | depth=${d.x.toFixed(2)} frac=${d.y.toFixed(3)}`;
+              const desc = clusterDesc(d.cid);
+              if (desc) html += `<br>${desc}`;
+              tooltip.show(event, html);
+            })
+            .on("mouseout", (event) => {
+              d3.select(event.target).attr("r", 3);
+              tooltip.hide();
+            });
+        }
+      }
+    
+      // Legend
+      createLegend(svg, {
+        items: clusterIds.map((cid) => ({
+          label: clusterLegendLabel(cid),
+          color: clusterColor(cid),
+          _cid: cid,
+        })),
+        x: CHART_MARGIN.left + innerWidth + 12,
+        y: CHART_MARGIN.top,
+        onClick: (_label, _idx, item) => {
+          const cid = item._cid;
+          clusterVisible[cid] = !clusterVisible[cid];
+          g.select(`.cluster-${cid}`).style(
+            "display",
+            clusterVisible[cid] ? null : "none",
+          );
+        },
+      });
+    
+      addExportButton(containerId, "layer-depth-cluster-fraction");
+    }
+    
+    /**
+     * Distribution mode for the layer chart.
+     * Per cluster: min/max/mean band across models at each depth.
+     * @param {Array} filtered - family-filtered by_layer records
+     */
+    function buildLayerChartDistribution(filtered) {
+      const containerId = "layer-chart-container";
+      const { svg, g, innerWidth, innerHeight } = createChartSVG(
+        containerId,
+        CHART_MARGIN,
+      );
+      const tooltip = createTooltip(containerId);
+    
+      // Group by cluster
+      /** @type {Object<number, Array<{depth:number, frac:number}>>} */
+      const byCluster = {};
+      for (const r of filtered) {
+        if (!byCluster[r.cluster]) byCluster[r.cluster] = [];
+        byCluster[r.cluster].push({ depth: r.depth, frac: r.frac });
+      }
+    
+      const clusterIds = Object.keys(byCluster)
+        .map(Number)
+        .sort((a, b) => a - b);
+    
+      for (const cid of clusterIds) {
+        if (clusterVisible[cid] === undefined) clusterVisible[cid] = true;
+      }
+    
+      const yMax =
+        d3.max(
+          clusterIds.flatMap((cid) => (byCluster[cid] || []).map((d) => d.frac)),
+        ) || 1;
+    
+      const xScale = d3.scaleLinear().domain([-0.02, 1.02]).range([0, innerWidth]);
+      const yScale = d3
+        .scaleLinear()
+        .domain([0, yMax * 1.05])
+        .range([innerHeight, 0]);
+    
+      createXAxis(g, xScale, {
+        height: innerHeight,
+        label: "Normalized Layer Depth",
+        gridHeight: innerHeight,
+      });
+      createYAxis(g, yScale, {
+        label: "Fraction of Heads",
+        gridWidth: innerWidth,
+      });
+    
+      const curve = d3.curveCatmullRom.alpha(0.5);
+    
+      for (const cid of clusterIds) {
+        const points = byCluster[cid];
+        const color = clusterColor(cid);
+        const fillColor = clusterColorAlpha(cid, 0.15);
+    
+        // Group by depth
+        /** @type {Object<string, number[]>} */
+        const byDepth = {};
+        for (const p of points) {
+          const dk = p.depth.toFixed(4);
+          if (!byDepth[dk]) byDepth[dk] = [];
+          byDepth[dk].push(p.frac);
+        }
+    
+        const depths = Object.keys(byDepth)
+          .map(Number)
+          .sort((a, b) => a - b);
+        const stats = depths.map((d) => {
+          const vals = byDepth[d.toFixed(4)];
+          return {
+            depth: d,
+            min: Math.min(...vals),
+            max: Math.max(...vals),
+            mean: vals.reduce((a, b) => a + b, 0) / vals.length,
+          };
+        });
+    
+        const clusterG = g
+          .append("g")
+          .attr("class", `cluster-group cluster-${cid}`)
+          .style("display", clusterVisible[cid] ? null : "none");
+    
+        // Filled area between min and max
+        const area = d3
+          .area()
+          .x((d) => xScale(d.depth))
+          .y0((d) => yScale(d.min))
+          .y1((d) => yScale(d.max))
+          .curve(curve);
+    
+        clusterG
+          .append("path")
+          .datum(stats)
+          .attr("fill", fillColor)
+          .attr("stroke", "none")
+          .attr("d", area);
+    
+        // Max line (dashed)
+        const maxLine = d3
+          .line()
+          .x((d) => xScale(d.depth))
+          .y((d) => yScale(d.max))
+          .curve(curve);
+        clusterG
+          .append("path")
+          .datum(stats)
+          .attr("fill", "none")
+          .attr("stroke", color)
+          .attr("stroke-width", 1)
+          .attr("stroke-dasharray", "4,2")
+          .attr("d", maxLine);
+    
+        // Min line (dashed)
+        const minLine = d3
+          .line()
+          .x((d) => xScale(d.depth))
+          .y((d) => yScale(d.min))
+          .curve(curve);
+        clusterG
+          .append("path")
+          .datum(stats)
+          .attr("fill", "none")
+          .attr("stroke", color)
+          .attr("stroke-width", 1)
+          .attr("stroke-dasharray", "4,2")
+          .attr("d", minLine);
+    
+        // Mean line (solid, thicker)
+        const meanLine = d3
+          .line()
+          .x((d) => xScale(d.depth))
+          .y((d) => yScale(d.mean))
+          .curve(curve);
+        clusterG
+          .append("path")
+          .datum(stats)
+          .attr("fill", "none")
+          .attr("stroke", color)
+          .attr("stroke-width", 2.5)
+          .attr("d", meanLine);
+    
+        // Mean line hover points
+        clusterG
+          .selectAll(null)
+          .data(stats.map((s) => ({ ...s, cid })))
+          .enter()
+          .append("circle")
+          .attr("cx", (d) => xScale(d.depth))
+          .attr("cy", (d) => yScale(d.mean))
+          .attr("r", 1)
+          .attr("fill", color)
+          .on("mouseover", (event, d) => {
+            d3.select(event.target).attr("r", 4);
+            const label = clusterLegendLabel(d.cid);
+            let html = `${label} (mean) | depth=${d.depth.toFixed(2)} frac=${d.mean.toFixed(3)}`;
+            const desc = clusterDesc(d.cid);
+            if (desc) html += `<br>${desc}`;
+            tooltip.show(event, html);
+          })
+          .on("mouseout", (event) => {
+            d3.select(event.target).attr("r", 1);
+            tooltip.hide();
+          });
+      }
+    
+      // Legend
+      createLegend(svg, {
+        items: clusterIds.map((cid) => ({
+          label: clusterLegendLabel(cid),
+          color: clusterColor(cid),
+          _cid: cid,
+        })),
+        x: CHART_MARGIN.left + innerWidth + 12,
+        y: CHART_MARGIN.top,
+        onClick: (_label, _idx, item) => {
+          const cid = item._cid;
+          clusterVisible[cid] = !clusterVisible[cid];
+          g.select(`.cluster-${cid}`).style(
+            "display",
+            clusterVisible[cid] ? null : "none",
+          );
+        },
+      });
+    
+      addExportButton(containerId, "layer-depth-cluster-distribution");
+    }
+    
+    // ── Chart 2: Model size x cluster fraction ──────────────────────
+    
+    function buildSizeChart() {
+      const records = currentRecords.by_model;
+      const showDist = document.getElementById("size-distribution").checked;
+    
+      // Filter by enabled families
+      const filtered = records.filter((r) => isModelEnabled(r.model));
+    
+      if (showDist) {
+        buildSizeChartDistribution(filtered);
+      } else {
+        buildSizeChartScatter(filtered);
+      }
+    }
+    
+    /** @type {(val: number) => string} */
+    function formatParams(val) {
+      if (val >= 1e9) return (val / 1e9).toFixed(1) + "B";
+      if (val >= 1e6) return (val / 1e6).toFixed(0) + "M";
+      if (val >= 1e3) return (val / 1e3).toFixed(0) + "K";
+      return String(val);
+    }
+    
+    /**
+     * Scatter mode for the size chart.
+     * @param {Array} filtered - family-filtered by_model records
+     */
+    function buildSizeChartScatter(filtered) {
+      const containerId = "size-chart-container";
+      const { svg, g, innerWidth, innerHeight } = createChartSVG(
+        containerId,
+        CHART_MARGIN,
+      );
+      const tooltip = createTooltip(containerId);
+    
+      // Group by cluster
+      /** @type {Object<number, Array<{x:number, y:number, model:string}>>} */
+      const byCluster = {};
+      for (const r of filtered) {
+        const meta = DATA.models[r.model];
+        if (!meta || !meta.n_params) continue;
+        if (!byCluster[r.cluster]) byCluster[r.cluster] = [];
+        byCluster[r.cluster].push({
+          x: meta.n_params,
+          y: r.frac,
+          model: r.model,
+        });
+      }
+    
+      const clusterIds = Object.keys(byCluster)
+        .map(Number)
+        .sort((a, b) => a - b);
+    
+      for (const cid of clusterIds) {
+        if (clusterVisible[cid] === undefined) clusterVisible[cid] = true;
+      }
+    
+      const allPoints = clusterIds.flatMap((cid) => byCluster[cid] || []);
+    
+      if (allPoints.length === 0) {
+        g.append("text")
+          .attr("x", innerWidth / 2)
+          .attr("y", innerHeight / 2)
+          .attr("text-anchor", "middle")
+          .attr("fill", "#999")
+          .text("No data for current filters");
+        return;
+      }
+    
+      const xExtent = d3.extent(allPoints, (d) => d.x);
+      const yMax = d3.max(allPoints, (d) => d.y) || 1;
+    
+      const xScale = d3
+        .scaleLog()
+        .domain([xExtent[0] * 0.8, xExtent[1] * 1.2])
+        .range([0, innerWidth]);
+      const yScale = d3
+        .scaleLinear()
+        .domain([0, yMax * 1.05])
+        .range([innerHeight, 0]);
+    
+      createXAxis(g, xScale, {
+        height: innerHeight,
+        label: "Parameters",
+        tickFormat: formatParams,
+        gridHeight: innerHeight,
+      });
+      createYAxis(g, yScale, {
+        label: "Fraction of Heads",
+        gridWidth: innerWidth,
+      });
+    
+      for (const cid of clusterIds) {
+        const pts = (byCluster[cid] || []).sort((a, b) => a.x - b.x);
+        const color = clusterColor(cid);
+    
+        const clusterG = g
+          .append("g")
+          .attr("class", `cluster-group cluster-${cid}`)
+          .style("display", clusterVisible[cid] ? null : "none");
+    
+        clusterG
+          .selectAll(null)
+          .data(pts.map((p) => ({ ...p, cid })))
+          .enter()
+          .append("circle")
+          .attr("cx", (d) => xScale(d.x))
+          .attr("cy", (d) => yScale(d.y))
+          .attr("r", 4)
+          .attr("fill", color)
+          .on("mouseover", (event, d) => {
+            d3.select(event.target).attr("r", 6);
+            const label = clusterLegendLabel(d.cid);
+            let html = `${d.model} | ${label} | frac=${d.y.toFixed(3)}`;
+            const desc = clusterDesc(d.cid);
+            if (desc) html += `<br>${desc}`;
+            tooltip.show(event, html);
+          })
+          .on("mouseout", (event) => {
+            d3.select(event.target).attr("r", 4);
+            tooltip.hide();
+          });
+      }
+    
+      // Legend
+      createLegend(svg, {
+        items: clusterIds.map((cid) => ({
+          label: clusterLegendLabel(cid),
+          color: clusterColor(cid),
+          _cid: cid,
+        })),
+        x: CHART_MARGIN.left + innerWidth + 12,
+        y: CHART_MARGIN.top,
+        onClick: (_label, _idx, item) => {
+          const cid = item._cid;
+          clusterVisible[cid] = !clusterVisible[cid];
+          g.select(`.cluster-${cid}`).style(
+            "display",
+            clusterVisible[cid] ? null : "none",
+          );
+        },
+      });
+    
+      addExportButton(containerId, "model-size-cluster-fraction");
+    }
+    
+    /**
+     * Distribution mode for the size chart.
+     * Per cluster: min/max/mean band across models at each model size.
+     * @param {Array} filtered - family-filtered by_model records
+     */
+    function buildSizeChartDistribution(filtered) {
+      const containerId = "size-chart-container";
+      const { svg, g, innerWidth, innerHeight } = createChartSVG(
+        containerId,
+        CHART_MARGIN,
+      );
+      const tooltip = createTooltip(containerId);
+    
+      // Group by cluster first
+      /** @type {Object<number, Array<{size:number, frac:number}>>} */
+      const byCluster = {};
+      for (const r of filtered) {
+        const meta = DATA.models[r.model];
+        if (!meta || !meta.n_params) continue;
+        if (!byCluster[r.cluster]) byCluster[r.cluster] = [];
+        byCluster[r.cluster].push({ size: meta.n_params, frac: r.frac });
+      }
+    
+      const clusterIds = Object.keys(byCluster)
+        .map(Number)
+        .sort((a, b) => a - b);
+    
+      for (const cid of clusterIds) {
+        if (clusterVisible[cid] === undefined) clusterVisible[cid] = true;
+      }
+    
+      const allPoints = clusterIds.flatMap((cid) => byCluster[cid] || []);
+    
+      if (allPoints.length === 0) {
+        g.append("text")
+          .attr("x", innerWidth / 2)
+          .attr("y", innerHeight / 2)
+          .attr("text-anchor", "middle")
+          .attr("fill", "#999")
+          .text("No data for current filters");
+        return;
+      }
+    
+      const xExtent = d3.extent(allPoints, (d) => d.size);
+      const yMax = d3.max(allPoints, (d) => d.frac) || 1;
+    
+      const xScale = d3
+        .scaleLog()
+        .domain([xExtent[0] * 0.8, xExtent[1] * 1.2])
+        .range([0, innerWidth]);
+      const yScale = d3
+        .scaleLinear()
+        .domain([0, yMax * 1.05])
+        .range([innerHeight, 0]);
+    
+      createXAxis(g, xScale, {
+        height: innerHeight,
+        label: "Parameters",
+        tickFormat: formatParams,
+        gridHeight: innerHeight,
+      });
+      createYAxis(g, yScale, {
+        label: "Fraction of Heads",
+        gridWidth: innerWidth,
+      });
+    
+      const curve = d3.curveCatmullRom.alpha(0.5);
+    
+      for (const cid of clusterIds) {
+        const points = byCluster[cid];
+        const color = clusterColor(cid);
+        const fillColor = clusterColorAlpha(cid, 0.15);
+    
+        // Group by model size
+        /** @type {Object<string, number[]>} */
+        const bySize = {};
+        for (const p of points) {
+          const sk = String(p.size);
+          if (!bySize[sk]) bySize[sk] = [];
+          bySize[sk].push(p.frac);
+        }
+    
+        const sizes = Object.keys(bySize)
+          .map(Number)
+          .sort((a, b) => a - b);
+        const stats = sizes.map((s) => {
+          const vals = bySize[String(s)];
+          return {
+            size: s,
+            min: Math.min(...vals),
+            max: Math.max(...vals),
+            mean: vals.reduce((a, b) => a + b, 0) / vals.length,
+          };
+        });
+    
+        const clusterG = g
+          .append("g")
+          .attr("class", `cluster-group cluster-${cid}`)
+          .style("display", clusterVisible[cid] ? null : "none");
+    
+        // Filled area
+        const area = d3
+          .area()
+          .x((d) => xScale(d.size))
+          .y0((d) => yScale(d.min))
+          .y1((d) => yScale(d.max))
+          .curve(curve);
+        clusterG
+          .append("path")
+          .datum(stats)
+          .attr("fill", fillColor)
+          .attr("stroke", "none")
+          .attr("d", area);
+    
+        // Max line (dashed)
+        clusterG
+          .append("path")
+          .datum(stats)
+          .attr("fill", "none")
+          .attr("stroke", color)
+          .attr("stroke-width", 1)
+          .attr("stroke-dasharray", "4,2")
+          .attr(
+            "d",
+            d3
+              .line()
+              .x((d) => xScale(d.size))
+              .y((d) => yScale(d.max))
+              .curve(curve),
+          );
+    
+        // Min line (dashed)
+        clusterG
+          .append("path")
+          .datum(stats)
+          .attr("fill", "none")
+          .attr("stroke", color)
+          .attr("stroke-width", 1)
+          .attr("stroke-dasharray", "4,2")
+          .attr(
+            "d",
+            d3
+              .line()
+              .x((d) => xScale(d.size))
+              .y((d) => yScale(d.min))
+              .curve(curve),
+          );
+    
+        // Mean line (solid)
+        clusterG
+          .append("path")
+          .datum(stats)
+          .attr("fill", "none")
+          .attr("stroke", color)
+          .attr("stroke-width", 2.5)
+          .attr(
+            "d",
+            d3
+              .line()
+              .x((d) => xScale(d.size))
+              .y((d) => yScale(d.mean))
+              .curve(curve),
+          );
+    
+        // Hover points on mean
+        clusterG
+          .selectAll(null)
+          .data(stats.map((s) => ({ ...s, cid })))
+          .enter()
+          .append("circle")
+          .attr("cx", (d) => xScale(d.size))
+          .attr("cy", (d) => yScale(d.mean))
+          .attr("r", 1)
+          .attr("fill", color)
+          .on("mouseover", (event, d) => {
+            d3.select(event.target).attr("r", 4);
+            const label = clusterLegendLabel(d.cid);
+            let html = `${label} (mean) | ${formatParams(d.size)} | frac=${d.mean.toFixed(3)}`;
+            const desc = clusterDesc(d.cid);
+            if (desc) html += `<br>${desc}`;
+            tooltip.show(event, html);
+          })
+          .on("mouseout", (event) => {
+            d3.select(event.target).attr("r", 1);
+            tooltip.hide();
+          });
+      }
+    
+      // Legend
+      createLegend(svg, {
+        items: clusterIds.map((cid) => ({
+          label: clusterLegendLabel(cid),
+          color: clusterColor(cid),
+          _cid: cid,
+        })),
+        x: CHART_MARGIN.left + innerWidth + 12,
+        y: CHART_MARGIN.top,
+        onClick: (_label, _idx, item) => {
+          const cid = item._cid;
+          clusterVisible[cid] = !clusterVisible[cid];
+          g.select(`.cluster-${cid}`).style(
+            "display",
+            clusterVisible[cid] ? null : "none",
+          );
+        },
+      });
+    
+      addExportButton(containerId, "model-size-cluster-distribution");
+    }
+    
+    // ── Chart 3: Cluster entropy by layer ───────────────────────────
+    
+    function buildEntropyChart() {
+      const containerId = "entropy-chart-container";
+      const records = currentRecords.entropy_by_layer;
+    
+      const { svg, g, innerWidth, innerHeight } = createChartSVG(
+        containerId,
+        CHART_MARGIN,
+      );
+      const tooltip = createTooltip(containerId);
+    
+      // Group by model (filtered by family)
+      /** @type {Object<string, Array<{x:number, y:number}>>} */
+      const byModel = {};
+      for (const r of records) {
+        if (!isModelEnabled(r.model)) continue;
+        if (!byModel[r.model]) byModel[r.model] = [];
+        byModel[r.model].push({ x: r.depth, y: r.entropy });
+      }
+    
+      const models = Object.keys(byModel).sort();
+      const yMax = d3.max(models.flatMap((m) => byModel[m].map((d) => d.y))) || 1;
+    
+      const xScale = d3.scaleLinear().domain([-0.02, 1.02]).range([0, innerWidth]);
+      const yScale = d3
+        .scaleLinear()
+        .domain([0, yMax * 1.05])
+        .range([innerHeight, 0]);
+    
+      createXAxis(g, xScale, {
+        height: innerHeight,
+        label: "Normalized Layer Depth",
+        gridHeight: innerHeight,
+      });
+      createYAxis(g, yScale, {
+        label: "Shannon Entropy (bits)",
+        gridWidth: innerWidth,
+      });
+    
+      const curve = d3.curveCatmullRom.alpha(0.5);
+    
+      models.forEach((m, i) => {
+        const pts = byModel[m].sort((a, b) => a.x - b.x);
+        const color = modelColor(i, models.length);
+    
+        const modelG = g.append("g").attr("class", "model-group");
+    
+        // Line
+        const line = d3
+          .line()
+          .x((d) => xScale(d.x))
+          .y((d) => yScale(d.y))
+          .curve(curve);
+        modelG
+          .append("path")
+          .datum(pts)
+          .attr("fill", "none")
+          .attr("stroke", color)
+          .attr("stroke-width", 2)
+          .attr("d", line);
+    
+        // Points
+        modelG
+          .selectAll(null)
+          .data(pts.map((p) => ({ ...p, model: m })))
+          .enter()
+          .append("circle")
+          .attr("cx", (d) => xScale(d.x))
+          .attr("cy", (d) => yScale(d.y))
+          .attr("r", 2)
+          .attr("fill", color)
+          .on("mouseover", (event, d) => {
+            d3.select(event.target).attr("r", 4);
+            tooltip.show(
+              event,
+              `${d.model} | depth=${d.x.toFixed(2)} entropy=${d.y.toFixed(3)}`,
+            );
+          })
+          .on("mouseout", (event) => {
+            d3.select(event.target).attr("r", 2);
+            tooltip.hide();
+          });
+      });
+    
+      // Legend
+      createLegend(svg, {
+        items: models.map((m, i) => ({
+          label: m,
+          color: modelColor(i, models.length),
+        })),
+        x: CHART_MARGIN.left + innerWidth + 12,
+        y: CHART_MARGIN.top,
+      });
+    
+      addExportButton(containerId, "cluster-entropy-by-layer");
+    }
+    
+    // ── Cluster chips ───────────────────────────────────────────────
+    
+    /**
+     * Render cluster chips above the charts.
+     * Each chip links to the clustering page with the current cut height
+     * and highlights that cluster.
+     */
+    function renderClusterChips() {
+      const container = document.getElementById("cluster-chips");
+      if (!container) return;
+    
+      // Compute cluster sizes from by_model records (all models, not filtered)
+      /** @type {Object<number, number>} */
+      const clusterSizes = {};
+      for (const r of currentRecords.by_model) {
+        clusterSizes[r.cluster] = (clusterSizes[r.cluster] || 0) + r.count;
+      }
+    
+      const sorted = Object.entries(clusterSizes)
+        .map(([cid, size]) => ({ clusterId: parseInt(cid), size }))
+        .filter((c) => c.clusterId !== -1)
+        .sort((a, b) => b.size - a.size);
+    
+      const top = sorted.slice(0, 20);
+      const hasMore = sorted.length > 20;
+    
+      container.innerHTML =
+        `<span class="top-clusters-label">Clusters (${sorted.length}):</span>` +
+        top
+          .map(({ clusterId, size }) => {
+            const color = clusterColor(clusterId);
+            const label = resolvedLabels[clusterId];
+            const name = (label && label.name) || "";
+            const desc = (label && label.desc) || "";
+            const labelHtml = name
+              ? `<span class="cluster-chip-label" title="${desc.replace(/"/g, "&quot;")}">${name}</span>`
+              : "";
+            return `
+            <div class="cluster-chip" data-cluster-id="${clusterId}">
+              <span class="cluster-chip-color" style="background-color: ${color}"></span>
+              <span class="cluster-chip-size">${size}</span>
+              ${labelHtml}
+            </div>`;
+          })
+          .join("") +
+        (hasMore
+          ? `<span class="top-clusters-ellipsis">... +${sorted.length - 20} more</span>`
+          : "");
+    
+      container.classList.add("visible");
+    
+      // Click → navigate to clustering page with shared config
+      container.querySelectorAll(".cluster-chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          const clusterId = parseInt(chip.dataset.clusterId);
+          if (gridState.currentCutHeight != null) {
+            ClusteringConfig.setCutHeight(gridState.currentCutHeight);
+          }
+          ClusteringConfig.setHighlightCluster(clusterId);
+          window.location.href = `../clustering/index.html?highlight=${clusterId}`;
+        });
+      });
+    
+      // Middle-click: open clustering page in new tab with cluster selected
+      container.addEventListener("auxclick", (e) => {
+        if (e.button !== 1) return;
+        const chip = e.target.closest(".cluster-chip");
+        if (!chip) return;
+        e.preventDefault();
+        const clusterId = parseInt(chip.dataset.clusterId);
+        if (gridState.currentCutHeight != null) {
+          ClusteringConfig.setCutHeight(gridState.currentCutHeight);
+        }
+        ClusteringConfig.setHighlightCluster(clusterId);
+        window.open(`../clustering/index.html?highlight=${clusterId}`, "_blank");
+      });
+    }
+    
+    // Track current cut height for chip navigation
+    /** @type {{currentCutHeight: number|null}} */
+    const gridState = { currentCutHeight: null };
+    
+    // ── Family / model toggles ──────────────────────────────────────
+    
+    /**
+     * Build nested family→model toggle buttons.
+     * Click family = expand/collapse model list.
+     * Shift+click family = toggle all models in family.
+     * Click model = toggle individual model.
+     * @param {string} containerId
+     * @param {Object<string, string[]>} familyModels - family name -> sorted model names
+     */
+    function buildFamilyModelToggles(containerId, familyModels) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+    
+      for (const [family, models] of Object.entries(familyModels)) {
+        const group = document.createElement("div");
+        group.className = "family-group";
+    
+        // Family header button
+        const familyBtn = document.createElement("span");
+        familyBtn.className = "family-toggle";
+        familyBtn.textContent = family;
+        updateFamilyBtnState(familyBtn, family, models);
+    
+        familyBtn.addEventListener("click", (e) => {
+          if (e.shiftKey) {
+            // Shift+click: toggle all models in family
+            const allEnabled = models.every((m) => modelEnabled[m]);
+            for (const m of models) {
+              modelEnabled[m] = !allEnabled;
+            }
+            familyEnabled[family] = !allEnabled;
+            updateFamilyBtnState(familyBtn, family, models);
+            updateModelBtnStates(modelRow, models);
+            rebuildAll();
+          } else {
+            // Click: expand/collapse
+            modelRow.classList.toggle("expanded");
+          }
+        });
+    
+        // Model row (initially collapsed)
+        const modelRow = document.createElement("div");
+        modelRow.className = "model-toggles";
+    
+        for (const m of models) {
+          const btn = document.createElement("span");
+          btn.className = "model-toggle";
+          btn.textContent = m;
+          if (!modelEnabled[m]) btn.classList.add("disabled");
+    
+          btn.addEventListener("click", () => {
+            modelEnabled[m] = !modelEnabled[m];
+            btn.classList.toggle("disabled", !modelEnabled[m]);
+            // Update family state
+            familyEnabled[family] = models.some((mm) => modelEnabled[mm]);
+            updateFamilyBtnState(familyBtn, family, models);
+            rebuildAll();
+          });
+          modelRow.appendChild(btn);
+        }
+    
+        group.appendChild(familyBtn);
+        group.appendChild(modelRow);
+        container.appendChild(group);
+      }
+    }
+    
+    /**
+     * Update family button visual state based on model enabled states.
+     * @param {HTMLElement} btn
+     * @param {string} family
+     * @param {string[]} models
+     */
+    function updateFamilyBtnState(btn, _family, models) {
+      const enabledCount = models.filter((m) => modelEnabled[m]).length;
+      btn.classList.remove("disabled", "partial");
+      if (enabledCount === 0) {
+        btn.classList.add("disabled");
+      } else if (enabledCount < models.length) {
+        btn.classList.add("partial");
+      }
+    }
+    
+    /**
+     * Update model button states in a model row.
+     * @param {HTMLElement} modelRow
+     * @param {string[]} models
+     */
+    function updateModelBtnStates(modelRow, models) {
+      const btns = modelRow.querySelectorAll(".model-toggle");
+      btns.forEach((btn, i) => {
+        btn.classList.toggle("disabled", !modelEnabled[models[i]]);
+      });
+    }
+    
+    // ── Rebuild all ─────────────────────────────────────────────────
+    
+    function rebuildAll() {
+      buildLayerChart();
+      buildSizeChart();
+      buildEntropyChart();
+      renderClusterChips();
+    }
+    
+    // ── Init ────────────────────────────────────────────────────────
+    
+    async function init() {
+      try {
+        await loadData();
+      } catch (err) {
+        console.error("Cluster trends init failed:", err);
+        document.getElementById("loading").textContent =
+          `Error loading data: ${err.message}`;
+        return;
+      }
+    
+      console.log(
+        `Cluster trends loaded: ${Object.keys(DATA.models).length} models, ` +
+          `${DATA.k_values.length} K values, methods: ${(DATA.methods || []).join(", ")}`,
+      );
+    
+      // Initialize family and model toggle states
+      const families = [
+        ...new Set(Object.values(DATA.models).map((m) => m.family)),
+      ].sort();
+      const defaultFamilies = ["pythia", "gpt2"];
+    
+      /** @type {Object<string, string[]>} */
+      const familyModels = {};
+      for (const [modelName, meta] of Object.entries(DATA.models)) {
+        if (!familyModels[meta.family]) familyModels[meta.family] = [];
+        familyModels[meta.family].push(modelName);
+      }
+      for (const f of families) {
+        familyModels[f].sort();
+        const enabled = defaultFamilies.includes(f);
+        familyEnabled[f] = enabled;
+        for (const m of familyModels[f]) {
+          modelEnabled[m] = enabled;
+        }
+      }
+    
+      // --- Method selector ---
+      const methodSelect = document.getElementById("method-select");
+      const hierControls = document.getElementById("hierarchical-controls");
+      const flatParamControls = document.getElementById("flat-param-controls");
+      const flatParamSelect = document.getElementById("flat-param-select");
+      const flatParamLabel = document.getElementById("flat-param-label");
+    
+      const availableMethods = DATA.methods || ["hierarchical"];
+    
+      // Filter to methods that have data
+      const methodsWithData = availableMethods.filter(
+        (m) => m === "hierarchical" || DATA[m] !== undefined,
+      );
+    
+      if (methodSelect) {
+        methodSelect.innerHTML = "";
+        for (const m of methodsWithData) {
+          const opt = document.createElement("option");
+          opt.value = m;
+          opt.textContent = m;
+          methodSelect.appendChild(opt);
+        }
+    
+        const savedMethod = ClusteringConfig.getMethod();
+        currentMethod =
+          savedMethod && methodsWithData.includes(savedMethod)
+            ? savedMethod
+            : methodsWithData.includes("leiden")
+              ? "leiden"
+              : "hierarchical";
+        methodSelect.value = currentMethod;
+      }
+    
+      function updateMethodControls() {
+        const isHier = currentMethod === "hierarchical";
+        if (hierControls) hierControls.style.display = isHier ? "" : "none";
+        if (flatParamControls)
+          flatParamControls.style.display = isHier ? "none" : "";
+    
+        if (!isHier && flatParamSelect) {
+          const methodData = DATA[currentMethod];
+          if (methodData) {
+            if (flatParamLabel)
+              flatParamLabel.textContent = methodData.param_name + ":";
+            flatParamSelect.innerHTML = "";
+            for (const pv of methodData.param_values) {
+              const opt = document.createElement("option");
+              opt.value = String(pv);
+              opt.textContent = String(pv);
+              flatParamSelect.appendChild(opt);
+            }
+            const savedPK = ClusteringConfig.getParamKey();
+            const defaultPK = currentMethod === "leiden" ? "1" : null;
+            const pvStrings = methodData.param_values.map(String);
+            flatParamSelect.value =
+              savedPK && pvStrings.includes(savedPK)
+                ? savedPK
+                : defaultPK && pvStrings.includes(defaultPK)
+                  ? defaultPK
+                  : String(methodData.param_values[0]);
+          }
+        }
+      }
+    
+      // Populate K selector
+      const kSelect = document.getElementById("k-select");
+      for (const k of DATA.k_values) {
+        const opt = document.createElement("option");
+        opt.value = k;
+        opt.textContent = `K = ${k}`;
+        kSelect.appendChild(opt);
+      }
+    
+      // Set default K (used when switching to K mode)
+      if (CONFIG.defaultK && DATA.k_values.includes(Number(CONFIG.defaultK))) {
+        currentK = Number(CONFIG.defaultK);
+      } else {
+        currentK = DATA.k_values.includes(10) ? 10 : DATA.k_values[0];
+      }
+      kSelect.value = currentK;
+    
+      // Load clustering data for cut-height mode
+      const clusteringAvailable = await loadClusteringData();
+    
+      // Load cluster labels
+      const labelsUrl = "../../features/clustering/cluster_labels.json";
+      allClusterLabels = await loadClusterLabels(labelsUrl);
+    
+      // Cut height control (shared component)
+      const cutHeightCtrl = createCutHeightControl({
+        container: document.getElementById("cut-height-container"),
+        maxHeight: 10,
+        step: 0.01,
+        initialValue: 5,
+        label: "Cut height:",
+        onChange: (h) => updateFromCutHeight(h),
+      });
+      if (!clusteringAvailable) {
+        cutHeightCtrl.setDisabled(true);
+      }
+    
+      // K selector: switch to precomputed mode
+      kSelect.addEventListener("change", () => {
+        updateFromK(Number(kSelect.value));
+      });
+    
+      // Method selector
+      if (methodSelect) {
+        methodSelect.addEventListener("change", () => {
+          currentMethod = methodSelect.value;
+          ClusteringConfig.setMethod(currentMethod);
+          updateMethodControls();
+    
+          if (currentMethod === "hierarchical") {
+            if (clusteringAvailable) {
+              const h = cutHeightCtrl.getValue ? cutHeightCtrl.getValue() : 5;
+              updateFromCutHeight(h);
+            } else {
+              updateFromK(currentK);
+            }
+          } else {
+            const pk = flatParamSelect ? flatParamSelect.value : null;
+            if (pk) {
+              ClusteringConfig.setParamKey(pk);
+              updateFromFlatParam(currentMethod, pk);
+            }
+          }
+        });
+      }
+    
+      // Flat param selector
+      if (flatParamSelect) {
+        flatParamSelect.addEventListener("change", () => {
+          const pk = flatParamSelect.value;
+          ClusteringConfig.setParamKey(pk);
+          updateFromFlatParam(currentMethod, pk);
+        });
+      }
+    
+      updateMethodControls();
+    
+      document.getElementById("show-lines").addEventListener("change", () => {
+        buildLayerChart();
+      });
+    
+      // Distribution toggles
+      document
+        .getElementById("layer-distribution")
+        .addEventListener("change", () => {
+          buildLayerChart();
+        });
+      document
+        .getElementById("size-distribution")
+        .addEventListener("change", () => {
+          buildSizeChart();
+        });
+    
+      // Build nested family→model toggles
+      buildFamilyModelToggles("global-family-toggles", familyModels);
+    
+      // Show charts, hide loading
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("charts-container").style.display = "block";
+    
+      // Initial draw based on current method
+      if (currentMethod === "hierarchical") {
+        if (clusteringAvailable) {
+          const savedCutHeight = ClusteringConfig.getCutHeight();
+          const startCutHeight = savedCutHeight ?? 5;
+          cutHeightCtrl.setValue(startCutHeight);
+          updateFromCutHeight(startCutHeight);
+        } else {
+          updateFromK(currentK);
+        }
+      } else {
+        const pk = flatParamSelect ? flatParamSelect.value : null;
+        if (pk) updateFromFlatParam(currentMethod, pk);
+      }
+    }
+    
+    init();
+    
+    </script>
+    <!-- end 'app.js' -->
+  </body>
+</html>

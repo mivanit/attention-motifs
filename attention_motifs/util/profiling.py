@@ -251,11 +251,11 @@ class TrainingProfiler:
 
 			# Save GPU trace if available
 			gpu_trace_path = None
-			if self.output_dir and gpu_prof:
+			if self.output_dir and gpu_prof:  # pyright: ignore[reportPossiblyUnboundVariable]
 				gpu_trace_path = self.output_dir / f"{name}_trace.json"
 
 				try:
-					gpu_prof.export_chrome_trace(gpu_trace_path.as_posix())
+					gpu_prof.export_chrome_trace(gpu_trace_path.as_posix())  # pyright: ignore[reportPossiblyUnboundVariable]
 				except Exception as e:
 					warnings.warn(f"Error saving GPU trace: {e}")
 

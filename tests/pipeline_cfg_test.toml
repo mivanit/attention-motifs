@@ -6,7 +6,7 @@ models = [
 ]
 
 # paths -- where to find stuff and where to save it
-prompts_file = "data/text/pile_demo.jsonl"
+prompts_file = "tests/data/pile_demo.jsonl"
 patterns_dir = "tests/.temp/patterns"
 features_dir = "tests/.temp/features"
 vis_dir = "tests/.temp/vis"
@@ -16,16 +16,38 @@ prompts_n_samples = 2
 prompts_min_chars = 10
 prompts_max_chars = 100
 
+embedding_n_neighbors_list = [2, 4]
+
 # computing -- no effect on the results
-n_proc = 12
-device = "cuda:0"
+n_proc = 4
+device = "cpu"
+# number of prompts per forward pass during activation gathering
+batch_size = 2
 
 verbose = 99
 figures_dir = "tests/.temp/figures"
 
-
-embedding_n_neighbors_list = [2, 4]
-
 [vis_configs.attentionpedia.cfg]
-head_viewing = "tiny-stories-1M:L0:H0"
+head_viewing = "tiny-stories-1M:L0:H0" # default head to view?
+# TODO: what does this do?
 prompts_url = "../../patterns/tiny-stories-1M/prompts.jsonl"
+
+[clustering]
+methods = ["hierarchical", "hdbscan", "leiden"]
+hierarchical_n_clusters_list = [2, 3]
+hdbscan_min_cluster_sizes = [2, 3]
+leiden_resolutions = [0.5, 1.0]
+leiden_n_neighbors = 2
+
+# ablation -- minimal config for test pipeline
+[ablation]
+all_heads = true
+output_dir = "tests/.temp/ablations"
+n_sequences = 2
+seq_length = 5
+n_repetitions = 2
+n_calibration_prompts = 2
+micro_batch_size = 2
+max_heads_per_model = 2
+calibration_prompts_file = "tests/data/pile_demo.jsonl"
+icl_prompts_file = "tests/data/pile_demo.jsonl"

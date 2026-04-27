@@ -4,6 +4,10 @@ import polars as pl
 
 # plotting
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from matplotlib.image import AxesImage
+from matplotlib.lines import Line2D
 
 # scipy
 from sklearn.decomposition import PCA
@@ -17,7 +21,7 @@ def plot_correlation_matrix(
 	feature_cols: list[str],
 	sort_by: Literal["sum", "var", "none"] = "sum",
 	show: bool = True,
-) -> plt.Figure:
+) -> Figure:
 	"""Plot a correlation matrix of features and identify features with NaN correlations.
 
 	# Parameters:
@@ -57,9 +61,9 @@ def plot_correlation_matrix(
 		feature_cols = [feature_cols[i] for i in sort_idx]
 
 	# Plot with larger figure size
-	fig: plt.Figure = plt.figure(figsize=(25, 20))
-	ax: plt.Axes = fig.add_subplot(111)
-	cax: plt.AxesImage = ax.imshow(
+	fig: Figure = plt.figure(figsize=(25, 20))
+	ax: Axes = fig.add_subplot(111)
+	cax: AxesImage = ax.imshow(
 		corr_mat, aspect="auto", cmap="coolwarm", vmin=-1, vmax=1
 	)
 
@@ -123,8 +127,12 @@ def apply_pca(
 	    - Transformed data array
 	    - Fitted PCA object
 	"""
-	# Fit PCA
-	pca: PCA = PCA(n_components=n_components, random_state=0)
+	# Use covariance_eigh solver: for n >> d (here ~4M rows, 446 features), this builds
+	# the d×d covariance matrix via a single BLAS3 DSYRK call, then runs eigendecomposition
+	# on that small matrix. Compared to the default 'randomized' solver, it makes fewer
+	# passes over the data and produces an exact result (not approximate). Tradeoff: uses
+	# O(d^2) extra memory for the covariance matrix (~1.5 MB here), which is negligible.
+	pca: PCA = PCA(n_components=n_components, svd_solver="covariance_eigh")
 	pca_input = data[feature_cols].to_numpy()
 	dbg_tensor(pca_input)
 	reduced: np.ndarray = pca.fit_transform(pca_input)
@@ -152,7 +160,6 @@ def apply_pca(
 		ax2.set_ylabel("Cumulative Explained Variance")
 		ax2.set_title("Cumulative Explained Variance")
 		ax2.set_xticks(range(0, len(cumulative_variance), 2))
-		ax2.legend()
 
 		plt.tight_layout()
 
@@ -178,7 +185,7 @@ def plot_embedding(
 	marker_size: int | dict[str, int] = 1,
 	color_map: dict | str | None = None,
 	unknown_color: str = "#bfbfbf",
-	ax: plt.Axes | None = None,
+	ax: Axes | None = None,
 	do_legend: bool = True,
 ) -> list:
 	"""Scatter plot of 2D embedding with points colored by label.
@@ -221,7 +228,7 @@ def plot_embedding(
 		cmap["unknown"] = unknown_color
 
 	# Store handles for legend
-	handles: list[plt.Line2D] = []
+	handles: list[Line2D] = []
 
 	# ------------------------------------------------------------------
 	# Plot each label group, picking the requested colour if available.
@@ -230,11 +237,9 @@ def plot_embedding(
 		mask = label_values == label
 
 		# Support per-label alpha / marker size like the original
-		alpha_value = (
-			alpha.get(label, alpha.get(None, 0.9)) if isinstance(alpha, dict) else alpha
-		)
+		alpha_value = alpha.get(str(label), 0.9) if isinstance(alpha, dict) else alpha
 		size_value = (
-			marker_size.get(label, marker_size.get(None, 1))
+			marker_size.get(str(label), 1)
 			if isinstance(marker_size, dict)
 			else marker_size
 		)
@@ -251,7 +256,7 @@ def plot_embedding(
 		)
 
 		# Phantom point for the legend
-		handle = plt.Line2D(
+		handle = Line2D(
 			[0],
 			[0],
 			marker="o",
@@ -289,8 +294,8 @@ def plot_embedding_kde(embedding: np.ndarray, labels: pl.Series, title: str) -> 
 	"""
 	import scipy.stats as stats
 
-	fig: plt.Figure = plt.figure(figsize=(12, 10))
-	ax: plt.Axes = fig.add_subplot(111)
+	fig: Figure = plt.figure(figsize=(12, 10))
+	ax: Axes = fig.add_subplot(111)
 
 	# Convert labels to numpy array
 	label_values = labels.to_numpy()
@@ -325,8 +330,8 @@ def plot_embedding_kde(embedding: np.ndarray, labels: pl.Series, title: str) -> 
 				y_min -= 0.1 * y_range
 				y_max += 0.1 * y_range
 
-				# Create grid
-				xx, yy = np.mgrid[x_min:x_max:100j, y_min:y_max:100j]
+				# Create grid using numpy's complex step syntax: 100j means "100 evenly spaced points"
+				xx, yy = np.mgrid[x_min:x_max:100j, y_min:y_max:100j]  # type: ignore[misc]
 				positions = np.vstack([xx.ravel(), yy.ravel()])
 
 				# Compute kernel density

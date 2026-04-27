@@ -21,7 +21,7 @@ class HeadAutocomplete {
 
   async ensureHeadsLoaded() {
     if (this.allHeads.length === 0) {
-      await this.headDistances._ensureLoaded();
+      await this.headDistances._ensureMetaLoaded();
       this.allHeads = this.headDistances.head_dists_meta.cls_values;
     }
   }

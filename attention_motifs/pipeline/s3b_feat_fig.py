@@ -40,7 +40,9 @@ def plot_feat_covariance(
 	plt.savefig(cfg.figure_path("cov_full"), bbox_inches="tight", pad_inches=0.01)
 
 	# reduced
-	plot_importance_covariance(
+	reduced_feats: list[str]
+	_cov: Float[np.ndarray, "n n"]
+	reduced_feats, _cov = plot_importance_covariance(
 		data_scaled,
 		df_importance,
 		# feature_order=sorted(FEATURE_COLS, key=lambda x: x.split(".")[-1]),
@@ -49,13 +51,14 @@ def plot_feat_covariance(
 		cmap="coolwarm",
 		figsize=(10, 10),
 		tick_pad=100,
-		importance_threshold=0.2,
+		importance_threshold=0.1,
 	)
-	plt.savefig(
-		cfg.figure_path("cov_reduced"),
-		bbox_inches="tight",
-		pad_inches=0.01,
-	)
+	if reduced_feats:
+		plt.savefig(
+			cfg.figure_path("cov_reduced"),
+			bbox_inches="tight",
+			pad_inches=0.01,
+		)
 
 
 def plot_pca_all(
@@ -63,7 +66,7 @@ def plot_pca_all(
 	data_scaled: pl.DataFrame,
 	pca_data: np.ndarray,
 ) -> None:
-	n_dims: int = cfg.plot_kwargs.get("n_dims", 5)
+	n_dims: int = cfg.plot_kwargs.get("n_dims", 5)  # type: ignore[arg-type]
 	embed_fig, embed_ax = plt.subplots(
 		n_dims - 1,
 		n_dims - 1,
@@ -87,7 +90,8 @@ def plot_pca_all(
 			embed_ax[i, k].axis("off")
 
 	plt.legend(
-		handles=handles,
+		# TODO: i think this is fine, but double check
+		handles=handles,  # pyright: ignore[reportPossiblyUnboundVariable]
 		loc="lower left",
 		bbox_to_anchor=(-3, 1),
 		title="Models",

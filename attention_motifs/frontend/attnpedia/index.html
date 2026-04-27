@@ -16,6 +16,10 @@
     ></script>
         <!-- begin 'style/style.css' -->
     <style>
+    [x-cloak] {
+      display: none !important;
+    }
+    
     body {
       font-family: -apple-system, sans-serif;
       margin: 0;
@@ -31,26 +35,32 @@
     /* Navigation bar styles */
     .nav-bar {
       background: white;
+      padding: 8px 16px;
       border-bottom: 1px solid #ddd;
-      padding: 12px 0;
-      margin-bottom: 20px;
     }
     
     .nav-bar-content {
+      display: flex;
+      gap: 16px;
+      align-items: center;
       max-width: 1400px;
       margin: 0 auto;
-      text-align: center;
     }
     
     .nav-bar a {
       color: #1565c0;
-      text-decoration: underline;
-      margin: 0 15px;
+      text-decoration: none;
       font-size: 14px;
     }
     
     .nav-bar a:hover {
       color: #0d47a1;
+    }
+    
+    .nav-current {
+      color: #666;
+      font-weight: bold;
+      font-size: 14px;
     }
     
     .container {
@@ -464,6 +474,7 @@
       margin: 0 auto;
       width: var(--pattern-size, 120px);
       height: var(--pattern-size, 120px);
+      overflow: hidden;
     }
     
     .pattern-image {
@@ -591,8 +602,8 @@
     /* Controls styling */
     .controls-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 15px;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
       align-items: center;
       border-top: 1px solid #eee;
       padding-top: 15px;
@@ -654,6 +665,138 @@
       background-color: #f5f5f5;
       color: #999;
       cursor: not-allowed;
+    }
+    
+    /* Clustering panel (left side) */
+    .clustering-panel {
+      border-top: 1px solid #eee;
+      margin-top: 15px;
+      padding-top: 15px;
+    }
+    
+    .clustering-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    
+    .clustering-panel-header h3 {
+      margin: 0;
+      font-size: 16px;
+      color: #333;
+    }
+    
+    .cluster-toggle-btn {
+      font-size: 12px;
+      padding: 3px 10px;
+    }
+    
+    .cluster-control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    
+    .cluster-control-group label {
+      font-size: 13px;
+      color: #666;
+      min-width: 75px;
+      flex-shrink: 0;
+    }
+    
+    .cluster-slider {
+      flex: 1;
+      min-width: 80px;
+    }
+    
+    .cluster-control-group .control-input {
+      width: 60px;
+      flex-shrink: 0;
+    }
+    
+    .cluster-stats-line {
+      font-size: 12px;
+      color: #666;
+      font-family: monospace;
+      margin: 8px 0;
+    }
+    
+    .top-clusters-section {
+      margin-top: 8px;
+    }
+    
+    .top-clusters-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    
+    .top-clusters-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    
+    .cluster-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 500;
+      color: white;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+    
+    .cluster-chip:hover {
+      opacity: 0.8;
+    }
+    
+    .cluster-chip-inline {
+      vertical-align: middle;
+    }
+    
+    .current-head-cluster {
+      font-size: 12px;
+      color: #666;
+      margin-top: 8px;
+    }
+    
+    /* Cluster column in table */
+    .cluster-cell {
+      text-align: center;
+      vertical-align: middle;
+      min-width: 60px;
+    }
+    
+    .cluster-column-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 500;
+      color: white;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    
+    .cluster-column-chip:hover {
+      opacity: 0.8;
+    }
+    
+    .cluster-cell-size {
+      font-size: 10px;
+      color: #888;
+      margin-top: 2px;
+    }
+    
+    .cluster-cell-misc {
+      font-size: 11px;
+      color: #999;
+      font-style: italic;
     }
     
     /* Help menu corner styling */
@@ -719,8 +862,7 @@
       z-index: 1000;
     }
     
-    .help-menu:hover .help-content,
-    .help-menu-corner:hover .help-content {
+    .help-menu:hover .help-content {
       display: block;
     }
     
@@ -744,6 +886,98 @@
     
     .help-content ul:last-child {
       margin-bottom: 0;
+    }
+    
+    /* Settings menu */
+    .settings-menu {
+      position: relative;
+    }
+    
+    .settings-button {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+      text-align: center;
+      background: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .settings-button:hover {
+      background: #565e64;
+    }
+    
+    .settings-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px 14px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      width: 180px;
+      margin-top: 5px;
+      font-size: 12px;
+    }
+    
+    .settings-section-label {
+      font-weight: 600;
+      font-size: 11px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    
+    .settings-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 0;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    
+    .settings-checkbox input[type="checkbox"] {
+      margin: 0;
+    }
+    
+    .settings-divider {
+      border: none;
+      border-top: 1px solid #e0e0e0;
+      margin: 8px 0;
+    }
+    
+    .settings-number-input {
+      width: 52px;
+      padding: 2px 4px;
+      font-size: 11px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      margin-left: auto;
+    }
+    
+    .settings-export-btn {
+      display: block;
+      width: 100%;
+      padding: 5px 8px;
+      font-size: 11px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #f8f9fa;
+      color: #555;
+      cursor: pointer;
+      transition: background-color 0.15s;
+    }
+    
+    .settings-export-btn:hover {
+      background: #e9ecef;
     }
     
     .prompt-header {
@@ -855,115 +1089,115 @@
     
     </style>
     <!-- end 'style/style.css' -->
-        <!-- begin 'style/notif.css' -->
+        <!-- begin '../../libs/notif.css' -->
     <style>
     /* Notification system styling */
     .notification-container {
-      position: fixed;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1001;
-      pointer-events: none;
+    	position: fixed;
+    	top: 0;
+    	left: 50%;
+    	transform: translateX(-50%);
+    	z-index: 1001;
+    	pointer-events: none;
     }
     
     .notification-indicator {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 34, 68, 0.95);
-      color: #00ff00;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-family: "Courier New", monospace;
-      font-size: 12px;
-      font-weight: bold;
-      display: block;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      border: 1px solid #00ff00;
-      min-width: 200px;
-      text-align: center;
-      transition: all 0.3s ease;
-      opacity: 1;
-      margin-bottom: 10px;
+    	position: absolute;
+    	left: 50%;
+    	transform: translateX(-50%);
+    	background: rgba(0, 34, 68, 0.95);
+    	color: #00ff00;
+    	padding: 12px 24px;
+    	border-radius: 8px;
+    	font-family: "Courier New", monospace;
+    	font-size: 12px;
+    	font-weight: bold;
+    	display: block;
+    	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    	border: 1px solid #00ff00;
+    	min-width: 200px;
+    	text-align: center;
+    	transition: all 0.3s ease;
+    	opacity: 1;
+    	margin-bottom: 10px;
     }
     
     /* Success styling */
     .notification-indicator.success {
-      background: rgba(0, 68, 34, 0.95);
-      border-color: #00ff88;
-      color: #00ff88;
+    	background: rgba(0, 68, 34, 0.95);
+    	border-color: #00ff88;
+    	color: #00ff88;
     }
     
     /* Error styling */
     .notification-indicator.error {
-      background: rgba(68, 0, 0, 0.95);
-      border-color: #ff4444;
-      color: #ff4444;
+    	background: rgba(68, 0, 0, 0.95);
+    	border-color: #ff4444;
+    	color: #ff4444;
     }
     
     /* Loading spinner */
     .notification-spinner {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      border: 2px solid #004400;
-      border-radius: 50%;
-      border-top-color: #00ff00;
-      animation: spin 1s ease-in-out infinite;
-      margin-right: 8px;
-      vertical-align: middle;
+    	display: inline-block;
+    	width: 12px;
+    	height: 12px;
+    	border: 2px solid #004400;
+    	border-radius: 50%;
+    	border-top-color: #00ff00;
+    	animation: spin 1s ease-in-out infinite;
+    	margin-right: 8px;
+    	vertical-align: middle;
     }
     
     .notification-indicator.success .notification-spinner {
-      border-color: #004400;
-      border-top-color: #00ff88;
+    	border-color: #004400;
+    	border-top-color: #00ff88;
     }
     
     .notification-indicator.error .notification-spinner {
-      display: none;
-      /* No spinner for errors */
+    	display: none;
+    	/* No spinner for errors */
     }
     
     /* Progress bar components */
     .notification-progress-container {
-      width: 100%;
-      height: 6px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 3px;
-      margin-top: 8px;
-      overflow: hidden;
+    	width: 100%;
+    	height: 6px;
+    	background: rgba(255, 255, 255, 0.1);
+    	border-radius: 3px;
+    	margin-top: 8px;
+    	overflow: hidden;
     }
     
     .notification-progress-bar {
-      height: 100%;
-      background: #00ff00;
-      border-radius: 3px;
-      transition: width 0.3s ease;
-      width: 0%;
+    	height: 100%;
+    	background: #00ff00;
+    	border-radius: 3px;
+    	transition: width 0.3s ease;
+    	width: 0%;
     }
     
     .notification-indicator.success .notification-progress-bar {
-      background: #00ff88;
+    	background: #00ff88;
     }
     
     .notification-indicator.error .notification-progress-bar {
-      background: #ff4444;
+    	background: #ff4444;
     }
     
     @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
+    	to {
+    		transform: rotate(360deg);
+    	}
     }
     
     /* Hide spinner when not in spinner mode */
     .notification-indicator:not(.spinner) .notification-spinner {
-      display: none;
+    	display: none;
     }
     
     </style>
-    <!-- end 'style/notif.css' -->
+    <!-- end '../../libs/notif.css' -->
         <!-- begin 'util/config.js' -->
     <script>
     /**
@@ -989,7 +1223,12 @@
     const FLOAT_COMPARISON_EPSILON = 0.001;
     
     // Keys to skip during URL serialization
-    const URL_SKIP_PATHS = ["data.cache", "network.headers", "tempData"];
+    const URL_SKIP_PATHS = [
+      "data.cache",
+      "network.headers",
+      "tempData",
+      "middleClick.content",
+    ];
     
     // Keys to skip during config comparison
     const COMPARISON_SKIP_KEYS = ["timestamp", "sessionId", "tempData"];
@@ -1026,12 +1265,13 @@
         prompts_url: "../../patterns/gpt2-small/prompts.jsonl",
         patterns_path: "../../patterns/",
         attnpedia_url: "ap.json",
-        headDistsnpy_url: "../../features/head_dists_raw/distances.npy",
+        headDistsnpy_url: "../../features/head_dists_raw/distances_f32.npy",
         headDistsmeta_url: "../../features/head_dists_raw/dists_meta.json",
         pattern_url_template:
           "../../patterns/single.html?prompt={prompt_hash}&head={model}.L{layer}.H{head}",
         patternlens_url_template:
           "../../patterns/index.html?models={model}&heads-{model}=L{layer}H{head}&prompts={prompt_hashes}",
+        rendered_prompts_url: "../../patterns/rendered_prompts.jsonl",
       };
     
       if (INLINE_CONFIG) {
@@ -1527,261 +1767,270 @@
     <script>
       console.log(CONFIG);
     </script>
-        <!-- begin 'util/notif.js' -->
+        <!-- begin '../../libs/notif.js' -->
     <script>
-    /* notif.js - Standalone notification system */
+    /**
+     * @fileoverview Notification system
+     * @module notif
+     * @license GPLv3
+     * @see {@link https://github.com/mivanit/js-dev-toolkit}
+     */
     class NotificationManager {
-      constructor(options = {}) {
-        // Timeout settings
-        this.defaultTimeout = options.defaultTimeout || 4000;
-        this.successTimeout = options.successTimeout || 2000;
-        this.fadeTimeout = options.fadeTimeout || 300;
+    	constructor(options = {}) {
+    		// Timeout settings
+    		this.defaultTimeout = options.defaultTimeout || 4000;
+    		this.successTimeout = options.successTimeout || 2000;
+    		this.fadeTimeout = options.fadeTimeout || 300;
     
-        // Layout settings
-        this.topOffset = options.topOffset || 20;
-        this.spacing = options.spacing || 60;
-        this.slideOffset = options.slideOffset || -20;
+    		// Layout settings
+    		this.topOffset = options.topOffset || 20;
+    		this.spacing = options.spacing || 60;
+    		this.slideOffset = options.slideOffset || -20;
     
-        this.notifications = new Map(); // Map of id -> notification data
-        this.nextId = 0;
-        this.container = null;
-        this.isReady = false;
+    		this.notifications = new Map(); // Map of id -> notification data
+    		this.nextId = 0;
+    		this.container = null;
+    		this.isReady = false;
     
-        // Initialize when DOM is ready
-        this._initWhenReady();
-      }
+    		// Initialize when DOM is ready
+    		this._initWhenReady();
+    	}
     
-      _initWhenReady() {
-        if (document.body) {
-          this._createContainer();
-          this.isReady = true;
-        } else if (document.readyState === "loading") {
-          document.addEventListener("DOMContentLoaded", () => {
-            this._createContainer();
-            this.isReady = true;
-          });
-        } else {
-          // DOM is ready but body might not be parsed yet
-          setTimeout(() => this._initWhenReady(), 10);
-        }
-      }
+    	_initWhenReady() {
+    		if (document.body) {
+    			this._createContainer();
+    			this.isReady = true;
+    		} else if (document.readyState === "loading") {
+    			document.addEventListener("DOMContentLoaded", () => {
+    				this._createContainer();
+    				this.isReady = true;
+    			});
+    		} else {
+    			// DOM is ready but body might not be parsed yet
+    			setTimeout(() => this._initWhenReady(), 10);
+    		}
+    	}
     
-      _createContainer() {
-        if (this.container) return; // Already created
+    	_createContainer() {
+    		if (this.container) return; // Already created
     
-        this.container = document.createElement("div");
-        this.container.className = "notification-container";
-        document.body.appendChild(this.container);
-      }
+    		this.container = document.createElement("div");
+    		this.container.className = "notification-container";
+    		document.body.appendChild(this.container);
+    	}
     
-      _ensureReady() {
-        if (!this.isReady) {
-          console.warn(
-            "NotificationManager not ready yet, initializing synchronously",
-          );
-          this._createContainer();
-          this.isReady = true;
-        }
-      }
+    	_ensureReady() {
+    		if (!this.isReady) {
+    			console.warn(
+    				"NotificationManager not ready yet, initializing synchronously",
+    			);
+    			this._createContainer();
+    			this.isReady = true;
+    		}
+    	}
     
-      _createNotificationElement(id, type, message) {
-        this._ensureReady();
+    	_createNotificationElement(id, type, message) {
+    		this._ensureReady();
     
-        const element = document.createElement("div");
-        element.className = `notification-indicator visible ${type}`;
-        element.dataset.id = id;
+    		const element = document.createElement("div");
+    		element.className = `notification-indicator visible ${type}`;
+    		element.dataset.id = id;
     
-        if (type === "spinner") {
-          element.innerHTML = `
+    		if (type === "spinner") {
+    			element.innerHTML = `
                     <span class="notification-spinner"></span>
                     <span class="notification-text">${message}</span>
                 `;
-        } else if (type === "pbar") {
-          element.innerHTML = `
+    		} else if (type === "pbar") {
+    			element.innerHTML = `
                     <div class="notification-text">${message}</div>
                     <div class="notification-progress-container">
                         <div class="notification-progress-bar" style="width: 0%"></div>
                     </div>
                 `;
-        } else {
-          element.innerHTML = `
+    		} else {
+    			element.innerHTML = `
                     <span class="notification-text">${message}</span>
                 `;
-        }
+    		}
     
-        this.container.appendChild(element);
-        this._updatePositions();
-        return element;
-      }
+    		this.container.appendChild(element);
+    		this._updatePositions();
+    		return element;
+    	}
     
-      _updatePositions() {
-        if (!this.container) return;
+    	_updatePositions() {
+    		if (!this.container) return;
     
-        const notifications = Array.from(this.container.children);
-        notifications.forEach((el, index) => {
-          el.style.top = `${this.topOffset + index * this.spacing}px`;
-        });
-      }
+    		const notifications = Array.from(this.container.children);
+    		notifications.forEach((el, index) => {
+    			el.style.top = `${this.topOffset + index * this.spacing}px`;
+    		});
+    	}
     
-      _removeNotification(id) {
-        const notifData = this.notifications.get(id);
-        if (!notifData) return;
+    	_removeNotification(id) {
+    		const notifData = this.notifications.get(id);
+    		if (!notifData) return;
     
-        // Clear timeout if exists
-        if (notifData.timeout) {
-          clearTimeout(notifData.timeout);
-        }
+    		// Clear timeout if exists
+    		if (notifData.timeout) {
+    			clearTimeout(notifData.timeout);
+    		}
     
-        // Remove element with fade animation
-        notifData.element.style.opacity = "0";
-        notifData.element.style.transform = `translateX(-50%) translateY(${this.slideOffset}px)`;
+    		// Remove element with fade animation
+    		notifData.element.style.opacity = "0";
+    		notifData.element.style.transform = `translateX(-50%) translateY(${this.slideOffset}px)`;
     
-        setTimeout(() => {
-          if (notifData.element.parentNode) {
-            notifData.element.parentNode.removeChild(notifData.element);
-          }
-          this.notifications.delete(id);
-          this._updatePositions();
-        }, this.fadeTimeout);
-      }
+    		setTimeout(() => {
+    			if (notifData.element.parentNode) {
+    				notifData.element.parentNode.removeChild(notifData.element);
+    			}
+    			this.notifications.delete(id);
+    			this._updatePositions();
+    		}, this.fadeTimeout);
+    	}
     
-      /**
-       * Show a regular notification message
-       * @param {string} message - Message to display
-       * @param {number} timeout - Auto-hide timeout in ms (default from constructor)
-       */
-      show(message, timeout = null) {
-        console.log(message);
+    	/**
+    	 * Show a regular notification message
+    	 * @param {string} message - Message to display
+    	 * @param {number} timeout - Auto-hide timeout in ms (default from constructor)
+    	 */
+    	show(message, timeout = null) {
+    		console.log(message);
     
-        const id = this.nextId++;
-        const element = this._createNotificationElement(id, "show", message);
+    		const id = this.nextId++;
+    		const element = this._createNotificationElement(id, "show", message);
     
-        const hideTimeout = timeout || this.defaultTimeout;
-        const timeoutId = setTimeout(() => {
-          this._removeNotification(id);
-        }, hideTimeout);
+    		const hideTimeout = timeout || this.defaultTimeout;
+    		const timeoutId = setTimeout(() => {
+    			this._removeNotification(id);
+    		}, hideTimeout);
     
-        this.notifications.set(id, {
-          element,
-          type: "show",
-          timeout: timeoutId,
-        });
-      }
+    		this.notifications.set(id, {
+    			element,
+    			type: "show",
+    			timeout: timeoutId,
+    		});
+    	}
     
-      /**
-       * Show a persistent spinner with message
-       * @param {string} message - Loading message to display
-       * @returns {object} Spinner control object with .complete() method
-       */
-      spinner(message) {
-        console.log(message);
+    	/**
+    	 * Show a persistent spinner with message
+    	 * @param {string} message - Loading message to display
+    	 * @returns {object} Spinner control object with .complete() method
+    	 */
+    	spinner(message) {
+    		console.log(message);
     
-        const id = this.nextId++;
-        const element = this._createNotificationElement(id, "spinner", message);
+    		const id = this.nextId++;
+    		const element = this._createNotificationElement(id, "spinner", message);
     
-        this.notifications.set(id, {
-          element,
-          type: "spinner",
-          timeout: null,
-        });
+    		this.notifications.set(id, {
+    			element,
+    			type: "spinner",
+    			timeout: null,
+    		});
     
-        return {
-          complete: () => {
-            this._removeNotification(id);
-          },
-        };
-      }
+    		return {
+    			complete: () => {
+    				this._removeNotification(id);
+    			},
+    		};
+    	}
     
-      /**
-       * Show a persistent progress bar with message
-       * @param {string} message - Loading message to display
-       * @returns {object} Progress bar control object with .progress(value) method
-       */
-      pbar(message) {
-        console.log(message);
+    	/**
+    	 * Show a persistent progress bar with message
+    	 * @param {string} message - Loading message to display
+    	 * @returns {object} Progress bar control object with .progress(value) method
+    	 */
+    	pbar(message) {
+    		console.log(message);
     
-        const id = this.nextId++;
-        const element = this._createNotificationElement(id, "pbar", message);
+    		const id = this.nextId++;
+    		const element = this._createNotificationElement(id, "pbar", message);
     
-        this.notifications.set(id, {
-          element,
-          type: "pbar",
-          timeout: null,
-        });
+    		this.notifications.set(id, {
+    			element,
+    			type: "pbar",
+    			timeout: null,
+    		});
     
-        return {
-          progress: (value) => {
-            const progressBar = element.querySelector(".notification-progress-bar");
-            if (progressBar) {
-              const percentage = Math.max(0, Math.min(100, value * 100));
-              progressBar.style.width = `${percentage}%`;
-            }
-          },
-          complete: () => {
-            this._removeNotification(id);
-          },
-        };
-      }
+    		return {
+    			progress: (value) => {
+    				const progressBar = element.querySelector(
+    					".notification-progress-bar",
+    				);
+    				if (progressBar) {
+    					const percentage = Math.max(0, Math.min(100, value * 100));
+    					progressBar.style.width = `${percentage}%`;
+    				}
+    			},
+    			complete: () => {
+    				this._removeNotification(id);
+    			},
+    		};
+    	}
     
-      /**
-       * Show success message
-       * @param {string} message - Success message
-       * @param {number} timeout - Auto-hide timeout in ms (default from constructor)
-       */
-      success(message, timeout = null) {
-        console.log(message);
+    	/**
+    	 * Show success message
+    	 * @param {string} message - Success message
+    	 * @param {number} timeout - Auto-hide timeout in ms (default from constructor)
+    	 */
+    	success(message, timeout = null) {
+    		console.log(message);
     
-        const id = this.nextId++;
-        const element = this._createNotificationElement(id, "success", message);
+    		const id = this.nextId++;
+    		const element = this._createNotificationElement(id, "success", message);
     
-        const hideTimeout = timeout || this.successTimeout;
-        const timeoutId = setTimeout(() => {
-          this._removeNotification(id);
-        }, hideTimeout);
+    		const hideTimeout = timeout || this.successTimeout;
+    		const timeoutId = setTimeout(() => {
+    			this._removeNotification(id);
+    		}, hideTimeout);
     
-        this.notifications.set(id, {
-          element,
-          type: "success",
-          timeout: timeoutId,
-        });
-      }
+    		this.notifications.set(id, {
+    			element,
+    			type: "success",
+    			timeout: timeoutId,
+    		});
+    	}
     
-      /**
-       * Show error message
-       * @param {string} message - Error message
-       * @param {Error} err - Error object to log
-       * @param {number} timeout - Auto-hide timeout in ms (default from constructor)
-       */
-      error(message, err = null, timeout = null) {
-        if (err) {
-          console.error(err);
-        } else {
-          console.error(message);
-        }
+    	/**
+    	 * Show error message
+    	 * @param {string} message - Error message
+    	 * @param {Error} err - Error object to log
+    	 * @param {number} timeout - Auto-hide timeout in ms (null for persistent, default 10s)
+    	 */
+    	error(message, err = null, timeout = 10000) {
+    		if (err) {
+    			console.error(err);
+    		} else {
+    			console.error(message);
+    		}
     
-        const id = this.nextId++;
-        const element = this._createNotificationElement(id, "error", message);
+    		const id = this.nextId++;
+    		const element = this._createNotificationElement(id, "error", message);
     
-        const hideTimeout = timeout || this.defaultTimeout;
-        const timeoutId = setTimeout(() => {
-          this._removeNotification(id);
-        }, hideTimeout);
+    		let timeoutId = null;
+    		if (timeout !== null) {
+    			timeoutId = setTimeout(() => {
+    				this._removeNotification(id);
+    			}, timeout);
+    		}
     
-        this.notifications.set(id, {
-          element,
-          type: "error",
-          timeout: timeoutId,
-        });
-      }
+    		this.notifications.set(id, {
+    			element,
+    			type: "error",
+    			timeout: timeoutId,
+    		});
+    	}
     
-      /**
-       * Hide all notifications
-       */
-      clear() {
-        for (const [id] of this.notifications) {
-          this._removeNotification(id);
-        }
-      }
+    	/**
+    	 * Hide all notifications
+    	 */
+    	clear() {
+    		for (const [id] of this.notifications) {
+    			this._removeNotification(id);
+    		}
+    	}
     }
     
     // Initialize global instance when DOM is ready
@@ -1789,394 +2038,1567 @@
     
     // Initialize immediately if DOM is already ready, otherwise wait
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", () => {
-        NOTIF = new NotificationManager();
-      });
+    	document.addEventListener("DOMContentLoaded", () => {
+    		NOTIF = new NotificationManager();
+    	});
     } else {
-      // DOM already loaded
-      NOTIF = new NotificationManager();
+    	// DOM already loaded
+    	NOTIF = new NotificationManager();
     }
     
     </script>
-    <!-- end 'util/notif.js' -->
-        <!-- begin 'util/array.js' -->
+    <!-- end '../../libs/notif.js' -->
+        <!-- begin '../../libs/array.js' -->
     <script>
-    // ------------------------------------------------------------
-    // this file has been modified from original code at:
-    // https://github.com/aplbrain/npyjs
-    // under Apache License
-    // https://github.com/aplbrain/npyjs/blob/b0cd99b7f4c2bff791b4977e16dec3478519920b/LICENSE
-    // removed float16 support for brevity -- we don't need it
-    // ------------------------------------------------------------
+    /**
+     * @fileoverview NumPy array parsing and utilities
+     * @module array
+     * @version 0.2.0
+     * @license GPLv3
+     * @see {@link https://github.com/mivanit/js-dev-toolkit}
+     *
+     * @note Append ".dev-{name}" to version if you edit this locally
+     *
+     * @note This file has been modified from original code at:
+     * {@link https://github.com/aplbrain/npyjs} under Apache License
+     * {@link https://github.com/aplbrain/npyjs/blob/b0cd99b7f4c2bff791b4977e16dec3478519920b/LICENSE}
+     *
+     * Modifications:
+     * - npz loading (requires jszip)
+     * - JSON deserialization for various inline array formats
+     *   (see {@link https://github.com/mivanit/muutils}, {@link https://github.com/mivanit/zanj})
+     */
+    
+    // Must match muutils.json_serialize.util._FORMAT_KEY
+    const _FORMAT_KEY = "__muutils_format__";
+    
+    // Float16 converter function
+    function float16ToFloat32(float16) {
+    	const sign = (float16 >> 15) & 0x1;
+    	const exponent = (float16 >> 10) & 0x1f;
+    	const fraction = float16 & 0x3ff;
+    
+    	if (exponent === 0) {
+    		if (fraction === 0) {
+    			return sign ? -0 : 0;
+    		}
+    		return (sign ? -1 : 1) * Math.pow(2, -14) * (fraction / 0x400);
+    	} else if (exponent === 0x1f) {
+    		if (fraction === 0) {
+    			return sign ? -Infinity : Infinity;
+    		}
+    		return NaN;
+    	}
+    
+    	return (
+    		(sign ? -1 : 1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x400)
+    	);
+    }
+    
+    function float16ToFloat32Array(float16Array) {
+    	const length = float16Array.length;
+    	const float32Array = new Float32Array(length);
+    	for (let i = 0; i < length; i++) {
+    		float32Array[i] = float16ToFloat32(float16Array[i]);
+    	}
+    	return float32Array;
+    }
+    
+    function _isBigIntArray(arr) {
+    	return arr instanceof BigInt64Array || arr instanceof BigUint64Array;
+    }
+    
+    // Parse NPY header dict (Python dict literal → JS object)
+    function _parseNPYHeader(text) {
+    	return JSON.parse(
+    		text
+    			.replace(/True/g, "true")
+    			.replace(/False/g, "false")
+    			.replace(/'/g, '"')
+    			.replace(/\(/g, "[")
+    			.replace(/,*\),*/g, "]")
+    			.replace(/,\s*]/g, "]"),
+    	);
+    }
+    
+    // Canonical dtype list - single source of truth
+    const _DTYPES = [
+    	{
+    		descriptors: ["<u1", "|u1"],
+    		name: "uint8",
+    		size: 8,
+    		arrayConstructor: Uint8Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<u2"],
+    		name: "uint16",
+    		size: 16,
+    		arrayConstructor: Uint16Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<u4"],
+    		name: "uint32",
+    		size: 32,
+    		arrayConstructor: Uint32Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<u8"],
+    		name: "uint64",
+    		size: 64,
+    		arrayConstructor: BigUint64Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["|i1"],
+    		name: "int8",
+    		size: 8,
+    		arrayConstructor: Int8Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<i2"],
+    		name: "int16",
+    		size: 16,
+    		arrayConstructor: Int16Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<i4"],
+    		name: "int32",
+    		size: 32,
+    		arrayConstructor: Int32Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<i8"],
+    		name: "int64",
+    		size: 64,
+    		arrayConstructor: BigInt64Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<f4"],
+    		name: "float32",
+    		size: 32,
+    		arrayConstructor: Float32Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<f8"],
+    		name: "float64",
+    		size: 64,
+    		arrayConstructor: Float64Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<f2"],
+    		name: "float16",
+    		size: 16,
+    		arrayConstructor: Uint16Array,
+    		converter: float16ToFloat32Array,
+    	},
+    ];
+    
+    // Generate map: numpy descriptor -> dtype info (for NPY parsing)
+    const _DTYPE_BY_DESCRIPTOR = {};
+    for (const dtype of _DTYPES) {
+    	for (const desc of dtype.descriptors) {
+    		_DTYPE_BY_DESCRIPTOR[desc] = dtype;
+    	}
+    }
+    
+    // Generate map: dtype name -> dtype info (for JSON deserialization)
+    const _DTYPE_BY_NAME = {};
+    for (const dtype of _DTYPES) {
+    	_DTYPE_BY_NAME[dtype.name] = dtype;
+    }
+    
+    // Generate map: TypedArray constructor -> dtype name (for type inference)
+    const _CONSTRUCTOR_TO_DTYPE = new Map();
+    for (const dtype of _DTYPES) {
+    	_CONSTRUCTOR_TO_DTYPE.set(dtype.arrayConstructor, dtype.name);
+    }
+    
+    // NPY header info for range-based loading
+    class NPYHeaderInfo {
+    	constructor({ shape, dtype, fortranOrder, dataOffset }) {
+    		this.shape = shape;
+    		this.dtype = dtype;
+    		this.fortranOrder = fortranOrder;
+    		this.dataOffset = dataOffset;
+    
+    		// Get element size in bytes from dtype
+    		const dtypeInfo = _DTYPE_BY_DESCRIPTOR[dtype];
+    		if (!dtypeInfo) {
+    			throw new Error(
+    				`NPYHeaderInfo: unsupported dtype descriptor "${dtype}"`,
+    			);
+    		}
+    		this.elementSize = dtypeInfo.size / 8;
+    
+    		// Calculate stride for first axis (bytes per first-axis element)
+    		// For shape [d0, d1, d2], stride = d1 * d2 * elementSize
+    		this.firstAxisStride =
+    			this.shape.slice(1).reduce((acc, dim) => acc * dim, 1) *
+    			this.elementSize;
+    	}
+    }
+    
+    // Fetch only the NPY header using HTTP range requests
+    async function fetchNPYHeader(url, fetchArgs = {}) {
+    	// Fetch first 1KB - enough for most headers (typically < 200 bytes)
+    	const initialResponse = await fetch(url, {
+    		...fetchArgs,
+    		headers: {
+    			...fetchArgs.headers,
+    			Range: "bytes=0-1023",
+    		},
+    	});
+    
+    	// Check if range requests are supported
+    	if (initialResponse.status === 200) {
+    		// Server returned full file - range not supported
+    		console.warn(
+    			"HTTP Range requests not supported for",
+    			url,
+    			"- downloading full file",
+    		);
+    		return { rangeSupported: false, fullResponse: initialResponse };
+    	}
+    
+    	if (initialResponse.status !== 206) {
+    		throw new Error(
+    			`Failed to fetch NPY header: ${initialResponse.status}`,
+    		);
+    	}
+    
+    	const initialBytes = await initialResponse.arrayBuffer();
+    
+    	// Reject NPY v2.0+ (uses uint32 header length at different offset)
+    	const majorVersion = new Uint8Array(initialBytes)[6];
+    	if (majorVersion > 1) {
+    		throw new Error(
+    			`NPY format v${majorVersion}.0 is not supported (only v1.0)`,
+    		);
+    	}
+    
+    	// Parse header length (uint16 little-endian at bytes 8-9 for v1.0)
+    	const headerLength = new DataView(initialBytes, 8, 2).getUint16(0, true);
+    	const headerStart = 10;
+    	const dataOffset = headerStart + headerLength;
+    
+    	let headerBytes;
+    	if (dataOffset <= initialBytes.byteLength) {
+    		// Header fits in initial 1KB fetch - no second request needed
+    		headerBytes = initialBytes.slice(headerStart, dataOffset);
+    	} else {
+    		// Header larger than 1KB (rare) - fetch the rest
+    		const headerResponse = await fetch(url, {
+    			...fetchArgs,
+    			headers: {
+    				...fetchArgs.headers,
+    				Range: `bytes=${initialBytes.byteLength}-${dataOffset - 1}`,
+    			},
+    		});
+    
+    		if (headerResponse.status !== 206) {
+    			throw new Error(
+    				`Failed to fetch NPY header content: ${headerResponse.status}`,
+    			);
+    		}
+    
+    		// Combine initial bytes with remaining header
+    		const remainingBytes = await headerResponse.arrayBuffer();
+    		const combined = new Uint8Array(dataOffset);
+    		combined.set(new Uint8Array(initialBytes), 0);
+    		combined.set(new Uint8Array(remainingBytes), initialBytes.byteLength);
+    		headerBytes = combined.slice(headerStart, dataOffset);
+    	}
+    
+    	const headerText = new TextDecoder("utf-8").decode(
+    		new Uint8Array(headerBytes),
+    	);
+    
+    	// Parse header dict
+    	const header = _parseNPYHeader(headerText);
+    
+    	if (header.fortran_order) {
+    		throw new Error(
+    			"Fortran-order NPY files are not supported. Save with order='C'.",
+    		);
+    	}
+    
+    	return {
+    		rangeSupported: true,
+    		info: new NPYHeaderInfo({
+    			shape: header.shape,
+    			dtype: header.descr,
+    			fortranOrder: header.fortran_order,
+    			dataOffset: dataOffset,
+    		}),
+    	};
+    }
+    
     class npyjs {
-      constructor() {
-        this.dtypes = {
-          "<u1": {
-            name: "uint8",
-            size: 8,
-            arrayConstructor: Uint8Array,
-          },
-          "|u1": {
-            name: "uint8",
-            size: 8,
-            arrayConstructor: Uint8Array,
-          },
-          "<u2": {
-            name: "uint16",
-            size: 16,
-            arrayConstructor: Uint16Array,
-          },
-          "|i1": {
-            name: "int8",
-            size: 8,
-            arrayConstructor: Int8Array,
-          },
-          "<i2": {
-            name: "int16",
-            size: 16,
-            arrayConstructor: Int16Array,
-          },
-          "<u4": {
-            name: "uint32",
-            size: 32,
-            arrayConstructor: Uint32Array,
-          },
-          "<i4": {
-            name: "int32",
-            size: 32,
-            arrayConstructor: Int32Array,
-          },
-          "<u8": {
-            name: "uint64",
-            size: 64,
-            arrayConstructor: BigUint64Array,
-          },
-          "<i8": {
-            name: "int64",
-            size: 64,
-            arrayConstructor: BigInt64Array,
-          },
-          "<f4": {
-            name: "float32",
-            size: 32,
-            arrayConstructor: Float32Array,
-          },
-          "<f8": {
-            name: "float64",
-            size: 64,
-            arrayConstructor: Float64Array,
-          },
-          // "<f2": {
-          //     name: "float16",
-          //     size: 16,
-          //     arrayConstructor: Uint16Array,
-          //     converter: this.convertFloat16 ? this.float16ToFloat32Array : undefined
-          // },
-        };
-      }
+    	constructor(opts) {
+    		this.convertFloat16 = opts?.convertFloat16 ?? true;
+    		this.dtypes = {};
     
-      parse(arrayBufferContents) {
-        // const version = arrayBufferContents.slice(6, 8); // Uint8-encoded
-        const headerLength = new DataView(
-          arrayBufferContents.slice(8, 10),
-        ).getUint8(0);
-        const offsetBytes = 10 + headerLength;
+    		// Build dtypes map from canonical list
+    		for (const desc in _DTYPE_BY_DESCRIPTOR) {
+    			const dtype = _DTYPE_BY_DESCRIPTOR[desc];
+    			this.dtypes[desc] = {
+    				name: dtype.name,
+    				size: dtype.size,
+    				arrayConstructor: dtype.arrayConstructor,
+    				converter:
+    					dtype.converter && this.convertFloat16
+    						? dtype.converter
+    						: undefined,
+    			};
+    		}
+    	}
     
-        const hcontents = new TextDecoder("utf-8").decode(
-          new Uint8Array(arrayBufferContents.slice(10, 10 + headerLength)),
-        );
-        const header = JSON.parse(
-          hcontents
-            .toLowerCase() // True -> true
-            .replace(/'/g, '"')
-            .replace("(", "[")
-            .replace(/,*\),*/g, "]"),
-        );
-        const shape = header.shape;
-        const dtype = this.dtypes[header.descr];
+    	parse(arrayBufferContents) {
+    		// Reject NPY v2.0+ (uses uint32 header length at different offset)
+    		const majorVersion = new Uint8Array(arrayBufferContents)[6];
+    		if (majorVersion > 1) {
+    			throw new Error(
+    				`NPY format v${majorVersion}.0 is not supported (only v1.0)`,
+    			);
+    		}
+    		const headerLength = new DataView(
+    			arrayBufferContents.slice(8, 10),
+    		).getUint16(0, true);
+    		const offsetBytes = 10 + headerLength;
     
-        if (!dtype) {
-          console.error(`Unsupported dtype: ${header.descr}`);
-          return null;
-        }
+    		const hcontents = new TextDecoder("utf-8").decode(
+    			new Uint8Array(arrayBufferContents.slice(10, 10 + headerLength)),
+    		);
+    		const header = _parseNPYHeader(hcontents);
+    		const shape = header.shape;
     
-        const nums = new dtype.arrayConstructor(arrayBufferContents, offsetBytes);
+    		if (header.fortran_order) {
+    			throw new Error(
+    				"Fortran-order NPY files are not supported. Save with order='C'.",
+    			);
+    		}
     
-        // Convert float16 to float32 if converter exists
-        const data = dtype.converter ? dtype.converter.call(this, nums) : nums;
+    		const dtype = this.dtypes[header.descr];
     
-        return {
-          dtype: dtype.name,
-          data: data,
-          shape,
-          fortranOrder: header.fortran_order,
-        };
-      }
+    		if (!dtype) {
+    			throw new Error(`Unsupported dtype: ${header.descr}`);
+    		}
     
-      async load(filename, callback, fetchArgs) {
-        /*
+    		const nums = new dtype.arrayConstructor(
+    			arrayBufferContents,
+    			offsetBytes,
+    		);
+    
+    		// Convert float16 to float32 if converter exists
+    		const data = dtype.converter ? dtype.converter.call(this, nums) : nums;
+    
+    		return {
+    			dtype: dtype.converter ? "float32" : dtype.name,
+    			data: data,
+    			shape,
+    			fortranOrder: header.fortran_order,
+    		};
+    	}
+    
+    	async load(filename, callback, fetchArgs) {
+    		/*
     		Loads an array from a stream of bytes.
     		*/
-        fetchArgs = fetchArgs || {};
-        let arrayBuf;
-        // If filename is ArrayBuffer
-        if (filename instanceof ArrayBuffer) {
-          arrayBuf = filename;
-        }
-        // If filename is a file path
-        else {
-          const resp = await fetch(filename, { ...fetchArgs });
-          arrayBuf = await resp.arrayBuffer();
-        }
-        const result = this.parse(arrayBuf);
-        if (callback) {
-          return callback(result);
-        }
-        return result;
-      }
+    		fetchArgs = fetchArgs || {};
+    		let arrayBuf;
+    		// If filename is ArrayBuffer
+    		if (filename instanceof ArrayBuffer) {
+    			arrayBuf = filename;
+    		}
+    		// If filename is a file path
+    		else {
+    			const resp = await fetch(filename, { ...fetchArgs });
+    			arrayBuf = await resp.arrayBuffer();
+    		}
+    		const result = this.parse(arrayBuf);
+    		if (callback) {
+    			return callback(result);
+    		}
+    		return result;
+    	}
+    
+    	async loadNPZ(filename, fetchArgs) {
+    		fetchArgs = fetchArgs || {};
+    		const resp = await fetch(filename, { ...fetchArgs });
+    		const arrayBuffer = await resp.arrayBuffer();
+    		return this.parseZIP(arrayBuffer);
+    	}
+    
+    	async parseZIP(arrayBuffer) {
+    		// Use JSZip to properly decompress NPZ files
+    		const zip = new JSZip();
+    		const zipFile = await zip.loadAsync(arrayBuffer);
+    		const arrays = {};
+    
+    		// Iterate through all files in the ZIP
+    		for (const [filename, file] of Object.entries(zipFile.files)) {
+    			if (file.dir) continue;
+    
+    			// Get decompressed ArrayBuffer
+    			const decompressedData = await file.async("arraybuffer");
+    
+    			// Parse NPY data
+    			const arrayName = filename.replace(".npy", "");
+    			arrays[arrayName] = this.parse(decompressedData);
+    		}
+    
+    		return arrays;
+    	}
     }
     
     class NDArray {
-      /**
-       * Creates a multidimensional array similar to NumPy arrays
-       *
-       * @param {any} data - The array data
-       * @param {Array<number>} shape - The shape of the array
-       * @param {string} dtype - The data type of the array
-       */
-      constructor(data, shape, dtype) {
-        this.data = data;
-        this.shape = shape;
-        this.dtype = dtype;
-        this.ndim = shape.length;
+    	/**
+    	 * Creates a multidimensional array similar to NumPy arrays
+    	 *
+    	 * @param {any} data - The array data
+    	 * @param {Array<number>} shape - The shape of the array
+    	 * @param {string} dtype - The data type of the array
+    	 */
+    	constructor(data, shape, dtype) {
+    		this.data = data;
+    		this.shape = shape;
+    		this.dtype = dtype;
+    		this.ndim = shape.length;
     
-        // Calculate total size from shape
-        this._size = shape.reduce((acc, dim) => acc * dim, 1);
+    		// Validate shape dimensions
+    		for (let i = 0; i < shape.length; i++) {
+    			if (!Number.isInteger(shape[i]) || shape[i] < 0) {
+    				throw new Error(
+    					`Invalid shape dimension at index ${i}: ${shape[i]} (must be non-negative integer)`,
+    				);
+    			}
+    		}
     
-        // Validate data length matches shape
-        if (data.length !== this._size) {
-          throw new Error(
-            `Data length ${data.length} doesn't match shape ${shape} (expected ${this._size})`,
-          );
-        }
-      }
+    		// Calculate total size from shape
+    		this._size = shape.reduce((acc, dim) => acc * dim, 1);
     
-      /**
-       * Converts multidimensional indices to flat index
-       *
-       * @param {Array<number|null>} indices - Array of indices, can contain null for slicing
-       * @returns {number|Array<number>} - Flat index or array of indices for slicing
-       * @private
-       */
-      _getIndices(indices) {
-        // Handle case where all dimensions are requested (no indices)
-        if (indices.length === 0) {
-          return [...Array(this._size).keys()];
-        }
+    		// Validate data length matches shape
+    		if (data.length !== this._size) {
+    			throw new Error(
+    				`Data length ${data.length} doesn't match shape ${shape} (expected ${this._size})`,
+    			);
+    		}
+    	}
     
-        // Check that we don't have too many indices
-        if (indices.filter((idx) => idx !== null).length > this.shape.length) {
-          throw new Error(`Too many indices for array with shape ${this.shape}`);
-        }
+    	/**
+    	 * Returns the total number of elements in the array
+    	 * @returns {number} Total number of elements
+    	 */
+    	get size() {
+    		return this._size;
+    	}
     
-        // If we have exact indices (no nulls), calculate flat index
-        if (!indices.includes(null) && indices.length === this.shape.length) {
-          // Validate all indices
-          for (let i = 0; i < indices.length; i++) {
-            if (indices[i] < 0) {
-              indices[i] = this.shape[i] + indices[i]; // Handle negative indices like numpy
-            }
+    	/**
+    	 * Validates axis parameter is within bounds
+    	 * @param {number|null} axis - The axis to validate
+    	 * @returns {number|null} The validated axis
+    	 * @private
+    	 */
+    	_validateAxis(axis) {
+    		if (axis === null || axis === undefined) {
+    			return null;
+    		}
     
-            if (indices[i] < 0 || indices[i] >= this.shape[i]) {
-              throw new Error(
-                `Index ${indices[i]} is out of bounds for axis ${i} with size ${this.shape[i]}`,
-              );
-            }
-          }
+    		// Handle negative axis
+    		if (axis < 0) {
+    			axis = this.ndim + axis;
+    		}
     
-          // Calculate flat index using strides
-          let flatIndex = 0;
-          let stride = 1;
+    		if (axis < 0 || axis >= this.ndim) {
+    			throw new Error(
+    				`axis ${axis} is out of bounds for array with ${this.ndim} dimensions`,
+    			);
+    		}
     
-          for (let i = this.shape.length - 1; i >= 0; i--) {
-            flatIndex += indices[i] * stride;
-            stride *= this.shape[i];
-          }
+    		return axis;
+    	}
     
-          return flatIndex;
-        }
+    	/**
+    	 * Returns a flattened 1D view of the array
+    	 * @returns {NDArray} 1D NDArray
+    	 */
+    	flatten() {
+    		return new this.constructor(this.data, [this._size], this.dtype);
+    	}
     
-        // Handle slicing (when some indices are null)
-        // This returns all flat indices that match the specified dimensions
-        const resultIndices = [];
-        const completeIndices = [...indices];
+    	/**
+    	 * Slice the array along the first axis.
+    	 * Returns a new NDArray containing elements [start, end) along the first axis.
+    	 *
+    	 * @param {Array<number>|number} range - [start, end) range or single index for first axis
+    	 * @returns {NDArray} Sliced array
+    	 *
+    	 * @example
+    	 * const arr = new NDArray(data, [100, 10], 'float32');
+    	 * const sliced = arr.slice([10, 20]); // shape: [10, 10]
+    	 * const row = arr.slice(5);           // shape: [1, 10] - single row
+    	 */
+    	slice(range) {
+    		// Allow single int to get one row
+    		const dim0 = this.shape[0];
+    		let start, end;
+    		if (typeof range === "number") {
+    			start = range < 0 ? dim0 + range : range;
+    			end = start + 1;
+    		} else {
+    			[start, end] = range;
+    			if (start < 0) start = dim0 + start;
+    			if (end < 0) end = dim0 + end;
+    		}
     
-        // Fill in missing indices with zeros
-        while (completeIndices.length < this.shape.length) {
-          completeIndices.push(0);
-        }
+    		// Validate bounds
+    		if (start < 0 || end > dim0 || start > end) {
+    			throw new Error(
+    				`Invalid slice [${start}, ${end}) for array with shape ${this.shape}`,
+    			);
+    		}
     
-        // Find which dimensions need to be iterated over (those with null)
-        const dimToIterate = [];
-        for (let i = 0; i < this.shape.length; i++) {
-          if (i >= indices.length || indices[i] === null) {
-            dimToIterate.push(i);
-          }
-        }
+    		// Calculate stride for first axis (elements per first-axis index)
+    		const firstAxisStride = this.shape
+    			.slice(1)
+    			.reduce((acc, dim) => acc * dim, 1);
     
-        // Generate all combinations of indices for the dimensions to iterate over
-        const generateIndices = (currentDim, currentIndices) => {
-          if (currentDim >= dimToIterate.length) {
-            // Calculate flat index for this combination
-            let flatIndex = 0;
-            let stride = 1;
+    		// Extract slice data
+    		const sliceStart = start * firstAxisStride;
+    		const sliceEnd = end * firstAxisStride;
+    		const slicedData = this.data.slice(sliceStart, sliceEnd);
     
-            for (let i = this.shape.length - 1; i >= 0; i--) {
-              flatIndex += currentIndices[i] * stride;
-              stride *= this.shape[i];
-            }
+    		// Construct sliced shape
+    		const slicedShape = [end - start, ...this.shape.slice(1)];
     
-            resultIndices.push(flatIndex);
-            return;
-          }
+    		return new this.constructor(slicedData, slicedShape, this.dtype);
+    	}
     
-          const dim = dimToIterate[currentDim];
-          for (let i = 0; i < this.shape[dim]; i++) {
-            currentIndices[dim] = i;
-            generateIndices(currentDim + 1, currentIndices);
-          }
-        };
+    	/**
+    	 * Computes the sum of array elements over a given axis
+    	 * @param {number|null} axis - Axis along which to sum. If null, sum over all elements
+    	 * @returns {number|NDArray} Sum as scalar or NDArray depending on axis
+    	 */
+    	sum(axis = null) {
+    		axis = this._validateAxis(axis);
     
-        generateIndices(0, completeIndices);
-        return resultIndices;
-      }
+    		// Sum over all elements
+    		if (axis === null) {
+    			if (this._size === 0) return _isBigIntArray(this.data) ? 0n : 0;
+    			let total = this.data[0];
+    			for (let i = 1; i < this._size; i++) {
+    				total += this.data[i];
+    			}
+    			return total;
+    		}
     
-      /**
-       * Gets values at specified indices
-       *
-       * @param {...(number|null)} args - Indices for each dimension, null for full dimension
-       * @returns {any} - Value or subarray at the specified location
-       */
-      get(...args) {
-        // Handle case where args is array
-        let indices = args;
-        if (args.length === 1 && Array.isArray(args[0])) {
-          indices = args[0];
-        }
+    		// Sum along specific axis
+    		const newShape = this.shape.filter((_, i) => i !== axis);
+    		const newSize = newShape.reduce((acc, dim) => acc * dim, 1);
+    		const resultData = new this.data.constructor(newSize);
     
-        const flatIndices = this._getIndices(indices);
+    		// Calculate strides for indexing
+    		const strides = new Array(this.ndim);
+    		strides[this.ndim - 1] = 1;
+    		for (let i = this.ndim - 2; i >= 0; i--) {
+    			strides[i] = strides[i + 1] * this.shape[i + 1];
+    		}
     
-        // If we got a single index, return the single value
-        if (typeof flatIndices === "number") {
-          return this.data[flatIndices];
-        }
+    		// Sum values along the specified axis
+    		for (let i = 0; i < this._size; i++) {
+    			// Convert flat index to multidimensional indices
+    			let remaining = i;
+    			const indices = new Array(this.ndim);
+    			for (let j = 0; j < this.ndim; j++) {
+    				indices[j] = Math.floor(remaining / strides[j]);
+    				remaining %= strides[j];
+    			}
     
-        // Otherwise, create a new array with the values
-        // We need to calculate the shape of the result
-        const resultShape = [];
-        for (let i = 0; i < this.shape.length; i++) {
-          if (i >= indices.length || indices[i] === null) {
-            resultShape.push(this.shape[i]);
-          }
-        }
+    			// Calculate result index (excluding the axis dimension)
+    			let resultIdx = 0;
+    			let resultStride = 1;
+    			for (let j = this.ndim - 1; j >= 0; j--) {
+    				if (j !== axis) {
+    					resultIdx += indices[j] * resultStride;
+    					resultStride *= this.shape[j];
+    				}
+    			}
     
-        // If result is empty, it means we want the entire array
-        if (resultShape.length === 0) {
-          return this;
-        }
+    			resultData[resultIdx] += this.data[i];
+    		}
     
-        // Create new data array with the values at the flat indices
-        const resultData = new this.data.constructor(flatIndices.length);
-        for (let i = 0; i < flatIndices.length; i++) {
-          resultData[i] = this.data[flatIndices[i]];
-        }
+    		return new this.constructor(resultData, newShape, this.dtype);
+    	}
     
-        return new NDArray(resultData, resultShape, this.dtype);
-      }
+    	/**
+    	 * Computes the mean of array elements over a given axis
+    	 * @param {number|null} axis - Axis along which to compute mean. If null, compute mean over all elements
+    	 * @returns {number|NDArray} Mean as scalar or NDArray depending on axis
+    	 */
+    	mean(axis = null) {
+    		axis = this._validateAxis(axis);
     
-      /**
-       * Sets values at specified indices
-       *
-       * @param {...*} args - Indices followed by value to set
-       */
-      set(...args) {
-        // Handle case where args is array
-        let indices, value;
-        if (args.length === 2 && Array.isArray(args[0])) {
-          indices = args[0];
-          value = args[1];
-        } else {
-          value = args[args.length - 1];
-          indices = args.slice(0, args.length - 1);
-        }
+    		// Mean over all elements
+    		if (axis === null) {
+    			if (this._size === 0) {
+    				throw new Error("mean of empty slice is undefined");
+    			}
+    			const total = this.sum(null);
+    			return Number(total) / this._size;
+    		}
     
-        const flatIndices = this._getIndices(indices);
+    		// Mean along specific axis
+    		const sumResult = this.sum(axis);
+    		if (this.shape[axis] === 0) {
+    			throw new Error("mean of empty slice is undefined");
+    		}
+    		const divisor = this.shape[axis];
+    		const isBigInt = _isBigIntArray(sumResult.data);
     
-        // If we got a single index, set the single value
-        if (typeof flatIndices === "number") {
-          this.data[flatIndices] = value;
-          return;
-        }
+    		// Always return float for mean (convert BigInt sums to Number)
+    		const resultData = isBigInt
+    			? new Float64Array(sumResult.data.length)
+    			: new sumResult.data.constructor(sumResult.data.length);
+    		for (let i = 0; i < sumResult.data.length; i++) {
+    			resultData[i] =
+    				(isBigInt ? Number(sumResult.data[i]) : sumResult.data[i]) /
+    				divisor;
+    		}
     
-        // Otherwise, set all indices to the value
-        // If value is an array, distribute its values
-        if (Array.isArray(value) || value instanceof NDArray) {
-          const valueArray = value instanceof NDArray ? value.data : value;
-          if (valueArray.length !== flatIndices.length) {
-            throw new Error(
-              `Cannot broadcast ${valueArray.length} values to ${flatIndices.length} indices`,
-            );
-          }
+    		return new this.constructor(
+    			resultData,
+    			sumResult.shape,
+    			isBigInt ? "float64" : this.dtype,
+    		);
+    	}
     
-          for (let i = 0; i < flatIndices.length; i++) {
-            this.data[flatIndices[i]] = valueArray[i];
-          }
-        } else {
-          // Set all indices to the same value
-          for (const idx of flatIndices) {
-            this.data[idx] = value;
-          }
-        }
-      }
+    	/**
+    	 * Computes both minimum and maximum of array elements over a given axis in a single pass
+    	 * @param {number|null} axis - Axis along which to find range. If null, find range over all elements
+    	 * @returns {NDArray} NDArray with shape [..., 2] where index 0 is min, index 1 is max
+    	 */
+    	range(axis = null) {
+    		axis = this._validateAxis(axis);
     
-      /**
-       * Returns a string representation of the array
-       *
-       * @returns {string} String representation of the array
-       */
-      toString() {
-        // Simple representation for 1D arrays
-        if (this.shape.length === 1) {
-          return `[${Array.from(this.data).join(", ")}]`;
-        }
+    		// Range over all elements - return [2] array
+    		if (axis === null) {
+    			if (this._size === 0) {
+    				throw new Error(
+    					"zero-size array to reduction operation range which has no identity",
+    				);
+    			}
+    			let minVal = this.data[0];
+    			let maxVal = this.data[0];
+    			for (let i = 1; i < this._size; i++) {
+    				if (this.data[i] < minVal) {
+    					minVal = this.data[i];
+    				}
+    				if (this.data[i] > maxVal) {
+    					maxVal = this.data[i];
+    				}
+    			}
+    			const resultData = new this.data.constructor(2);
+    			resultData[0] = minVal;
+    			resultData[1] = maxVal;
+    			return new this.constructor(resultData, [2], this.dtype);
+    		}
     
-        // For higher dimensions, we'll just show shape and type
-        return `NDArray(${this.shape.join("X")}, ${this.dtype})`;
-      }
+    		// Range along specific axis - result shape is [..., 2]
+    		if (this.shape[axis] === 0) {
+    			throw new Error(
+    				"zero-size array to reduction operation range which has no identity",
+    			);
+    		}
+    		const baseShape = this.shape.filter((_, i) => i !== axis);
+    		const newShape = [...baseShape, 2];
+    		const baseSize = baseShape.reduce((acc, dim) => acc * dim, 1);
+    		const newSize = baseSize * 2;
+    		const resultData = new this.data.constructor(newSize);
     
-      static parse(arrayBufferContents) {
-        const npy = new npyjs();
-        const npyData = npy.parse(arrayBufferContents);
-        if (!npyData) {
-          throw new Error("Failed to parse NPY data");
-        }
-        // Convert data to NDArray
-        return new NDArray(npyData.data, npyData.shape, npyData.dtype);
-      }
+    		// Calculate strides for indexing
+    		const strides = new Array(this.ndim);
+    		strides[this.ndim - 1] = 1;
+    		for (let i = this.ndim - 2; i >= 0; i--) {
+    			strides[i] = strides[i + 1] * this.shape[i + 1];
+    		}
     
-      static async load(filename, callback, fetchArgs) {
-        const npy = new npyjs();
-        const npyData = await npy.load(filename, null, fetchArgs);
-        if (!npyData) {
-          throw new Error("Failed to load NPY data");
-        }
-        // Convert data to NDArray
-        return new NDArray(npyData.data, npyData.shape, npyData.dtype);
-      }
+    		// Track whether each position has been initialized
+    		const initialized = new Uint8Array(baseSize);
+    
+    		// Find min and max values along the specified axis
+    		for (let i = 0; i < this._size; i++) {
+    			// Convert flat index to multidimensional indices
+    			let remaining = i;
+    			const indices = new Array(this.ndim);
+    			for (let j = 0; j < this.ndim; j++) {
+    				indices[j] = Math.floor(remaining / strides[j]);
+    				remaining %= strides[j];
+    			}
+    
+    			// Calculate result index (excluding the axis dimension)
+    			let resultIdx = 0;
+    			let resultStride = 1;
+    			for (let j = this.ndim - 1; j >= 0; j--) {
+    				if (j !== axis) {
+    					resultIdx += indices[j] * resultStride;
+    					resultStride *= this.shape[j];
+    				}
+    			}
+    
+    			// Seed with first value, then compare
+    			if (!initialized[resultIdx]) {
+    				resultData[resultIdx * 2] = this.data[i];
+    				resultData[resultIdx * 2 + 1] = this.data[i];
+    				initialized[resultIdx] = 1;
+    			} else {
+    				if (this.data[i] < resultData[resultIdx * 2]) {
+    					resultData[resultIdx * 2] = this.data[i];
+    				}
+    				if (this.data[i] > resultData[resultIdx * 2 + 1]) {
+    					resultData[resultIdx * 2 + 1] = this.data[i];
+    				}
+    			}
+    		}
+    
+    		return new this.constructor(resultData, newShape, this.dtype);
+    	}
+    
+    	/**
+    	 * Computes the minimum of array elements over a given axis
+    	 * @param {number|null} axis - Axis along which to find minimum. If null, find minimum over all elements
+    	 * @returns {number|NDArray} Minimum as scalar or NDArray depending on axis
+    	 */
+    	min(axis = null) {
+    		axis = this._validateAxis(axis);
+    		const rangeResult = this.range(axis);
+    
+    		if (axis === null) {
+    			return rangeResult.data[0];
+    		}
+    
+    		const baseSize = rangeResult.data.length / 2;
+    		const minData = new this.data.constructor(baseSize);
+    		for (let i = 0; i < baseSize; i++) {
+    			minData[i] = rangeResult.data[i * 2];
+    		}
+    
+    		const newShape = this.shape.filter((_, i) => i !== axis);
+    		return new this.constructor(minData, newShape, this.dtype);
+    	}
+    
+    	/**
+    	 * Computes the maximum of array elements over a given axis
+    	 * @param {number|null} axis - Axis along which to find maximum. If null, find maximum over all elements
+    	 * @returns {number|NDArray} Maximum as scalar or NDArray depending on axis
+    	 */
+    	max(axis = null) {
+    		axis = this._validateAxis(axis);
+    		const rangeResult = this.range(axis);
+    
+    		if (axis === null) {
+    			return rangeResult.data[1];
+    		}
+    
+    		const baseSize = rangeResult.data.length / 2;
+    		const maxData = new this.data.constructor(baseSize);
+    		for (let i = 0; i < baseSize; i++) {
+    			maxData[i] = rangeResult.data[i * 2 + 1];
+    		}
+    
+    		const newShape = this.shape.filter((_, i) => i !== axis);
+    		return new this.constructor(maxData, newShape, this.dtype);
+    	}
+    
+    	/**
+    	 * Returns a new array with a new shape
+    	 * @param {Array<number>} newShape - The new shape, can contain -1 for auto-calculation
+    	 * @returns {NDArray} Reshaped array
+    	 */
+    	reshape(newShape) {
+    		if (!Array.isArray(newShape)) {
+    			throw new Error("newShape must be an array");
+    		}
+    
+    		// Reject invalid negative dimensions (only -1 is allowed)
+    		for (const dim of newShape) {
+    			if (dim < -1) {
+    				throw new Error(
+    					`invalid dimension ${dim} in reshape (only -1 is allowed for auto-calculation)`,
+    				);
+    			}
+    		}
+    
+    		// Handle -1 for auto-calculation
+    		const autoIdx = newShape.indexOf(-1);
+    		let finalShape = [...newShape];
+    
+    		if (autoIdx !== -1) {
+    			// Check for multiple -1s
+    			if (newShape.indexOf(-1, autoIdx + 1) !== -1) {
+    				throw new Error("can only specify one unknown dimension (-1)");
+    			}
+    
+    			// Calculate the auto dimension
+    			const knownSize = newShape.reduce(
+    				(acc, dim) => (dim === -1 ? acc : acc * dim),
+    				1,
+    			);
+    			if (knownSize === 0) {
+    				finalShape[autoIdx] = 0;
+    			} else {
+    				if (this._size % knownSize !== 0) {
+    					throw new Error(
+    						`cannot reshape array of size ${this._size} into shape ${newShape}`,
+    					);
+    				}
+    				finalShape[autoIdx] = this._size / knownSize;
+    			}
+    		}
+    
+    		// Validate new shape has same total size
+    		const newSize = finalShape.reduce((acc, dim) => acc * dim, 1);
+    		if (newSize !== this._size) {
+    			throw new Error(
+    				`cannot reshape array of size ${this._size} into shape ${finalShape} (size ${newSize})`,
+    			);
+    		}
+    
+    		// Create new array with same data but different shape
+    		return new this.constructor(this.data, finalShape, this.dtype);
+    	}
+    
+    	/**
+    	 * Returns a transposed array
+    	 * @param {Array<number>|null} axes - Permutation of axes. If null, reverses all axes
+    	 * @returns {NDArray} Transposed array
+    	 */
+    	transpose(axes = null) {
+    		// Default: reverse all axes
+    		if (axes === null) {
+    			axes = Array.from(
+    				{ length: this.ndim },
+    				(_, i) => this.ndim - 1 - i,
+    			);
+    		}
+    
+    		// Validate axes
+    		if (!Array.isArray(axes) || axes.length !== this.ndim) {
+    			throw new Error(`axes must be array of length ${this.ndim}`);
+    		}
+    
+    		// Normalize negative axes
+    		axes = axes.map((ax) => (ax < 0 ? ax + this.ndim : ax));
+    
+    		// Check for valid permutation (all unique, in range)
+    		const axesSet = new Set(axes);
+    		if (axesSet.size !== this.ndim) {
+    			throw new Error("axes must be a permutation of dimensions");
+    		}
+    		for (const axis of axes) {
+    			if (axis < 0 || axis >= this.ndim) {
+    				throw new Error(
+    					`axis ${axis} is out of bounds for array with ${this.ndim} dimensions`,
+    				);
+    			}
+    		}
+    
+    		// Calculate new shape
+    		const newShape = axes.map((ax) => this.shape[ax]);
+    
+    		// Calculate old strides
+    		const oldStrides = new Array(this.ndim);
+    		oldStrides[this.ndim - 1] = 1;
+    		for (let i = this.ndim - 2; i >= 0; i--) {
+    			oldStrides[i] = oldStrides[i + 1] * this.shape[i + 1];
+    		}
+    
+    		// Create new data array
+    		const newData = new this.data.constructor(this._size);
+    
+    		// Calculate new strides
+    		const newStrides = new Array(this.ndim);
+    		newStrides[this.ndim - 1] = 1;
+    		for (let i = this.ndim - 2; i >= 0; i--) {
+    			newStrides[i] = newStrides[i + 1] * newShape[i + 1];
+    		}
+    
+    		// Copy data in transposed order
+    		for (let i = 0; i < this._size; i++) {
+    			// Convert flat index to old multidimensional indices
+    			let remaining = i;
+    			const oldIndices = new Array(this.ndim);
+    			for (let j = 0; j < this.ndim; j++) {
+    				oldIndices[j] = Math.floor(remaining / oldStrides[j]);
+    				remaining %= oldStrides[j];
+    			}
+    
+    			// Permute indices according to axes
+    			const newIndices = new Array(this.ndim);
+    			for (let j = 0; j < this.ndim; j++) {
+    				newIndices[j] = oldIndices[axes[j]];
+    			}
+    
+    			// Convert new multidimensional indices to flat index
+    			let newFlatIdx = 0;
+    			for (let j = 0; j < this.ndim; j++) {
+    				newFlatIdx += newIndices[j] * newStrides[j];
+    			}
+    
+    			newData[newFlatIdx] = this.data[i];
+    		}
+    
+    		return new this.constructor(newData, newShape, this.dtype);
+    	}
+    
+    	/**
+    	 * Converts multidimensional indices to flat index
+    	 *
+    	 * @param {Array<number|null>} indices - Array of indices, can contain null for slicing
+    	 * @returns {number|Array<number>} - Flat index or array of indices for slicing
+    	 * @private
+    	 */
+    	_getIndices(indices) {
+    		// Clone to avoid mutating caller's array
+    		indices = [...indices];
+    
+    		// Handle case where all dimensions are requested (no indices)
+    		if (indices.length === 0) {
+    			return [...Array(this._size).keys()];
+    		}
+    
+    		// Check that we don't have too many indices
+    		if (indices.filter((idx) => idx !== null).length > this.shape.length) {
+    			throw new Error(
+    				`Too many indices for array with shape ${this.shape}`,
+    			);
+    		}
+    
+    		// If we have exact indices (no nulls), calculate flat index
+    		if (!indices.includes(null) && indices.length === this.shape.length) {
+    			// Validate all indices
+    			for (let i = 0; i < indices.length; i++) {
+    				if (indices[i] < 0) {
+    					indices[i] = this.shape[i] + indices[i]; // Handle negative indices like numpy
+    				}
+    
+    				if (indices[i] < 0 || indices[i] >= this.shape[i]) {
+    					throw new Error(
+    						`Index ${indices[i]} is out of bounds for axis ${i} with size ${this.shape[i]}`,
+    					);
+    				}
+    			}
+    
+    			// Calculate flat index using strides
+    			let flatIndex = 0;
+    			let stride = 1;
+    
+    			for (let i = this.shape.length - 1; i >= 0; i--) {
+    				flatIndex += indices[i] * stride;
+    				stride *= this.shape[i];
+    			}
+    
+    			return flatIndex;
+    		}
+    
+    		// Handle slicing (when some indices are null)
+    		// This returns all flat indices that match the specified dimensions
+    		const resultIndices = [];
+    		const completeIndices = [...indices];
+    
+    		// Fill in missing indices with zeros
+    		while (completeIndices.length < this.shape.length) {
+    			completeIndices.push(0);
+    		}
+    
+    		// Find which dimensions need to be iterated over (those with null)
+    		const dimToIterate = [];
+    		for (let i = 0; i < this.shape.length; i++) {
+    			if (i >= indices.length || indices[i] === null) {
+    				dimToIterate.push(i);
+    			}
+    		}
+    
+    		// Generate all combinations of indices for the dimensions to iterate over
+    		const generateIndices = (currentDim, currentIndices) => {
+    			if (currentDim >= dimToIterate.length) {
+    				// Calculate flat index for this combination
+    				let flatIndex = 0;
+    				let stride = 1;
+    
+    				for (let i = this.shape.length - 1; i >= 0; i--) {
+    					flatIndex += currentIndices[i] * stride;
+    					stride *= this.shape[i];
+    				}
+    
+    				resultIndices.push(flatIndex);
+    				return;
+    			}
+    
+    			const dim = dimToIterate[currentDim];
+    			for (let i = 0; i < this.shape[dim]; i++) {
+    				currentIndices[dim] = i;
+    				generateIndices(currentDim + 1, currentIndices);
+    			}
+    		};
+    
+    		generateIndices(0, completeIndices);
+    		return resultIndices;
+    	}
+    
+    	/**
+    	 * Gets values at specified indices
+    	 *
+    	 * @param {...(number|null)} args - Indices for each dimension, null for full dimension
+    	 * @returns {any} - Value or subarray at the specified location
+    	 */
+    	get(...args) {
+    		// Handle case where args is array
+    		let indices = args;
+    		if (args.length === 1 && Array.isArray(args[0])) {
+    			indices = args[0];
+    		}
+    
+    		const flatIndices = this._getIndices(indices);
+    
+    		// If we got a single index, return the single value
+    		if (typeof flatIndices === "number") {
+    			return this.data[flatIndices];
+    		}
+    
+    		// Otherwise, create a new array with the values
+    		// We need to calculate the shape of the result
+    		const resultShape = [];
+    		for (let i = 0; i < this.shape.length; i++) {
+    			if (i >= indices.length || indices[i] === null) {
+    				resultShape.push(this.shape[i]);
+    			}
+    		}
+    
+    		// If result is empty, it means we want the entire array
+    		if (resultShape.length === 0) {
+    			return this;
+    		}
+    
+    		// Create new data array with the values at the flat indices
+    		const resultData = new this.data.constructor(flatIndices.length);
+    		for (let i = 0; i < flatIndices.length; i++) {
+    			resultData[i] = this.data[flatIndices[i]];
+    		}
+    
+    		return new this.constructor(resultData, resultShape, this.dtype);
+    	}
+    
+    	/**
+    	 * Sets values at specified indices
+    	 *
+    	 * @param {...*} args - Indices followed by value to set
+    	 */
+    	set(...args) {
+    		// Handle case where args is array
+    		let indices, value;
+    		if (args.length === 2 && Array.isArray(args[0])) {
+    			indices = args[0];
+    			value = args[1];
+    		} else {
+    			value = args[args.length - 1];
+    			indices = args.slice(0, args.length - 1);
+    		}
+    
+    		const flatIndices = this._getIndices(indices);
+    
+    		// If we got a single index, set the single value
+    		if (typeof flatIndices === "number") {
+    			this.data[flatIndices] = value;
+    			return;
+    		}
+    
+    		// Otherwise, set all indices to the value
+    		// If value is an array, distribute its values
+    		if (
+    			Array.isArray(value) ||
+    			ArrayBuffer.isView(value) ||
+    			value instanceof NDArray
+    		) {
+    			const valueArray = value instanceof NDArray ? value.data : value;
+    			if (valueArray.length !== flatIndices.length) {
+    				throw new Error(
+    					`Cannot broadcast ${valueArray.length} values to ${flatIndices.length} indices`,
+    				);
+    			}
+    
+    			for (let i = 0; i < flatIndices.length; i++) {
+    				this.data[flatIndices[i]] = valueArray[i];
+    			}
+    		} else {
+    			// Set all indices to the same value
+    			for (const idx of flatIndices) {
+    				this.data[idx] = value;
+    			}
+    		}
+    	}
+    
+    	/**
+    	 * Slice along an arbitrary dimension: extract [start, end) along the given axis.
+    	 * Returns a new contiguous NDArray.
+    	 *
+    	 * @param {number} dim - Axis to slice along (supports negative indexing)
+    	 * @param {number} start - Start index (inclusive)
+    	 * @param {number} end - End index (exclusive)
+    	 * @returns {NDArray} Sliced array
+    	 *
+    	 * @example
+    	 * const arr = new NDArray(data, [2, 3, 4], 'float32');
+    	 * const sliced = arr.sliceDim(1, 0, 2); // shape: [2, 2, 4]
+    	 */
+    	sliceDim(dim, start, end) {
+    		const shape = this.shape;
+    		const rank = shape.length;
+    
+    		// Handle negative dim
+    		if (dim < 0) dim = rank + dim;
+    
+    		if (dim < 0 || dim >= rank) {
+    			throw new Error(
+    				`dim ${dim} is out of bounds for array with ${rank} dimensions`,
+    			);
+    		}
+    		// Handle negative start/end
+    		if (start < 0) start = shape[dim] + start;
+    		if (end < 0) end = shape[dim] + end;
+    
+    		if (start < 0 || end > shape[dim] || start > end) {
+    			throw new Error(
+    				`Invalid slice [${start}, ${end}) for axis ${dim} with size ${shape[dim]}`,
+    			);
+    		}
+    
+    		const newShape = [...shape];
+    		newShape[dim] = end - start;
+    
+    		const outerSize = shape.slice(0, dim).reduce((a, b) => a * b, 1);
+    		const innerSize = shape.slice(dim + 1).reduce((a, b) => a * b, 1);
+    		const dimSize = shape[dim];
+    		const sliceSize = (end - start) * innerSize;
+    
+    		const out = new this.data.constructor(
+    			newShape.reduce((a, b) => a * b, 1),
+    		);
+    
+    		for (let outer = 0; outer < outerSize; outer++) {
+    			for (let d = start; d < end; d++) {
+    				const srcOff = (outer * dimSize + d) * innerSize;
+    				const dstOff = outer * sliceSize + (d - start) * innerSize;
+    				for (let inner = 0; inner < innerSize; inner++) {
+    					out[dstOff + inner] = this.data[srcOff + inner];
+    				}
+    			}
+    		}
+    
+    		return new this.constructor(out, newShape, this.dtype);
+    	}
+    
+    	/**
+    	 * Convert to a Tensor instance (requires tensor.js to be loaded).
+    	 * If dtype is already float32, shares the underlying data buffer.
+    	 *
+    	 * @param {string} [dtype='float32'] - Target dtype for the Tensor
+    	 * @returns {Tensor} Tensor instance
+    	 * @throws {ReferenceError} If tensor.js is not loaded
+    	 */
+    	toTensor(dtype = "float32") {
+    		if (typeof Tensor === "undefined") {
+    			throw new ReferenceError(
+    				"Tensor class not found — load tensor.js after array.js",
+    			);
+    		}
+    		if (!_DTYPE_BY_NAME[dtype]) {
+    			throw new Error(`Unsupported dtype: ${dtype}`);
+    		}
+    		let data;
+    		if (this.dtype === dtype) {
+    			data = this.data;
+    		} else {
+    			// If source has a converter (e.g. float16 → Uint16Array), decode first
+    			const srcInfo = _DTYPE_BY_NAME[this.dtype];
+    			const rawData =
+    				srcInfo && srcInfo.converter
+    					? srcInfo.converter(this.data)
+    					: this.data;
+    			data = new _DTYPE_BY_NAME[dtype].arrayConstructor(rawData);
+    		}
+    		return new Tensor(data, [...this.shape], dtype);
+    	}
+    
+    	/**
+    	 * Create an NDArray from a Tensor or plain tensor object {data, shape}.
+    	 *
+    	 * @param {Object} t - Tensor instance or plain object with data and shape properties
+    	 * @param {string} [dtype] - Override dtype (auto-detected from data if omitted)
+    	 * @returns {NDArray} NDArray instance
+    	 */
+    	static fromTensor(t, dtype) {
+    		if (!t || !t.data || !t.shape) {
+    			throw new Error("Expected object with data and shape properties");
+    		}
+    		const inferredDtype =
+    			dtype ||
+    			(t instanceof NDArray
+    				? t.dtype
+    				: _CONSTRUCTOR_TO_DTYPE.get(t.data.constructor) || "float32");
+    		return new NDArray(t.data, [...t.shape], inferredDtype);
+    	}
+    
+    	/**
+    	 * Returns a string representation of the array
+    	 *
+    	 * @returns {string} String representation of the array
+    	 */
+    	toString() {
+    		// Simple representation for 1D arrays
+    		if (this.shape.length === 1) {
+    			return `[${Array.from(this.data).join(", ")}]`;
+    		}
+    
+    		// For higher dimensions, we'll just show shape and type
+    		return `NDArray(${this.shape.join("X")}, ${this.dtype})`;
+    	}
+    
+    	static parse(arrayBufferContents) {
+    		const npy = new npyjs();
+    		const npyData = npy.parse(arrayBufferContents);
+    		if (!npyData) {
+    			throw new Error("Failed to parse NPY data");
+    		}
+    		// Convert data to NDArray
+    		return new NDArray(npyData.data, npyData.shape, npyData.dtype);
+    	}
+    
+    	static async load(filename, callback, fetchArgs) {
+    		if (filename.endsWith(".npz")) {
+    			throw new Error(
+    				"NDArray.load() does not support .npz files. Use NDArray.loadNPZ() instead.",
+    			);
+    		}
+    		const npy = new npyjs({ convertFloat16: true });
+    		const npyData = await npy.load(filename, null, fetchArgs);
+    		if (!npyData) {
+    			throw new Error("Failed to load NPY data");
+    		}
+    		return new NDArray(npyData.data, npyData.shape, npyData.dtype);
+    	}
+    
+    	/**
+    	 * Load an NPZ file and return a dict of NDArrays keyed by array name.
+    	 * Requires JSZip to be loaded globally.
+    	 *
+    	 * @param {string} filename - URL or path to the NPZ file
+    	 * @param {Object} [fetchArgs] - Additional fetch arguments
+    	 * @returns {Promise<Object<string, NDArray>>} - Dict of NDArrays
+    	 */
+    	static async loadNPZ(filename, fetchArgs) {
+    		const npy = new npyjs({ convertFloat16: true });
+    		const arrays = await npy.loadNPZ(filename, fetchArgs);
+    		const result = {};
+    		for (const [name, npyData] of Object.entries(arrays)) {
+    			result[name] = new NDArray(
+    				npyData.data,
+    				npyData.shape,
+    				npyData.dtype,
+    			);
+    		}
+    		return result;
+    	}
+    
+    	/**
+    	 * Load a slice of an NPY array using HTTP range requests.
+    	 * Only first-axis slicing is supported (contiguous bytes).
+    	 *
+    	 * @param {string} url - URL to the NPY file
+    	 * @param {Array<number>|number} slice - [start, end) range or single index for first axis
+    	 * @param {Object} [fetchArgs] - Additional fetch arguments
+    	 * @returns {Promise<NDArray>} - Sliced array
+    	 *
+    	 * @example
+    	 * // Load rows 100-199 of a 2D array
+    	 * const slice = await NDArray.loadSlice(url, [100, 200]);
+    	 * // Load single row
+    	 * const row = await NDArray.loadSlice(url, 50);
+    	 */
+    	static async loadSlice(url, slice, fetchArgs = {}) {
+    		// NPZ files are compressed archives - can't use range requests
+    		if (url.endsWith(".npz")) {
+    			throw new Error(
+    				"loadSlice does not support NPZ files (compressed archives)",
+    			);
+    		}
+    
+    		// Allow single int to get one row
+    		const [start, end] =
+    			typeof slice === "number" ? [slice, slice + 1] : slice;
+    
+    		// Fetch header to get array metadata
+    		const headerResult = await fetchNPYHeader(url, fetchArgs);
+    
+    		if (!headerResult.rangeSupported) {
+    			// Fall back to full download
+    			const fullBuffer = await headerResult.fullResponse.arrayBuffer();
+    			const fullArray = NDArray.parse(fullBuffer);
+    			return fullArray.slice(slice);
+    		}
+    
+    		const { info } = headerResult;
+    
+    		// Validate slice bounds
+    		if (start < 0 || end > info.shape[0] || start > end) {
+    			throw new Error(
+    				`Invalid slice [${start}, ${end}) for array with shape ${info.shape}`,
+    			);
+    		}
+    
+    		// Empty slice — return immediately without HTTP fetch
+    		if (start === end) {
+    			const slicedShape = [0, ...info.shape.slice(1)];
+    			const dtypeInfo = _DTYPE_BY_DESCRIPTOR[info.dtype];
+    			return new NDArray(
+    				new dtypeInfo.arrayConstructor(0),
+    				slicedShape,
+    				dtypeInfo.name,
+    			);
+    		}
+    
+    		// Calculate byte range for the slice
+    		const byteStart = info.dataOffset + start * info.firstAxisStride;
+    		const byteEnd = info.dataOffset + end * info.firstAxisStride - 1;
+    
+    		// Fetch the slice data
+    		const dataResponse = await fetch(url, {
+    			...fetchArgs,
+    			headers: {
+    				...fetchArgs.headers,
+    				Range: `bytes=${byteStart}-${byteEnd}`,
+    			},
+    		});
+    
+    		if (dataResponse.status !== 206) {
+    			// Range request failed, fall back to full download
+    			console.warn(
+    				"Range request for data failed, downloading full file",
+    			);
+    			const fullArray = await NDArray.load(url, null, fetchArgs);
+    			return fullArray.slice(slice);
+    		}
+    
+    		const dataBuffer = await dataResponse.arrayBuffer();
+    
+    		// Create typed array from the data
+    		const dtypeInfo = _DTYPE_BY_DESCRIPTOR[info.dtype];
+    		if (!dtypeInfo) {
+    			throw new Error(`Unsupported dtype: ${info.dtype}`);
+    		}
+    
+    		const nums = new dtypeInfo.arrayConstructor(dataBuffer);
+    		const data = dtypeInfo.converter ? dtypeInfo.converter(nums) : nums;
+    
+    		// Construct sliced shape
+    		const slicedShape = [end - start, ...info.shape.slice(1)];
+    
+    		return new NDArray(
+    			data,
+    			slicedShape,
+    			dtypeInfo.converter ? "float32" : dtypeInfo.name,
+    		);
+    	}
+    
+    	/**
+    	 * Infer the array format from a JSON object
+    	 * @param {Object} obj - JSON object potentially containing array data
+    	 * @returns {string|null} - Format name or null if not an array format
+    	 */
+    	static inferFormat(obj) {
+    		if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
+    			if (Array.isArray(obj)) return "list";
+    			return null;
+    		}
+    
+    		const fmt = obj[_FORMAT_KEY];
+    		if (!fmt || typeof fmt !== "string") return null;
+    
+    		// Format is like "numpy.ndarray:array_b64_meta" or "torch.Tensor:array_list_meta"
+    		if (fmt.includes(":")) {
+    			const suffix = fmt.split(":")[1];
+    			if (
+    				[
+    					"array_list_meta",
+    					"array_hex_meta",
+    					"array_b64_meta",
+    					"zero_dim",
+    				].includes(suffix)
+    			) {
+    				return suffix;
+    			}
+    		}
+    
+    		return null;
+    	}
+    
+    	/**
+    	 * Deserialize an NDArray from JSON in various formats
+    	 * @param {Object} obj - JSON object containing array data
+    	 * @param {string} [format] - Optional format override (auto-detected if not provided)
+    	 * @returns {NDArray} - Deserialized NDArray
+    	 */
+    	static fromJSON(obj, format = null) {
+    		// Auto-detect format if not provided
+    		if (!format) {
+    			format = NDArray.inferFormat(obj);
+    			if (!format) {
+    				throw new Error("Cannot infer array format from object");
+    			}
+    		}
+    
+    		// Handle plain list
+    		if (format === "list") {
+    			if (!Array.isArray(obj)) {
+    				throw new Error("Expected array for list format");
+    			}
+    			// Convert nested list to flat TypedArray
+    			const flatList = obj.flat(Infinity);
+    			const data = new Float64Array(flatList);
+    			// Infer shape by walking first elements at each nesting level
+    			const shape = [];
+    			let current = obj;
+    			while (Array.isArray(current)) {
+    				shape.push(current.length);
+    				current = current[0];
+    			}
+    			// Validate shape matches flat data (catches jagged arrays)
+    			const expectedSize = shape.reduce((a, b) => a * b, 1);
+    			if (flatList.length !== expectedSize) {
+    				throw new Error(
+    					`Jagged array: flat length ${flatList.length} does not match shape [${shape}] (expected ${expectedSize})`,
+    				);
+    			}
+    			return new NDArray(data, shape, "float64");
+    		}
+    
+    		// All other formats have metadata
+    		if (!obj.shape || !obj.dtype) {
+    			throw new Error(`Missing shape or dtype for format ${format}`);
+    		}
+    
+    		const shape = obj.shape;
+    		const dtypeName = obj.dtype;
+    		const dtypeInfo = _DTYPE_BY_NAME[dtypeName];
+    
+    		if (!dtypeInfo) {
+    			throw new Error(`Unsupported dtype: ${dtypeName}`);
+    		}
+    
+    		// Handle zero-dimensional arrays
+    		if (format === "zero_dim") {
+    			let dataValue = obj.data;
+    			// Convert to BigInt for 64-bit integer types
+    			if (dtypeName === "int64" || dtypeName === "uint64") {
+    				dataValue = BigInt(dataValue);
+    			}
+    			const data = new dtypeInfo.arrayConstructor([dataValue]);
+    			if (dtypeInfo.converter) {
+    				const converted = dtypeInfo.converter(data);
+    				return new NDArray(converted, shape, "float32");
+    			}
+    			return new NDArray(data, shape, dtypeName);
+    		}
+    
+    		// Handle array_list_meta
+    		if (format === "array_list_meta") {
+    			const flatList = obj.data.flat(Infinity);
+    			const expectedSize = shape.reduce((a, b) => a * b, 1);
+    			if (flatList.length !== expectedSize) {
+    				throw new Error(
+    					`Jagged array in ${format}: flat length ${flatList.length} does not match shape [${shape}] (expected ${expectedSize})`,
+    				);
+    			}
+    			// Convert to BigInt for 64-bit integer types
+    			const processedList =
+    				dtypeName === "int64" || dtypeName === "uint64"
+    					? flatList.map((v) => BigInt(v))
+    					: flatList;
+    			const data = new dtypeInfo.arrayConstructor(processedList);
+    			if (dtypeInfo.converter) {
+    				const converted = dtypeInfo.converter(data);
+    				return new NDArray(converted, shape, "float32");
+    			}
+    			return new NDArray(data, shape, dtypeName);
+    		}
+    
+    		// Handle array_hex_meta
+    		if (format === "array_hex_meta") {
+    			const hexString = obj.data;
+    			if (
+    				!hexString ||
+    				typeof hexString !== "string" ||
+    				hexString.length % 2 !== 0
+    			) {
+    				throw new Error(
+    					`Invalid hex string: must be non-empty with even length`,
+    				);
+    			}
+    			const bytes = new Uint8Array(
+    				hexString.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)),
+    			);
+    			const expectedBytes =
+    				shape.reduce((a, b) => a * b, 1) * (dtypeInfo.size / 8);
+    			if (bytes.length !== expectedBytes) {
+    				throw new Error(
+    					`Hex data size ${bytes.length} does not match shape [${shape}] with dtype ${dtypeName} (expected ${expectedBytes} bytes)`,
+    				);
+    			}
+    			const data = new dtypeInfo.arrayConstructor(bytes.buffer);
+    			if (dtypeInfo.converter) {
+    				const converted = dtypeInfo.converter(data);
+    				return new NDArray(converted, shape, "float32");
+    			}
+    			return new NDArray(data, shape, dtypeName);
+    		}
+    
+    		// Handle array_b64_meta
+    		if (format === "array_b64_meta") {
+    			const b64String = obj.data;
+    			const binaryString = atob(b64String);
+    			const expectedBytes =
+    				shape.reduce((a, b) => a * b, 1) * (dtypeInfo.size / 8);
+    			if (binaryString.length !== expectedBytes) {
+    				throw new Error(
+    					`Base64 decoded to ${binaryString.length} bytes but shape [${shape}] with dtype ${dtypeName} expects ${expectedBytes} bytes`,
+    				);
+    			}
+    			const bytes = new Uint8Array(binaryString.length);
+    			for (let i = 0; i < binaryString.length; i++) {
+    				bytes[i] = binaryString.charCodeAt(i);
+    			}
+    			const data = new dtypeInfo.arrayConstructor(bytes.buffer);
+    			if (dtypeInfo.converter) {
+    				const converted = dtypeInfo.converter(data);
+    				return new NDArray(converted, shape, "float32");
+    			}
+    			return new NDArray(data, shape, dtypeName);
+    		}
+    
+    		throw new Error(`Unsupported array format: ${format}`);
+    	}
     }
     
     </script>
-    <!-- end 'util/array.js' -->
+    <!-- end '../../libs/array.js' -->
         <!-- begin 'AttentionPedia.js' -->
     <script>
     // TODO: fallback to getting from github?
@@ -2188,7 +3610,9 @@
         const loaded = await r.json();
         return loaded;
       } else {
-        throw new Error(`Failed to load AttentionPedia data from ${path}`);
+        throw new Error(
+          `Failed to load AttentionPedia data from ${CONFIG.attnpedia_url}`,
+        );
       }
     }
     
@@ -2240,61 +3664,48 @@
       }
     }
     
-    async function _load_dists_npy() {
-      return NDArray.load(CONFIG.headDistsnpy_url);
-    }
-    
     class HeadDistances {
       constructor() {
-        this._is_loaded = false;
-        this._load_promise = null;
+        this._meta_loaded = false;
+        this._meta_promise = null;
         this.head_dists_meta = null;
-        this.head_dists_arr = null;
-        // Don't start loading in constructor - let methods trigger it when needed
+        this._rowCache = new Map();
       }
     
-      async _ensureLoaded() {
-        // If already loaded, return immediately
-        if (this._is_loaded) {
+      async _ensureMetaLoaded() {
+        if (this._meta_loaded) {
           return;
         }
     
-        // If loading is in progress, wait for the existing promise
-        if (this._load_promise) {
-          return this._load_promise;
+        if (this._meta_promise) {
+          return this._meta_promise;
         }
     
-        // Start loading and store the promise to prevent duplicate loads
-        this._load_promise = (async () => {
+        this._meta_promise = (async () => {
           try {
-            const notif = NOTIF.pbar("Loading head distances data...");
-    
-            // Load metadata first
             this.head_dists_meta = await _load_dists_meta();
-            notif.progress(0.2);
-    
-            // Load the large distances array
-            this.head_dists_arr = await _load_dists_npy();
-            notif.progress(1.0);
-    
-            this._is_loaded = true;
-            notif.complete();
-            NOTIF.success("Head distances loaded successfully");
+            this._meta_loaded = true;
           } catch (error) {
-            NOTIF.error("Failed to load head distances", error);
+            NOTIF.error("Failed to load head distances metadata", error);
             throw error;
           }
         })();
     
-        return this._load_promise;
+        return this._meta_promise;
+      }
+    
+      /** Fetch a single row from the distances matrix via HTTP range request */
+      async _loadRow(head_idx) {
+        if (this._rowCache.has(head_idx)) {
+          return this._rowCache.get(head_idx);
+        }
+        const promise = NDArray.loadSlice(CONFIG.headDistsnpy_url, head_idx);
+        this._rowCache.set(head_idx, promise);
+        return promise;
       }
     
       isMetadataLoaded() {
         return this.head_dists_meta !== null;
-      }
-    
-      isFullyLoaded() {
-        return this._is_loaded;
       }
     
       get_head_idx(head_name) {
@@ -2313,10 +3724,10 @@
       }
     
       async getNearestHeads(head_name, n = 5) {
-        await this._ensureLoaded();
+        await this._ensureMetaLoaded();
     
         const head_idx = this.get_head_idx(head_name);
-        const distanceRow = this.head_dists_arr.get(head_idx);
+        const distanceRow = await this._loadRow(head_idx);
         const distanceArray = Array.from(distanceRow.data);
     
         // Sort distances and get indices of n nearest (excluding self)
@@ -2334,18 +3745,18 @@
       }
     
       async getHeadDistance(head_name1, head_name2) {
-        await this._ensureLoaded();
+        await this._ensureMetaLoaded();
         const head_idx1 = this.get_head_idx(head_name1);
         const head_idx2 = this.get_head_idx(head_name2);
     
-        const distanceRow = this.head_dists_arr.get(head_idx1);
+        const distanceRow = await this._loadRow(head_idx1);
         return distanceRow.data[head_idx2];
       }
     
       async getHeadDistances(head_name, head_names_list) {
-        await this._ensureLoaded();
+        await this._ensureMetaLoaded();
         const head_idx = this.get_head_idx(head_name);
-        const distanceRow = this.head_dists_arr.get(head_idx);
+        const distanceRow = await this._loadRow(head_idx);
         const distanceArray = Array.from(distanceRow.data);
     
         return head_names_list.map((target_head) => {
@@ -2428,6 +3839,35 @@
         await this._ensureLoaded();
         return this._hashToIndex ? Object.keys(this._hashToIndex) : [];
       }
+    
+      /**
+       * Load the set of prompt hashes that were actually rendered as PNGs.
+       * Returns null if rendered_prompts.jsonl doesn't exist (all prompts rendered).
+       * @returns {Promise<Set<string>|null>}
+       */
+      async loadRenderedHashes() {
+        try {
+          const url = CONFIG.rendered_prompts_url;
+          if (!url) return null;
+          const resp = await fetch(url);
+          if (!resp.ok) return null;
+          const text = await resp.text();
+          const hashes = new Set();
+          for (const line of text.trim().split("\n")) {
+            if (!line.trim()) continue;
+            try {
+              const prompt = JSON.parse(line);
+              if (prompt.hash) hashes.add(prompt.hash);
+            } catch (e) {
+              console.warn("Failed to parse rendered_prompts line:", line, e);
+            }
+          }
+          return hashes.size > 0 ? hashes : null;
+        } catch (e) {
+          console.warn("rendered_prompts.jsonl not available, using all prompts");
+          return null;
+        }
+      }
     }
     
     </script>
@@ -2502,7 +3942,7 @@
     
       async ensureHeadsLoaded() {
         if (this.allHeads.length === 0) {
-          await this.headDistances._ensureLoaded();
+          await this.headDistances._ensureMetaLoaded();
           this.allHeads = this.headDistances.head_dists_meta.cls_values;
         }
       }
@@ -2682,6 +4122,1057 @@
     
     </script>
     <!-- end 'autocomplete.js' -->
+        <!-- begin '../../shared/cluster_engine.js' -->
+    <script>
+    /**
+     * Shared clustering computation engine.
+     *
+     * Pure functions for computing cluster assignments from a scipy-format
+     * linkage matrix. Used by clustering, cluster_trends, and attnpedia views.
+     */
+    
+    /**
+     * Compute cluster assignments by cutting the dendrogram at a given height.
+     * Uses union-find with path compression.
+     *
+     * @param {number[][]} linkage - Scipy-format linkage matrix [[idx1, idx2, distance, count], ...]
+     * @param {string[]} clsValues - Head IDs in clustering order
+     * @param {number} cutHeight - Height at which to cut the dendrogram
+     * @returns {Object<string, number>} headId -> clusterId (0-indexed)
+     */
+    function computeClustersByHeight(linkage, clsValues, cutHeight) {
+      if (!linkage || !clsValues) return {};
+    
+      const n = clsValues.length;
+      const parent = Array.from({ length: 2 * n - 1 }, (_, i) => i);
+    
+      function find(x) {
+        if (parent[x] !== x) parent[x] = find(parent[x]);
+        return parent[x];
+      }
+    
+      function union(x, y, newParent) {
+        parent[find(x)] = newParent;
+        parent[find(y)] = newParent;
+      }
+    
+      for (let i = 0; i < linkage.length; i++) {
+        const [idx1, idx2, distance] = linkage[i];
+        if (distance <= cutHeight) {
+          union(Math.floor(idx1), Math.floor(idx2), n + i);
+        }
+      }
+    
+      const rootToCluster = {};
+      let nextCluster = 0;
+      const assignments = {};
+    
+      for (let i = 0; i < n; i++) {
+        const root = find(i);
+        if (!(root in rootToCluster)) {
+          rootToCluster[root] = nextCluster++;
+        }
+        assignments[clsValues[i]] = rootToCluster[root];
+      }
+    
+      return assignments;
+    }
+    
+    /**
+     * Apply minimum-size filtering to cluster assignments.
+     * Clusters smaller than minSize are reassigned to -1 (misc).
+     *
+     * @param {Object<string, number>} assignments - Raw headId -> clusterId
+     * @param {number} minSize - Minimum cluster size (0 = no filtering)
+     * @returns {{ assignments: Object<string, number>, smallClusters: Set<number>, nClusters: number }}
+     */
+    function applyMinSizeFilter(assignments, minSize) {
+      if (minSize <= 0) {
+        return {
+          assignments: assignments,
+          smallClusters: new Set(),
+          nClusters: new Set(Object.values(assignments)).size,
+        };
+      }
+    
+      // Count cluster sizes
+      const clusterCounts = {};
+      for (const cid of Object.values(assignments)) {
+        clusterCounts[cid] = (clusterCounts[cid] || 0) + 1;
+      }
+    
+      // Find small clusters
+      const smallClusters = new Set();
+      for (const [cid, count] of Object.entries(clusterCounts)) {
+        if (count < minSize) {
+          smallClusters.add(parseInt(cid));
+        }
+      }
+    
+      // Reassign small cluster heads to misc (-1)
+      if (smallClusters.size > 0) {
+        const merged = {};
+        for (const [headId, cid] of Object.entries(assignments)) {
+          merged[headId] = smallClusters.has(cid) ? -1 : cid;
+        }
+        return {
+          assignments: merged,
+          smallClusters: smallClusters,
+          nClusters: new Set(Object.values(merged)).size,
+        };
+      }
+    
+      return {
+        assignments: assignments,
+        smallClusters: smallClusters,
+        nClusters: new Set(Object.values(assignments)).size,
+      };
+    }
+    
+    /**
+     * Find the cut height that produces a target number of clusters.
+     *
+     * @param {number[][]} linkage - Scipy-format linkage matrix
+     * @param {number} nHeads - Number of leaf nodes (heads)
+     * @param {number} nClusters - Desired number of clusters
+     * @returns {number} Cut height
+     */
+    function cutHeightForNClusters(linkage, nHeads, nClusters) {
+      if (nClusters >= nHeads) {
+        return Math.max(...linkage.map((row) => row[2]));
+      }
+      const heights = linkage.map((row) => row[2]).sort((a, b) => b - a);
+      return heights[nHeads - nClusters - 1] + 1e-10;
+    }
+    
+    /**
+     * Compute cluster assignments for a target number of clusters.
+     *
+     * @param {number[][]} linkage - Scipy-format linkage matrix
+     * @param {string[]} clsValues - Head IDs in clustering order
+     * @param {number} nClusters - Desired number of clusters
+     * @returns {{ assignments: Object<string, number>, cutHeight: number }}
+     */
+    function computeClustersByNClusters(linkage, clsValues, nClusters) {
+      const n = clsValues.length;
+    
+      if (nClusters >= n) {
+        const assignments = {};
+        clsValues.forEach((cls, i) => {
+          assignments[cls] = i;
+        });
+        return {
+          assignments,
+          cutHeight: Math.max(...linkage.map((row) => row[2])),
+        };
+      }
+    
+      const cutHeight = cutHeightForNClusters(linkage, n, nClusters);
+      return {
+        assignments: computeClustersByHeight(linkage, clsValues, cutHeight),
+        cutHeight,
+      };
+    }
+    
+    /**
+     * Look up precomputed flat partition assignments by parameter key.
+     * Used for HDBSCAN and Leiden methods where assignments are precomputed
+     * at discrete parameter values (not computed client-side like hierarchical).
+     *
+     * @param {Object<string, Object<string, number>>} partitions - paramKey -> { headId: clusterId }
+     * @param {string} paramKey - The parameter key to look up
+     * @returns {Object<string, number>} headId -> clusterId (empty object if key not found)
+     */
+    function getFlatPartitionAssignments(partitions, paramKey) {
+      return partitions[paramKey] || {};
+    }
+    
+    </script>
+    <!-- end '../../shared/cluster_engine.js' -->
+        <!-- begin '../../shared/cluster_utils.js' -->
+    <script>
+    /**
+     * Shared clustering visualization utilities.
+     *
+     * Used by cluster_trends and potentially other frontends that need
+     * cluster coloring and toggle buttons.
+     */
+    
+    // ── Cluster colors (golden angle) ──────────────────────────────
+    
+    const GOLDEN_ANGLE = 137.508;
+    
+    /**
+     * Generate a distinct opaque color for a cluster index.
+     * @param {number} idx
+     * @returns {string} CSS hsl color
+     */
+    function clusterColor(idx) {
+      const hue = (idx * GOLDEN_ANGLE) % 360;
+      const sat = 65 + (idx % 3) * 10;
+      const lit = 45 + (idx % 2) * 10;
+      return `hsl(${hue}, ${sat}%, ${lit}%)`;
+    }
+    
+    /**
+     * Generate a distinct color with alpha for a cluster index.
+     * @param {number} idx
+     * @param {number} alpha - opacity 0..1
+     * @returns {string} CSS hsla color
+     */
+    function clusterColorAlpha(idx, alpha) {
+      const hue = (idx * GOLDEN_ANGLE) % 360;
+      const sat = 65 + (idx % 3) * 10;
+      const lit = 45 + (idx % 2) * 10;
+      return `hsla(${hue}, ${sat}%, ${lit}%, ${alpha})`;
+    }
+    
+    // ── Toggle buttons ─────────────────────────────────────────────
+    
+    /**
+     * Build toggle buttons inside a container element.
+     * Each button toggles a boolean in the shared enabledState object.
+     *
+     * @param {string} containerId - DOM element ID for the container
+     * @param {string[]} items - sorted list of item labels
+     * @param {Object<string, boolean>} enabledState - shared state (mutated in place)
+     * @param {string} cssClass - CSS class for each button (e.g. "family-toggle")
+     * @param {() => void} onChange - callback when any toggle changes
+     */
+    function buildToggleButtons(
+      containerId,
+      items,
+      enabledState,
+      cssClass,
+      onChange,
+    ) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+      for (const item of items) {
+        const btn = document.createElement("span");
+        btn.className = cssClass;
+        btn.textContent = item;
+        if (!enabledState[item]) btn.classList.add("disabled");
+        btn.addEventListener("click", () => {
+          enabledState[item] = !enabledState[item];
+          btn.classList.toggle("disabled", !enabledState[item]);
+          onChange();
+        });
+        container.appendChild(btn);
+      }
+    }
+    
+    // ── Cluster labels ──────────────────────────────────────────────
+    
+    const CLUSTER_LABELS_STORAGE_KEY = "clustering_labels";
+    
+    /**
+     * Load cluster labels from localStorage and optionally from a server URL.
+     * localStorage labels override server labels on merge.
+     *
+     * @param {string|null} [serverUrl] - URL to fetch server-side labels JSON
+     * @returns {Promise<Object>} Merged labels: { cutHeightKey: { clusterIdx: { name, desc, heads } } }
+     */
+    async function loadClusterLabels(serverUrl) {
+      // Load from localStorage
+      let localLabels = {};
+      try {
+        const raw = localStorage.getItem(CLUSTER_LABELS_STORAGE_KEY);
+        if (raw) localLabels = JSON.parse(raw);
+      } catch (e) {
+        console.warn("Failed to load cluster labels from localStorage:", e);
+      }
+    
+      // Load from server (optional)
+      let serverLabels = {};
+      if (serverUrl) {
+        try {
+          const resp = await fetch(serverUrl);
+          if (resp.ok) {
+            serverLabels = await resp.json();
+          } else {
+            console.warn(
+              `Cluster labels not found at ${serverUrl} (${resp.status})`,
+            );
+          }
+        } catch (e) {
+          console.warn("Failed to fetch cluster labels:", e);
+        }
+      }
+    
+      // Merge: server as base, localStorage overrides
+      const merged = {};
+      const allKeys = new Set([
+        ...Object.keys(serverLabels),
+        ...Object.keys(localLabels),
+      ]);
+      for (const heightKey of allKeys) {
+        merged[heightKey] = {
+          ...(serverLabels[heightKey] || {}),
+          ...(localLabels[heightKey] || {}),
+        };
+      }
+      return merged;
+    }
+    
+    /**
+     * Resolve stored labels against current cluster assignments.
+     * Matches each label's heads list to the current cluster with the
+     * highest overlap, returning a map of clusterId -> {name, desc}.
+     *
+     * @param {Object} allLabels - Full labels object keyed by cut height
+     * @param {number} cutHeight - Current cut height
+     * @param {Object<string, number>} assignments - headId -> clusterId
+     * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+     */
+    function resolveClusterLabels(allLabels, cutHeight, assignments) {
+      const heightKey = cutHeight.toFixed(3);
+      return resolveClusterLabelsByKey(allLabels, heightKey, assignments);
+    }
+    
+    /**
+     * Resolve stored labels for a flat clustering method.
+     * Label key format: "{method}:{param_name}={value}"
+     *
+     * @param {Object} allLabels - Full labels object keyed by label key
+     * @param {string} method - Clustering method name (e.g. "hdbscan", "leiden")
+     * @param {string} paramName - Parameter name (e.g. "min_cluster_size", "resolution")
+     * @param {string} paramKey - Parameter value as string
+     * @param {Object<string, number>} assignments - headId -> clusterId
+     * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+     */
+    function resolveClusterLabelsFlat(
+      allLabels,
+      method,
+      paramName,
+      paramKey,
+      assignments,
+    ) {
+      const labelKey = `${method}:${paramName}=${paramKey}`;
+      return resolveClusterLabelsByKey(allLabels, labelKey, assignments);
+    }
+    
+    /**
+     * Resolve stored labels against current cluster assignments using a specific key.
+     * Shared implementation for both hierarchical and flat methods.
+     *
+     * @param {Object} allLabels - Full labels object keyed by label key
+     * @param {string} key - The label key to look up
+     * @param {Object<string, number>} assignments - headId -> clusterId
+     * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+     */
+    function resolveClusterLabelsByKey(allLabels, key, assignments) {
+      const labelsForKey = allLabels[key];
+      if (!labelsForKey) return {};
+    
+      const resolvedCounts = {};
+      const resolved = {};
+    
+      for (const [_origIdx, entry] of Object.entries(labelsForKey)) {
+        if (!entry || !entry.name) continue;
+        const heads = entry.heads || [];
+    
+        // Count overlap with each current cluster
+        const clusterOverlap = {};
+        for (const headId of heads) {
+          const cid = assignments[headId];
+          if (cid !== undefined) {
+            clusterOverlap[cid] = (clusterOverlap[cid] || 0) + 1;
+          }
+        }
+    
+        // Find cluster with most overlap
+        let bestCluster = null;
+        let bestCount = 0;
+        for (const [cid, count] of Object.entries(clusterOverlap)) {
+          if (count > bestCount) {
+            bestCount = count;
+            bestCluster = parseInt(cid);
+          }
+        }
+    
+        if (bestCluster !== null && bestCount > 0) {
+          if (!resolved[bestCluster] || bestCount > resolvedCounts[bestCluster]) {
+            resolved[bestCluster] = { name: entry.name, desc: entry.desc || null };
+            resolvedCounts[bestCluster] = bestCount;
+          }
+        }
+      }
+    
+      return resolved;
+    }
+    
+    /**
+     * Get a short display name for a cluster, using name if available.
+     *
+     * @param {number} clusterId
+     * @param {Object<number, {name: string, desc: string|null}>} resolvedLabels
+     * @returns {string} e.g. "Cluster 3: Induction" or "Cluster 3"
+     */
+    function clusterDisplayName(clusterId, resolvedLabels) {
+      if (clusterId === -1) return "misc";
+      const label = resolvedLabels[clusterId];
+      if (label && label.name) return `Cluster ${clusterId}: ${label.name}`;
+      return `Cluster ${clusterId}`;
+    }
+    
+    </script>
+    <!-- end '../../shared/cluster_utils.js' -->
+        <!-- begin '../../shared/clustering_config.js' -->
+    <script>
+    /**
+     * Shared clustering configuration state.
+     *
+     * Persists clustering UI state (cut height, highlighted cluster, etc.)
+     * to localStorage so it can be shared across cluster_trends and clustering
+     * pages without URL parameters.
+     */
+    
+    const CLUSTERING_CONFIG_KEY = "clustering_config";
+    
+    const ClusteringConfig = {
+      /**
+       * Load full state from localStorage.
+       * @returns {Object} parsed state (empty object if nothing stored)
+       */
+      load() {
+        try {
+          return JSON.parse(localStorage.getItem(CLUSTERING_CONFIG_KEY)) || {};
+        } catch {
+          return {};
+        }
+      },
+    
+      /**
+       * Merge partial state into localStorage.
+       * @param {Object} partial - key/value pairs to merge
+       */
+      save(partial) {
+        const current = this.load();
+        localStorage.setItem(
+          CLUSTERING_CONFIG_KEY,
+          JSON.stringify({ ...current, ...partial }),
+        );
+      },
+    
+      /** @returns {number|null} */
+      getCutHeight() {
+        return this.load().cutHeight ?? null;
+      },
+    
+      /** @param {number} h */
+      setCutHeight(h) {
+        this.save({ cutHeight: h });
+      },
+    
+      /** @returns {number|null} */
+      getHighlightCluster() {
+        return this.load().highlightCluster ?? null;
+      },
+    
+      /** @param {number} id */
+      setHighlightCluster(id) {
+        this.save({ highlightCluster: id });
+      },
+    
+      clearHighlightCluster() {
+        const s = this.load();
+        delete s.highlightCluster;
+        localStorage.setItem(CLUSTERING_CONFIG_KEY, JSON.stringify(s));
+      },
+    
+      /** @returns {string|null} clustering method name ("hierarchical", "hdbscan", "leiden") */
+      getMethod() {
+        return this.load().method ?? null;
+      },
+    
+      /** @param {string} method */
+      setMethod(method) {
+        this.save({ method });
+      },
+    
+      /** @returns {string|null} current parameter key for flat methods */
+      getParamKey() {
+        return this.load().paramKey ?? null;
+      },
+    
+      /** @param {string} key */
+      setParamKey(key) {
+        this.save({ paramKey: key });
+      },
+    };
+    
+    </script>
+    <!-- end '../../shared/clustering_config.js' -->
+        <!-- begin 'clustering.js' -->
+    <script>
+    /**
+     * ClusteringLoader - Loads clustering data for AttentionPedia
+     *
+     * Supports hierarchical (client-side cut-height), HDBSCAN, and Leiden
+     * (precomputed flat partitions at discrete parameter values).
+     */
+    class ClusteringLoader {
+      constructor() {
+        this._is_loaded = false;
+        this._load_promise = null;
+        this._assignments = {};
+        this._rawAssignments = {}; // before min-size filtering
+        this._nClusters = 10;
+        this._cutHeight = null;
+        this._minClusterSize = 0;
+    
+        // Cluster labels (loaded from localStorage + server)
+        this._labels = {};
+        this._resolvedLabels = {};
+    
+        // Current method: "hierarchical" | "hdbscan" | "leiden"
+        this._method = "hierarchical";
+        this._availableMethods = [];
+    
+        // Hierarchical-specific
+        this._meta = null;
+        this._linkage = null;
+        this._maxCutHeight = null;
+    
+        // Flat method data: { method: { meta, partitions, labels } }
+        this._flatData = {};
+        this._currentParamKey = null;
+      }
+    
+      /**
+       * Ensure clustering data is loaded
+       */
+      async _ensureLoaded() {
+        if (this._is_loaded) return;
+        if (this._load_promise) {
+          await this._load_promise;
+          return;
+        }
+    
+        this._load_promise = this._load();
+        await this._load_promise;
+      }
+    
+      async _load() {
+        try {
+          // Detect available methods from manifest
+          const methodsUrl =
+            CONFIG.clustering_methods_url ||
+            "../../features/clustering_methods.json";
+          let methods = ["hierarchical"];
+          try {
+            const mResp = await fetch(methodsUrl);
+            if (mResp.ok) {
+              const manifest = await mResp.json();
+              methods = manifest.methods || ["hierarchical"];
+            }
+          } catch (e) {
+            // Fall back to hierarchical only
+          }
+          this._availableMethods = methods;
+    
+          // --- Load hierarchical ---
+          if (methods.includes("hierarchical")) {
+            const metaUrl =
+              CONFIG.clustering_meta_url ||
+              "../../features/clustering/clustering_meta.json";
+            const linkageUrl =
+              CONFIG.clustering_linkage_url ||
+              "../../features/clustering/linkage.json";
+    
+            const [metaResp, linkageResp] = await Promise.all([
+              fetch(metaUrl),
+              fetch(linkageUrl),
+            ]);
+    
+            if (metaResp.ok && linkageResp.ok) {
+              this._meta = await metaResp.json();
+              this._linkage = await linkageResp.json();
+    
+              if (this._linkage && this._linkage.length > 0) {
+                this._maxCutHeight = Math.max(
+                  ...this._linkage.map((row) => row[2]),
+                );
+              }
+    
+              // Load hierarchical labels
+              const labelsUrl =
+                CONFIG.cluster_labels_url ||
+                "../../features/clustering/cluster_labels.json";
+              this._labels = await loadClusterLabels(labelsUrl);
+            }
+          }
+    
+          // --- Load flat methods (HDBSCAN, Leiden) ---
+          for (const method of ["hdbscan", "leiden"]) {
+            if (!methods.includes(method)) continue;
+            try {
+              const flatMetaUrl =
+                CONFIG[`clustering_${method}_meta_url`] ||
+                `../../features/clustering_${method}/clustering_meta.json`;
+              const flatPartitionsUrl =
+                CONFIG[`clustering_${method}_partitions_url`] ||
+                `../../features/clustering_${method}/partitions.json`;
+              const flatLabelsUrl =
+                CONFIG[`clustering_${method}_labels_url`] ||
+                `../../features/clustering_${method}/cluster_labels.json`;
+    
+              const [fMetaResp, fPartResp] = await Promise.all([
+                fetch(flatMetaUrl),
+                fetch(flatPartitionsUrl),
+              ]);
+    
+              if (fMetaResp.ok && fPartResp.ok) {
+                const fMeta = await fMetaResp.json();
+                const fPartitions = await fPartResp.json();
+                const fLabels = await loadClusterLabels(flatLabelsUrl);
+                this._flatData[method] = {
+                  meta: fMeta,
+                  partitions: fPartitions,
+                  labels: fLabels,
+                };
+              }
+            } catch (e) {
+              console.warn(`Failed to load ${method} clustering data:`, e);
+            }
+          }
+    
+          this._is_loaded = true;
+    
+          // Compute initial assignments: prefer saved method, then leiden, then hierarchical
+          const savedMethod = ClusteringConfig.getMethod();
+          if (
+            savedMethod &&
+            this._availableMethods.includes(savedMethod) &&
+            (savedMethod === "hierarchical" ||
+              this._flatData[savedMethod] !== undefined)
+          ) {
+            this._setMethodInternal(savedMethod);
+          } else if (this._flatData["leiden"]) {
+            this._setMethodInternal("leiden");
+          } else if (this._linkage && this._meta) {
+            this._method = "hierarchical";
+            this._computeAssignmentsByNClusters(this._nClusters);
+          } else if (Object.keys(this._flatData).length > 0) {
+            const firstFlat = Object.keys(this._flatData)[0];
+            this._setMethodInternal(firstFlat);
+          }
+        } catch (e) {
+          console.warn("Failed to load clustering data:", e);
+          this._is_loaded = true;
+        }
+      }
+    
+      /**
+       * Check if clustering data is available
+       */
+      async isAvailable() {
+        await this._ensureLoaded();
+        return (
+          (this._meta !== null && this._linkage !== null) ||
+          Object.keys(this._flatData).length > 0
+        );
+      }
+    
+      /**
+       * Get list of available clustering methods.
+       * @returns {string[]}
+       */
+      getAvailableMethods() {
+        return this._availableMethods.filter(
+          (m) =>
+            (m === "hierarchical" && this._linkage !== null) ||
+            this._flatData[m] !== undefined,
+        );
+      }
+    
+      /**
+       * Get current clustering method.
+       * @returns {string}
+       */
+      getMethod() {
+        return this._method;
+      }
+    
+      /**
+       * Check if current method is hierarchical (continuous parameter).
+       * @returns {boolean}
+       */
+      isHierarchical() {
+        return this._method === "hierarchical";
+      }
+    
+      /**
+       * Internal: switch to a method without persisting to config.
+       * @param {string} method
+       */
+      _setMethodInternal(method) {
+        this._method = method;
+    
+        if (method === "hierarchical") {
+          if (this._cutHeight !== null) {
+            this._computeAssignmentsByCutHeight(this._cutHeight);
+          } else {
+            this._computeAssignmentsByNClusters(this._nClusters);
+          }
+        } else {
+          const flat = this._flatData[method];
+          if (!flat || !flat.meta.param_keys.length) return;
+    
+          // Use saved param key, then method-specific default, then first available
+          const savedKey = ClusteringConfig.getParamKey();
+          const defaultKey = method === "leiden" ? "1.000" : null;
+          const paramKey =
+            savedKey && flat.meta.param_keys.includes(savedKey)
+              ? savedKey
+              : defaultKey && flat.meta.param_keys.includes(defaultKey)
+                ? defaultKey
+                : flat.meta.param_keys[0];
+          this._setFlatParam(method, paramKey);
+        }
+      }
+    
+      /**
+       * Set clustering method and recompute assignments.
+       * @param {string} method - "hierarchical", "hdbscan", or "leiden"
+       */
+      setMethod(method) {
+        ClusteringConfig.setMethod(method);
+        this._setMethodInternal(method);
+      }
+    
+      /**
+       * Set parameter for a flat clustering method.
+       * @param {string} method
+       * @param {string} paramKey
+       */
+      _setFlatParam(method, paramKey) {
+        const flat = this._flatData[method];
+        if (!flat) return;
+    
+        this._currentParamKey = paramKey;
+        ClusteringConfig.setParamKey(paramKey);
+        this._rawAssignments = getFlatPartitionAssignments(
+          flat.partitions,
+          paramKey,
+        );
+        this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+    
+        // Count clusters
+        const clusterIds = new Set(
+          Object.values(this._assignments).filter((c) => c !== -1),
+        );
+        this._nClusters = clusterIds.size;
+    
+        // Resolve labels
+        this._resolvedLabels = resolveClusterLabelsFlat(
+          flat.labels,
+          flat.meta.method,
+          flat.meta.param_name,
+          paramKey,
+          this._assignments,
+        );
+      }
+    
+      /**
+       * Set flat method parameter and recompute.
+       * @param {string} paramKey
+       */
+      async setParamKey(paramKey) {
+        await this._ensureLoaded();
+        if (this._method === "hierarchical") return;
+        this._setFlatParam(this._method, paramKey);
+      }
+    
+      /**
+       * Get current parameter key for flat methods.
+       * @returns {string|null}
+       */
+      getParamKey() {
+        return this._currentParamKey;
+      }
+    
+      /**
+       * Get parameter metadata for the current flat method.
+       * @returns {{paramName: string, paramKeys: string[], meta: Object}|null}
+       */
+      getFlatParamInfo() {
+        if (this._method === "hierarchical") return null;
+        const flat = this._flatData[this._method];
+        if (!flat) return null;
+        return {
+          paramName: flat.meta.param_name,
+          paramKeys: flat.meta.param_keys,
+          meta: flat.meta.partition_meta,
+        };
+      }
+    
+      /**
+       * Apply min-size filtering using shared engine.
+       * Returns filtered assignments (small clusters get id = -1).
+       */
+      _applyMinSizeFilter(raw) {
+        if (this._minClusterSize <= 0) return { ...raw };
+        return applyMinSizeFilter(raw, this._minClusterSize).assignments;
+      }
+    
+      /**
+       * Compute assignments by target number of clusters (hierarchical only).
+       * Uses shared computeClustersByNClusters() from cluster_engine.js.
+       */
+      _computeAssignmentsByNClusters(nClusters) {
+        if (!this._linkage || !this._meta) return;
+    
+        const result = computeClustersByNClusters(
+          this._linkage,
+          this._meta.cls_values,
+          nClusters,
+        );
+        this._cutHeight = result.cutHeight;
+        this._rawAssignments = result.assignments;
+        this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+        this._nClusters = nClusters;
+        this._resolveLabels();
+      }
+    
+      /**
+       * Compute assignments by cut height (hierarchical only).
+       * Uses shared computeClustersByHeight() from cluster_engine.js.
+       */
+      _computeAssignmentsByCutHeight(cutHeight) {
+        if (!this._linkage || !this._meta) return;
+    
+        this._cutHeight = cutHeight;
+        this._rawAssignments = computeClustersByHeight(
+          this._linkage,
+          this._meta.cls_values,
+          cutHeight,
+        );
+        this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+    
+        // Count actual clusters (excluding -1)
+        const clusterIds = new Set(
+          Object.values(this._assignments).filter((c) => c !== -1),
+        );
+        this._nClusters = clusterIds.size;
+        this._resolveLabels();
+      }
+    
+      /**
+       * Resolve cluster labels against current assignments
+       */
+      _resolveLabels() {
+        if (this._method === "hierarchical") {
+          if (this._cutHeight !== null && Object.keys(this._labels).length > 0) {
+            this._resolvedLabels = resolveClusterLabels(
+              this._labels,
+              this._cutHeight,
+              this._assignments,
+            );
+          } else {
+            this._resolvedLabels = {};
+          }
+        }
+        // Flat methods resolve labels in _setFlatParam
+      }
+    
+      /**
+       * Set number of clusters and recompute assignments (hierarchical only)
+       */
+      async setNClusters(n) {
+        await this._ensureLoaded();
+        if (this._method !== "hierarchical") return;
+        this._computeAssignmentsByNClusters(n);
+      }
+    
+      /**
+       * Set cut height and recompute assignments (hierarchical only)
+       */
+      async setCutHeight(h) {
+        await this._ensureLoaded();
+        if (this._method !== "hierarchical") return;
+        this._computeAssignmentsByCutHeight(h);
+      }
+    
+      /**
+       * Set minimum cluster size and reapply filtering
+       */
+      async setMinClusterSize(n) {
+        await this._ensureLoaded();
+        this._minClusterSize = Math.max(0, n);
+        this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+        // Recount actual clusters
+        const clusterIds = new Set(
+          Object.values(this._assignments).filter((c) => c !== -1),
+        );
+        this._nClusters = clusterIds.size;
+        if (this._method === "hierarchical") {
+          this._resolveLabels();
+        } else {
+          // Re-resolve flat labels with filtered assignments
+          const flat = this._flatData[this._method];
+          if (flat && this._currentParamKey) {
+            this._resolvedLabels = resolveClusterLabelsFlat(
+              flat.labels,
+              flat.meta.method,
+              flat.meta.param_name,
+              this._currentParamKey,
+              this._assignments,
+            );
+          }
+        }
+      }
+    
+      /**
+       * Get current cut height (hierarchical only)
+       */
+      getCutHeight() {
+        return this._cutHeight;
+      }
+    
+      /**
+       * Get max possible cut height (hierarchical only)
+       */
+      getMaxCutHeight() {
+        return this._maxCutHeight;
+      }
+    
+      /**
+       * Get current min cluster size
+       */
+      getMinClusterSize() {
+        return this._minClusterSize;
+      }
+    
+      /**
+       * Get cluster color for a head.
+       */
+      async getColor(headId) {
+        await this._ensureLoaded();
+        const clusterId = this._assignments[headId];
+        if (clusterId === undefined || clusterId === -1) return "transparent";
+        return clusterColor(clusterId);
+      }
+    
+      /**
+       * Get color for a cluster ID (synchronous, for use after loading).
+       */
+      getClusterColor(clusterId) {
+        if (clusterId === undefined || clusterId === -1) return "#888888";
+        return clusterColor(clusterId);
+      }
+    
+      /**
+       * Get cluster color as {r, g, b} in 0-1 range (for use with js-embedding-vis color override)
+       */
+      getClusterColorRGB(clusterId) {
+        if (clusterId === undefined || clusterId === -1) return null;
+        const hslStr = clusterColor(clusterId);
+        // Parse "hsl(H, S%, L%)"
+        const m = hslStr.match(/hsl\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/);
+        if (!m) return null;
+        const h = parseFloat(m[1]) / 360,
+          s = parseFloat(m[2]) / 100,
+          l = parseFloat(m[3]) / 100;
+        // HSL to RGB conversion
+        const a = s * Math.min(l, 1 - l);
+        const f = (n) => {
+          const k = (n + h * 12) % 12;
+          return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+        };
+        return { r: f(0), g: f(8), b: f(4) };
+      }
+    
+      /**
+       * Get cluster ID for a head
+       */
+      async getClusterId(headId) {
+        await this._ensureLoaded();
+        return this._assignments[headId];
+      }
+    
+      /**
+       * Get all heads in a cluster
+       */
+      async getHeadsInCluster(clusterId) {
+        await this._ensureLoaded();
+        return Object.entries(this._assignments)
+          .filter(([_, cid]) => cid === clusterId)
+          .map(([headId, _]) => headId);
+      }
+    
+      /**
+       * Get current number of clusters (excluding misc/-1)
+       */
+      getNClusters() {
+        return this._nClusters;
+      }
+    
+      /**
+       * Get actual cluster count (excluding -1 misc cluster)
+       */
+      getNClustersActual() {
+        const clusterIds = new Set(
+          Object.values(this._assignments).filter((c) => c !== -1),
+        );
+        return clusterIds.size;
+      }
+    
+      /**
+       * Get cluster sizes (excluding -1 misc cluster)
+       */
+      async getClusterSizes() {
+        await this._ensureLoaded();
+        const sizes = {};
+        for (const clusterId of Object.values(this._assignments)) {
+          if (clusterId === -1) continue;
+          sizes[clusterId] = (sizes[clusterId] || 0) + 1;
+        }
+        return sizes;
+      }
+    
+      /**
+       * Get number of unclustered heads (cluster -1, from min-size filtering)
+       */
+      getUnclusteredCount() {
+        let count = 0;
+        for (const cid of Object.values(this._assignments)) {
+          if (cid === -1) count++;
+        }
+        return count;
+      }
+    
+      /**
+       * Get cluster label for a cluster ID (synchronous, for use after loading)
+       * @param {number} clusterId
+       * @returns {{name: string, desc: string|null}|null}
+       */
+      getClusterLabel(clusterId) {
+        return this._resolvedLabels[clusterId] || null;
+      }
+    
+      /**
+       * Get top N clusters sorted by size descending
+       * @param {number} n - how many to return
+       * @returns {Array<{id: number, size: number, color: string, label: {name: string, desc: string|null}|null}>}
+       */
+      async getTopClusters(n) {
+        const sizes = await this.getClusterSizes();
+        const sorted = Object.entries(sizes)
+          .map(([id, size]) => ({
+            id: parseInt(id),
+            size,
+            color: this.getClusterColor(parseInt(id)),
+            label: this.getClusterLabel(parseInt(id)),
+          }))
+          .sort((a, b) => b.size - a.size);
+        return sorted.slice(0, n);
+      }
+    }
+    
+    </script>
+    <!-- end 'clustering.js' -->
         <!-- begin 'app.js' -->
     <script>
     document.addEventListener("alpine:init", () => {
@@ -2692,6 +5183,7 @@
         prompts: [],
         allPrompts: [],
         allPromptsCount: 0,
+        renderedPromptsCount: null, // null = all rendered, number = subset
         heads_display: [],
         heads_display_with_distances: [],
         current_head: null,
@@ -2701,6 +5193,7 @@
         table: {
           n_nearby: 2,
           n_share_class: 2,
+          n_same_cluster: 2,
           n_distant: 0,
           n_random: 0,
         },
@@ -2727,14 +5220,54 @@
           classifications: { failed: 0, total: 0 },
         },
     
+        // Column visibility
+        column_visibility: {
+          distance: true,
+          classifications: true,
+          cluster: true,
+        },
+        settings_open: false,
+        max_ctx: 0, // 0 = no limit
+    
+        // Clustering state
+        clustering: null,
+        clustering_available: false,
+        clustering_method: "leiden",
+        clustering_methods: [],
+        clustering_param_label: "",
+        clustering_param_key: null,
+        clustering_param_keys: [],
+        n_clusters: 10,
+        cluster_stats: null,
+        cluster_cut_height: null,
+        cluster_max_height: null,
+        cluster_min_size: 0,
+        top_clusters: [],
+        current_head_cluster: null, // {id, size, color}
+        _updateGeneration: 0, // guards against stale async updates
+    
         async init() {
           await getConfig();
           try {
             this.attention_pedia = new AttentionPedia();
             this.head_distances = new HeadDistances();
+            this.clustering = new ClusteringLoader();
             this.prompts_loader = new PromptsLoader();
             this.allPrompts = await this.prompts_loader.get_all();
             this.allPromptsCount = this.allPrompts.length;
+    
+            // Filter to only rendered prompts if rendered_prompts.jsonl exists
+            const renderedHashes = await this.prompts_loader.loadRenderedHashes();
+            if (renderedHashes) {
+              this.allPrompts = this.allPrompts.filter((p) =>
+                renderedHashes.has(p.hash),
+              );
+              this.renderedPromptsCount = this.allPrompts.length;
+              console.log(
+                `Filtered to ${this.renderedPromptsCount}/${this.allPromptsCount} rendered prompts`,
+              );
+            }
+    
             this.n_prompts = CONFIG.n_prompts || 5;
     
             // Load model data for filtering
@@ -2770,8 +5303,23 @@
             this.current_classification = CONFIG.current_classification || null;
             this.table.n_nearby = CONFIG.table?.n_nearby || 2;
             this.table.n_share_class = CONFIG.table?.n_share_class || 2;
+            this.table.n_same_cluster = CONFIG.table?.n_same_cluster || 2;
             this.table.n_distant = CONFIG.table?.n_distant || 0;
             this.table.n_random = CONFIG.table?.n_random || 0;
+    
+            // Load column visibility from config
+            if (CONFIG.column_visibility) {
+              const cv = CONFIG.column_visibility;
+              if (cv.distance !== undefined)
+                this.column_visibility.distance = cv.distance;
+              if (cv.classifications !== undefined)
+                this.column_visibility.classifications = cv.classifications;
+              if (cv.cluster !== undefined)
+                this.column_visibility.cluster = cv.cluster;
+            }
+    
+            // Load max context window size
+            this.max_ctx = CONFIG.max_ctx || 0;
     
             // Handle classification mode
             if (this.classification_mode && this.current_classification) {
@@ -2802,6 +5350,25 @@
                 this.selected_suggestion_index = -1;
               }
             });
+    
+            // Initialize clustering (non-blocking)
+            this.clustering_available = await this.clustering.isAvailable();
+            if (this.clustering_available) {
+              // ClusteringLoader already picked the best default method
+              const methods = this.clustering.getAvailableMethods();
+              this.clustering_methods = methods;
+              this.clustering_method = this.clustering.getMethod();
+    
+              if (this.clustering.isHierarchical()) {
+                this.n_clusters = CONFIG.default_n_clusters || 10;
+                await this.clustering.setNClusters(this.n_clusters);
+                this.cluster_cut_height = this.clustering.getCutHeight();
+                this.cluster_max_height = this.clustering.getMaxCutHeight();
+              } else {
+                this._updateFlatParamUI();
+              }
+              await this.updateClusterInfo();
+            }
     
             await this.updateHeadsWithDistances();
             this.loading = false;
@@ -2858,6 +5425,8 @@
         },
     
         async updateHeadsWithDistances() {
+          const generation = ++this._updateGeneration;
+    
           if (!this.current_head) {
             this.heads_display_with_distances = [];
             return;
@@ -2874,6 +5443,7 @@
               rank: 1,
               totalHeads: 1,
               isLoadingOthers: true,
+              clusterInfo: await this.getClusterInfo(this.current_head),
             },
           ];
     
@@ -2944,9 +5514,12 @@
                 hasMatchingClassification: shouldHighlight,
                 rank: headRankMap.get(item.head_name) || 0,
                 totalHeads: totalHeads,
+                clusterInfo: await this.getClusterInfo(item.head_name),
               });
             }
     
+            // Discard if a newer update was started while we were computing
+            if (generation !== this._updateGeneration) return;
             // Assign the complete array at once to trigger Alpine.js reactivity
             this.heads_display_with_distances = newHeadsArray;
             return;
@@ -3025,6 +5598,26 @@
             }
           }
     
+          // Add same-cluster heads
+          const n_same_cluster = this.table.n_same_cluster;
+          if (n_same_cluster > 0 && this.clustering_available) {
+            const currentClusterId = await this.clustering.getClusterId(
+              this.current_head,
+            );
+            if (currentClusterId !== undefined) {
+              const sameClusterHeads =
+                await this.clustering.getHeadsInCluster(currentClusterId);
+              const filteredClusterHeads = sameClusterHeads.filter(
+                (head) => head !== this.current_head && this.shouldShowHead(head),
+              );
+              filteredClusterHeads.slice(0, n_same_cluster).forEach((head) => {
+                if (!headsToShow.has(head)) {
+                  headsToShow.add(head);
+                }
+              });
+            }
+          }
+    
           // Get final distances for selected heads
           const finalHeadsWithDistances =
             await this.head_distances.getHeadDistances(
@@ -3073,9 +5666,12 @@
               hasMatchingClassification: shouldHighlight,
               rank: headRankMap.get(item.head_name) || 0,
               totalHeads: totalHeads,
+              clusterInfo: await this.getClusterInfo(item.head_name),
             });
           }
     
+          // Discard if a newer update was started while we were computing
+          if (generation !== this._updateGeneration) return;
           // Assign the complete array at once to trigger Alpine.js reactivity
           this.heads_display_with_distances = newHeadsArray;
         },
@@ -3102,6 +5698,10 @@
           url.searchParams.set(
             "table.n_share_class",
             this.table.n_share_class.toString(),
+          );
+          url.searchParams.set(
+            "table.n_same_cluster",
+            this.table.n_same_cluster.toString(),
           );
           url.searchParams.set("table.n_distant", this.table.n_distant.toString());
           url.searchParams.set("table.n_random", this.table.n_random.toString());
@@ -3316,6 +5916,7 @@
             imageUrl: null,
             error: null,
             patternLink: null,
+            naturalSize: 0,
     
             async init() {
               app.failureTracker.patterns.total++;
@@ -3333,7 +5934,25 @@
                 );
               }
             },
+    
+            onImageLoad(event) {
+              this.naturalSize = event.target.naturalWidth;
+            },
+    
+            get cropStyle() {
+              const maxCtx = app.max_ctx;
+              if (!maxCtx || maxCtx <= 0 || !this.naturalSize) return "";
+              if (maxCtx >= this.naturalSize) return "";
+              const scale = this.naturalSize / maxCtx;
+              const size = `calc(var(--pattern-size, 120px) * ${scale})`;
+              return `width: ${size}; height: ${size};`;
+            },
           };
+        },
+    
+        updateMaxCtx() {
+          this.max_ctx = Math.max(0, Math.floor(this.max_ctx));
+          setConfigValue("max_ctx", this.max_ctx);
         },
     
         classificationComponent(headId) {
@@ -3479,6 +6098,7 @@
           // Update URL
           setConfigValue("table.n_nearby", this.table.n_nearby);
           setConfigValue("table.n_share_class", this.table.n_share_class);
+          setConfigValue("table.n_same_cluster", this.table.n_same_cluster);
           setConfigValue("table.n_distant", this.table.n_distant);
           setConfigValue("table.n_random", this.table.n_random);
     
@@ -3612,7 +6232,7 @@
           }
     
           // Also search existing heads for partial matches
-          await this.head_distances._ensureLoaded();
+          await this.head_distances._ensureMetaLoaded();
           const query = this.head_search_query.toLowerCase();
           const allHeads = this.head_distances.head_dists_meta.cls_values;
     
@@ -3798,6 +6418,242 @@
             this.heads_display.length > 0
           );
         },
+    
+        // Clustering methods
+        async getClusterColor(headId) {
+          if (!this.clustering_available) {
+            return "transparent";
+          }
+          return await this.clustering.getColor(headId);
+        },
+    
+        async getClusterInfo(headId) {
+          if (!this.clustering_available) return null;
+          const clusterId = await this.clustering.getClusterId(headId);
+          if (clusterId === undefined || clusterId === -1) return null;
+          const sizes = await this.clustering.getClusterSizes();
+          return {
+            id: clusterId,
+            size: sizes[clusterId] || 0,
+            color: this.clustering.getClusterColor(clusterId),
+            label: this.clustering.getClusterLabel(clusterId),
+          };
+        },
+    
+        async updateNClusters() {
+          if (!this.clustering_available) return;
+          this.n_clusters = Math.max(2, Math.min(200, this.n_clusters));
+          await this.clustering.setNClusters(this.n_clusters);
+          this.cluster_cut_height = this.clustering.getCutHeight();
+          await this.updateClusterInfo();
+          await this.updateHeadsWithDistances();
+        },
+    
+        async updateCutHeight() {
+          if (!this.clustering_available) return;
+          this.cluster_cut_height = Math.max(
+            0,
+            Math.min(this.cluster_max_height, this.cluster_cut_height),
+          );
+          await this.clustering.setCutHeight(this.cluster_cut_height);
+          this.n_clusters = this.clustering.getNClusters();
+          await this.updateClusterInfo();
+          await this.updateHeadsWithDistances();
+        },
+    
+        async updateMinClusterSize() {
+          if (!this.clustering_available) return;
+          this.cluster_min_size = Math.max(0, this.cluster_min_size);
+          await this.clustering.setMinClusterSize(this.cluster_min_size);
+          this.n_clusters = this.clustering.getNClustersActual();
+          await this.updateClusterInfo();
+          await this.updateHeadsWithDistances();
+        },
+    
+        async updateClusterInfo() {
+          await this.updateClusterStats();
+          this.top_clusters = await this.clustering.getTopClusters(10);
+          await this.updateCurrentHeadCluster();
+        },
+    
+        async updateCurrentHeadCluster() {
+          if (!this.clustering_available || !this.current_head) {
+            this.current_head_cluster = null;
+            return;
+          }
+          this.current_head_cluster = await this.getClusterInfo(this.current_head);
+        },
+    
+        async updateClusterStats() {
+          if (!this.clustering_available) {
+            this.cluster_stats = null;
+            return;
+          }
+          const sizesObj = await this.clustering.getClusterSizes();
+          const sizes = Object.values(sizesObj);
+          if (!sizes || sizes.length === 0) {
+            this.cluster_stats = null;
+            return;
+          }
+          const minSize = Math.min(...sizes);
+          const maxSize = Math.max(...sizes);
+          const avgSize = (sizes.reduce((a, b) => a + b, 0) / sizes.length).toFixed(
+            1,
+          );
+          const unclustered = this.clustering.getUnclusteredCount();
+          let statsText = `${sizes.length} clusters (min: ${minSize}, max: ${maxSize}, avg: ${avgSize})`;
+          if (unclustered > 0) {
+            statsText += ` · ${unclustered} unclustered`;
+          }
+          this.cluster_stats = statsText;
+        },
+    
+        getClusterPageUrl(highlightClusterId = null) {
+          if (typeof ClusteringConfig !== "undefined") {
+            ClusteringConfig.setCutHeight(this.cluster_cut_height);
+            if (highlightClusterId !== null) {
+              ClusteringConfig.setHighlightCluster(highlightClusterId);
+            }
+          }
+          const url = new URL("../clustering/index.html", window.location.href);
+          if (highlightClusterId !== null) {
+            url.searchParams.set("highlight", highlightClusterId);
+          }
+          return url.toString();
+        },
+    
+        // --- Clustering method switching ---
+    
+        async updateClusteringMethod(method) {
+          this.clustering_method = method;
+          this.clustering.setMethod(method);
+          ClusteringConfig.setMethod(method);
+    
+          if (method === "hierarchical") {
+            this.n_clusters = CONFIG.default_n_clusters || 10;
+            await this.clustering.setNClusters(this.n_clusters);
+            this.cluster_cut_height = this.clustering.getCutHeight();
+            this.cluster_max_height = this.clustering.getMaxCutHeight();
+          } else {
+            this._updateFlatParamUI();
+          }
+          await this.updateClusterInfo();
+          await this.updateHeadsWithDistances();
+        },
+    
+        async updateClusteringParam(paramKey) {
+          this.clustering_param_key = paramKey;
+          await this.clustering.setParamKey(paramKey);
+          ClusteringConfig.setParamKey(paramKey);
+          this.n_clusters = this.clustering.getNClustersActual();
+          await this.updateClusterInfo();
+          await this.updateHeadsWithDistances();
+        },
+    
+        _updateFlatParamUI() {
+          const info = this.clustering.getFlatParamInfo();
+          if (!info) return;
+          this.clustering_param_label = info.paramName;
+          this.clustering_param_keys = info.paramKeys;
+          this.clustering_param_key =
+            this.clustering.getParamKey() || info.paramKeys[0];
+          this.n_clusters = this.clustering.getNClustersActual();
+        },
+    
+        // --- Column visibility ---
+    
+        toggleColumn(col) {
+          this.column_visibility[col] = !this.column_visibility[col];
+          setConfigValue(`column_visibility.${col}`, this.column_visibility[col]);
+        },
+    
+        /** Number of visible fixed columns (Head always visible). */
+        get visibleColCount() {
+          return (
+            1 +
+            (this.column_visibility.distance ? 1 : 0) +
+            (this.column_visibility.classifications ? 1 : 0) +
+            (this.clustering_available && this.column_visibility.cluster ? 1 : 0) +
+            this.prompts.length
+          );
+        },
+    
+        // --- Table SVG export ---
+    
+        exportTableSVG() {
+          const table = document.querySelector(".pattern-table");
+          if (!table) return;
+    
+          const clone = table.cloneNode(true);
+    
+          // Inline computed styles onto every element for standalone SVG
+          const inlineStyles = (source, target) => {
+            const cs = window.getComputedStyle(source);
+            const dominated = [
+              "font",
+              "color",
+              "background",
+              "border",
+              "padding",
+              "margin",
+              "text-align",
+              "vertical-align",
+              "white-space",
+              "font-size",
+              "font-weight",
+              "font-family",
+              "line-height",
+              "overflow",
+              "width",
+              "height",
+              "display",
+            ];
+            for (const prop of dominated) {
+              target.style.setProperty(prop, cs.getPropertyValue(prop));
+            }
+            const srcChildren = source.children;
+            const tgtChildren = target.children;
+            for (let i = 0; i < srcChildren.length; i++) {
+              if (tgtChildren[i]) inlineStyles(srcChildren[i], tgtChildren[i]);
+            }
+          };
+          inlineStyles(table, clone);
+    
+          // XHTML namespace required for foreignObject content
+          clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+    
+          // Remove hidden elements (Alpine x-show sets display:none)
+          clone
+            .querySelectorAll("[style*='display: none']")
+            .forEach((el) => el.remove());
+    
+          const rect = table.getBoundingClientRect();
+          const width = Math.ceil(rect.width);
+          const height = Math.ceil(rect.height);
+    
+          const svgNS = "http://www.w3.org/2000/svg";
+          const svg = document.createElementNS(svgNS, "svg");
+          svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+          svg.setAttribute("width", width);
+          svg.setAttribute("height", height);
+    
+          const fo = document.createElementNS(svgNS, "foreignObject");
+          fo.setAttribute("width", "100%");
+          fo.setAttribute("height", "100%");
+          fo.appendChild(clone);
+          svg.appendChild(fo);
+    
+          const serializer = new XMLSerializer();
+          const svgStr = serializer.serializeToString(svg);
+          const blob = new Blob([svgStr], { type: "image/svg+xml" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          const headLabel = this.current_head || "table";
+          a.download = `attnpedia-${headLabel}.svg`;
+          a.click();
+          URL.revokeObjectURL(url);
+        },
       }));
     });
     
@@ -3811,61 +6667,67 @@
     <nav class="nav-bar">
       <div class="nav-bar-content">
         <a href="../../index.html">Home</a>
-        <a href="../../patterns/index.html">Pattern Lens</a>
+        <span class="nav-current">AttentionPedia</span>
+        <a href="../embeds/patterns/index.html">Pattern Embeddings</a>
+        <a href="../embeds/heads/index.html">Head Embeddings</a>
+        <a href="../../figures/head_embed_table.html">Head Embed Table</a>
         <a href="../../figures/classifications.html">Classifications</a>
-        <a href="../../vis/embeds/patterns/index.html">Pattern Embeddings</a>
-        <a href="../../vis/embeds/heads/index.html">Head Embeddings</a>
-        <a href="../../figures/head_embed_table.html">Head Embedding Table</a>
+        <a href="../clustering/index.html">Clustering</a>
+        <a href="../cluster_trends/index.html">Cluster Trends</a>
+        <a href="../../ablations/index.html">Ablation</a>
+        <a href="../../ablations/correlations.html">Correlations</a>
       </div>
     </nav>
 
     <div class="container" x-data="attentionApp" x-init="await init()">
       <!-- Help button in top right -->
       <div class="help-menu-corner">
-        <span class="help-button">?</span>
-        <div class="help-content">
-          <h3>Controls</h3>
-          <ul>
-            <li>
-              <strong>Top right controls:</strong> Adjust which heads and
-              prompts are displayed
-            </li>
-          </ul>
-          <h3>Navigation</h3>
-          <ul>
-            <li>Click head IDs to navigate between heads</li>
-            <li>
-              <strong>Classification tags:</strong> Hover for info, click to
-              view all heads of that type
-            </li>
-            <li>Click pattern images to view detailed pattern</li>
-            <li>
-              <strong>Pattern Lens links (top):</strong> Compare patterns across
-              many heads/prompts more flexibly
-            </li>
-          </ul>
-          <h3>Interface</h3>
-          <ul>
-            <li>
-              <strong>Distance column:</strong> lighter colors correspond to a
-              head which is closer
-            </li>
-            <li>
-              <strong>Classification column highlight:</strong> Orange for heads
-              sharing classifications with the current head
-            </li>
-            <li>
-              <strong>Prompt tooltips:</strong> Hover column headers for full
-              text, clicking the pattern also gives full text
-            </li>
-          </ul>
-          <h3>Reset</h3>
-          <ul>
-            <li>
-              <strong>Reset button (🔄):</strong> Resets all settings to default
-              while preserving current head
-            </li>
-          </ul>
+        <div class="help-menu">
+          <span class="help-button">?</span>
+          <div class="help-content">
+            <h3>Controls</h3>
+            <ul>
+              <li>
+                <strong>Top right controls:</strong> Adjust which heads and
+                prompts are displayed
+              </li>
+            </ul>
+            <h3>Navigation</h3>
+            <ul>
+              <li>Click head IDs to navigate between heads</li>
+              <li>
+                <strong>Classification tags:</strong> Hover for info, click to
+                view all heads of that type
+              </li>
+              <li>Click pattern images to view detailed pattern</li>
+              <li>
+                <strong>Pattern Lens links (top):</strong> Compare patterns
+                across many heads/prompts more flexibly
+              </li>
+            </ul>
+            <h3>Interface</h3>
+            <ul>
+              <li>
+                <strong>Distance column:</strong> lighter colors correspond to a
+                head which is closer
+              </li>
+              <li>
+                <strong>Classification column highlight:</strong> Orange for
+                heads sharing classifications with the current head
+              </li>
+              <li>
+                <strong>Prompt tooltips:</strong> Hover column headers for full
+                text, clicking the pattern also gives full text
+              </li>
+            </ul>
+            <h3>Reset</h3>
+            <ul>
+              <li>
+                <strong>Reset button (🔄):</strong> Resets all settings to
+                default while preserving current head
+              </li>
+            </ul>
+          </div>
         </div>
         <button
           class="reset-button"
@@ -3874,6 +6736,61 @@
         >
           🔄
         </button>
+        <!-- Settings gear -->
+        <div class="settings-menu" @click.outside="settings_open = false">
+          <button
+            class="settings-button"
+            @click="settings_open = !settings_open"
+            title="Table settings"
+          >
+            ⚙
+          </button>
+          <div class="settings-dropdown" x-show="settings_open" x-cloak>
+            <div class="settings-section-label">Visible columns</div>
+            <label class="settings-checkbox">
+              <input
+                type="checkbox"
+                :checked="column_visibility.distance"
+                @change="toggleColumn('distance')"
+              />
+              Distance
+            </label>
+            <label class="settings-checkbox">
+              <input
+                type="checkbox"
+                :checked="column_visibility.classifications"
+                @change="toggleColumn('classifications')"
+              />
+              Classifications
+            </label>
+            <template x-if="clustering_available">
+              <label class="settings-checkbox">
+                <input
+                  type="checkbox"
+                  :checked="column_visibility.cluster"
+                  @change="toggleColumn('cluster')"
+                />
+                Cluster
+              </label>
+            </template>
+            <hr class="settings-divider" />
+            <label class="settings-checkbox">
+              <span>Max context:</span>
+              <input
+                type="number"
+                x-model.number="max_ctx"
+                @change="updateMaxCtx()"
+                min="0"
+                placeholder="0 = all"
+                class="settings-number-input"
+              />
+            </label>
+            <hr class="settings-divider" />
+            <button class="settings-export-btn" @click="exportTableSVG()">
+              Export table SVG
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Page Title Section -->
@@ -3933,6 +6850,145 @@
               >
             </div>
           </template>
+
+          <!-- Clustering Panel -->
+          <template x-if="clustering_available">
+            <div class="clustering-panel">
+              <div class="clustering-panel-header">
+                <h3>Clustering</h3>
+                <select
+                  class="control-input"
+                  x-model="clustering_method"
+                  @change="updateClusteringMethod($event.target.value)"
+                >
+                  <template x-for="m in clustering_methods" :key="m">
+                    <option :value="m" x-text="m"></option>
+                  </template>
+                </select>
+              </div>
+
+              <!-- Flat method parameter selector (hdbscan/leiden) -->
+              <template x-if="clustering_method !== 'hierarchical'">
+                <div class="cluster-control-group">
+                  <label x-text="clustering_param_label + ':'"></label>
+                  <select
+                    class="control-input"
+                    x-model="clustering_param_key"
+                    @change="updateClusteringParam($event.target.value)"
+                  >
+                    <template x-for="pk in clustering_param_keys" :key="pk">
+                      <option :value="pk" x-text="pk"></option>
+                    </template>
+                  </select>
+                </div>
+              </template>
+
+              <!-- Hierarchical controls -->
+              <template x-if="clustering_method === 'hierarchical'">
+                <div class="cluster-control-group">
+                  <label>Clusters:</label>
+                  <input
+                    type="range"
+                    x-model.number="n_clusters"
+                    @input="updateNClusters()"
+                    min="2"
+                    max="200"
+                    class="cluster-slider"
+                  />
+                  <input
+                    type="number"
+                    x-model.number="n_clusters"
+                    @change="updateNClusters()"
+                    min="2"
+                    max="200"
+                    class="control-input"
+                  />
+                </div>
+              </template>
+
+              <template
+                x-if="clustering_method === 'hierarchical' && cluster_max_height !== null"
+              >
+                <div class="cluster-control-group">
+                  <label>Cut height:</label>
+                  <input
+                    type="range"
+                    x-model.number="cluster_cut_height"
+                    @input="updateCutHeight()"
+                    min="0"
+                    :max="cluster_max_height"
+                    :step="cluster_max_height / 1000"
+                    class="cluster-slider"
+                  />
+                  <input
+                    type="number"
+                    x-model.number="cluster_cut_height"
+                    @change="updateCutHeight()"
+                    min="0"
+                    :max="cluster_max_height"
+                    :step="cluster_max_height / 1000"
+                    class="control-input"
+                  />
+                </div>
+              </template>
+
+              <div class="cluster-control-group">
+                <label>Min size:</label>
+                <input
+                  type="range"
+                  x-model.number="cluster_min_size"
+                  @input="updateMinClusterSize()"
+                  min="0"
+                  max="100"
+                  class="cluster-slider"
+                />
+                <input
+                  type="number"
+                  x-model.number="cluster_min_size"
+                  @change="updateMinClusterSize()"
+                  min="0"
+                  class="control-input"
+                />
+              </div>
+
+              <!-- Cluster statistics -->
+              <template x-if="cluster_stats">
+                <div class="cluster-stats-line" x-text="cluster_stats"></div>
+              </template>
+
+              <!-- Top clusters -->
+              <template x-if="top_clusters.length > 0">
+                <div class="top-clusters-section">
+                  <div class="top-clusters-label">Top clusters:</div>
+                  <div class="top-clusters-row">
+                    <template x-for="cluster in top_clusters" :key="cluster.id">
+                      <span
+                        class="cluster-chip"
+                        :style="`background-color: ${cluster.color}`"
+                        @click="window.open(getClusterPageUrl(cluster.id), '_blank')"
+                        :title="cluster.label?.desc || ''"
+                        x-text="`#${cluster.id} (${cluster.size})${cluster.label?.name ? ' — ' + cluster.label.name : ''}`"
+                      ></span>
+                    </template>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Current head cluster info -->
+              <template x-if="current_head_cluster && !classification_mode">
+                <div class="current-head-cluster">
+                  This head: cluster
+                  <span
+                    class="cluster-chip cluster-chip-inline"
+                    :style="`background-color: ${current_head_cluster.color}`"
+                    @click="window.open(getClusterPageUrl(current_head_cluster.id), '_blank')"
+                    :title="current_head_cluster.label?.desc || ''"
+                    x-text="`#${current_head_cluster.id} (${current_head_cluster.size} heads)${current_head_cluster.label?.name ? ' — ' + current_head_cluster.label.name : ''}`"
+                  ></span>
+                </div>
+              </template>
+            </div>
+          </template>
         </div>
 
         <div class="controls-section">
@@ -3982,7 +7038,7 @@
               >
                 <div
                   class="autocomplete-suggestion"
-                  :class="{ 
+                  :class="{
                                      'selected': index === selected_suggestion_index,
                                      'error': !suggestion.valid
                                  }"
@@ -4123,6 +7179,7 @@
             </div>
           </div>
 
+          <!-- Head Selection Controls -->
           <div class="controls-grid">
             <div class="control-item">
               <label>Prompts:</label>
@@ -4133,6 +7190,14 @@
                 min="1"
                 class="control-input"
               />
+            </div>
+            <div class="control-item">
+              <button
+                @click="randomizePrompts()"
+                class="control-button full-width"
+              >
+                Randomize prompts
+              </button>
             </div>
             <template x-if="!classification_mode">
               <div
@@ -4166,14 +7231,6 @@
                 />
               </div>
             </template>
-            <div class="control-item">
-              <button
-                @click="randomizePrompts()"
-                class="control-button full-width"
-              >
-                Randomize prompts
-              </button>
-            </div>
             <template x-if="!classification_mode">
               <div
                 class="control-item"
@@ -4206,6 +7263,23 @@
                 />
               </div>
             </template>
+            <!-- Same-cluster heads control -->
+            <template x-if="clustering_available && !classification_mode">
+              <div
+                class="control-item"
+                :class="{ 'disabled': hasExplicitHeads }"
+              >
+                <label>Same-cluster heads:</label>
+                <input
+                  type="number"
+                  x-model.number="table.n_same_cluster"
+                  @change="updateHeadsDisplay()"
+                  min="0"
+                  class="control-input"
+                  :disabled="hasExplicitHeads"
+                />
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -4215,12 +7289,19 @@
           <thead>
             <tr>
               <th>Head</th>
-              <th>
+              <th x-show="column_visibility.distance">
                 Distance<br /><span style="font-size: 10px; font-weight: normal"
                   >rank /n_heads</span
                 >
               </th>
-              <th>Classifications</th>
+              <th x-show="column_visibility.classifications">
+                Classifications
+              </th>
+              <template
+                x-if="clustering_available && column_visibility.cluster"
+              >
+                <th>Cluster</th>
+              </template>
               <template x-for="prompt in prompts" :key="prompt.hash">
                 <th
                   class="prompt-header"
@@ -4240,7 +7321,7 @@
             <!-- Loading state -->
             <tr x-show="loading">
               <td
-                :colspan="3 + prompts.length"
+                :colspan="visibleColCount"
                 style="text-align: center; padding: 20px; color: #666"
               >
                 Loading attention heads data...
@@ -4249,7 +7330,7 @@
             <!-- Classification error state -->
             <tr x-show="!loading && classificationError">
               <td
-                :colspan="3 + prompts.length"
+                :colspan="visibleColCount"
                 style="text-align: center; padding: 40px"
               >
                 <div
@@ -4282,7 +7363,7 @@
               x-show="!loading && !classificationError && heads_display_with_distances.length === 0"
             >
               <td
-                :colspan="3 + prompts.length"
+                :colspan="visibleColCount"
                 style="text-align: center; padding: 20px; color: #666"
               >
                 No heads data available
@@ -4302,6 +7383,7 @@
                 </td>
                 <td
                   class="distance-cell"
+                  x-show="column_visibility.distance"
                   :style="`background-color: ${headRow.distanceColor}`"
                 >
                   <div
@@ -4314,6 +7396,7 @@
                 </td>
                 <td
                   class="classifications-cell"
+                  x-show="column_visibility.classifications"
                   :class="headRow.hasMatchingClassification ? 'matching-classification' : ''"
                   x-data="classificationComponent(headRow.headId)"
                   x-init="await loadData()"
@@ -4339,6 +7422,31 @@
                     <span class="no-classifications">No classifications</span>
                   </template>
                 </td>
+                <template
+                  x-if="clustering_available && column_visibility.cluster"
+                >
+                  <td class="cluster-cell">
+                    <template x-if="headRow.clusterInfo">
+                      <span
+                        class="cluster-column-chip"
+                        :style="`background-color: ${headRow.clusterInfo.color}`"
+                        @click="window.open(getClusterPageUrl(), '_blank')"
+                        :title="headRow.clusterInfo.label?.desc || ''"
+                        x-text="`#${headRow.clusterInfo.id}`"
+                      ></span>
+                    </template>
+                    <template x-if="headRow.clusterInfo">
+                      <div
+                        class="cluster-cell-size"
+                        :title="headRow.clusterInfo.label?.desc || ''"
+                        x-text="`(${headRow.clusterInfo.size} heads)${headRow.clusterInfo.label?.name ? ' ' + headRow.clusterInfo.label.name : ''}`"
+                      ></div>
+                    </template>
+                    <template x-if="!headRow.clusterInfo">
+                      <span class="cluster-cell-misc">misc</span>
+                    </template>
+                  </td>
+                </template>
                 <template x-for="prompt in prompts" :key="prompt.hash">
                   <td
                     x-data="patternComponent(headRow.headId, prompt.hash)"
@@ -4359,6 +7467,8 @@
                         <img
                           :src="imageUrl"
                           class="pattern-image"
+                          :style="cropStyle"
+                          @load="onImageLoad($event)"
                           :alt="`Pattern for ${headRow.headId} on ${prompt.hash}`"
                         />
                       </a>

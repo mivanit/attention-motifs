@@ -21,7 +21,12 @@ const URL_UPDATE_DEBOUNCE_DELAY = 500; // ms
 const FLOAT_COMPARISON_EPSILON = 0.001;
 
 // Keys to skip during URL serialization
-const URL_SKIP_PATHS = ["data.cache", "network.headers", "tempData"];
+const URL_SKIP_PATHS = [
+  "data.cache",
+  "network.headers",
+  "tempData",
+  "middleClick.content",
+];
 
 // Keys to skip during config comparison
 const COMPARISON_SKIP_KEYS = ["timestamp", "sessionId", "tempData"];
@@ -58,12 +63,13 @@ function getDefaultConfig() {
     prompts_url: "../../patterns/gpt2-small/prompts.jsonl",
     patterns_path: "../../patterns/",
     attnpedia_url: "ap.json",
-    headDistsnpy_url: "../../features/head_dists_raw/distances.npy",
+    headDistsnpy_url: "../../features/head_dists_raw/distances_f32.npy",
     headDistsmeta_url: "../../features/head_dists_raw/dists_meta.json",
     pattern_url_template:
       "../../patterns/single.html?prompt={prompt_hash}&head={model}.L{layer}.H{head}",
     patternlens_url_template:
       "../../patterns/index.html?models={model}&heads-{model}=L{layer}H{head}&prompts={prompt_hashes}",
+    rendered_prompts_url: "../../patterns/rendered_prompts.jsonl",
   };
 
   if (INLINE_CONFIG) {

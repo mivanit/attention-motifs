@@ -3,7 +3,7 @@
 
 # from muutils.tensor_info import array_summary
 
-from pattern_lens.figure_util import (
+from pattern_lens.consts import (
 	AttentionMatrix,
 )
 from pattern_lens.attn_figure_funcs import (

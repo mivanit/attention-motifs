@@ -13,61 +13,48 @@ async function _load_dists_meta() {
   }
 }
 
-async function _load_dists_npy() {
-  return NDArray.load(CONFIG.headDistsnpy_url);
-}
-
 class HeadDistances {
   constructor() {
-    this._is_loaded = false;
-    this._load_promise = null;
+    this._meta_loaded = false;
+    this._meta_promise = null;
     this.head_dists_meta = null;
-    this.head_dists_arr = null;
-    // Don't start loading in constructor - let methods trigger it when needed
+    this._rowCache = new Map();
   }
 
-  async _ensureLoaded() {
-    // If already loaded, return immediately
-    if (this._is_loaded) {
+  async _ensureMetaLoaded() {
+    if (this._meta_loaded) {
       return;
     }
 
-    // If loading is in progress, wait for the existing promise
-    if (this._load_promise) {
-      return this._load_promise;
+    if (this._meta_promise) {
+      return this._meta_promise;
     }
 
-    // Start loading and store the promise to prevent duplicate loads
-    this._load_promise = (async () => {
+    this._meta_promise = (async () => {
       try {
-        const notif = NOTIF.pbar("Loading head distances data...");
-
-        // Load metadata first
         this.head_dists_meta = await _load_dists_meta();
-        notif.progress(0.2);
-
-        // Load the large distances array
-        this.head_dists_arr = await _load_dists_npy();
-        notif.progress(1.0);
-
-        this._is_loaded = true;
-        notif.complete();
-        NOTIF.success("Head distances loaded successfully");
+        this._meta_loaded = true;
       } catch (error) {
-        NOTIF.error("Failed to load head distances", error);
+        NOTIF.error("Failed to load head distances metadata", error);
         throw error;
       }
     })();
 
-    return this._load_promise;
+    return this._meta_promise;
+  }
+
+  /** Fetch a single row from the distances matrix via HTTP range request */
+  async _loadRow(head_idx) {
+    if (this._rowCache.has(head_idx)) {
+      return this._rowCache.get(head_idx);
+    }
+    const promise = NDArray.loadSlice(CONFIG.headDistsnpy_url, head_idx);
+    this._rowCache.set(head_idx, promise);
+    return promise;
   }
 
   isMetadataLoaded() {
     return this.head_dists_meta !== null;
-  }
-
-  isFullyLoaded() {
-    return this._is_loaded;
   }
 
   get_head_idx(head_name) {
@@ -86,10 +73,10 @@ class HeadDistances {
   }
 
   async getNearestHeads(head_name, n = 5) {
-    await this._ensureLoaded();
+    await this._ensureMetaLoaded();
 
     const head_idx = this.get_head_idx(head_name);
-    const distanceRow = this.head_dists_arr.get(head_idx);
+    const distanceRow = await this._loadRow(head_idx);
     const distanceArray = Array.from(distanceRow.data);
 
     // Sort distances and get indices of n nearest (excluding self)
@@ -107,18 +94,18 @@ class HeadDistances {
   }
 
   async getHeadDistance(head_name1, head_name2) {
-    await this._ensureLoaded();
+    await this._ensureMetaLoaded();
     const head_idx1 = this.get_head_idx(head_name1);
     const head_idx2 = this.get_head_idx(head_name2);
 
-    const distanceRow = this.head_dists_arr.get(head_idx1);
+    const distanceRow = await this._loadRow(head_idx1);
     return distanceRow.data[head_idx2];
   }
 
   async getHeadDistances(head_name, head_names_list) {
-    await this._ensureLoaded();
+    await this._ensureMetaLoaded();
     const head_idx = this.get_head_idx(head_name);
-    const distanceRow = this.head_dists_arr.get(head_idx);
+    const distanceRow = await this._loadRow(head_idx);
     const distanceArray = Array.from(distanceRow.data);
 
     return head_names_list.map((target_head) => {

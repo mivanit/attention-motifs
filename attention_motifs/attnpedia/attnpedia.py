@@ -1,7 +1,7 @@
 import json
 import sys
 import matplotlib.colors as mcolors
-from typing import Callable, Literal
+from typing import Callable, TypedDict
 import warnings
 from pathlib import Path
 import importlib.resources
@@ -12,11 +12,15 @@ import polars as pl
 import attention_motifs
 
 ATTNPEDIA_PATH: Path = (
-	Path(importlib.resources.files(attention_motifs)) / "attnpedia" / "attn-pedia.json"
+	Path(str(importlib.resources.files(attention_motifs)))
+	/ "attnpedia"
+	/ "attn-pedia.json"
 )
 
 ATTNPEDIA_GROUPS_PATH: Path = (
-	Path(importlib.resources.files(attention_motifs)) / "attnpedia" / "attn-pedia-groups.json"
+	Path(str(importlib.resources.files(attention_motifs)))
+	/ "attnpedia"
+	/ "attn-pedia-groups.json"
 )
 
 if not ATTNPEDIA_PATH.is_file():
@@ -26,23 +30,98 @@ if not ATTNPEDIA_GROUPS_PATH.is_file():
 	warnings.warn(f"attpedia groups json does not exist: {ATTNPEDIA_GROUPS_PATH = }.")
 
 
-AttentionPediaSchema = list[
-	dict[
-		# all values are strings, except for the "classes" key
-		# which is a list of dictionaries
-		Literal["prefix", "url", "notes", "model", "classes"],
-		str
-		| list[
-			dict[
-				Literal["type", "heads"],
-				# "type" maps to a string, "heads" maps to a list of strings
-				# where each string is of the form "L{layer}:H{head}"
-				# e.g. "L0:H0", "L5:H7", etc.
-				str | list[str],
-			]
-		],
-	]
-]
+def parse_head(head_id: str) -> tuple[int, int]:
+	"""Parse head ID string to (layer, head) tuple.
+
+	Parameters
+	----------
+	head_id
+		String in format 'L{layer}:H{head}' or '{model}:L{layer}:H{head}'.
+
+	Returns
+	-------
+	tuple[int, int]
+		(layer, head) indices.
+	"""
+	parts = head_id.split(":")
+	if len(parts) == 2:
+		layer_part, head_part = parts
+	elif len(parts) == 3:
+		_, layer_part, head_part = parts
+	else:
+		raise ValueError(f"Invalid head string format: {head_id}")
+
+	layer = int(layer_part.removeprefix("L"))
+	head = int(head_part.removeprefix("H"))
+	return layer, head
+
+
+def parse_cls(cls_: str) -> tuple[str, int, int]:
+	"""Parse full head ID string to (model, layer, head) tuple.
+
+	Parameters
+	----------
+	cls_
+		String in format '{model}:L{layer}:H{head}'.
+
+	Returns
+	-------
+	tuple[str, int, int]
+		(model, layer, head).
+	"""
+	model_part, layer_part, head_part = cls_.split(":")
+	layer = int(layer_part.removeprefix("L"))
+	head = int(head_part.removeprefix("H"))
+	return model_part, layer, head
+
+
+def heads_from_strings(head_strs: list[str]) -> list[tuple[int, int]]:
+	"""Convert list of head strings to (layer, head) tuples.
+
+	Parameters
+	----------
+	head_strs
+		List of strings like ['L5:H5', 'L6:H9'] or ['gpt2-small:L5:H5'].
+
+	Returns
+	-------
+	list[tuple[int, int]]
+		List of (layer, head) tuples.
+	"""
+	return [parse_head(s) for s in head_strs]
+
+
+class HeadClassSchema(TypedDict):
+	"""Schema for a head classification entry.
+
+	Attributes:
+		type: Classification type name (e.g. "induction", "previous_token")
+		heads: List of head IDs in format "L{layer}:H{head}" (e.g. "L0:H0", "L5:H7")
+	"""
+
+	type: str
+	heads: list[str]
+
+
+class PaperGroupSchema(TypedDict):
+	"""Schema for a paper/research group entry in the AttentionPedia JSON.
+
+	Attributes:
+		prefix: Short identifier for the paper (e.g. "olsson2022")
+		url: URL to the paper or resource
+		notes: Additional notes about the paper's findings
+		model: Model name the classifications apply to (e.g. "gpt2-small")
+		classes: List of head classification entries from this paper
+	"""
+
+	prefix: str
+	url: str
+	notes: str
+	model: str
+	classes: list[HeadClassSchema]
+
+
+AttentionPediaSchema = list[PaperGroupSchema]
 
 
 class AttentionPedia:
@@ -72,9 +151,7 @@ class AttentionPedia:
 
 			for head_cls in group["classes"]:
 				for h in head_cls["heads"]:
-					h_split: tuple[str, str] = tuple(h.split(":"))
-					layer_idx: int = int(h_split[0].removeprefix("L"))
-					head_idx: int = int(h_split[1].removeprefix("H"))
+					layer_idx, head_idx = parse_head(h)
 
 					df_raw.append(
 						{
@@ -186,6 +263,7 @@ class AttentionPedia:
 		if self._head_type_colors is None or refresh:
 			self._generate_head_type_maps()
 
+		assert self._head_type_colors is not None
 		return self._head_type_colors
 
 	def head_type_groups(self, refresh: bool = False) -> dict[str, str]:
@@ -202,6 +280,7 @@ class AttentionPedia:
 		if self._head_type_groups is None or refresh:
 			self._generate_head_type_maps()
 
+		assert self._head_type_groups is not None
 		return self._head_type_groups
 
 	def _generate_head_type_maps(self) -> None:
@@ -229,8 +308,10 @@ class AttentionPedia:
 					factor: float = 0.2 * (i / (len(types) - 1 or 1) - 0.5)
 
 					# Create variation (lighten/darken)
-					new_rgb: tuple = tuple(
-						min(max(c * (1 + factor), 0), 1) for c in base_rgb
+					new_rgb: tuple[float, float, float] = (
+						min(max(base_rgb[0] * (1 + factor), 0), 1),
+						min(max(base_rgb[1] * (1 + factor), 0), 1),
+						min(max(base_rgb[2] * (1 + factor), 0), 1),
 					)
 					color_dict[type_name] = mcolors.rgb2hex(new_rgb)
 
@@ -297,11 +378,9 @@ def main() -> None:
 				"type_to_heads": pedia.type_to_heads(),
 				"type_metadata": pedia.type_metadata(),
 			}
-		case "dataframe":
-			result = pedia.dataframe().to_dict(orient="records")
-			lines = True
-		case "df":
-			result = pedia.dataframe().to_dict(orient="records")
+		case "dataframe" | "df":
+			# same as pandas.DataFrame(...).to_dict(orient="records")
+			result = pedia.dataframe().to_dicts()
 			lines = True
 		case "head-to-types":
 			result = pedia.head_to_types()

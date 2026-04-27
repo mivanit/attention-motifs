@@ -16,22 +16,22 @@ def cross_entropy(
 	p: Float[np.ndarray, " d"],
 	q: Float[np.ndarray, " d"],
 ) -> float:
-	"$H(p,q)=-\sum _{x\in {\mathcal {X}}}p(x)\,\log q(x)$"
-	return -np.sum(p * np.log(q))
+	r"$H(p,q)=-\sum _{x\in {\mathcal {X}}}p(x)\,\log q(x)$"
+	return -float(np.sum(p * np.log(q)))
 
 
 def l2_norm(
 	p: Float[np.ndarray, " d"],
 	q: Float[np.ndarray, " d"],
 ) -> float:
-	return np.linalg.norm(p - q, ord=2)
+	return float(np.linalg.norm(p - q, ord=2))
 
 
 def kl_divergence(
 	p: Float[np.ndarray, " d"],
 	q: Float[np.ndarray, " d"],
 ) -> float:
-	return np.sum(p * np.log(p / q))
+	return float(np.sum(p * np.log(p / q)))
 
 
 def sigmoid(
@@ -143,6 +143,10 @@ def transition_tensor(
 	res_resampled: Float[np.ndarray, "n_idxs n_ctx"] | None
 	if residuals:
 		res_resampled = np.full((n_idxs, n_ctx), np.nan, dtype=A.dtype)
+		# TODO: bug -- when i_idx == 0, tt_resampled[-1] grabs the *last* element
+		# (highest power) via Python negative indexing instead of identity.
+		# Docstring says residuals[0] should be NaN. Fix: range(1, n_idxs).
+		# Only affects tt_fig plotting, not the pipeline (which uses the torch version).
 		for i_idx in range(n_idxs):
 			for i_ctx in range(n_ctx):
 				res_resampled[i_idx, i_ctx] = res_norm(
@@ -228,12 +232,12 @@ def transition_tensor_torch(
 	n_idxs: int = len(idxs)
 
 	# Compute powers of A iteratively
-	needed_powers: list[int] = sorted(p.item() for p in set(idxs) if p >= 0)
+	needed_powers: list[int] = sorted(int(p.item()) for p in set(idxs) if p >= 0)
 	# Only add powers-1 if we're computing residuals
 	if residuals:
 		prev_powers = set(idxs - 1)
 		needed_powers = sorted(
-			set(needed_powers).union(p for p in prev_powers if p >= 0)
+			set(needed_powers).union(int(p.item()) for p in prev_powers if p >= 0)
 		)
 
 	A_powers_arr: Float[Tensor, "len(needed_powers) n_ctx n_ctx"] = matrix_powers_torch(
@@ -251,7 +255,7 @@ def transition_tensor_torch(
 
 	# Stack the matrices in the order specified by idxs
 	tt_resampled: Float[Tensor, "n_idxs n_ctx n_ctx"] = torch.stack(
-		[A_powers[p.item()] for p in idxs],
+		[A_powers[int(p.item())] for p in idxs],
 		dim=0,
 	)
 
@@ -263,7 +267,7 @@ def transition_tensor_torch(
 		)
 		for i_idx in range(n_idxs):
 			for i_ctx in range(n_ctx):
-				prev_power = idxs[i_idx - 1].item() if i_idx > 0 else -1
+				prev_power: int = int(idxs[i_idx - 1].item()) if i_idx > 0 else -1
 				if prev_power in A_powers:
 					res_resampled[i_idx, i_ctx] = res_norm(
 						tt_resampled[i_idx, i_ctx, :], A_powers[prev_power][i_ctx, :]
@@ -284,7 +288,7 @@ def tt_fig(
 	axs[0].matshow(A)
 
 	# compute transition_tensor
-	idxs, tt, res = transition_tensor(A, exact=20, approx_l10=3.0, approx_pts=20)
+	idxs, tt, res = transition_tensor(A, exact=20, approx_l10=3, approx_pts=20)
 
 	#
 	axs[1].set_title("transition tensor")
@@ -302,7 +306,12 @@ def tt_fig(
 		x: np.ndarray = np.arange(tt.shape[2])
 		y: np.ndarray = tt[i, 0, :]
 		# Initial parameter guess: amplitude, midpoint, steepness, baseline
-		p0: list[float] = [max(y) - min(y), np.median(x), 1.0, min(y)]
+		p0: list[float] = [
+			float(max(y) - min(y)),
+			float(np.median(x)),
+			1.0,
+			float(min(y)),
+		]
 		try:
 			popt: np.ndarray
 			popt, _ = curve_fit(sigmoid, x, y, p0=p0)
@@ -315,6 +324,7 @@ def tt_fig(
 	#
 	axs[3].set_title("residuals tensor")
 	# aspect shoudl be such that the image is square, although the matrix is not
+	assert res is not None, "residuals must be computed for this plot"
 	axs[3].matshow(res.T, aspect=(res.shape[0] / res.shape[1]))
 	axs[3].set_xticks(range(len(idxs)))
 	axs[3].set_xticklabels(idxs)

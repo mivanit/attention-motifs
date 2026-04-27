@@ -3,7 +3,7 @@
 # prompts file -- should be newline-delimited jsonl with each row having keys "text" and "meta"
 # example:
 # {"text": "Inorganic phosphate uptake in intact vacuoles isolated from suspension-cultured cells", "meta": {"pile_set_name": "PubMed Abstracts"}}
-prompts_file = "data/text/pile_demo.jsonl"
+prompts_file = "data/text/pile_10k.jsonl"
 # where to save patters -- both npz files of activations, and in step 1b png files of activation patterns
 # structure is:
 # `{patterns_dir}/{model_name}/prompts/{prompt_hash}/activations.npz`
@@ -13,7 +13,7 @@ patterns_dir = "data/patterns"
 # prompts processing
 # ============================================================
 # how many total prompts to use
-prompts_n_samples = 128
+prompts_n_samples = 1024
 # minimum chars per prompt
 prompts_min_chars = 64
 # maximum chars per prompt
@@ -23,22 +23,61 @@ prompts_max_chars = 512
 # ============================================================
 # which models to use (transformerlens names)
 models = [
-	# "pythia-410m",
-	"pythia-1b",
+	# gpt2
 	"gpt2-small",
 	"gpt2-medium",
-	# "gpt2-large",
-	"meta-llama/Llama-3.2-1B",
-	# "Llama-3.2-1B",
-	# "Llama-3.2-1B-Instruct",
-	"gemma-2b",
-	"gemma-2-2b",
-	# these are tiny and look weird
-	# "pythia-14m",
+	"gpt2-large",
+	"gpt2-xl",
+	"distillgpt2",
+	
+	# pythia
+	"pythia-14m",
+	"pythia-31m",
+	"pythia-70m",
+	"pythia-160m",
+
+	# "pythia-160m-deduped",
+	# "pythia-160m-v0",
+	# "pythia-160m-deduped-v0",
+	"pythia-160m-seed1",
+	"pythia-160m-seed2",
+	"pythia-160m-seed3",
+	
+	"pythia-410m",
+	"pythia-1b",
+	"pythia-1.4b",
+	
+	# too big for 24GB vram
+	# "pythia-2.8b",
+	# "pythia-6.9b",
+	# "pythia-12b",
+	
+	# tinystories
 	# "tiny-stories-1M",
+	# "tiny-stories-3M",
+	# "tiny-stories-8M",
+	# "tiny-stories-28M",
+	# "tiny-stories-33M",
+	# gemma
+	# "gemma-2b",
+	# "gemma-2-2b",
+	## gemma3
+	# "gemma-3-270m",
+	# "gemma-3-1b-pt",
+	#"gemma-3-4b-pt",
+	# llama
+	# "meta-llama/Llama-3.2-1B",
+	#"meta-llama/Llama-3.2-3B",
+	# qwen doesnt work, TL bug?
 ]
 # number of components for PCA decomposition of activation features
 pca_n_components = 6
+# max prompts in web CSV (pca_web.csv). same prompt subset for all models.
+# PCA is computed on ALL data; this only limits the web visualization file.
+# comment out = use all prompts
+web_pca_n_prompts = 128
+
+# clustering configuration -- see [clustering] section near bottom
 
 # head embedding configuration
 # ============================================================
@@ -51,13 +90,45 @@ pca_n_components = 6
 
 # computing
 # ============================================================
-# numbper of cpus to use for CPU tasks
-n_proc = 12
+
+# skip previously completed steps (tracks state in data/pipeline_state.json)
+# invalidates automatically when config changes
+smart_mode = true
+# number of cpus to use for CPU tasks
+n_proc = 69
+# chunksize for multiprocessing pool.imap in s2 feature computation
+s2_chunksize = 1
 # whether to force an overwrite of existing attention patterns
 force_overwrite = false
 # device to use for torch tensors -- generally "cpu", "cuda", or "mps"
 # can be set thru cli with `--device`
 device = "cuda:0"
+
+# multi-model parallelism for s1 (run models concurrently based on VRAM)
+# enable with --parallel-models on the CLI, or set to true here
+parallel_models = true
+devices = ["cuda:0"]
+# multiplied with n_params to estimate VRAM in bytes.  must account for dtype
+# size (e.g. 4 for fp32), activation caches, and allocator overhead.
+# batch-size memory is not modelled — increase this if you hit OOM.
+vram_safety_factor = 10.0
+# number of prompts per forward pass during activation gathering
+# batch_size = 32
+batch_size = 8 # gpt2-xl and pythia-2.8b need this to avoid OOM on 24GB vram, but smaller models can use larger batch sizes for speed. so, run the pipeline with larger batch size first, let the models fail, then run again with this smaller batch size to finish the failed models
+# compression level for activation .npz files: 0=none (fastest), 1=fast, 6=default
+# level 1 is ~5x faster than 6 with ~2x compression ratio
+compress_level = 0
+
+# s1b: render patterns to PNG
+# ============================================================
+# set to false to skip PNG rendering entirely
+render_patterns_enabled = true
+# how many prompts to render PNGs for (comment out = all prompts_n_samples)
+# if less than prompts_n_samples, a deterministic random subset is selected
+# the same subset is used for ALL models
+render_n_samples = 64
+# seed for deterministic random prompt selection
+render_seed = 42
 
 # output paths
 # ============================================================
@@ -83,7 +154,7 @@ verbose = 99
 pca_all_dpi = 150
 
 [vis_configs.embed_pattern.cfg]
-dataFile = "../../../features/pca.csv"
+dataFile = "../../../features/pca_web.csv"
 
 # visualization configurations (uncomment to override defaults)
 # ============================================================
@@ -115,4 +186,51 @@ dataFile = "../../../features/pca.csv"
 # dataFile = "../../../features/head_embed.jsonl"
 # numericalPrefix = "embed."
 # defaultColorColumn = "type.group"
+
+# clustering (step s4c)
+# ============================================================
+# Which clustering methods to compute. All three run by default.
+# Each method uses the same mean head-distance matrix from step s4.
+[clustering]
+methods = ["hierarchical", "hdbscan", "leiden"]
+
+# -- hierarchical (agglomerative, scipy) --
+# Linkage criterion: "ward", "average", "complete", "single"
+# hierarchical_linkage_method = "average"
+# K values to pre-compute dendrogram cuts for
+# hierarchical_n_clusters_list = [5, 10, 20, 50]
+
+# -- HDBSCAN (density-based, sklearn) --
+# min_cluster_size values to sweep; controls cluster granularity.
+# Heads not assigned to any cluster become outliers (label -1).
+hdbscan_min_cluster_sizes = [3, 5, 10, 20]
+
+# -- Leiden (graph community detection, igraph) --
+# Builds a mutual k-NN graph from the distance matrix with Gaussian
+# kernel edge weights, then runs Leiden at each resolution.
+# Higher resolution = more / smaller clusters.
+leiden_resolutions = [0.1, 0.25, 0.5, 1.0, 2.0]
+# k for k-NN graph construction
+# TODO: sweep over n_neighbors???
+leiden_n_neighbors = 10
+
+# ablation experiments (step s7)
+# ============================================================
+# Runs ablation experiments (requires s4c for clustering data).
+# all_heads = true: ablate every head in every pipeline model.
+# all_heads = false: per-cluster mode (specify cut_height + heads/cluster_ids).
+[ablation]
+all_heads = true
+output_dir = "data/ablations"
+n_sequences = 100
+seq_length = 25
+n_repetitions = 4
+seed = 42
+micro_batch_size = 20
+calibration_prompts_file = "data/text/pile_10k.jsonl"
+icl_prompts_file = "data/text/pile_10k.jsonl"
+# --- Per-cluster mode (used when all_heads = false) ---
+# cut_height = 5.0
+# heads = ["gpt2-small:L5:H5"]
+# cluster_ids = [3, 7]
 

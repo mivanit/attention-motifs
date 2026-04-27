@@ -3,62 +3,62 @@
 -e .
 absl-py==2.4.0
     # via tensorboard
-accelerate==1.12.0
+accelerate==1.13.0
     # via transformer-lens
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.13.3
-    # via
-    #   datasets
-    #   fsspec
+aiohttp==3.13.5
+    # via fsspec
 aiosignal==1.4.0
     # via aiohttp
+annotated-doc==0.0.4
+    # via typer
 annotated-types==0.7.0
     # via pydantic
+anyio==4.13.0
+    # via httpx
 appnope==0.1.4 ; sys_platform == 'darwin'
     # via ipykernel
 asttokens==3.0.1
     # via stack-data
-attrs==25.4.0
+attrs==26.1.0
     # via
     #   aiohttp
     #   igittigitt
     #   jsonschema
     #   referencing
-beartype==0.14.1
+basedpyright==1.39.3
+beartype==0.22.9
     # via
     #   attention-motifs
     #   pattern-lens
     #   transformer-lens
 beautifulsoup4==4.14.3
-    # via
-    #   attention-motifs
-    #   nbconvert
+    # via nbconvert
 better-abc==0.0.3
     # via transformer-lens
 bleach==6.3.0
     # via nbconvert
-blinker==1.9.0
-    # via flask
 bracex==2.6
     # via wcmatch
-certifi==2026.1.4
+certifi==2026.4.22
     # via
+    #   httpcore
+    #   httpx
     #   requests
     #   sentry-sdk
 cffi==2.0.0 ; implementation_name == 'pypy'
     # via pyzmq
-charset-normalizer==3.4.4
+charset-normalizer==3.4.7
     # via requests
 cli-exit-tools==1.2.7
     # via igittigitt
-click==8.3.1
+click==8.3.3
     # via
     #   cli-exit-tools
-    #   flask
     #   igittigitt
-    #   pysr
     #   rich-click
+    #   typer
     #   wandb
 colorama==0.4.6 ; sys_platform == 'win32'
     # via
@@ -73,28 +73,25 @@ comm==0.2.3
     #   ipywidgets
 contourpy==1.3.3
     # via matplotlib
-coverage==7.13.4
+coverage==7.13.5
     # via
     #   coverage-badge
     #   pytest-cov
 coverage-badge==1.1.2
-cuda-bindings==12.9.4 ; platform_machine == 'x86_64' and sys_platform == 'linux'
-    # via torch
-cuda-pathfinder==1.3.4 ; platform_machine == 'x86_64' and sys_platform == 'linux'
-    # via cuda-bindings
 cycler==0.12.1
     # via matplotlib
-dash==4.0.0
-    # via attention-motifs
-datasets==2.14.4
-    # via transformer-lens
+datasets==4.8.4
+    # via
+    #   attention-motifs
+    #   pattern-lens
+    #   transformer-lens
 debugpy==1.8.20
     # via ipykernel
 decorator==5.2.1
     # via ipython
 defusedxml==0.7.1
     # via nbconvert
-dill==0.3.7
+dill==0.4.1
     # via
     #   datasets
     #   multiprocess
@@ -102,21 +99,20 @@ einops==0.8.2
     # via
     #   attention-motifs
     #   transformer-lens
+execnet==2.1.2
+    # via pytest-xdist
 executing==2.2.1
     # via stack-data
 fancy-einsum==0.0.3
     # via transformer-lens
 fastjsonschema==2.21.2
     # via nbformat
-filelock==3.24.2
+filelock==3.29.0
     # via
+    #   datasets
     #   huggingface-hub
-    #   juliapkg
     #   torch
-    #   transformers
-flask==3.1.2
-    # via dash
-fonttools==4.61.1
+fonttools==4.62.1
     # via matplotlib
 frozenlist==1.8.0
     # via
@@ -129,34 +125,46 @@ fsspec==2026.2.0
     #   torch
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.46
+gitpython==3.1.47
     # via wandb
-grpcio==1.78.0
+greenlet==3.4.0
+    # via playwright
+grpcio==1.80.0
     # via tensorboard
-hf-xet==1.2.0 ; platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'
+h11==0.16.0
+    # via httpcore
+hf-xet==1.4.3 ; platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'
     # via huggingface-hub
-huggingface-hub==0.36.2
+httpcore==1.0.9
+    # via httpx
+httpx==0.28.1
+    # via
+    #   datasets
+    #   huggingface-hub
+huggingface-hub==1.12.0
     # via
     #   accelerate
     #   datasets
     #   tokenizers
     #   transformer-lens
     #   transformers
-idna==3.11
+idna==3.13
     # via
+    #   anyio
+    #   httpx
     #   requests
     #   yarl
 igittigitt==2.1.5
     # via lmcat
-importlib-metadata==8.7.1
-    # via dash
+igraph==1.0.0
+    # via attention-motifs
 iniconfig==2.3.0
     # via pytest
 ipykernel==7.2.0
     # via
     #   attention-motifs
     #   pattern-lens
-ipython==9.10.0
+ipython==9.13.0
     # via
     #   ipykernel
     #   ipywidgets
@@ -166,8 +174,6 @@ ipywidgets==8.1.8
     # via
     #   attention-motifs
     #   pattern-lens
-itsdangerous==2.2.0
-    # via flask
 jaxtyping==0.3.9
     # via
     #   attention-motifs
@@ -178,7 +184,6 @@ jedi==0.19.2
     # via ipython
 jinja2==3.1.6
     # via
-    #   flask
     #   nbconvert
     #   pdoc
     #   torch
@@ -186,16 +191,12 @@ joblib==1.5.3
     # via
     #   pynndescent
     #   scikit-learn
-js-embedding-vis @ git+https://github.com/mivanit/js-embedding-vis@d6a65503e5e8042ab960a14df62a830c3e9460c7
+js-embedding-vis @ git+https://github.com/mivanit/js-embedding-vis@3facd57bbd596c090f02cf1d63a9cb0c2a665659
     # via attention-motifs
 jsonschema==4.26.0
     # via nbformat
 jsonschema-specifications==2025.9.1
     # via jsonschema
-juliacall==0.9.26
-    # via pysr
-juliapkg==0.1.23
-    # via juliacall
 jupyter-client==8.8.0
     # via
     #   ipykernel
@@ -211,15 +212,15 @@ jupyterlab-pygments==0.3.0
     # via nbconvert
 jupyterlab-widgets==3.0.16
     # via ipywidgets
-kiwisolver==1.4.9
+kiwisolver==1.5.0
     # via matplotlib
 lib-detect-testenv==3.0.1
     # via
     #   cli-exit-tools
     #   igittigitt
-librt==0.8.1 ; platform_python_implementation != 'PyPy'
+librt==0.9.0 ; platform_python_implementation != 'PyPy'
     # via mypy
-llvmlite==0.46.0
+llvmlite==0.47.0
     # via
     #   numba
     #   pynndescent
@@ -228,16 +229,15 @@ markdown==3.10.2
     # via tensorboard
 markdown-it-py==4.0.0
     # via rich
-markdown2==2.5.4
+markdown2==2.5.5
     # via pdoc
 markupsafe==3.0.3
     # via
-    #   flask
     #   jinja2
     #   nbconvert
     #   pdoc
     #   werkzeug
-matplotlib==3.10.8
+matplotlib==3.10.9
     # via
     #   attention-motifs
     #   pattern-lens
@@ -255,37 +255,36 @@ multidict==6.7.1
     # via
     #   aiohttp
     #   yarl
-multiprocess==0.70.15
+multiprocess==0.70.19
     # via datasets
-muutils==0.8.12
+muutils==0.9.1
     # via
     #   attention-motifs
     #   lmcat
     #   pattern-lens
     #   trnbl
     #   zanj
-mypy==1.19.1
+mypy==1.20.2
 mypy-extensions==1.1.0
     # via mypy
-narwhals==2.16.0
+narwhals==2.20.0
     # via plotly
 nbclient==0.10.4
     # via nbconvert
-nbconvert==7.17.0
+nbconvert==7.17.1
 nbformat==5.10.4
     # via
     #   attention-motifs
     #   nbclient
     #   nbconvert
 nest-asyncio==1.6.0
-    # via
-    #   dash
-    #   ipykernel
+    # via ipykernel
 networkx==3.6.1
     # via torch
-numba==0.63.1
+nodejs-wheel-binaries==24.15.0
+    # via basedpyright
+numba==0.65.1
     # via
-    #   attention-motifs
     #   pynndescent
     #   umap-learn
 numpy==1.26.4
@@ -296,10 +295,11 @@ numpy==1.26.4
     #   datasets
     #   matplotlib
     #   numba
+    #   numpy-typing-compat
+    #   optype
     #   pandas
+    #   pandas-stubs
     #   pattern-lens
-    #   pot
-    #   pysr
     #   scikit-learn
     #   scipy
     #   tensorboard
@@ -308,46 +308,46 @@ numpy==1.26.4
     #   trnbl
     #   umap-learn
     #   zanj
-nvidia-cublas-cu12==12.8.4.1 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+numpy-typing-compat==20251206.1.25
+    # via optype
+nvidia-cublas-cu12==12.4.5.8 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via
     #   nvidia-cudnn-cu12
     #   nvidia-cusolver-cu12
     #   torch
-nvidia-cuda-cupti-cu12==12.8.90 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+nvidia-cuda-cupti-cu12==12.4.127 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-cuda-nvrtc-cu12==12.8.93 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+nvidia-cuda-nvrtc-cu12==12.4.127 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-cuda-runtime-cu12==12.8.90 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+nvidia-cuda-runtime-cu12==12.4.127 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-cudnn-cu12==9.10.2.21 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+nvidia-cudnn-cu12==9.1.0.70 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-cufft-cu12==11.3.3.83 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+nvidia-cufft-cu12==11.2.1.3 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-cufile-cu12==1.13.1.3 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+nvidia-curand-cu12==10.3.5.147 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-curand-cu12==10.3.9.90 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+nvidia-cusolver-cu12==11.6.1.9 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-cusolver-cu12==11.7.3.90 ; platform_machine == 'x86_64' and sys_platform == 'linux'
-    # via torch
-nvidia-cusparse-cu12==12.5.8.93 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+nvidia-cusparse-cu12==12.3.1.170 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via
     #   nvidia-cusolver-cu12
     #   torch
-nvidia-cusparselt-cu12==0.7.1 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+nvidia-cusparselt-cu12==0.6.2 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-nccl-cu12==2.27.5 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+nvidia-nccl-cu12==2.21.5 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-nvjitlink-cu12==12.8.93 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+nvidia-nvjitlink-cu12==12.4.127 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via
     #   nvidia-cufft-cu12
     #   nvidia-cusolver-cu12
     #   nvidia-cusparse-cu12
     #   torch
-nvidia-nvshmem-cu12==3.4.5 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+nvidia-nvtx-cu12==12.4.127 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-nvtx-cu12==12.8.90 ; platform_machine == 'x86_64' and sys_platform == 'linux'
-    # via torch
-packaging==26.0
+optype==0.17.0
+    # via scipy-stubs
+packaging==26.2
     # via
     #   accelerate
     #   datasets
@@ -360,55 +360,51 @@ packaging==26.0
     #   tensorboard
     #   transformers
     #   wandb
-pandas==2.3.3
+pandas==3.0.2
     # via
-    #   attention-motifs
     #   datasets
     #   pattern-lens
-    #   pysr
     #   transformer-lens
+pandas-stubs==3.0.0.260204
 pandocfilters==1.5.1
     # via nbconvert
 parso==0.8.6
     # via jedi
-pathspec==1.0.4
+pathspec==1.1.0
     # via mypy
-pattern-lens @ git+https://github.com/mivanit/pattern-lens@61adc0e68f97cb8ce65f85b0fb6b1396d1eefd18
+pattern-lens @ git+https://github.com/mivanit/pattern-lens@0c50ad2469d2ddb1e9200eae70b8c5a81e5d0cd5
     # via attention-motifs
 pdoc==16.0.0
 pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
     # via ipython
-pillow==12.1.1
+pillow==12.2.0
     # via
-    #   attention-motifs
     #   matplotlib
     #   pattern-lens
     #   tensorboard
-platformdirs==4.9.2
+platformdirs==4.9.6
     # via
     #   jupyter-core
     #   wandb
-plotly==6.5.2
-    # via
-    #   attention-motifs
-    #   dash
+playwright==1.58.0
+    # via pytest-playwright
+plotly==6.7.0
+    # via attention-motifs
 pluggy==1.6.0
     # via
     #   pytest
     #   pytest-cov
-polars==1.38.1
+polars==1.40.1
     # via attention-motifs
-polars-runtime-32==1.38.1
+polars-runtime-32==1.40.1
     # via polars
-pot==0.9.6.post1
-    # via attention-motifs
 prompt-toolkit==3.0.52
     # via ipython
 propcache==0.4.1
     # via
     #   aiohttp
     #   yarl
-protobuf==6.33.5
+protobuf==7.34.1
     # via
     #   tensorboard
     #   transformer-lens
@@ -417,11 +413,12 @@ psutil==7.2.2
     # via
     #   accelerate
     #   ipykernel
+    #   ipython
 ptyprocess==0.7.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
-pyarrow==23.0.1
+pyarrow==24.0.0
     # via datasets
 pycparser==3.0 ; implementation_name == 'pypy'
     # via cffi
@@ -431,7 +428,9 @@ pydantic==2.10.4
     #   wandb
 pydantic-core==2.27.2
     # via pydantic
-pygments==2.19.2
+pyee==13.0.1
+    # via playwright
+pygments==2.20.0
     # via
     #   ipython
     #   ipython-pygments-lexers
@@ -443,18 +442,24 @@ pynndescent==0.6.0
     # via umap-learn
 pyparsing==3.3.2
     # via matplotlib
-pysr==1.5.9
-    # via attention-motifs
-pytest==9.0.2
-    # via pytest-cov
-pytest-cov==7.0.0
+pytest==9.0.3
+    # via
+    #   pytest-base-url
+    #   pytest-cov
+    #   pytest-playwright
+    #   pytest-xdist
+pytest-base-url==2.1.0
+    # via pytest-playwright
+pytest-cov==7.1.0
+pytest-playwright==0.7.2
+pytest-xdist==3.8.0
 python-dateutil==2.9.0.post0
     # via
     #   jupyter-client
     #   matplotlib
     #   pandas
-pytz==2025.2
-    # via pandas
+python-slugify==8.0.4
+    # via pytest-playwright
 pyyaml==6.0.3
     # via
     #   accelerate
@@ -467,96 +472,89 @@ pyzmq==27.1.0
     # via
     #   ipykernel
     #   jupyter-client
+rangehttpserver==1.4.0
 referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-regex==2026.1.15
+regex==2026.4.4
     # via transformers
-requests==2.32.5
+requests==2.33.1
     # via
-    #   dash
     #   datasets
-    #   huggingface-hub
-    #   transformers
+    #   pytest-base-url
     #   wandb
-retrying==1.4.2
-    # via dash
-rich==14.3.2
+rich==15.0.0
     # via
     #   rich-click
     #   transformer-lens
+    #   typer
 rich-click==1.9.7
     # via lib-detect-testenv
 rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
-ruff==0.15.1
+ruff==0.15.12
 safetensors==0.7.0
     # via
     #   accelerate
     #   transformers
 scikit-learn==1.8.0
     # via
+    #   attention-motifs
     #   pynndescent
-    #   pysr
     #   umap-learn
-scipy==1.17.0
+scipy==1.17.1
     # via
     #   attention-motifs
     #   pattern-lens
-    #   pot
     #   pynndescent
     #   scikit-learn
     #   umap-learn
-semver==3.0.4
-    # via juliapkg
+scipy-stubs==1.17.1.4
 sentencepiece==0.2.1
     # via transformer-lens
-sentry-sdk==2.53.0
+sentry-sdk==2.58.0
     # via wandb
-setuptools==82.0.0
+setuptools==82.0.1
     # via
     #   coverage-badge
-    #   dash
     #   tensorboard
     #   torch
+shellingham==1.5.4
+    # via typer
 six==1.17.0
     # via python-dateutil
-smmap==5.0.2
+smmap==5.0.3
     # via gitdb
 soupsieve==2.8.3
     # via beautifulsoup4
 stack-data==0.6.3
     # via ipython
-sympy==1.14.0
-    # via
-    #   pysr
-    #   torch
+sympy==1.13.1
+    # via torch
 tensorboard==2.20.0
     # via trnbl
 tensorboard-data-server==0.7.2
     # via tensorboard
+text-unidecode==1.3
+    # via python-slugify
+texttable==1.7.0
+    # via igraph
 threadpoolctl==3.6.0
     # via scikit-learn
 tinycss2==1.4.0
     # via bleach
 tokenizers==0.22.2
     # via transformers
-tomli==2.4.0
-    # via
-    #   coverage
-    #   juliapkg
-tomlkit==0.14.0
-    # via juliapkg
-torch==2.10.0
+torch==2.6.0
     # via
     #   accelerate
     #   attention-motifs
     #   pattern-lens
     #   transformer-lens
-tornado==6.5.4
+tornado==6.5.5
     # via
     #   ipykernel
     #   jupyter-client
@@ -581,54 +579,65 @@ traitlets==5.14.3
     #   nbclient
     #   nbconvert
     #   nbformat
-transformer-lens==2.17.0
+transformer-lens @ git+https://github.com/TransformerLensOrg/TransformerLens@2a7d5c49795789218d372409c6911ab12b07aaa8
     # via
     #   attention-motifs
     #   pattern-lens
-transformers==4.57.6
+transformers==5.6.2
     # via
+    #   attention-motifs
     #   transformer-lens
     #   transformers-stream-generator
 transformers-stream-generator==0.0.5
     # via transformer-lens
-triton==3.6.0 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+triton==3.2.0 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
 trnbl==0.1.1
     # via attention-motifs
+ty==0.0.32
 typeguard==4.4.2
     # via
     #   attention-motifs
     #   pattern-lens
     #   transformer-lens
+typer==0.25.0
+    # via
+    #   huggingface-hub
+    #   transformers
+types-psutil==7.2.2.20260408
+types-requests==2.33.0.20260408
+    # via types-tqdm
+types-tqdm==4.67.3.20260408
 typing-extensions==4.12.2
     # via
     #   aiosignal
+    #   anyio
     #   attention-motifs
     #   beautifulsoup4
-    #   dash
     #   grpcio
     #   huggingface-hub
-    #   ipython
     #   mypy
+    #   optype
     #   pydantic
     #   pydantic-core
-    #   pysr
+    #   pyee
     #   referencing
     #   torch
     #   transformer-lens
     #   typeguard
     #   wandb
-tzdata==2025.3
+tzdata==2026.2 ; sys_platform == 'emscripten' or sys_platform == 'win32'
     # via pandas
-umap-learn==0.5.11
+umap-learn==0.5.12
     # via attention-motifs
 urllib3==2.6.3
     # via
     #   requests
     #   sentry-sdk
+    #   types-requests
 wadler-lindig==0.1.7
     # via jaxtyping
-wandb==0.25.0
+wandb==0.26.1
     # via transformer-lens
 wcmatch==10.1
     # via igittigitt
@@ -638,20 +647,15 @@ webencodings==0.5.1
     # via
     #   bleach
     #   tinycss2
-werkzeug==3.1.5
-    # via
-    #   dash
-    #   flask
-    #   tensorboard
+werkzeug==3.1.8
+    # via tensorboard
 widgetsnbextension==4.0.15
     # via ipywidgets
-xxhash==3.6.0
+xxhash==3.7.0
     # via datasets
-yarl==1.22.0
+yarl==1.23.0
     # via aiohttp
-zanj==0.5.2
+zanj==0.6.0
     # via
     #   attention-motifs
     #   pattern-lens
-zipp==3.23.0
-    # via importlib-metadata

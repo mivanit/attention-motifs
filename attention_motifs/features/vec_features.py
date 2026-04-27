@@ -13,10 +13,15 @@ def vec_features(
 	# compute_distribution: bool = True,
 	# compute_timeseries: bool = True,
 	reduced: bool = True,
+	dist_only: bool = False,
 ) -> dict[str, float]:
 	if len(arr.shape) != 1:
 		dbg_tensor(arr)
 		raise ValueError(f"Input arr must be 1-dimensional, got {arr.shape}")
+
+	# Guard against NaN values which cause histogram to fail
+	if np.any(np.isnan(arr)):
+		arr = np.nan_to_num(arr, nan=0.0)
 
 	n: int = arr.size
 
@@ -31,21 +36,24 @@ def vec_features(
 		hist.astype(float) / hist.sum() if hist.sum() > 0 else hist.astype(float)
 	)
 	dist_features = dict(
-		mean=np.mean(arr),
-		median=np.median(arr),
-		variance=np.var(arr, ddof=1),
+		mean=float(np.mean(arr)),
+		median=float(np.median(arr)),
+		variance=float(np.var(arr, ddof=1)),
 		# std=np.std(arr, ddof=1),
-		skewness=stats.skew(arr),
+		skewness=float(stats.skew(arr)),
 		# kurtosis=stats.kurtosis(arr),
-		entropy=stats.entropy(probs, base=2),
+		entropy=float(stats.entropy(probs, base=2)),
 		# L1_norm=np.sum(np.abs(arr)) / n,
 		# L2_norm=np.linalg.norm(arr, ord=2) / n,
-		rms=np.sqrt(np.mean(arr**2)),
+		rms=float(np.sqrt(np.mean(arr**2))),
 	)
 	if not reduced:
-		dist_features["energy"] = np.sum(arr**2)
-		dist_features["kurtosis"] = stats.kurtosis(arr)
-		dist_features["L2_norm"] = np.linalg.norm(arr, ord=2) / n
+		dist_features["energy"] = float(np.sum(arr**2))
+		dist_features["kurtosis"] = float(stats.kurtosis(arr))
+		dist_features["L2_norm"] = float(np.linalg.norm(arr, ord=2) / n)
+
+	if dist_only:
+		return dist_features
 
 	# if compute_timeseries:
 	# Lag-1 Autocorrelation (Pearson correlation between arr[:-1] and arr[1:])
@@ -57,18 +65,18 @@ def vec_features(
 
 	# PSD using Welch's method (total power)
 	freqs, psd_vals = signal.welch(arr, nperseg=n)
-	psd_total_power: float = np.sum(psd_vals)
+	psd_total_power: float = float(np.sum(psd_vals))
 
 	# Linear regression using scipy.stats.linregress
 	t: np.ndarray = np.arange(n)
 	linreg_result = stats.linregress(t, arr)
 	line_fit: dict[str, float] = dict(
-		slope=linreg_result.slope,
-		intercept=linreg_result.intercept,
-		r2=linreg_result.rvalue**2,
+		slope=float(linreg_result.slope),
+		intercept=float(linreg_result.intercept),
+		r2=float(linreg_result.rvalue**2),
 	)
 
-	timeseries_features: dict[str, float] = dict(
+	timeseries_features = dict(
 		# zero_crossing_rate=np.sum(np.diff(np.signbit(arr))) / (n - 1),
 		autocorr_lag1=autocorr_lag1,
 		psd_total_power=psd_total_power,
@@ -112,7 +120,7 @@ N_VEC_FEATURES: Final[int] = len(VEC_FEATURES_NAMES)
 def vec_features_arr(
 	x: Float[np.ndarray, "*n"],
 ) -> Float[np.ndarray, f"{N_VEC_FEATURES}"]:
-	"""Return the full 17-element feature vector for a 1-D array.
+	"""Return the full 16-element feature vector for a 1-D array.
 
 	The column order is fixed by ``VEC_FEATURES_NAMES`` so that downstream
 	code can reconstruct a ``dict`` via
@@ -244,5 +252,5 @@ def vec_features_arr(
 
 def vec_features_fast(
 	x: Float[np.ndarray, "*n"],
-) -> Float[np.ndarray, f"{N_VEC_FEATURES}"]:
+) -> dict[str, float]:
 	return {k: v for k, v in zip(VEC_FEATURES_NAMES, vec_features_arr(x))}

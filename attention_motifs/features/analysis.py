@@ -1,16 +1,23 @@
 from functools import cached_property
+import functools
 import json
+import multiprocessing as mp
+import warnings
 from pathlib import Path
-from typing import Callable, Iterable, Sequence
+from typing import Callable, Iterable, Literal, Sequence, overload
 import math
 from collections import defaultdict
 from statistics import median
+from typing import Any, Self, cast
 
 import numpy as np
 import polars as pl
 from jaxtyping import Float
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy.spatial.distance import cdist
 from sklearn.decomposition import PCA
 import matplotlib.gridspec as gridspec
 from tqdm import tqdm
@@ -25,15 +32,7 @@ from muutils.json_serialize import (
 )
 from zanj import ZANJ
 
-
-def parse_cls(cls_: str) -> tuple[str, int, int]:
-	"""
-	Split ``{model}:L{layer}:H{head}`` into (model, layer, head).
-	"""
-	model_part, layer_part, head_part = cls_.split(":")
-	layer = int(layer_part[1:])  # drop leading "L"
-	head = int(head_part[1:])  # drop leading "H"
-	return model_part, layer, head
+from attention_motifs.attnpedia import parse_cls
 
 
 def null_stats(df: pl.DataFrame) -> pl.DataFrame:
@@ -51,10 +50,11 @@ def null_stats(df: pl.DataFrame) -> pl.DataFrame:
 	for col in df.columns:
 		col_dtype: pl.DataType = df.schema[col]
 		# For columns whose dtype string contains "float", check both nulls and NaNs.
+		missing_expr: pl.Expr
 		if "float" in str(col_dtype).lower():
-			missing_expr: pl.Expr = pl.col(col).is_null() | pl.col(col).is_nan()
+			missing_expr = pl.col(col).is_null() | pl.col(col).is_nan()
 		else:
-			missing_expr: pl.Expr = pl.col(col).is_null()
+			missing_expr = pl.col(col).is_null()
 		count: int = df.select(missing_expr.sum()).item()
 		nan_counts[col] = count
 	return pl.DataFrame(
@@ -136,7 +136,9 @@ def filter_data(
 	)
 	for col in remove_cols:
 		# Assuming array_summary is defined elsewhere.
-		print(f"{col:<60} {array_summary(df_models_dropped[col].to_numpy())}")
+		print(
+			f"{col:<60} {array_summary(df_models_dropped[col].to_numpy(), as_list=False)}"
+		)
 
 	df_filtered: pl.DataFrame = df_models_dropped.drop(remove_cols)
 	return df_filtered
@@ -223,6 +225,9 @@ def pca_importance_table(
 		`PC0 … PCk`, `abs_sum`, `abs_mean`, `abs_max`, `abs_var`, `var_weighted`.
 	"""
 	# raw loadings → (n_features × n_components)
+	assert pca_obj.components_ is not None, (
+		"PCA must be fitted before calling pca_importance_table"
+	)
 	loadings = pca_obj.components_.T
 	comp_cols = [f"PC{i}" for i in range(pca_obj.n_components_)]
 	df = (
@@ -354,6 +359,13 @@ def plot_importance_covariance(
 		scores_df = scores_df.filter(pl.col(metrics[0]) > importance_threshold)
 		features = scores_df["feature"].to_list()
 
+	if not features:
+		print(
+			f"[plot_importance_covariance] No features pass the filter "
+			f"(importance_threshold={importance_threshold}). Skipping plot."
+		)
+		return [], np.empty((0, 0))
+
 	labels = [f.removeprefix(feat_strip_prefix) for f in features]
 
 	# ---------- monospace + right-padding for labels ----------------------
@@ -422,7 +434,7 @@ def plot_importance_covariance(
 
 	if 0 < trim_frac < 0.5:
 		pos = ax_imp.get_position()
-		ax_imp.set_position([pos.x0, pos.y0, pos.width * (1 - trim_frac), pos.height])
+		ax_imp.set_position((pos.x0, pos.y0, pos.width * (1 - trim_frac), pos.height))
 
 	# ---------- optional histogram ---------------------------------------
 	# if bins:
@@ -433,9 +445,96 @@ def plot_importance_covariance(
 	# 	ax_hist.set_title("Importance distribution")
 	# 	ax_hist.invert_yaxis()
 
-	plt.tight_layout()
-
 	return features, cov
+
+
+# ---------------------------------------------------------------------------
+# core helper + multiprocessing plumbing for build_distance_tensor
+# ---------------------------------------------------------------------------
+
+
+@overload
+def _build_distance_tensor(
+	data: Float[np.ndarray, "p h d"],
+	*,
+	order: int = ...,
+	reduce: Literal[True] = ...,
+) -> Float[np.ndarray, "h h"]: ...
+
+
+@overload
+def _build_distance_tensor(
+	data: Float[np.ndarray, "p h d"],
+	*,
+	order: int = ...,
+	reduce: Literal[False],
+) -> Float[np.ndarray, "h h p"]: ...
+
+
+@overload
+def _build_distance_tensor(
+	data: Float[np.ndarray, "p h d"],
+	*,
+	order: int = ...,
+	reduce: bool,
+) -> Float[np.ndarray, "h h"] | Float[np.ndarray, "h h p"]: ...
+
+
+def _build_distance_tensor(
+	data: Float[np.ndarray, "p h d"],
+	*,
+	order: int = 2,
+	reduce: bool = True,
+) -> Float[np.ndarray, "h h"] | Float[np.ndarray, "h h p"]:
+	"""Core distance computation on a dense ``(p, h, d)`` array.
+
+	Parameters
+	----------
+	data
+		Feature vectors arranged as *(prompts, heads, features)*.
+	order
+		L-p norm order passed to :func:`scipy.spatial.distance.cdist`.
+	reduce
+		If ``True`` return the ``(h, h)`` mean distance matrix.
+		If ``False`` return the full ``(h, h, p)`` tensor.
+	"""
+	p: int
+	h: int
+	p, h, _ = data.shape
+
+	if reduce:
+		D_sum: Float[np.ndarray, "h h"] = np.zeros((h, h), dtype=np.float64)
+		for k in range(p):
+			D_sum += cdist(data[k], data[k], metric="minkowski", p=order)
+		return D_sum / p if p > 0 else D_sum
+	else:
+		D: Float[np.ndarray, "h h p"] = np.empty((h, h, p), dtype=np.float64)
+		for k in range(p):
+			D[:, :, k] = cdist(data[k], data[k], metric="minkowski", p=order)
+		return D
+
+
+# -- multiprocessing plumbing --
+
+# safe: only written by Pool initializer (one write per worker process, fork CoW)
+_worker_data: Float[np.ndarray, "p h d"]
+
+
+def _init_distance_worker(data: Float[np.ndarray, "p h d"]) -> None:
+	"""Pool initializer — stash the shared (p, h, d) array in a global."""
+	global _worker_data
+	_worker_data = data
+
+
+def _distance_worker(
+	prompt_indices: list[int],
+	*,
+	order: int,
+) -> Float[np.ndarray, "h h"]:
+	"""Pool worker — compute reduced distances for a chunk of prompts."""
+	return _build_distance_tensor(
+		_worker_data[prompt_indices], order=order, reduce=True
+	)
 
 
 @serializable_dataclass(methods_no_override=["serialize", "load"])
@@ -456,16 +555,21 @@ class DistanceTensorResult(SerializableDataclass):
 			is_reduced=True,
 		)
 
+	# this violates Liskov but its fine
 	@classmethod
-	def load(cls, data: dict) -> "DistanceTensorResult":
+	def load(cls, data: dict[str, Any] | Self) -> "DistanceTensorResult":  # ty: ignore[invalid-method-override] # pyright: ignore[reportIncompatibleMethodOverride]
 		"""Load a `DistanceTensorResult` from a dictionary."""
-		assert data["is_reduced"], (
+		if isinstance(data, cls):
+			return data
+		assert isinstance(data, dict)
+		d: dict[str, Any] = cast(dict[str, Any], data)  # narrow for ty
+		assert d["is_reduced"], (
 			"data must be reduced when loading -- non-reduced would be huge!"
 		)
 		return cls(
-			cls_values=data["cls_values"],
-			prompt_values=data["prompt_values"],
-			distances=data["distances"],
+			cls_values=d["cls_values"],
+			prompt_values=d["prompt_values"],
+			distances=d["distances"],
 			is_reduced=True,
 		)
 
@@ -546,7 +650,9 @@ class DistanceTensorResult(SerializableDataclass):
 		elif precision == "f16":
 			distances = np.load(path / "distances_f16.npy")
 		else:
-			raise ValueError(f"Unknown precision: {precision}. Use 'f64', 'f32', or 'f16'.")
+			raise ValueError(
+				f"Unknown precision: {precision}. Use 'f64', 'f32', or 'f16'."
+			)
 
 		return cls(
 			cls_values=meta["cls_values"],
@@ -629,38 +735,45 @@ class DistanceTensorResult(SerializableDataclass):
 		feature_prefix: str = "feat.",
 		order: int = 2,
 		include_missing_prompts: bool = False,
+		reduce: bool = True,
+		parallel: bool = False,
+		n_proc: int | None = None,
 	) -> "DistanceTensorResult":
-		"""
-		Compute a (h, h, p) distance tensor grouped by
-		(`activation.cls`, `activation.prompt`).
+		"""Compute pairwise head distances across prompts.
 
 		Parameters
 		----------
 		df
-			Polars DataFrame containing feature columns and two categorical columns.
+			Polars DataFrame with feature columns and two categorical columns.
 		cls_col, prompt_col
-			Column names holding the categorical identifiers.
+			Column names for the categorical identifiers.
 		feature_prefix
 			Prefix that marks feature columns.
 		order
-			Order of the L‑p norm (1 → L₁/Manhattan, 2 → L₂/Euclidean).
+			L-p norm order (1 → Manhattan, 2 → Euclidean).
 		include_missing_prompts
-			If ``False`` (default), *drop* any prompt that lacks a row for at
-			least one class; the output tensor then contains **no** NaNs.
-			If ``True``, keep all prompts and leave distances with missing rows
-			as ``NaN``.
+			If ``False`` (default), drop any prompt missing a row for at
+			least one class.
+		reduce
+			If ``True`` (default), return the ``(h, h)`` mean distance
+			matrix (``is_reduced=True``).  If ``False``, return the full
+			``(h, h, p)`` tensor.  Must be ``True`` when *parallel* is set.
+		parallel
+			If ``True``, distribute prompt batches across *n_proc* workers.
+			Implies ``reduce=True``.
+		n_proc
+			Worker count for parallel mode.  ``None`` → ``os.cpu_count()``.
+			Ignored when *parallel* is ``False``.
 
 		Returns
 		-------
 		DistanceTensorResult
-			* ``cls_values``	(list[str]) – first‑occurrence order of cls values
-			* ``prompt_values`` (list[str]) – first‑occurrence order of prompts
-			* ``distances``	 (Float[Array, 'h h p']) – distance tensor
-			(may include ``NaN`` depending on *include_missing_prompts*).
 		"""
-		# gather feature columns and unique keys (order‑preserving)
-		feat_cols: list[str] = [c for c in df.columns if c.startswith(feature_prefix)]
+		if parallel:
+			assert reduce, "parallel mode requires reduce=True"
 
+		# -- shared setup: DataFrame → dense (p, h, d) array ---------------
+		feat_cols: list[str] = [c for c in df.columns if c.startswith(feature_prefix)]
 		cls_values: list[str] = (
 			df.select(cls_col).get_column(cls_col).unique(maintain_order=True).to_list()
 		)
@@ -680,36 +793,100 @@ class DistanceTensorResult(SerializableDataclass):
 		# optionally drop prompts with missing class rows
 		if not include_missing_prompts:
 			prompt_values = [
-				p
-				for p in prompt_values
-				if all((cls, p) in vectors for cls in cls_values)
+				p for p in prompt_values if all((c, p) in vectors for c in cls_values)
 			]
 
 		h: int = len(cls_values)
 		p: int = len(prompt_values)
+		d: int = len(feat_cols)
 		cls_to_i: dict[str, int] = {c: i for i, c in enumerate(cls_values)}
 
-		# build tensor prompt‑by‑prompt
-		D: Float[np.ndarray, "h h p"] = np.full((h, h, p), np.nan, dtype=float)
+		# pack into dense (p, h, d) array
+		data: Float[np.ndarray, "p h d"] = np.empty((p, h, d), dtype=np.float64)
+		for k, prompt in enumerate(prompt_values):
+			for c_name in cls_values:
+				data[k, cls_to_i[c_name]] = vectors[(c_name, prompt)]
 
-		for k, prompt in tqdm(enumerate(prompt_values), desc="prompts", total=p):
-			existing_cls = [cls for cls in cls_values if (cls, prompt) in vectors]
-			idxs = [cls_to_i[cls] for cls in existing_cls]
-			if len(idxs) < 2:  # 0 or 1 row → nothing to compare
-				continue
-
-			X = np.vstack([vectors[(cls, prompt)] for cls in existing_cls])  # m × d
-			diff = X[:, None, :] - X[None, :, :]  # m × m × d
-			dist = np.linalg.norm(diff, ord=order, axis=-1)  # m × m
-
-			for a, i in enumerate(idxs):
-				D[i, idxs, k] = dist[a]
+		# -- dispatch -------------------------------------------------------
+		if parallel:
+			distances: Float[np.ndarray, "h h"] = cls._build_parallel(
+				data, order=order, n_proc=n_proc
+			)
+		else:
+			distances = _build_distance_tensor(data, order=order, reduce=reduce)
 
 		return DistanceTensorResult(
 			cls_values=cls_values,
 			prompt_values=prompt_values,
-			distances=D,
+			distances=distances,
+			is_reduced=reduce,
 		)
+
+	@staticmethod
+	def _build_parallel(
+		data: Float[np.ndarray, "p h d"],
+		*,
+		order: int,
+		n_proc: int | None,
+	) -> Float[np.ndarray, "h h"]:
+		"""Parallel path: split prompts across workers, combine means."""
+		p: int = data.shape[0]
+		if n_proc is None:
+			n_proc = mp.cpu_count() or 1
+
+		# warn if fork CoW is not available (spawn pickles the full array per worker)
+		start_method: str | None = mp.get_start_method(allow_none=True)
+		if n_proc > 1 and start_method is not None and start_method != "fork":
+			data_mb: float = data.nbytes / 1024 / 1024
+			warnings.warn(
+				f"\n{'=' * 60}\n"
+				f"  multiprocessing start method is {start_method!r}, not 'fork'.\n"
+				f"  The (p, h, d) data array ({data_mb:.1f} MB) will be pickled\n"
+				f"  and copied to EACH of the {n_proc} workers.\n"
+				f"  This is much slower and uses ~{data_mb * n_proc:.0f} MB total.\n"
+				f"  Consider setting n_proc=1 or switching to 'fork' start method.\n"
+				f"{'=' * 60}",
+				stacklevel=2,
+			)
+
+		chunk_indices: list[list[int]] = [
+			batch.tolist()
+			for batch in np.array_split(range(p), min(n_proc, p))
+			if len(batch) > 0
+		]
+		worker_func: functools.partial[Float[np.ndarray, "h h"]] = functools.partial(
+			_distance_worker, order=order
+		)
+
+		# accumulate weighted sum of chunk means
+		D_sum: Float[np.ndarray, "h h"] = np.zeros(
+			(data.shape[1], data.shape[1]), dtype=np.float64
+		)
+
+		if n_proc <= 1 or p <= 1:
+			# single-process fast path (useful in tests)
+			_init_distance_worker(data)
+			for chunk in tqdm(chunk_indices, desc="head distances"):
+				n_chunk: int = len(chunk)
+				D_sum += worker_func(chunk) * n_chunk
+		else:
+			with mp.Pool(
+				processes=n_proc,
+				initializer=_init_distance_worker,
+				initargs=(data,),
+			) as pool:
+				for chunk, partial_mean in zip(
+					chunk_indices,
+					tqdm(
+						pool.imap(worker_func, chunk_indices),
+						total=len(chunk_indices),
+						desc="head distances",
+					),
+				):
+					n_chunk = len(chunk)
+					D_sum += partial_mean * n_chunk
+
+		return D_sum / p if p > 0 else D_sum
 
 	def save_means(self, path: Path) -> None:
 		with open(path, "w") as f:
@@ -729,10 +906,10 @@ class DistanceTensorResult(SerializableDataclass):
 		bins: int = 50,
 		alpha: float = 0.01,
 		n_samples: int | None = 128,
-	) -> plt.Axes:
+	) -> Axes:
 		assert not self.is_reduced, "plot_hists() only works if we haven't reduced"
 		max_dist: float = np.max(self.distances)
-		bins = np.linspace(0, max_dist, bins)
+		bin_edges: np.ndarray = np.linspace(0, max_dist, bins)
 		n_heads: int = self.n_heads
 		print(f"{n_heads=}, {max_dist=}")
 		if n_samples is not None:
@@ -744,11 +921,11 @@ class DistanceTensorResult(SerializableDataclass):
 			for j in range(i + 1, n_heads):
 				hist, _ = np.histogram(
 					self.distances[i, j],
-					bins=bins,
+					bins=bin_edges,
 					density=True,
 				)
 				ax.plot(
-					bins[:-1] - self.mean_dists[i, j],
+					bin_edges[:-1] - self.mean_dists[i, j],
 					hist,
 					color="black",
 					alpha=alpha,
@@ -771,7 +948,7 @@ class DistanceTensorResult(SerializableDataclass):
 		major_grid_colour: str = "red",
 		minor_grid_colour: str = "red",
 		show: bool = True,
-	) -> plt.Figure:
+	) -> Figure:
 		"""
 		Draw the distance matrix with:
 
@@ -798,7 +975,7 @@ class DistanceTensorResult(SerializableDataclass):
 		# ---------------- colours ---------------------------------------------
 		models: list[str] = sorted({model for model, _, _ in sorted_entries})
 		model_rgb: dict[str, tuple[float, float, float]] = {
-			model: plt.cm.tab10(i)[:3] for i, model in enumerate(models)
+			model: plt.get_cmap("tab10")(i)[:3] for i, model in enumerate(models)
 		}
 
 		max_layer_for_model: dict[str, int] = {}
@@ -835,7 +1012,7 @@ class DistanceTensorResult(SerializableDataclass):
 
 		# ---------------- stripes ------------------------------------------------
 		axis_top = axis_main.inset_axes(
-			[0, 1.0 + top_label_space * 0.4, 1, stripe_thickness],
+			(0, 1.0 + top_label_space * 0.4, 1, stripe_thickness),
 			transform=axis_main.transAxes,
 			sharex=axis_main,
 		)
@@ -843,7 +1020,7 @@ class DistanceTensorResult(SerializableDataclass):
 		axis_top.set_axis_off()
 
 		axis_left = axis_main.inset_axes(
-			[-stripe_thickness - left_label_space * 0.4, 0, stripe_thickness, 1],
+			(-stripe_thickness - left_label_space * 0.4, 0, stripe_thickness, 1),
 			transform=axis_main.transAxes,
 			sharey=axis_main,
 		)
@@ -852,19 +1029,19 @@ class DistanceTensorResult(SerializableDataclass):
 
 		# ---------------- model-label axes --------------------------------------
 		axis_top_labels = axis_main.inset_axes(
-			[
+			(
 				0,
 				1.0 + stripe_thickness + top_label_space * 0.2,
 				1,
 				top_label_space * 0.8,
-			],
+			),
 			transform=axis_main.transAxes,
 			sharex=axis_main,
 		)
 		axis_top_labels.set_axis_off()
 
 		axis_left_labels = axis_main.inset_axes(
-			[-stripe_thickness - left_label_space, 0, top_label_space * 0.8, 1],
+			(-stripe_thickness - left_label_space, 0, top_label_space * 0.8, 1),
 			transform=axis_main.transAxes,
 			sharey=axis_main,
 		)

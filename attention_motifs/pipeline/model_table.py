@@ -1,0 +1,134 @@
+"""Fetch and cache TransformerLens model parameter table from GitHub.
+
+Used by the parallel model scheduler to estimate VRAM requirements
+based on parameter counts.
+
+CLI usage::
+
+    python -m attention_motifs.pipeline.model_table          # print table
+    python -m attention_motifs.pipeline.model_table -f       # force re-download
+    python -m attention_motifs.pipeline.model_table --cache-path  # show cache location
+"""
+
+import argparse
+import io
+import urllib.request
+from dataclasses import dataclass
+from pathlib import Path
+
+import polars as pl
+
+from attention_motifs.util.cache_path import resolve_cache_path
+
+MODEL_TABLE_URL: str = "https://raw.githubusercontent.com/mivanit/transformerlens-model-table/main/docs/model_table.csv"
+
+MODEL_TABLE_CACHE: Path = resolve_cache_path("model_table.csv")
+
+
+@dataclass(frozen=True)
+class ModelInfo:
+	"""Basic model metadata from the TransformerLens model table."""
+
+	name: str
+	n_params: int
+	n_layers: int
+	n_heads: int
+
+
+def _download_csv(url: str, cache_path: Path) -> str:
+	"""Download CSV from URL and save to cache path.
+
+	Returns the CSV content as a string.
+	"""
+	cache_path.parent.mkdir(parents=True, exist_ok=True)
+	with urllib.request.urlopen(url) as response:  # noqa: S310
+		content: str = response.read().decode("utf-8")
+	cache_path.write_text(content)
+	return content
+
+
+def _fetch_csv_content(force_refresh: bool = False) -> str:
+	"""Return raw CSV content, downloading if necessary."""
+	content: str
+	if MODEL_TABLE_CACHE.exists() and not force_refresh:
+		content = MODEL_TABLE_CACHE.read_text()
+		print(f"Using cached model table from {MODEL_TABLE_CACHE}")
+	else:
+		print(f"Downloading model table from {MODEL_TABLE_URL}")
+		content = _download_csv(MODEL_TABLE_URL, MODEL_TABLE_CACHE)
+		print(f"Cached model table to {MODEL_TABLE_CACHE}")
+	return content
+
+
+def fetch_model_table_df(force_refresh: bool = False) -> pl.DataFrame:
+	"""Fetch model table from GitHub as a polars DataFrame (cached).
+
+	Downloads the CSV on first call, then reads from cache on subsequent calls.
+	Pass ``force_refresh=True`` to re-download.
+	"""
+	content: str = _fetch_csv_content(force_refresh=force_refresh)
+	return pl.read_csv(io.StringIO(content))
+
+
+def fetch_model_table(force_refresh: bool = False) -> dict[str, ModelInfo]:
+	"""Fetch model table from GitHub, using local cache if available.
+
+	Downloads the CSV on first call, then reads from cache on subsequent calls.
+	Pass ``force_refresh=True`` to re-download.
+	"""
+	df: pl.DataFrame = fetch_model_table_df(force_refresh=force_refresh)
+	df = df.drop_nulls(
+		subset=["name.default_alias", "n_params.as_int", "cfg.n_layers", "cfg.n_heads"],
+	).filter(pl.col("name.default_alias") != "")
+	return {
+		row["name.default_alias"]: ModelInfo(
+			name=row["name.default_alias"],
+			n_params=int(row["n_params.as_int"]),
+			n_layers=int(row["cfg.n_layers"]),
+			n_heads=int(row["cfg.n_heads"]),
+		)
+		for row in df.iter_rows(named=True)
+	}
+
+
+def get_model_params(model_name: str, table: dict[str, ModelInfo]) -> int:
+	"""Look up parameter count for a model by name.
+
+	Raises ``KeyError`` if the model is not found in the table.
+	"""
+	if model_name in table:
+		return table[model_name].n_params
+	raise KeyError(
+		f"Model {model_name!r} not found in model table. "
+		f"Available models: {sorted(table.keys())}"
+	)
+
+
+def main() -> None:
+	"""CLI entrypoint: print the model table to stdout."""
+	parser: argparse.ArgumentParser = argparse.ArgumentParser(
+		description="Fetch and display the TransformerLens model parameter table.",
+	)
+	parser.add_argument(
+		"-f",
+		"--force-refresh",
+		action="store_true",
+		help="Re-download the CSV even if a cached copy exists.",
+	)
+	parser.add_argument(
+		"--cache-path",
+		action="store_true",
+		help="Print the resolved cache file path and exit.",
+	)
+	args: argparse.Namespace = parser.parse_args()
+
+	if args.cache_path:
+		print(MODEL_TABLE_CACHE)
+		return
+
+	df: pl.DataFrame = fetch_model_table_df(force_refresh=args.force_refresh)
+	print(df)
+
+
+if __name__ == "__main__":
+	main()

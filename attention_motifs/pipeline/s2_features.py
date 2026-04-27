@@ -1,9 +1,7 @@
 from attention_motifs.pipeline.cfg import PipelineConfig, pipeline_step_major
 
-from attention_motifs.features.features import (
-	scalar_feature_table,
-	compute_scalar_features,
-)
+from attention_motifs.features.feature_table import scalar_feature_table
+from attention_motifs.features.features import compute_scalar_features
 
 
 def compute_features(cfg: PipelineConfig) -> None:
@@ -14,6 +12,7 @@ def compute_features(cfg: PipelineConfig) -> None:
 		models=cfg.models,
 		out_path=cfg.data_path("raw"),
 		processes=cfg.n_proc,
+		chunksize=cfg.s2_chunksize,
 		verbose=cfg.verbose > 0,
 	)
 

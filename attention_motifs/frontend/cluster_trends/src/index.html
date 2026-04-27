@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cluster Trends - Attention Heads</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <nav class="nav-bar">
+      <div class="nav-bar-content">
+        <a href="../../index.html">Home</a>
+        <a href="../attnpedia/index.html">AttentionPedia</a>
+        <a href="../embeds/patterns/index.html">Pattern Embeddings</a>
+        <a href="../embeds/heads/index.html">Head Embeddings</a>
+        <a href="../../figures/head_embed_table.html">Head Embed Table</a>
+        <a href="../../figures/classifications.html">Classifications</a>
+        <a href="../clustering/index.html">Clustering</a>
+        <span class="nav-current">Cluster Trends</span>
+        <a href="../../ablations/index.html">Ablation</a>
+        <a href="../../ablations/correlations.html">Correlations</a>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h1>Cluster Trends</h1>
+
+      <div class="global-controls">
+        <div class="control-group">
+          <label for="method-select">Method:</label>
+          <select id="method-select"></select>
+        </div>
+        <div id="hierarchical-controls">
+          <div class="control-group" id="cut-height-container"></div>
+          <div class="control-group">
+            <label for="k-select">K (precomputed):</label>
+            <select id="k-select"></select>
+          </div>
+        </div>
+        <div id="flat-param-controls" style="display: none">
+          <div class="control-group">
+            <label id="flat-param-label" for="flat-param-select"
+              >Parameter:</label
+            >
+            <select id="flat-param-select"></select>
+          </div>
+        </div>
+        <div class="control-group">
+          <label for="show-lines">Lines:</label>
+          <input type="checkbox" id="show-lines" checked />
+        </div>
+        <div class="control-group">
+          <label style="font-size: 12px; color: #555">Families:</label>
+          <div class="family-toggles" id="global-family-toggles"></div>
+        </div>
+      </div>
+
+      <div class="top-clusters" id="cluster-chips"></div>
+
+      <div id="loading">Loading cluster trends data...</div>
+
+      <div id="charts-container" style="display: none">
+        <!-- Chart 1: Layer depth x cluster fraction -->
+        <div class="chart-section">
+          <h2>Cluster Fraction by Layer Depth</h2>
+          <p class="chart-desc">
+            Each point is a (model, layer, cluster). Y-axis shows fraction of
+            heads at that layer belonging to each cluster.
+          </p>
+          <div class="chart-controls">
+            <div class="control-group">
+              <label for="layer-distribution">Distribution:</label>
+              <input type="checkbox" id="layer-distribution" />
+            </div>
+          </div>
+          <div class="chart-svg-container" id="layer-chart-container"></div>
+        </div>
+
+        <!-- Chart 2: Model size x cluster fraction -->
+        <div class="chart-section">
+          <h2>Cluster Fraction by Model Size</h2>
+          <p class="chart-desc">
+            Each point is a (model, cluster). X-axis is parameter count (log
+            scale).
+          </p>
+          <div class="chart-controls">
+            <div class="control-group">
+              <label for="size-distribution">Distribution:</label>
+              <input type="checkbox" id="size-distribution" />
+            </div>
+          </div>
+          <div class="chart-svg-container" id="size-chart-container"></div>
+        </div>
+
+        <!-- Chart 3: Cluster entropy by layer -->
+        <div class="chart-section">
+          <h2>Cluster Entropy by Layer Depth</h2>
+          <p class="chart-desc">
+            Shannon entropy of cluster distribution at each layer. Higher = more
+            diverse clusters, lower = dominated by one cluster.
+          </p>
+          <div class="chart-svg-container" id="entropy-chart-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../libs/d3.min.js"></script>
+    <script src="../../shared/d3_chart_utils.js"></script>
+    <script src="../../shared/cluster_engine.js"></script>
+    <script src="../../shared/cluster_utils.js"></script>
+    <script src="../../shared/clustering_config.js"></script>
+    <script src="../../shared/cut_height_control.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -6,28 +6,29 @@ authors = [
 	{ name = "Michael Ivanitskiy", email = "mivanits@umich.edu" }
 ]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12,<3.14"
 
 dependencies = [
 	# standard
     "numpy>=1.26.1,<2.0.0",
-    "torch>=2.5.1",
-    "jaxtyping>=0.2.33",
+    "torch>=2.5.1,<2.7.0",
+    "jaxtyping>=0.2.11",
 	"einops>=0.8.0",
     "tqdm>=4.66.5",
-    "pandas>=2.2.2",
+    # "pandas>=2.2.2",
 	"polars",
     "scipy>=1.14.1",
-	"numba",
-	"POT>=0.9.5",
-    # "scikit-learn>=1.3",
+	# "numba",
+	# "POT>=0.9.5",
+    "scikit-learn>=1.3",
+    "igraph>=0.11",
 	"umap-learn>=0.5.7",
 	# plotting
 	"plotly",
     "matplotlib>=3.8.0",
-    "pillow>=11.0.0",
-	"dash>=3.0.1",
-	"beautifulsoup4",
+    # "pillow>=11.0.0",
+	# "dash>=3.0.1",
+	# "beautifulsoup4",
     # jupyter
     "ipykernel>=6.29.5",
     "ipywidgets>=8.1.5",
@@ -35,13 +36,15 @@ dependencies = [
     # typing
     "beartype>=0.14.1",
 	# symbolic regression
-	"pysr>=1.3.1",
+	# "pysr>=1.3.1",
     # custom utils
-    "muutils>=0.8.9",
-	"zanj>=0.3.1",
+    "muutils>=0.9.1",
+	"zanj>=0.6.0",
 	"trnbl[tensorboard]>=0.1.1",
     # TL
-    "transformer-lens>=2.10.0",
+    # "transformer-lens>=2.17.0",
+	"transformer-lens @ git+https://github.com/TransformerLensOrg/TransformerLens@dev-3.x",
+	"transformers>=5.1.0",
     # this TL dep not listed? is this in an extra?
     "typeguard>=4.4.1",
 	# see https://github.com/pydantic/pydantic/issues/11348
@@ -50,13 +53,16 @@ dependencies = [
 	# pattern-lens
 	# "pattern-lens>=0.5.0",
 	# pattern-lens from git
+	# "pattern-lens>=0.6.0",
 	"pattern-lens @ git+https://github.com/mivanit/pattern-lens",
-	"js-embedding-vis @ git+https://github.com/mivanit/js-embedding-vis"
+	"js-embedding-vis @ git+https://github.com/mivanit/js-embedding-vis",
+	# older datasets uses pa.PyExtensionType, removed in pyarrow 15
+	"datasets>=2.21.0",
 ]
 
 
 [dependency-groups]
-	dev = [	
+	dev = [
 		# lmcat
 		"lmcat>=0.2.0",
 		"nbconvert",
@@ -64,12 +70,25 @@ dependencies = [
 		"pytest>=8.2.2",
 		# coverage
 		"pytest-cov>=4.1.0",
+		"pytest-xdist>=3.5.0",
+		"filelock>=3.13.0",
 		"coverage-badge>=1.1.0",
+		# frontend testing
+		"pytest-playwright>=0.6.2",
 		# type checking
 		"mypy>=1.0.1",
-		# docs	
+		"ty",
+		"basedpyright",
+		# type stubs
+		"scipy-stubs>=1.5.0",
+		"pandas-stubs>=2.0.0",
+		"types-tqdm",
+		"types-psutil",
+		# docs
 		'pdoc>=14.6.0',
-		# tomli since no tomlib in python < 3.1		
+		# serving
+		"rangehttpserver>=1.4.0",
+		# tomli since no tomlib in python < 3.1
 		"tomli>=2.1.0; python_version < '3.11'",
 	]
 	lint = [
@@ -79,6 +98,9 @@ dependencies = [
 
 [tool.uv]
 	default-groups = ["dev", "lint"]
+	override-dependencies = [
+		"transformer-lens @ git+https://github.com/TransformerLensOrg/TransformerLens@dev-3.x",
+	]
 
 [project.urls]
 	Homepage = "https://attention-motifs.github.io"
@@ -92,7 +114,7 @@ dependencies = [
 
 # ruff config
 [tool.ruff]
-exclude = ["__pycache__"]
+exclude = ["__pycache__", ".meta/scripts/"]
 
 	[tool.ruff.lint]
 		ignore = ["F722", "F841", "F702"]
@@ -101,11 +123,56 @@ exclude = ["__pycache__"]
 		indent-style = "tab"
 		skip-magic-trailing-comma = false
 
+	[tool.ruff.lint.per-file-ignores]
+		"notebooks/**" = [
+			"E402", # notebooks can import wherever they want
+		]
+		"attention_motifs/pipeline/full.py" = [
+			"E402", # full pipeline has some deferred imports
+		]
+
 [tool.hatch.metadata]
 	allow-direct-references = true
 
+# mypy config
+[tool.mypy]
+	files = ["attention_motifs", "tests", "notebooks"]
+
+# ignore missing imports for libraries without type stubs
+[[tool.mypy.overrides]]
+module = [
+	"transformer_lens",
+	"transformer_lens.*",
+	"numba",
+	"mpl_toolkits.*",
+	"sklearn.*",
+	"js_embedding_vis",
+	"igraph",
+]
+ignore_missing_imports = true
+
+# basedpyright config
+[tool.basedpyright]
+	typeCheckingMode = "standard"
+	include = ["attention_motifs", "tests", "notebooks"]
+	# torch re-exports public API (tensor, zeros, cat, etc.) from C extensions
+	# (_C/_VariableFunctions), which basedpyright flags as private imports.
+	# These are all false positives.
+	reportPrivateImportUsage = false
+
+# ty config
+[tool.ty.src]
+	include = ["attention_motifs", "tests", "notebooks"]
+
+[tool.ty.rules]
+	unused-type-ignore-comment = "ignore"
+
 [tool.pytest.ini_options]
-	addopts = "--jaxtyping-packages=pattern_lens,beartype.beartype"
+	addopts = "-n auto --jaxtyping-packages=pattern_lens,beartype.beartype -m 'not benchmark'"
+	markers = [
+		"benchmark: marks tests as benchmark (deselect with '-m \"not benchmark\"')",
+		"playwright: frontend tests requiring Playwright browser",
+	]
 	filterwarnings = [
 		"ignore: PEP 484 type hint*:beartype.roar._roarwarn.BeartypeDecorHintPep585DeprecationWarning",
 	]
@@ -151,6 +218,7 @@ exclude = ["__pycache__"]
     no_clean = [
         ".nojekyll",  # For GitHub Pages
 		"demo/",
+		"notes/",
         # "resources/", # Templates, CSS, etc. this, or whatever is specified as DOCS_RESOURCES_DIR in makefile will always be preserved
     ]
 
@@ -177,7 +245,7 @@ exclude = ["__pycache__"]
 
 [tool.makefile.inline-todo]
 	search_dir = "."
-	out_file = "docs/other/todo-inline.md"
+	out_file_base = "docs/other/todo-inline"
 	context_lines = 2
 	extensions = ["py", "md"]
 	tags = ["CRIT", "TODO", "FIXME", "HACK", "BUG", "DOC"]

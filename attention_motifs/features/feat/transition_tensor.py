@@ -16,7 +16,7 @@ def tt_features(
 ) -> dict[str, float]:
 	A_torch = torch.tensor(A, device=device)
 	idxs_tr, tt_tr, _ = transition_tensor_torch(
-		A_torch, exact=32, approx_l10=5.0, approx_pts=32
+		A_torch, exact=32, approx_l10=5, approx_pts=32
 	)
 	idxs = idxs_tr.cpu().numpy()
 	tt = tt_tr.cpu().numpy()
@@ -65,8 +65,8 @@ def tt_features(
 	indices_adjusted_diff = np.diff(indices_adjusted)
 	output.update(
 		dict(
-			skewness=stats.skew(indices_adjusted_diff),
-			kurtosis=stats.kurtosis(indices_adjusted_diff),
+			skewness=float(stats.skew(indices_adjusted_diff)),
+			kurtosis=float(stats.kurtosis(indices_adjusted_diff)),
 		)
 		# all except skew and cov are highly correlated with other things
 		# prefix_dict(

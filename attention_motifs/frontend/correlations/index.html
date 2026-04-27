@@ -1,0 +1,4786 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ablation Correlations</title>
+        <!-- begin 'style.css' -->
+    <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+    
+    .nav-bar {
+      background: white;
+      padding: 8px 16px;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .nav-bar-content {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .nav-bar a {
+      color: #1565c0;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    
+    .nav-bar a:hover {
+      color: #0d47a1;
+    }
+    
+    .nav-current {
+      color: #666;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 20px auto;
+      padding: 0 16px;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 16px;
+    }
+    
+    /* === Controls row === */
+    
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      background: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      margin-bottom: 12px;
+    }
+    
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+    }
+    
+    .control-group > label {
+      font-weight: bold;
+      color: #495057;
+      white-space: nowrap;
+    }
+    
+    #target-head-input {
+      width: 220px;
+      padding: 4px 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-family: "Menlo", "Consolas", monospace;
+      font-size: 12px;
+    }
+    
+    #target-head-input.invalid {
+      border-color: #e74c3c;
+      background: #fdf0ef;
+    }
+    
+    #cut-height-slider {
+      width: 180px;
+    }
+    
+    #chart-width-slider {
+      width: 100px;
+    }
+    
+    #min-cluster-size {
+      width: 80px;
+    }
+    
+    .slider-value {
+      font-family: "Menlo", "Consolas", monospace;
+      font-size: 11px;
+      color: #888;
+      min-width: 36px;
+    }
+    
+    #cut-height-value {
+      font-family: "Menlo", "Consolas", monospace;
+      font-size: 12px;
+      min-width: 40px;
+    }
+    
+    #n-clusters-label {
+      color: #888;
+      font-size: 12px;
+    }
+    
+    #xaxis-mode-select,
+    #target-cluster-select,
+    #cluster-agg-select,
+    #method-select,
+    #cluster-method-select,
+    #cluster-param-select {
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 12px;
+    }
+    
+    #cluster-param-label {
+      font-size: 12px;
+      color: #495057;
+    }
+    
+    /* Family buttons */
+    
+    .family-btn {
+      padding: 4px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #f8f9fa;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    
+    .family-btn:hover {
+      background: #e9ecef;
+    }
+    
+    .family-btn.active {
+      background: #3498db;
+      color: white;
+      border-color: #3498db;
+    }
+    
+    /* === Cluster chips === */
+    
+    .cluster-chips-container {
+      background: white;
+      padding: 10px 16px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      margin-bottom: 12px;
+      overflow-x: auto;
+    }
+    
+    .cluster-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    
+    .cluster-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border: 2px solid transparent;
+      border-radius: 16px;
+      background: color-mix(in srgb, var(--chip-color) 20%, white);
+      color: #333;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    
+    .cluster-chip:hover {
+      background: color-mix(in srgb, var(--chip-color) 35%, white);
+    }
+    
+    .cluster-chip.selected {
+      border-color: var(--chip-color);
+      background: color-mix(in srgb, var(--chip-color) 30%, white);
+      font-weight: 700;
+    }
+    
+    .chip-count {
+      font-size: 10px;
+      color: #666;
+      background: rgba(0, 0, 0, 0.06);
+      padding: 1px 5px;
+      border-radius: 8px;
+    }
+    
+    /* === Scatterplot charts === */
+    
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(
+        auto-fit,
+        minmax(var(--chart-min-width, 400px), 1fr)
+      );
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .chart-cell {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      padding: 12px;
+      height: 300px;
+      position: relative;
+    }
+    
+    .chart-cell svg {
+      display: block;
+    }
+    
+    </style>
+    <!-- end 'style.css' -->
+    <script src="../../libs/d3.min.js"></script>
+        <!-- begin '../../shared/d3_chart_utils.js' -->
+    <script>
+    /**
+     * Shared D3.js chart utilities.
+     *
+     * Provides reusable helpers for creating SVG charts with D3,
+     * including axes, legends, tooltips, boxplots, and SVG export.
+     *
+     * Requires D3.js v7 to be loaded before this script.
+     */
+    
+    // ── Style constants ─────────────────────────────────────────────
+    
+    const CHART_STYLES = {
+      tickColor: "#888",
+      labelColor: "#555",
+      gridColor: "rgba(0,0,0,0.08)",
+      labelFontSize: 11,
+      titleFontSize: 13,
+      legendFontSize: 11,
+      tooltipBg: "rgba(0,0,0,0.82)",
+      tooltipColor: "#fff",
+      tooltipFontSize: "12px",
+      tooltipPadding: "6px 10px",
+      tooltipRadius: "4px",
+    };
+    
+    // ── SVG container ───────────────────────────────────────────────
+    
+    /**
+     * Create an SVG chart container inside a DOM element.
+     * Clears any existing SVG in the container.
+     *
+     * @param {string} containerId - DOM element ID
+     * @param {{top: number, right: number, bottom: number, left: number}} margin
+     * @returns {{svg: d3.Selection, g: d3.Selection, width: number, height: number, innerWidth: number, innerHeight: number}}
+     */
+    function createChartSVG(containerId, margin) {
+      const container = document.getElementById(containerId);
+      // Remove existing SVG and export button
+      const existing = container.querySelector("svg");
+      if (existing) existing.remove();
+      const existingBtn = container.querySelector(".export-svg-btn");
+      if (existingBtn) existingBtn.remove();
+    
+      const rect = container.getBoundingClientRect();
+      const cs = getComputedStyle(container);
+      const width =
+        rect.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const height =
+        rect.height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+    
+      const svg = d3
+        .select(container)
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .attr("xmlns", "http://www.w3.org/2000/svg")
+        .style("font-family", "sans-serif");
+    
+      const g = svg
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+    
+      return { svg, g, width, height, innerWidth, innerHeight };
+    }
+    
+    // ── Axes ────────────────────────────────────────────────────────
+    
+    /**
+     * Render a bottom (X) axis with optional grid lines and label.
+     *
+     * @param {d3.Selection} g - Chart inner group
+     * @param {d3.Scale} scale - D3 scale for the axis
+     * @param {{height: number, label?: string, tickFormat?: Function, gridHeight?: number, ticks?: number}} opts
+     */
+    function createXAxis(g, scale, opts) {
+      const axis = d3.axisBottom(scale);
+      if (opts.tickFormat) axis.tickFormat(opts.tickFormat);
+      if (opts.ticks) axis.ticks(opts.ticks);
+    
+      const axisG = g
+        .append("g")
+        .attr("class", "x-axis")
+        .attr("transform", `translate(0,${opts.height})`)
+        .call(axis);
+    
+      axisG.selectAll("text").attr("fill", CHART_STYLES.tickColor);
+      axisG.selectAll("line").attr("stroke", CHART_STYLES.tickColor);
+      axisG.select(".domain").attr("stroke", CHART_STYLES.tickColor);
+    
+      // Grid lines
+      if (opts.gridHeight) {
+        const gridAxis = d3
+          .axisBottom(scale)
+          .tickSize(-opts.gridHeight)
+          .tickFormat("");
+        if (opts.ticks) gridAxis.ticks(opts.ticks);
+        g.append("g")
+          .attr("class", "x-grid")
+          .attr("transform", `translate(0,${opts.height})`)
+          .call(gridAxis)
+          .selectAll("line")
+          .attr("stroke", CHART_STYLES.gridColor);
+        g.select(".x-grid .domain").remove();
+      }
+    
+      // Label
+      if (opts.label) {
+        g.append("text")
+          .attr("class", "x-label")
+          .attr("x", scale.range()[1] / 2 + (scale.range()[0] || 0) / 2)
+          .attr("y", opts.height + 36)
+          .attr("text-anchor", "middle")
+          .attr("fill", CHART_STYLES.labelColor)
+          .attr("font-size", CHART_STYLES.labelFontSize)
+          .text(opts.label);
+      }
+    }
+    
+    /**
+     * Render a left (Y) axis with optional grid lines and label.
+     *
+     * @param {d3.Selection} g - Chart inner group
+     * @param {d3.Scale} scale - D3 scale for the axis
+     * @param {{label?: string, gridWidth?: number, ticks?: number}} opts
+     */
+    function createYAxis(g, scale, opts) {
+      const axis = d3.axisLeft(scale);
+      if (opts.ticks) axis.ticks(opts.ticks);
+    
+      const axisG = g.append("g").attr("class", "y-axis").call(axis);
+    
+      axisG.selectAll("text").attr("fill", CHART_STYLES.tickColor);
+      axisG.selectAll("line").attr("stroke", CHART_STYLES.tickColor);
+      axisG.select(".domain").attr("stroke", CHART_STYLES.tickColor);
+    
+      // Grid lines
+      if (opts.gridWidth) {
+        const gridAxis = d3
+          .axisLeft(scale)
+          .tickSize(-opts.gridWidth)
+          .tickFormat("");
+        if (opts.ticks) gridAxis.ticks(opts.ticks);
+        g.append("g")
+          .attr("class", "y-grid")
+          .call(gridAxis)
+          .selectAll("line")
+          .attr("stroke", CHART_STYLES.gridColor);
+        g.select(".y-grid .domain").remove();
+      }
+    
+      // Label
+      if (opts.label) {
+        g.append("text")
+          .attr("class", "y-label")
+          .attr("transform", "rotate(-90)")
+          .attr("x", -(scale.range()[0] + scale.range()[1]) / 2)
+          .attr("y", -40)
+          .attr("text-anchor", "middle")
+          .attr("fill", CHART_STYLES.labelColor)
+          .attr("font-size", CHART_STYLES.labelFontSize)
+          .text(opts.label);
+      }
+    }
+    
+    // ── Legend ───────────────────────────────────────────────────────
+    
+    /**
+     * Render an interactive legend inside the SVG.
+     *
+     * @param {d3.Selection} svg - The root SVG selection
+     * @param {{items: Array<{label: string, color: string, dashed?: boolean}>, x: number, y: number, onClick?: (label: string, index: number) => void}} opts
+     */
+    function createLegend(svg, opts) {
+      const items = opts.items.filter((d) => d.label && d.label !== "");
+      const legendG = svg
+        .append("g")
+        .attr("class", "chart-legend")
+        .attr("transform", `translate(${opts.x},${opts.y})`);
+    
+      const itemGs = legendG
+        .selectAll(".legend-item")
+        .data(items)
+        .enter()
+        .append("g")
+        .attr("class", "legend-item")
+        .attr("transform", (_, i) => `translate(0,${i * 18})`)
+        .style("cursor", opts.onClick ? "pointer" : "default");
+    
+      // Color swatch
+      itemGs.each(function (d) {
+        const el = d3.select(this);
+        if (d.dashed) {
+          el.append("line")
+            .attr("x1", 0)
+            .attr("y1", 5)
+            .attr("x2", 14)
+            .attr("y2", 5)
+            .attr("stroke", d.color)
+            .attr("stroke-width", 2)
+            .attr("stroke-dasharray", "4,2");
+        } else {
+          el.append("rect")
+            .attr("width", 12)
+            .attr("height", 12)
+            .attr("rx", 2)
+            .attr("fill", d.color);
+        }
+      });
+    
+      // Label text
+      itemGs
+        .append("text")
+        .attr("x", 18)
+        .attr("y", 10)
+        .attr("fill", CHART_STYLES.labelColor)
+        .attr("font-size", CHART_STYLES.legendFontSize)
+        .text((d) => d.label);
+    
+      // Click handler
+      if (opts.onClick) {
+        itemGs.on("click", (event, d) => {
+          const idx = items.indexOf(d);
+          opts.onClick(d.label, idx, d);
+        });
+      }
+    
+      return legendG;
+    }
+    
+    // ── Tooltip ─────────────────────────────────────────────────────
+    
+    /**
+     * Create a tooltip div attached to a container.
+     * Returns show/hide functions.
+     *
+     * @param {string} containerId - DOM element ID
+     * @returns {{show: (event: MouseEvent, html: string) => void, hide: () => void, el: HTMLElement}}
+     */
+    function createTooltip(containerId) {
+      const container = document.getElementById(containerId);
+    
+      // Remove existing tooltip
+      const existing = container.querySelector(".d3-tooltip");
+      if (existing) existing.remove();
+    
+      const el = document.createElement("div");
+      el.className = "d3-tooltip";
+      el.style.cssText = `
+        position: absolute;
+        background: ${CHART_STYLES.tooltipBg};
+        color: ${CHART_STYLES.tooltipColor};
+        padding: ${CHART_STYLES.tooltipPadding};
+        border-radius: ${CHART_STYLES.tooltipRadius};
+        font-size: ${CHART_STYLES.tooltipFontSize};
+        pointer-events: none;
+        z-index: 100;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.15s;
+      `;
+      container.style.position = "relative";
+      container.appendChild(el);
+    
+      function show(event, html) {
+        el.innerHTML = html;
+        el.style.opacity = "1";
+        const containerRect = container.getBoundingClientRect();
+        let left = event.clientX - containerRect.left + 12;
+        let top = event.clientY - containerRect.top - 10;
+        // Keep within bounds
+        const elRect = el.getBoundingClientRect();
+        if (left + elRect.width > containerRect.width) {
+          left = event.clientX - containerRect.left - elRect.width - 12;
+        }
+        if (top < 0) top = 4;
+        el.style.left = left + "px";
+        el.style.top = top + "px";
+      }
+    
+      function hide() {
+        el.style.opacity = "0";
+      }
+    
+      return { show, hide, el };
+    }
+    
+    // ── SVG Export ───────────────────────────────────────────────────
+    
+    /**
+     * Add an "Export SVG" button below a chart container.
+     *
+     * @param {string} containerId - DOM element ID containing the SVG
+     * @param {string} filename - Download filename (without extension)
+     */
+    function addExportButton(containerId, filename) {
+      const container = document.getElementById(containerId);
+      // Remove existing button
+      const existing = container.querySelector(".export-svg-btn");
+      if (existing) existing.remove();
+    
+      const btn = document.createElement("button");
+      btn.className = "export-svg-btn";
+      btn.textContent = "Export SVG";
+      btn.style.cssText = `
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        padding: 3px 8px;
+        font-size: 11px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        background: #f8f9fa;
+        color: #555;
+        cursor: pointer;
+        z-index: 10;
+        opacity: 0.6;
+        transition: opacity 0.15s;
+      `;
+      btn.addEventListener("mouseenter", () => (btn.style.opacity = "1"));
+      btn.addEventListener("mouseleave", () => (btn.style.opacity = "0.6"));
+      btn.addEventListener("click", () => {
+        const svgEl = container.querySelector("svg");
+        if (!svgEl) return;
+        const clone = svgEl.cloneNode(true);
+        clone.querySelectorAll(".no-export").forEach((el) => el.remove());
+        const serializer = new XMLSerializer();
+        const svgStr = serializer.serializeToString(clone);
+        const blob = new Blob([svgStr], { type: "image/svg+xml" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${filename}.svg`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+      container.appendChild(btn);
+    
+      // Remove existing PNG button
+      const existingPng = container.querySelector(".export-png-btn");
+      if (existingPng) existingPng.remove();
+    
+      const pngBtn = document.createElement("button");
+      pngBtn.className = "export-png-btn";
+      pngBtn.textContent = "Export PNG";
+      pngBtn.style.cssText = `
+        position: absolute;
+        top: 4px;
+        right: 80px;
+        padding: 3px 8px;
+        font-size: 11px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        background: #f8f9fa;
+        color: #555;
+        cursor: pointer;
+        z-index: 10;
+        opacity: 0.6;
+        transition: opacity 0.15s;
+      `;
+      pngBtn.addEventListener("mouseenter", () => (pngBtn.style.opacity = "1"));
+      pngBtn.addEventListener("mouseleave", () => (pngBtn.style.opacity = "0.6"));
+      pngBtn.addEventListener("click", () => {
+        const svgEl = container.querySelector("svg");
+        if (!svgEl) return;
+        const clone = svgEl.cloneNode(true);
+        clone.querySelectorAll(".no-export").forEach((el) => el.remove());
+        const w = parseFloat(svgEl.getAttribute("width"));
+        const h = parseFloat(svgEl.getAttribute("height"));
+        const scale = 8;
+        const canvas = document.createElement("canvas");
+        canvas.width = w * scale;
+        canvas.height = h * scale;
+        const ctx = canvas.getContext("2d");
+        ctx.scale(scale, scale);
+        const svgStr = new XMLSerializer().serializeToString(clone);
+        const blob = new Blob([svgStr], {
+          type: "image/svg+xml;charset=utf-8",
+        });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, w, h);
+          URL.revokeObjectURL(url);
+          canvas.toBlob((pngBlob) => {
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(pngBlob);
+            a.download = `${filename}.png`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+          });
+        };
+        img.src = url;
+      });
+      container.appendChild(pngBtn);
+    }
+    
+    // ── KDE ─────────────────────────────────────────────────────────
+    
+    /**
+     * Gaussian kernel density estimator.
+     * Returns a function that evaluates density at any point x.
+     *
+     * @param {number[]} values - Sample data
+     * @param {number} [bandwidth] - Bandwidth (uses Silverman's rule if omitted)
+     * @returns {(x: number) => number} Density function
+     */
+    function createKDE(values, bandwidth) {
+      const n = values.length;
+      if (n === 0) return () => 0;
+      const sorted = [...values].sort((a, b) => a - b);
+      if (!bandwidth || bandwidth <= 0) {
+        const mean = d3.mean(sorted);
+        const std = Math.sqrt(d3.mean(sorted.map((v) => (v - mean) ** 2)));
+        const q1 = d3.quantile(sorted, 0.25);
+        const q3 = d3.quantile(sorted, 0.75);
+        const iqr = q3 - q1;
+        bandwidth = 0.9 * Math.min(std, iqr / 1.34) * n ** -0.2;
+        if (bandwidth <= 0) bandwidth = std * 0.5 || 1;
+      }
+      const factor = 1 / (n * bandwidth * Math.sqrt(2 * Math.PI));
+      return function (x) {
+        let sum = 0;
+        for (let i = 0; i < n; i++) {
+          const u = (x - sorted[i]) / bandwidth;
+          sum += Math.exp(-0.5 * u * u);
+        }
+        return sum * factor;
+      };
+    }
+    
+    // ── Letter-Value Plot ───────────────────────────────────────────
+    
+    /**
+     * Compute letter-value levels from sorted values.
+     * Returns array of {lower, upper, depth} from outermost to innermost.
+     *
+     * @param {number[]} sorted - Pre-sorted values
+     * @returns {Array<{lower: number, upper: number, depth: number}>}
+     */
+    function computeLetterValues(sorted) {
+      const n = sorted.length;
+      if (n === 0) return [];
+    
+      function quantile(arr, q) {
+        const pos = (arr.length - 1) * q;
+        const base = Math.floor(pos);
+        const rest = pos - base;
+        if (base + 1 < arr.length)
+          return arr[base] + rest * (arr[base + 1] - arr[base]);
+        return arr[base];
+      }
+    
+      const levels = [];
+      const maxDepth = Math.max(1, Math.floor(Math.log2(n)) - 1);
+    
+      for (let k = 1; k <= maxDepth; k++) {
+        const p = 0.5 ** k;
+        const lower = quantile(sorted, p);
+        const upper = quantile(sorted, 1 - p);
+        levels.push({ lower, upper, depth: k });
+        // Stop if the level covers fewer than ~4 data points on each tail
+        if (n * p < 4) break;
+      }
+      return levels;
+    }
+    
+    /**
+     * Draw a letter-value (boxen) plot as SVG elements.
+     *
+     * @param {d3.Selection} g - Parent group
+     * @param {{values: number[], x: number, width: number, yScale: d3.Scale, fillColor: string, strokeColor: string}} opts
+     */
+    function drawLetterValuePlot(g, opts) {
+      const { values, x, width, yScale, fillColor, strokeColor } = opts;
+      if (values.length === 0) return;
+      const sorted = [...values].sort((a, b) => a - b);
+      const levels = computeLetterValues(sorted);
+      const nLevels = levels.length;
+      const lvG = g.append("g").attr("class", "lettervalue");
+    
+      // Parse base color for alpha blending
+      const baseColor = fillColor;
+    
+      // Draw levels from outermost (narrowest box) to innermost (widest box)
+      for (let i = 0; i < nLevels; i++) {
+        const lv = levels[i];
+        const boxW = width * ((i + 1) / nLevels);
+        const xOff = x + (width - boxW) / 2;
+        const alpha = 0.2 + 0.6 * ((i + 1) / nLevels);
+    
+        lvG
+          .append("rect")
+          .attr("x", xOff)
+          .attr("y", yScale(lv.upper))
+          .attr("width", boxW)
+          .attr("height", Math.max(0, yScale(lv.lower) - yScale(lv.upper)))
+          .attr("fill", fillColor)
+          .attr("fill-opacity", alpha)
+          .attr("stroke", strokeColor)
+          .attr("stroke-opacity", 0.4)
+          .attr("stroke-width", 0.5);
+      }
+    
+      // Median line
+      const median = d3.quantile(sorted, 0.5);
+      lvG
+        .append("line")
+        .attr("x1", x)
+        .attr("y1", yScale(median))
+        .attr("x2", x + width)
+        .attr("y2", yScale(median))
+        .attr("stroke", strokeColor)
+        .attr("stroke-width", 2);
+    
+      // Whisker line spanning full data range
+      lvG
+        .append("line")
+        .attr("x1", x + width / 2)
+        .attr("y1", yScale(sorted[0]))
+        .attr("x2", x + width / 2)
+        .attr("y2", yScale(sorted[sorted.length - 1]))
+        .attr("stroke", strokeColor)
+        .attr("stroke-width", 0.5);
+    
+      return lvG;
+    }
+    
+    // ── Boxplot ─────────────────────────────────────────────────────
+    
+    /**
+     * Compute box plot statistics from an array of values.
+     *
+     * @param {number[]} values
+     * @returns {{min: number, q1: number, median: number, q3: number, max: number, whiskerLow: number, whiskerHigh: number, outliers: number[]}}
+     */
+    function computeBoxplotStats(values) {
+      if (values.length === 0) {
+        return {
+          min: 0,
+          q1: 0,
+          median: 0,
+          q3: 0,
+          max: 0,
+          whiskerLow: 0,
+          whiskerHigh: 0,
+          outliers: [],
+        };
+      }
+      const sorted = [...values].sort((a, b) => a - b);
+      const n = sorted.length;
+    
+      function quantile(arr, q) {
+        const pos = (arr.length - 1) * q;
+        const base = Math.floor(pos);
+        const rest = pos - base;
+        if (base + 1 < arr.length) {
+          return arr[base] + rest * (arr[base + 1] - arr[base]);
+        }
+        return arr[base];
+      }
+    
+      const q1 = quantile(sorted, 0.25);
+      const median = quantile(sorted, 0.5);
+      const q3 = quantile(sorted, 0.75);
+      const iqr = q3 - q1;
+      const whiskerLow = Math.max(sorted[0], q1 - 1.5 * iqr);
+      const whiskerHigh = Math.min(sorted[n - 1], q3 + 1.5 * iqr);
+      const outliers = sorted.filter((v) => v < whiskerLow || v > whiskerHigh);
+    
+      return {
+        min: sorted[0],
+        q1,
+        median,
+        q3,
+        max: sorted[n - 1],
+        whiskerLow,
+        whiskerHigh,
+        outliers,
+      };
+    }
+    
+    /**
+     * Draw a single box-and-whisker plot as SVG elements.
+     *
+     * @param {d3.Selection} g - Parent group
+     * @param {{stats: Object, x: number, width: number, yScale: d3.Scale, fillColor: string, strokeColor: string}} opts
+     */
+    function drawBoxplot(g, opts) {
+      const { stats, x, width, yScale, fillColor, strokeColor } = opts;
+      const boxG = g.append("g").attr("class", "boxplot");
+    
+      // Whisker line (vertical)
+      boxG
+        .append("line")
+        .attr("x1", x + width / 2)
+        .attr("y1", yScale(stats.whiskerHigh))
+        .attr("x2", x + width / 2)
+        .attr("y2", yScale(stats.whiskerLow))
+        .attr("stroke", strokeColor)
+        .attr("stroke-width", 1);
+    
+      // Whisker caps
+      const capW = width * 0.5;
+      for (const val of [stats.whiskerLow, stats.whiskerHigh]) {
+        boxG
+          .append("line")
+          .attr("x1", x + width / 2 - capW / 2)
+          .attr("y1", yScale(val))
+          .attr("x2", x + width / 2 + capW / 2)
+          .attr("y2", yScale(val))
+          .attr("stroke", strokeColor)
+          .attr("stroke-width", 1);
+      }
+    
+      // Box (Q1 to Q3)
+      boxG
+        .append("rect")
+        .attr("x", x)
+        .attr("y", yScale(stats.q3))
+        .attr("width", width)
+        .attr("height", Math.max(0, yScale(stats.q1) - yScale(stats.q3)))
+        .attr("fill", fillColor)
+        .attr("stroke", strokeColor)
+        .attr("stroke-width", 1);
+    
+      // Median line
+      boxG
+        .append("line")
+        .attr("x1", x)
+        .attr("y1", yScale(stats.median))
+        .attr("x2", x + width)
+        .attr("y2", yScale(stats.median))
+        .attr("stroke", strokeColor)
+        .attr("stroke-width", 2);
+    
+      // Outliers
+      for (const val of stats.outliers) {
+        boxG
+          .append("circle")
+          .attr("cx", x + width / 2)
+          .attr("cy", yScale(val))
+          .attr("r", 2)
+          .attr("fill", strokeColor)
+          .attr("opacity", 0.6);
+      }
+    
+      return boxG;
+    }
+    
+    </script>
+    <!-- end '../../shared/d3_chart_utils.js' -->
+        <!-- begin '../../shared/clustering_config.js' -->
+    <script>
+    /**
+     * Shared clustering configuration state.
+     *
+     * Persists clustering UI state (cut height, highlighted cluster, etc.)
+     * to localStorage so it can be shared across cluster_trends and clustering
+     * pages without URL parameters.
+     */
+    
+    const CLUSTERING_CONFIG_KEY = "clustering_config";
+    
+    const ClusteringConfig = {
+      /**
+       * Load full state from localStorage.
+       * @returns {Object} parsed state (empty object if nothing stored)
+       */
+      load() {
+        try {
+          return JSON.parse(localStorage.getItem(CLUSTERING_CONFIG_KEY)) || {};
+        } catch {
+          return {};
+        }
+      },
+    
+      /**
+       * Merge partial state into localStorage.
+       * @param {Object} partial - key/value pairs to merge
+       */
+      save(partial) {
+        const current = this.load();
+        localStorage.setItem(
+          CLUSTERING_CONFIG_KEY,
+          JSON.stringify({ ...current, ...partial }),
+        );
+      },
+    
+      /** @returns {number|null} */
+      getCutHeight() {
+        return this.load().cutHeight ?? null;
+      },
+    
+      /** @param {number} h */
+      setCutHeight(h) {
+        this.save({ cutHeight: h });
+      },
+    
+      /** @returns {number|null} */
+      getHighlightCluster() {
+        return this.load().highlightCluster ?? null;
+      },
+    
+      /** @param {number} id */
+      setHighlightCluster(id) {
+        this.save({ highlightCluster: id });
+      },
+    
+      clearHighlightCluster() {
+        const s = this.load();
+        delete s.highlightCluster;
+        localStorage.setItem(CLUSTERING_CONFIG_KEY, JSON.stringify(s));
+      },
+    
+      /** @returns {string|null} clustering method name ("hierarchical", "hdbscan", "leiden") */
+      getMethod() {
+        return this.load().method ?? null;
+      },
+    
+      /** @param {string} method */
+      setMethod(method) {
+        this.save({ method });
+      },
+    
+      /** @returns {string|null} current parameter key for flat methods */
+      getParamKey() {
+        return this.load().paramKey ?? null;
+      },
+    
+      /** @param {string} key */
+      setParamKey(key) {
+        this.save({ paramKey: key });
+      },
+    };
+    
+    </script>
+    <!-- end '../../shared/clustering_config.js' -->
+        <!-- begin '../../shared/cluster_utils.js' -->
+    <script>
+    /**
+     * Shared clustering visualization utilities.
+     *
+     * Used by cluster_trends and potentially other frontends that need
+     * cluster coloring and toggle buttons.
+     */
+    
+    // ── Cluster colors (golden angle) ──────────────────────────────
+    
+    const GOLDEN_ANGLE = 137.508;
+    
+    /**
+     * Generate a distinct opaque color for a cluster index.
+     * @param {number} idx
+     * @returns {string} CSS hsl color
+     */
+    function clusterColor(idx) {
+      const hue = (idx * GOLDEN_ANGLE) % 360;
+      const sat = 65 + (idx % 3) * 10;
+      const lit = 45 + (idx % 2) * 10;
+      return `hsl(${hue}, ${sat}%, ${lit}%)`;
+    }
+    
+    /**
+     * Generate a distinct color with alpha for a cluster index.
+     * @param {number} idx
+     * @param {number} alpha - opacity 0..1
+     * @returns {string} CSS hsla color
+     */
+    function clusterColorAlpha(idx, alpha) {
+      const hue = (idx * GOLDEN_ANGLE) % 360;
+      const sat = 65 + (idx % 3) * 10;
+      const lit = 45 + (idx % 2) * 10;
+      return `hsla(${hue}, ${sat}%, ${lit}%, ${alpha})`;
+    }
+    
+    // ── Toggle buttons ─────────────────────────────────────────────
+    
+    /**
+     * Build toggle buttons inside a container element.
+     * Each button toggles a boolean in the shared enabledState object.
+     *
+     * @param {string} containerId - DOM element ID for the container
+     * @param {string[]} items - sorted list of item labels
+     * @param {Object<string, boolean>} enabledState - shared state (mutated in place)
+     * @param {string} cssClass - CSS class for each button (e.g. "family-toggle")
+     * @param {() => void} onChange - callback when any toggle changes
+     */
+    function buildToggleButtons(
+      containerId,
+      items,
+      enabledState,
+      cssClass,
+      onChange,
+    ) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+      for (const item of items) {
+        const btn = document.createElement("span");
+        btn.className = cssClass;
+        btn.textContent = item;
+        if (!enabledState[item]) btn.classList.add("disabled");
+        btn.addEventListener("click", () => {
+          enabledState[item] = !enabledState[item];
+          btn.classList.toggle("disabled", !enabledState[item]);
+          onChange();
+        });
+        container.appendChild(btn);
+      }
+    }
+    
+    // ── Cluster labels ──────────────────────────────────────────────
+    
+    const CLUSTER_LABELS_STORAGE_KEY = "clustering_labels";
+    
+    /**
+     * Load cluster labels from localStorage and optionally from a server URL.
+     * localStorage labels override server labels on merge.
+     *
+     * @param {string|null} [serverUrl] - URL to fetch server-side labels JSON
+     * @returns {Promise<Object>} Merged labels: { cutHeightKey: { clusterIdx: { name, desc, heads } } }
+     */
+    async function loadClusterLabels(serverUrl) {
+      // Load from localStorage
+      let localLabels = {};
+      try {
+        const raw = localStorage.getItem(CLUSTER_LABELS_STORAGE_KEY);
+        if (raw) localLabels = JSON.parse(raw);
+      } catch (e) {
+        console.warn("Failed to load cluster labels from localStorage:", e);
+      }
+    
+      // Load from server (optional)
+      let serverLabels = {};
+      if (serverUrl) {
+        try {
+          const resp = await fetch(serverUrl);
+          if (resp.ok) {
+            serverLabels = await resp.json();
+          } else {
+            console.warn(
+              `Cluster labels not found at ${serverUrl} (${resp.status})`,
+            );
+          }
+        } catch (e) {
+          console.warn("Failed to fetch cluster labels:", e);
+        }
+      }
+    
+      // Merge: server as base, localStorage overrides
+      const merged = {};
+      const allKeys = new Set([
+        ...Object.keys(serverLabels),
+        ...Object.keys(localLabels),
+      ]);
+      for (const heightKey of allKeys) {
+        merged[heightKey] = {
+          ...(serverLabels[heightKey] || {}),
+          ...(localLabels[heightKey] || {}),
+        };
+      }
+      return merged;
+    }
+    
+    /**
+     * Resolve stored labels against current cluster assignments.
+     * Matches each label's heads list to the current cluster with the
+     * highest overlap, returning a map of clusterId -> {name, desc}.
+     *
+     * @param {Object} allLabels - Full labels object keyed by cut height
+     * @param {number} cutHeight - Current cut height
+     * @param {Object<string, number>} assignments - headId -> clusterId
+     * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+     */
+    function resolveClusterLabels(allLabels, cutHeight, assignments) {
+      const heightKey = cutHeight.toFixed(3);
+      return resolveClusterLabelsByKey(allLabels, heightKey, assignments);
+    }
+    
+    /**
+     * Resolve stored labels for a flat clustering method.
+     * Label key format: "{method}:{param_name}={value}"
+     *
+     * @param {Object} allLabels - Full labels object keyed by label key
+     * @param {string} method - Clustering method name (e.g. "hdbscan", "leiden")
+     * @param {string} paramName - Parameter name (e.g. "min_cluster_size", "resolution")
+     * @param {string} paramKey - Parameter value as string
+     * @param {Object<string, number>} assignments - headId -> clusterId
+     * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+     */
+    function resolveClusterLabelsFlat(
+      allLabels,
+      method,
+      paramName,
+      paramKey,
+      assignments,
+    ) {
+      const labelKey = `${method}:${paramName}=${paramKey}`;
+      return resolveClusterLabelsByKey(allLabels, labelKey, assignments);
+    }
+    
+    /**
+     * Resolve stored labels against current cluster assignments using a specific key.
+     * Shared implementation for both hierarchical and flat methods.
+     *
+     * @param {Object} allLabels - Full labels object keyed by label key
+     * @param {string} key - The label key to look up
+     * @param {Object<string, number>} assignments - headId -> clusterId
+     * @returns {Object<number, {name: string, desc: string|null}>} clusterId -> label info
+     */
+    function resolveClusterLabelsByKey(allLabels, key, assignments) {
+      const labelsForKey = allLabels[key];
+      if (!labelsForKey) return {};
+    
+      const resolvedCounts = {};
+      const resolved = {};
+    
+      for (const [_origIdx, entry] of Object.entries(labelsForKey)) {
+        if (!entry || !entry.name) continue;
+        const heads = entry.heads || [];
+    
+        // Count overlap with each current cluster
+        const clusterOverlap = {};
+        for (const headId of heads) {
+          const cid = assignments[headId];
+          if (cid !== undefined) {
+            clusterOverlap[cid] = (clusterOverlap[cid] || 0) + 1;
+          }
+        }
+    
+        // Find cluster with most overlap
+        let bestCluster = null;
+        let bestCount = 0;
+        for (const [cid, count] of Object.entries(clusterOverlap)) {
+          if (count > bestCount) {
+            bestCount = count;
+            bestCluster = parseInt(cid);
+          }
+        }
+    
+        if (bestCluster !== null && bestCount > 0) {
+          if (!resolved[bestCluster] || bestCount > resolvedCounts[bestCluster]) {
+            resolved[bestCluster] = { name: entry.name, desc: entry.desc || null };
+            resolvedCounts[bestCluster] = bestCount;
+          }
+        }
+      }
+    
+      return resolved;
+    }
+    
+    /**
+     * Get a short display name for a cluster, using name if available.
+     *
+     * @param {number} clusterId
+     * @param {Object<number, {name: string, desc: string|null}>} resolvedLabels
+     * @returns {string} e.g. "Cluster 3: Induction" or "Cluster 3"
+     */
+    function clusterDisplayName(clusterId, resolvedLabels) {
+      if (clusterId === -1) return "misc";
+      const label = resolvedLabels[clusterId];
+      if (label && label.name) return `Cluster ${clusterId}: ${label.name}`;
+      return `Cluster ${clusterId}`;
+    }
+    
+    </script>
+    <!-- end '../../shared/cluster_utils.js' -->
+        <!-- begin '../../shared/cluster_engine.js' -->
+    <script>
+    /**
+     * Shared clustering computation engine.
+     *
+     * Pure functions for computing cluster assignments from a scipy-format
+     * linkage matrix. Used by clustering, cluster_trends, and attnpedia views.
+     */
+    
+    /**
+     * Compute cluster assignments by cutting the dendrogram at a given height.
+     * Uses union-find with path compression.
+     *
+     * @param {number[][]} linkage - Scipy-format linkage matrix [[idx1, idx2, distance, count], ...]
+     * @param {string[]} clsValues - Head IDs in clustering order
+     * @param {number} cutHeight - Height at which to cut the dendrogram
+     * @returns {Object<string, number>} headId -> clusterId (0-indexed)
+     */
+    function computeClustersByHeight(linkage, clsValues, cutHeight) {
+      if (!linkage || !clsValues) return {};
+    
+      const n = clsValues.length;
+      const parent = Array.from({ length: 2 * n - 1 }, (_, i) => i);
+    
+      function find(x) {
+        if (parent[x] !== x) parent[x] = find(parent[x]);
+        return parent[x];
+      }
+    
+      function union(x, y, newParent) {
+        parent[find(x)] = newParent;
+        parent[find(y)] = newParent;
+      }
+    
+      for (let i = 0; i < linkage.length; i++) {
+        const [idx1, idx2, distance] = linkage[i];
+        if (distance <= cutHeight) {
+          union(Math.floor(idx1), Math.floor(idx2), n + i);
+        }
+      }
+    
+      const rootToCluster = {};
+      let nextCluster = 0;
+      const assignments = {};
+    
+      for (let i = 0; i < n; i++) {
+        const root = find(i);
+        if (!(root in rootToCluster)) {
+          rootToCluster[root] = nextCluster++;
+        }
+        assignments[clsValues[i]] = rootToCluster[root];
+      }
+    
+      return assignments;
+    }
+    
+    /**
+     * Apply minimum-size filtering to cluster assignments.
+     * Clusters smaller than minSize are reassigned to -1 (misc).
+     *
+     * @param {Object<string, number>} assignments - Raw headId -> clusterId
+     * @param {number} minSize - Minimum cluster size (0 = no filtering)
+     * @returns {{ assignments: Object<string, number>, smallClusters: Set<number>, nClusters: number }}
+     */
+    function applyMinSizeFilter(assignments, minSize) {
+      if (minSize <= 0) {
+        return {
+          assignments: assignments,
+          smallClusters: new Set(),
+          nClusters: new Set(Object.values(assignments)).size,
+        };
+      }
+    
+      // Count cluster sizes
+      const clusterCounts = {};
+      for (const cid of Object.values(assignments)) {
+        clusterCounts[cid] = (clusterCounts[cid] || 0) + 1;
+      }
+    
+      // Find small clusters
+      const smallClusters = new Set();
+      for (const [cid, count] of Object.entries(clusterCounts)) {
+        if (count < minSize) {
+          smallClusters.add(parseInt(cid));
+        }
+      }
+    
+      // Reassign small cluster heads to misc (-1)
+      if (smallClusters.size > 0) {
+        const merged = {};
+        for (const [headId, cid] of Object.entries(assignments)) {
+          merged[headId] = smallClusters.has(cid) ? -1 : cid;
+        }
+        return {
+          assignments: merged,
+          smallClusters: smallClusters,
+          nClusters: new Set(Object.values(merged)).size,
+        };
+      }
+    
+      return {
+        assignments: assignments,
+        smallClusters: smallClusters,
+        nClusters: new Set(Object.values(assignments)).size,
+      };
+    }
+    
+    /**
+     * Find the cut height that produces a target number of clusters.
+     *
+     * @param {number[][]} linkage - Scipy-format linkage matrix
+     * @param {number} nHeads - Number of leaf nodes (heads)
+     * @param {number} nClusters - Desired number of clusters
+     * @returns {number} Cut height
+     */
+    function cutHeightForNClusters(linkage, nHeads, nClusters) {
+      if (nClusters >= nHeads) {
+        return Math.max(...linkage.map((row) => row[2]));
+      }
+      const heights = linkage.map((row) => row[2]).sort((a, b) => b - a);
+      return heights[nHeads - nClusters - 1] + 1e-10;
+    }
+    
+    /**
+     * Compute cluster assignments for a target number of clusters.
+     *
+     * @param {number[][]} linkage - Scipy-format linkage matrix
+     * @param {string[]} clsValues - Head IDs in clustering order
+     * @param {number} nClusters - Desired number of clusters
+     * @returns {{ assignments: Object<string, number>, cutHeight: number }}
+     */
+    function computeClustersByNClusters(linkage, clsValues, nClusters) {
+      const n = clsValues.length;
+    
+      if (nClusters >= n) {
+        const assignments = {};
+        clsValues.forEach((cls, i) => {
+          assignments[cls] = i;
+        });
+        return {
+          assignments,
+          cutHeight: Math.max(...linkage.map((row) => row[2])),
+        };
+      }
+    
+      const cutHeight = cutHeightForNClusters(linkage, n, nClusters);
+      return {
+        assignments: computeClustersByHeight(linkage, clsValues, cutHeight),
+        cutHeight,
+      };
+    }
+    
+    /**
+     * Look up precomputed flat partition assignments by parameter key.
+     * Used for HDBSCAN and Leiden methods where assignments are precomputed
+     * at discrete parameter values (not computed client-side like hierarchical).
+     *
+     * @param {Object<string, Object<string, number>>} partitions - paramKey -> { headId: clusterId }
+     * @param {string} paramKey - The parameter key to look up
+     * @returns {Object<string, number>} headId -> clusterId (empty object if key not found)
+     */
+    function getFlatPartitionAssignments(partitions, paramKey) {
+      return partitions[paramKey] || {};
+    }
+    
+    </script>
+    <!-- end '../../shared/cluster_engine.js' -->
+        <!-- begin '../../attnpedia/src/clustering.js' -->
+    <script>
+    /**
+     * ClusteringLoader - Loads clustering data for AttentionPedia
+     *
+     * Supports hierarchical (client-side cut-height), HDBSCAN, and Leiden
+     * (precomputed flat partitions at discrete parameter values).
+     */
+    class ClusteringLoader {
+      constructor() {
+        this._is_loaded = false;
+        this._load_promise = null;
+        this._assignments = {};
+        this._rawAssignments = {}; // before min-size filtering
+        this._nClusters = 10;
+        this._cutHeight = null;
+        this._minClusterSize = 0;
+    
+        // Cluster labels (loaded from localStorage + server)
+        this._labels = {};
+        this._resolvedLabels = {};
+    
+        // Current method: "hierarchical" | "hdbscan" | "leiden"
+        this._method = "hierarchical";
+        this._availableMethods = [];
+    
+        // Hierarchical-specific
+        this._meta = null;
+        this._linkage = null;
+        this._maxCutHeight = null;
+    
+        // Flat method data: { method: { meta, partitions, labels } }
+        this._flatData = {};
+        this._currentParamKey = null;
+      }
+    
+      /**
+       * Ensure clustering data is loaded
+       */
+      async _ensureLoaded() {
+        if (this._is_loaded) return;
+        if (this._load_promise) {
+          await this._load_promise;
+          return;
+        }
+    
+        this._load_promise = this._load();
+        await this._load_promise;
+      }
+    
+      async _load() {
+        try {
+          // Detect available methods from manifest
+          const methodsUrl =
+            CONFIG.clustering_methods_url ||
+            "../../features/clustering_methods.json";
+          let methods = ["hierarchical"];
+          try {
+            const mResp = await fetch(methodsUrl);
+            if (mResp.ok) {
+              const manifest = await mResp.json();
+              methods = manifest.methods || ["hierarchical"];
+            }
+          } catch (e) {
+            // Fall back to hierarchical only
+          }
+          this._availableMethods = methods;
+    
+          // --- Load hierarchical ---
+          if (methods.includes("hierarchical")) {
+            const metaUrl =
+              CONFIG.clustering_meta_url ||
+              "../../features/clustering/clustering_meta.json";
+            const linkageUrl =
+              CONFIG.clustering_linkage_url ||
+              "../../features/clustering/linkage.json";
+    
+            const [metaResp, linkageResp] = await Promise.all([
+              fetch(metaUrl),
+              fetch(linkageUrl),
+            ]);
+    
+            if (metaResp.ok && linkageResp.ok) {
+              this._meta = await metaResp.json();
+              this._linkage = await linkageResp.json();
+    
+              if (this._linkage && this._linkage.length > 0) {
+                this._maxCutHeight = Math.max(
+                  ...this._linkage.map((row) => row[2]),
+                );
+              }
+    
+              // Load hierarchical labels
+              const labelsUrl =
+                CONFIG.cluster_labels_url ||
+                "../../features/clustering/cluster_labels.json";
+              this._labels = await loadClusterLabels(labelsUrl);
+            }
+          }
+    
+          // --- Load flat methods (HDBSCAN, Leiden) ---
+          for (const method of ["hdbscan", "leiden"]) {
+            if (!methods.includes(method)) continue;
+            try {
+              const flatMetaUrl =
+                CONFIG[`clustering_${method}_meta_url`] ||
+                `../../features/clustering_${method}/clustering_meta.json`;
+              const flatPartitionsUrl =
+                CONFIG[`clustering_${method}_partitions_url`] ||
+                `../../features/clustering_${method}/partitions.json`;
+              const flatLabelsUrl =
+                CONFIG[`clustering_${method}_labels_url`] ||
+                `../../features/clustering_${method}/cluster_labels.json`;
+    
+              const [fMetaResp, fPartResp] = await Promise.all([
+                fetch(flatMetaUrl),
+                fetch(flatPartitionsUrl),
+              ]);
+    
+              if (fMetaResp.ok && fPartResp.ok) {
+                const fMeta = await fMetaResp.json();
+                const fPartitions = await fPartResp.json();
+                const fLabels = await loadClusterLabels(flatLabelsUrl);
+                this._flatData[method] = {
+                  meta: fMeta,
+                  partitions: fPartitions,
+                  labels: fLabels,
+                };
+              }
+            } catch (e) {
+              console.warn(`Failed to load ${method} clustering data:`, e);
+            }
+          }
+    
+          this._is_loaded = true;
+    
+          // Compute initial assignments: prefer saved method, then leiden, then hierarchical
+          const savedMethod = ClusteringConfig.getMethod();
+          if (
+            savedMethod &&
+            this._availableMethods.includes(savedMethod) &&
+            (savedMethod === "hierarchical" ||
+              this._flatData[savedMethod] !== undefined)
+          ) {
+            this._setMethodInternal(savedMethod);
+          } else if (this._flatData["leiden"]) {
+            this._setMethodInternal("leiden");
+          } else if (this._linkage && this._meta) {
+            this._method = "hierarchical";
+            this._computeAssignmentsByNClusters(this._nClusters);
+          } else if (Object.keys(this._flatData).length > 0) {
+            const firstFlat = Object.keys(this._flatData)[0];
+            this._setMethodInternal(firstFlat);
+          }
+        } catch (e) {
+          console.warn("Failed to load clustering data:", e);
+          this._is_loaded = true;
+        }
+      }
+    
+      /**
+       * Check if clustering data is available
+       */
+      async isAvailable() {
+        await this._ensureLoaded();
+        return (
+          (this._meta !== null && this._linkage !== null) ||
+          Object.keys(this._flatData).length > 0
+        );
+      }
+    
+      /**
+       * Get list of available clustering methods.
+       * @returns {string[]}
+       */
+      getAvailableMethods() {
+        return this._availableMethods.filter(
+          (m) =>
+            (m === "hierarchical" && this._linkage !== null) ||
+            this._flatData[m] !== undefined,
+        );
+      }
+    
+      /**
+       * Get current clustering method.
+       * @returns {string}
+       */
+      getMethod() {
+        return this._method;
+      }
+    
+      /**
+       * Check if current method is hierarchical (continuous parameter).
+       * @returns {boolean}
+       */
+      isHierarchical() {
+        return this._method === "hierarchical";
+      }
+    
+      /**
+       * Internal: switch to a method without persisting to config.
+       * @param {string} method
+       */
+      _setMethodInternal(method) {
+        this._method = method;
+    
+        if (method === "hierarchical") {
+          if (this._cutHeight !== null) {
+            this._computeAssignmentsByCutHeight(this._cutHeight);
+          } else {
+            this._computeAssignmentsByNClusters(this._nClusters);
+          }
+        } else {
+          const flat = this._flatData[method];
+          if (!flat || !flat.meta.param_keys.length) return;
+    
+          // Use saved param key, then method-specific default, then first available
+          const savedKey = ClusteringConfig.getParamKey();
+          const defaultKey = method === "leiden" ? "1.000" : null;
+          const paramKey =
+            savedKey && flat.meta.param_keys.includes(savedKey)
+              ? savedKey
+              : defaultKey && flat.meta.param_keys.includes(defaultKey)
+                ? defaultKey
+                : flat.meta.param_keys[0];
+          this._setFlatParam(method, paramKey);
+        }
+      }
+    
+      /**
+       * Set clustering method and recompute assignments.
+       * @param {string} method - "hierarchical", "hdbscan", or "leiden"
+       */
+      setMethod(method) {
+        ClusteringConfig.setMethod(method);
+        this._setMethodInternal(method);
+      }
+    
+      /**
+       * Set parameter for a flat clustering method.
+       * @param {string} method
+       * @param {string} paramKey
+       */
+      _setFlatParam(method, paramKey) {
+        const flat = this._flatData[method];
+        if (!flat) return;
+    
+        this._currentParamKey = paramKey;
+        ClusteringConfig.setParamKey(paramKey);
+        this._rawAssignments = getFlatPartitionAssignments(
+          flat.partitions,
+          paramKey,
+        );
+        this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+    
+        // Count clusters
+        const clusterIds = new Set(
+          Object.values(this._assignments).filter((c) => c !== -1),
+        );
+        this._nClusters = clusterIds.size;
+    
+        // Resolve labels
+        this._resolvedLabels = resolveClusterLabelsFlat(
+          flat.labels,
+          flat.meta.method,
+          flat.meta.param_name,
+          paramKey,
+          this._assignments,
+        );
+      }
+    
+      /**
+       * Set flat method parameter and recompute.
+       * @param {string} paramKey
+       */
+      async setParamKey(paramKey) {
+        await this._ensureLoaded();
+        if (this._method === "hierarchical") return;
+        this._setFlatParam(this._method, paramKey);
+      }
+    
+      /**
+       * Get current parameter key for flat methods.
+       * @returns {string|null}
+       */
+      getParamKey() {
+        return this._currentParamKey;
+      }
+    
+      /**
+       * Get parameter metadata for the current flat method.
+       * @returns {{paramName: string, paramKeys: string[], meta: Object}|null}
+       */
+      getFlatParamInfo() {
+        if (this._method === "hierarchical") return null;
+        const flat = this._flatData[this._method];
+        if (!flat) return null;
+        return {
+          paramName: flat.meta.param_name,
+          paramKeys: flat.meta.param_keys,
+          meta: flat.meta.partition_meta,
+        };
+      }
+    
+      /**
+       * Apply min-size filtering using shared engine.
+       * Returns filtered assignments (small clusters get id = -1).
+       */
+      _applyMinSizeFilter(raw) {
+        if (this._minClusterSize <= 0) return { ...raw };
+        return applyMinSizeFilter(raw, this._minClusterSize).assignments;
+      }
+    
+      /**
+       * Compute assignments by target number of clusters (hierarchical only).
+       * Uses shared computeClustersByNClusters() from cluster_engine.js.
+       */
+      _computeAssignmentsByNClusters(nClusters) {
+        if (!this._linkage || !this._meta) return;
+    
+        const result = computeClustersByNClusters(
+          this._linkage,
+          this._meta.cls_values,
+          nClusters,
+        );
+        this._cutHeight = result.cutHeight;
+        this._rawAssignments = result.assignments;
+        this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+        this._nClusters = nClusters;
+        this._resolveLabels();
+      }
+    
+      /**
+       * Compute assignments by cut height (hierarchical only).
+       * Uses shared computeClustersByHeight() from cluster_engine.js.
+       */
+      _computeAssignmentsByCutHeight(cutHeight) {
+        if (!this._linkage || !this._meta) return;
+    
+        this._cutHeight = cutHeight;
+        this._rawAssignments = computeClustersByHeight(
+          this._linkage,
+          this._meta.cls_values,
+          cutHeight,
+        );
+        this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+    
+        // Count actual clusters (excluding -1)
+        const clusterIds = new Set(
+          Object.values(this._assignments).filter((c) => c !== -1),
+        );
+        this._nClusters = clusterIds.size;
+        this._resolveLabels();
+      }
+    
+      /**
+       * Resolve cluster labels against current assignments
+       */
+      _resolveLabels() {
+        if (this._method === "hierarchical") {
+          if (this._cutHeight !== null && Object.keys(this._labels).length > 0) {
+            this._resolvedLabels = resolveClusterLabels(
+              this._labels,
+              this._cutHeight,
+              this._assignments,
+            );
+          } else {
+            this._resolvedLabels = {};
+          }
+        }
+        // Flat methods resolve labels in _setFlatParam
+      }
+    
+      /**
+       * Set number of clusters and recompute assignments (hierarchical only)
+       */
+      async setNClusters(n) {
+        await this._ensureLoaded();
+        if (this._method !== "hierarchical") return;
+        this._computeAssignmentsByNClusters(n);
+      }
+    
+      /**
+       * Set cut height and recompute assignments (hierarchical only)
+       */
+      async setCutHeight(h) {
+        await this._ensureLoaded();
+        if (this._method !== "hierarchical") return;
+        this._computeAssignmentsByCutHeight(h);
+      }
+    
+      /**
+       * Set minimum cluster size and reapply filtering
+       */
+      async setMinClusterSize(n) {
+        await this._ensureLoaded();
+        this._minClusterSize = Math.max(0, n);
+        this._assignments = this._applyMinSizeFilter(this._rawAssignments);
+        // Recount actual clusters
+        const clusterIds = new Set(
+          Object.values(this._assignments).filter((c) => c !== -1),
+        );
+        this._nClusters = clusterIds.size;
+        if (this._method === "hierarchical") {
+          this._resolveLabels();
+        } else {
+          // Re-resolve flat labels with filtered assignments
+          const flat = this._flatData[this._method];
+          if (flat && this._currentParamKey) {
+            this._resolvedLabels = resolveClusterLabelsFlat(
+              flat.labels,
+              flat.meta.method,
+              flat.meta.param_name,
+              this._currentParamKey,
+              this._assignments,
+            );
+          }
+        }
+      }
+    
+      /**
+       * Get current cut height (hierarchical only)
+       */
+      getCutHeight() {
+        return this._cutHeight;
+      }
+    
+      /**
+       * Get max possible cut height (hierarchical only)
+       */
+      getMaxCutHeight() {
+        return this._maxCutHeight;
+      }
+    
+      /**
+       * Get current min cluster size
+       */
+      getMinClusterSize() {
+        return this._minClusterSize;
+      }
+    
+      /**
+       * Get cluster color for a head.
+       */
+      async getColor(headId) {
+        await this._ensureLoaded();
+        const clusterId = this._assignments[headId];
+        if (clusterId === undefined || clusterId === -1) return "transparent";
+        return clusterColor(clusterId);
+      }
+    
+      /**
+       * Get color for a cluster ID (synchronous, for use after loading).
+       */
+      getClusterColor(clusterId) {
+        if (clusterId === undefined || clusterId === -1) return "#888888";
+        return clusterColor(clusterId);
+      }
+    
+      /**
+       * Get cluster color as {r, g, b} in 0-1 range (for use with js-embedding-vis color override)
+       */
+      getClusterColorRGB(clusterId) {
+        if (clusterId === undefined || clusterId === -1) return null;
+        const hslStr = clusterColor(clusterId);
+        // Parse "hsl(H, S%, L%)"
+        const m = hslStr.match(/hsl\(([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\)/);
+        if (!m) return null;
+        const h = parseFloat(m[1]) / 360,
+          s = parseFloat(m[2]) / 100,
+          l = parseFloat(m[3]) / 100;
+        // HSL to RGB conversion
+        const a = s * Math.min(l, 1 - l);
+        const f = (n) => {
+          const k = (n + h * 12) % 12;
+          return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+        };
+        return { r: f(0), g: f(8), b: f(4) };
+      }
+    
+      /**
+       * Get cluster ID for a head
+       */
+      async getClusterId(headId) {
+        await this._ensureLoaded();
+        return this._assignments[headId];
+      }
+    
+      /**
+       * Get all heads in a cluster
+       */
+      async getHeadsInCluster(clusterId) {
+        await this._ensureLoaded();
+        return Object.entries(this._assignments)
+          .filter(([_, cid]) => cid === clusterId)
+          .map(([headId, _]) => headId);
+      }
+    
+      /**
+       * Get current number of clusters (excluding misc/-1)
+       */
+      getNClusters() {
+        return this._nClusters;
+      }
+    
+      /**
+       * Get actual cluster count (excluding -1 misc cluster)
+       */
+      getNClustersActual() {
+        const clusterIds = new Set(
+          Object.values(this._assignments).filter((c) => c !== -1),
+        );
+        return clusterIds.size;
+      }
+    
+      /**
+       * Get cluster sizes (excluding -1 misc cluster)
+       */
+      async getClusterSizes() {
+        await this._ensureLoaded();
+        const sizes = {};
+        for (const clusterId of Object.values(this._assignments)) {
+          if (clusterId === -1) continue;
+          sizes[clusterId] = (sizes[clusterId] || 0) + 1;
+        }
+        return sizes;
+      }
+    
+      /**
+       * Get number of unclustered heads (cluster -1, from min-size filtering)
+       */
+      getUnclusteredCount() {
+        let count = 0;
+        for (const cid of Object.values(this._assignments)) {
+          if (cid === -1) count++;
+        }
+        return count;
+      }
+    
+      /**
+       * Get cluster label for a cluster ID (synchronous, for use after loading)
+       * @param {number} clusterId
+       * @returns {{name: string, desc: string|null}|null}
+       */
+      getClusterLabel(clusterId) {
+        return this._resolvedLabels[clusterId] || null;
+      }
+    
+      /**
+       * Get top N clusters sorted by size descending
+       * @param {number} n - how many to return
+       * @returns {Array<{id: number, size: number, color: string, label: {name: string, desc: string|null}|null}>}
+       */
+      async getTopClusters(n) {
+        const sizes = await this.getClusterSizes();
+        const sorted = Object.entries(sizes)
+          .map(([id, size]) => ({
+            id: parseInt(id),
+            size,
+            color: this.getClusterColor(parseInt(id)),
+            label: this.getClusterLabel(parseInt(id)),
+          }))
+          .sort((a, b) => b.size - a.size);
+        return sorted.slice(0, n);
+      }
+    }
+    
+    </script>
+    <!-- end '../../attnpedia/src/clustering.js' -->
+        <!-- begin '../../attnpedia/src/AttentionPedia.js' -->
+    <script>
+    // TODO: fallback to getting from github?
+    // || "https://raw.githubusercontent.com/<TODO>";
+    
+    async function load_attnpedia() {
+      const r = await fetch(CONFIG.attnpedia_url);
+      if (r.ok) {
+        const loaded = await r.json();
+        return loaded;
+      } else {
+        throw new Error(
+          `Failed to load AttentionPedia data from ${CONFIG.attnpedia_url}`,
+        );
+      }
+    }
+    
+    class AttentionPedia {
+      constructor() {
+        this._data = null;
+        this._loaded = false;
+      }
+    
+      async _ensureLoaded() {
+        if (!this._loaded) {
+          this._data = await load_attnpedia();
+          this._loaded = true;
+        }
+      }
+    
+      async get_head_types(head_id) {
+        await this._ensureLoaded();
+        return this._data?.head_to_types?.[head_id] || [];
+      }
+    
+      async get_type_heads(type) {
+        await this._ensureLoaded();
+        return this._data?.type_to_heads?.[type] || [];
+      }
+    
+      async get_type_meta(type) {
+        await this._ensureLoaded();
+        return this._data?.type_metadata?.[type] || {};
+      }
+    }
+    
+    </script>
+    <!-- end '../../attnpedia/src/AttentionPedia.js' -->
+        <!-- begin '../../libs/array.js' -->
+    <script>
+    /**
+     * @fileoverview NumPy array parsing and utilities
+     * @module array
+     * @version 0.2.0
+     * @license GPLv3
+     * @see {@link https://github.com/mivanit/js-dev-toolkit}
+     *
+     * @note Append ".dev-{name}" to version if you edit this locally
+     *
+     * @note This file has been modified from original code at:
+     * {@link https://github.com/aplbrain/npyjs} under Apache License
+     * {@link https://github.com/aplbrain/npyjs/blob/b0cd99b7f4c2bff791b4977e16dec3478519920b/LICENSE}
+     *
+     * Modifications:
+     * - npz loading (requires jszip)
+     * - JSON deserialization for various inline array formats
+     *   (see {@link https://github.com/mivanit/muutils}, {@link https://github.com/mivanit/zanj})
+     */
+    
+    // Must match muutils.json_serialize.util._FORMAT_KEY
+    const _FORMAT_KEY = "__muutils_format__";
+    
+    // Float16 converter function
+    function float16ToFloat32(float16) {
+    	const sign = (float16 >> 15) & 0x1;
+    	const exponent = (float16 >> 10) & 0x1f;
+    	const fraction = float16 & 0x3ff;
+    
+    	if (exponent === 0) {
+    		if (fraction === 0) {
+    			return sign ? -0 : 0;
+    		}
+    		return (sign ? -1 : 1) * Math.pow(2, -14) * (fraction / 0x400);
+    	} else if (exponent === 0x1f) {
+    		if (fraction === 0) {
+    			return sign ? -Infinity : Infinity;
+    		}
+    		return NaN;
+    	}
+    
+    	return (
+    		(sign ? -1 : 1) * Math.pow(2, exponent - 15) * (1 + fraction / 0x400)
+    	);
+    }
+    
+    function float16ToFloat32Array(float16Array) {
+    	const length = float16Array.length;
+    	const float32Array = new Float32Array(length);
+    	for (let i = 0; i < length; i++) {
+    		float32Array[i] = float16ToFloat32(float16Array[i]);
+    	}
+    	return float32Array;
+    }
+    
+    function _isBigIntArray(arr) {
+    	return arr instanceof BigInt64Array || arr instanceof BigUint64Array;
+    }
+    
+    // Parse NPY header dict (Python dict literal → JS object)
+    function _parseNPYHeader(text) {
+    	return JSON.parse(
+    		text
+    			.replace(/True/g, "true")
+    			.replace(/False/g, "false")
+    			.replace(/'/g, '"')
+    			.replace(/\(/g, "[")
+    			.replace(/,*\),*/g, "]")
+    			.replace(/,\s*]/g, "]"),
+    	);
+    }
+    
+    // Canonical dtype list - single source of truth
+    const _DTYPES = [
+    	{
+    		descriptors: ["<u1", "|u1"],
+    		name: "uint8",
+    		size: 8,
+    		arrayConstructor: Uint8Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<u2"],
+    		name: "uint16",
+    		size: 16,
+    		arrayConstructor: Uint16Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<u4"],
+    		name: "uint32",
+    		size: 32,
+    		arrayConstructor: Uint32Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<u8"],
+    		name: "uint64",
+    		size: 64,
+    		arrayConstructor: BigUint64Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["|i1"],
+    		name: "int8",
+    		size: 8,
+    		arrayConstructor: Int8Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<i2"],
+    		name: "int16",
+    		size: 16,
+    		arrayConstructor: Int16Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<i4"],
+    		name: "int32",
+    		size: 32,
+    		arrayConstructor: Int32Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<i8"],
+    		name: "int64",
+    		size: 64,
+    		arrayConstructor: BigInt64Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<f4"],
+    		name: "float32",
+    		size: 32,
+    		arrayConstructor: Float32Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<f8"],
+    		name: "float64",
+    		size: 64,
+    		arrayConstructor: Float64Array,
+    		converter: null,
+    	},
+    	{
+    		descriptors: ["<f2"],
+    		name: "float16",
+    		size: 16,
+    		arrayConstructor: Uint16Array,
+    		converter: float16ToFloat32Array,
+    	},
+    ];
+    
+    // Generate map: numpy descriptor -> dtype info (for NPY parsing)
+    const _DTYPE_BY_DESCRIPTOR = {};
+    for (const dtype of _DTYPES) {
+    	for (const desc of dtype.descriptors) {
+    		_DTYPE_BY_DESCRIPTOR[desc] = dtype;
+    	}
+    }
+    
+    // Generate map: dtype name -> dtype info (for JSON deserialization)
+    const _DTYPE_BY_NAME = {};
+    for (const dtype of _DTYPES) {
+    	_DTYPE_BY_NAME[dtype.name] = dtype;
+    }
+    
+    // Generate map: TypedArray constructor -> dtype name (for type inference)
+    const _CONSTRUCTOR_TO_DTYPE = new Map();
+    for (const dtype of _DTYPES) {
+    	_CONSTRUCTOR_TO_DTYPE.set(dtype.arrayConstructor, dtype.name);
+    }
+    
+    // NPY header info for range-based loading
+    class NPYHeaderInfo {
+    	constructor({ shape, dtype, fortranOrder, dataOffset }) {
+    		this.shape = shape;
+    		this.dtype = dtype;
+    		this.fortranOrder = fortranOrder;
+    		this.dataOffset = dataOffset;
+    
+    		// Get element size in bytes from dtype
+    		const dtypeInfo = _DTYPE_BY_DESCRIPTOR[dtype];
+    		if (!dtypeInfo) {
+    			throw new Error(
+    				`NPYHeaderInfo: unsupported dtype descriptor "${dtype}"`,
+    			);
+    		}
+    		this.elementSize = dtypeInfo.size / 8;
+    
+    		// Calculate stride for first axis (bytes per first-axis element)
+    		// For shape [d0, d1, d2], stride = d1 * d2 * elementSize
+    		this.firstAxisStride =
+    			this.shape.slice(1).reduce((acc, dim) => acc * dim, 1) *
+    			this.elementSize;
+    	}
+    }
+    
+    // Fetch only the NPY header using HTTP range requests
+    async function fetchNPYHeader(url, fetchArgs = {}) {
+    	// Fetch first 1KB - enough for most headers (typically < 200 bytes)
+    	const initialResponse = await fetch(url, {
+    		...fetchArgs,
+    		headers: {
+    			...fetchArgs.headers,
+    			Range: "bytes=0-1023",
+    		},
+    	});
+    
+    	// Check if range requests are supported
+    	if (initialResponse.status === 200) {
+    		// Server returned full file - range not supported
+    		console.warn(
+    			"HTTP Range requests not supported for",
+    			url,
+    			"- downloading full file",
+    		);
+    		return { rangeSupported: false, fullResponse: initialResponse };
+    	}
+    
+    	if (initialResponse.status !== 206) {
+    		throw new Error(
+    			`Failed to fetch NPY header: ${initialResponse.status}`,
+    		);
+    	}
+    
+    	const initialBytes = await initialResponse.arrayBuffer();
+    
+    	// Reject NPY v2.0+ (uses uint32 header length at different offset)
+    	const majorVersion = new Uint8Array(initialBytes)[6];
+    	if (majorVersion > 1) {
+    		throw new Error(
+    			`NPY format v${majorVersion}.0 is not supported (only v1.0)`,
+    		);
+    	}
+    
+    	// Parse header length (uint16 little-endian at bytes 8-9 for v1.0)
+    	const headerLength = new DataView(initialBytes, 8, 2).getUint16(0, true);
+    	const headerStart = 10;
+    	const dataOffset = headerStart + headerLength;
+    
+    	let headerBytes;
+    	if (dataOffset <= initialBytes.byteLength) {
+    		// Header fits in initial 1KB fetch - no second request needed
+    		headerBytes = initialBytes.slice(headerStart, dataOffset);
+    	} else {
+    		// Header larger than 1KB (rare) - fetch the rest
+    		const headerResponse = await fetch(url, {
+    			...fetchArgs,
+    			headers: {
+    				...fetchArgs.headers,
+    				Range: `bytes=${initialBytes.byteLength}-${dataOffset - 1}`,
+    			},
+    		});
+    
+    		if (headerResponse.status !== 206) {
+    			throw new Error(
+    				`Failed to fetch NPY header content: ${headerResponse.status}`,
+    			);
+    		}
+    
+    		// Combine initial bytes with remaining header
+    		const remainingBytes = await headerResponse.arrayBuffer();
+    		const combined = new Uint8Array(dataOffset);
+    		combined.set(new Uint8Array(initialBytes), 0);
+    		combined.set(new Uint8Array(remainingBytes), initialBytes.byteLength);
+    		headerBytes = combined.slice(headerStart, dataOffset);
+    	}
+    
+    	const headerText = new TextDecoder("utf-8").decode(
+    		new Uint8Array(headerBytes),
+    	);
+    
+    	// Parse header dict
+    	const header = _parseNPYHeader(headerText);
+    
+    	if (header.fortran_order) {
+    		throw new Error(
+    			"Fortran-order NPY files are not supported. Save with order='C'.",
+    		);
+    	}
+    
+    	return {
+    		rangeSupported: true,
+    		info: new NPYHeaderInfo({
+    			shape: header.shape,
+    			dtype: header.descr,
+    			fortranOrder: header.fortran_order,
+    			dataOffset: dataOffset,
+    		}),
+    	};
+    }
+    
+    class npyjs {
+    	constructor(opts) {
+    		this.convertFloat16 = opts?.convertFloat16 ?? true;
+    		this.dtypes = {};
+    
+    		// Build dtypes map from canonical list
+    		for (const desc in _DTYPE_BY_DESCRIPTOR) {
+    			const dtype = _DTYPE_BY_DESCRIPTOR[desc];
+    			this.dtypes[desc] = {
+    				name: dtype.name,
+    				size: dtype.size,
+    				arrayConstructor: dtype.arrayConstructor,
+    				converter:
+    					dtype.converter && this.convertFloat16
+    						? dtype.converter
+    						: undefined,
+    			};
+    		}
+    	}
+    
+    	parse(arrayBufferContents) {
+    		// Reject NPY v2.0+ (uses uint32 header length at different offset)
+    		const majorVersion = new Uint8Array(arrayBufferContents)[6];
+    		if (majorVersion > 1) {
+    			throw new Error(
+    				`NPY format v${majorVersion}.0 is not supported (only v1.0)`,
+    			);
+    		}
+    		const headerLength = new DataView(
+    			arrayBufferContents.slice(8, 10),
+    		).getUint16(0, true);
+    		const offsetBytes = 10 + headerLength;
+    
+    		const hcontents = new TextDecoder("utf-8").decode(
+    			new Uint8Array(arrayBufferContents.slice(10, 10 + headerLength)),
+    		);
+    		const header = _parseNPYHeader(hcontents);
+    		const shape = header.shape;
+    
+    		if (header.fortran_order) {
+    			throw new Error(
+    				"Fortran-order NPY files are not supported. Save with order='C'.",
+    			);
+    		}
+    
+    		const dtype = this.dtypes[header.descr];
+    
+    		if (!dtype) {
+    			throw new Error(`Unsupported dtype: ${header.descr}`);
+    		}
+    
+    		const nums = new dtype.arrayConstructor(
+    			arrayBufferContents,
+    			offsetBytes,
+    		);
+    
+    		// Convert float16 to float32 if converter exists
+    		const data = dtype.converter ? dtype.converter.call(this, nums) : nums;
+    
+    		return {
+    			dtype: dtype.converter ? "float32" : dtype.name,
+    			data: data,
+    			shape,
+    			fortranOrder: header.fortran_order,
+    		};
+    	}
+    
+    	async load(filename, callback, fetchArgs) {
+    		/*
+    		Loads an array from a stream of bytes.
+    		*/
+    		fetchArgs = fetchArgs || {};
+    		let arrayBuf;
+    		// If filename is ArrayBuffer
+    		if (filename instanceof ArrayBuffer) {
+    			arrayBuf = filename;
+    		}
+    		// If filename is a file path
+    		else {
+    			const resp = await fetch(filename, { ...fetchArgs });
+    			arrayBuf = await resp.arrayBuffer();
+    		}
+    		const result = this.parse(arrayBuf);
+    		if (callback) {
+    			return callback(result);
+    		}
+    		return result;
+    	}
+    
+    	async loadNPZ(filename, fetchArgs) {
+    		fetchArgs = fetchArgs || {};
+    		const resp = await fetch(filename, { ...fetchArgs });
+    		const arrayBuffer = await resp.arrayBuffer();
+    		return this.parseZIP(arrayBuffer);
+    	}
+    
+    	async parseZIP(arrayBuffer) {
+    		// Use JSZip to properly decompress NPZ files
+    		const zip = new JSZip();
+    		const zipFile = await zip.loadAsync(arrayBuffer);
+    		const arrays = {};
+    
+    		// Iterate through all files in the ZIP
+    		for (const [filename, file] of Object.entries(zipFile.files)) {
+    			if (file.dir) continue;
+    
+    			// Get decompressed ArrayBuffer
+    			const decompressedData = await file.async("arraybuffer");
+    
+    			// Parse NPY data
+    			const arrayName = filename.replace(".npy", "");
+    			arrays[arrayName] = this.parse(decompressedData);
+    		}
+    
+    		return arrays;
+    	}
+    }
+    
+    class NDArray {
+    	/**
+    	 * Creates a multidimensional array similar to NumPy arrays
+    	 *
+    	 * @param {any} data - The array data
+    	 * @param {Array<number>} shape - The shape of the array
+    	 * @param {string} dtype - The data type of the array
+    	 */
+    	constructor(data, shape, dtype) {
+    		this.data = data;
+    		this.shape = shape;
+    		this.dtype = dtype;
+    		this.ndim = shape.length;
+    
+    		// Validate shape dimensions
+    		for (let i = 0; i < shape.length; i++) {
+    			if (!Number.isInteger(shape[i]) || shape[i] < 0) {
+    				throw new Error(
+    					`Invalid shape dimension at index ${i}: ${shape[i]} (must be non-negative integer)`,
+    				);
+    			}
+    		}
+    
+    		// Calculate total size from shape
+    		this._size = shape.reduce((acc, dim) => acc * dim, 1);
+    
+    		// Validate data length matches shape
+    		if (data.length !== this._size) {
+    			throw new Error(
+    				`Data length ${data.length} doesn't match shape ${shape} (expected ${this._size})`,
+    			);
+    		}
+    	}
+    
+    	/**
+    	 * Returns the total number of elements in the array
+    	 * @returns {number} Total number of elements
+    	 */
+    	get size() {
+    		return this._size;
+    	}
+    
+    	/**
+    	 * Validates axis parameter is within bounds
+    	 * @param {number|null} axis - The axis to validate
+    	 * @returns {number|null} The validated axis
+    	 * @private
+    	 */
+    	_validateAxis(axis) {
+    		if (axis === null || axis === undefined) {
+    			return null;
+    		}
+    
+    		// Handle negative axis
+    		if (axis < 0) {
+    			axis = this.ndim + axis;
+    		}
+    
+    		if (axis < 0 || axis >= this.ndim) {
+    			throw new Error(
+    				`axis ${axis} is out of bounds for array with ${this.ndim} dimensions`,
+    			);
+    		}
+    
+    		return axis;
+    	}
+    
+    	/**
+    	 * Returns a flattened 1D view of the array
+    	 * @returns {NDArray} 1D NDArray
+    	 */
+    	flatten() {
+    		return new this.constructor(this.data, [this._size], this.dtype);
+    	}
+    
+    	/**
+    	 * Slice the array along the first axis.
+    	 * Returns a new NDArray containing elements [start, end) along the first axis.
+    	 *
+    	 * @param {Array<number>|number} range - [start, end) range or single index for first axis
+    	 * @returns {NDArray} Sliced array
+    	 *
+    	 * @example
+    	 * const arr = new NDArray(data, [100, 10], 'float32');
+    	 * const sliced = arr.slice([10, 20]); // shape: [10, 10]
+    	 * const row = arr.slice(5);           // shape: [1, 10] - single row
+    	 */
+    	slice(range) {
+    		// Allow single int to get one row
+    		const dim0 = this.shape[0];
+    		let start, end;
+    		if (typeof range === "number") {
+    			start = range < 0 ? dim0 + range : range;
+    			end = start + 1;
+    		} else {
+    			[start, end] = range;
+    			if (start < 0) start = dim0 + start;
+    			if (end < 0) end = dim0 + end;
+    		}
+    
+    		// Validate bounds
+    		if (start < 0 || end > dim0 || start > end) {
+    			throw new Error(
+    				`Invalid slice [${start}, ${end}) for array with shape ${this.shape}`,
+    			);
+    		}
+    
+    		// Calculate stride for first axis (elements per first-axis index)
+    		const firstAxisStride = this.shape
+    			.slice(1)
+    			.reduce((acc, dim) => acc * dim, 1);
+    
+    		// Extract slice data
+    		const sliceStart = start * firstAxisStride;
+    		const sliceEnd = end * firstAxisStride;
+    		const slicedData = this.data.slice(sliceStart, sliceEnd);
+    
+    		// Construct sliced shape
+    		const slicedShape = [end - start, ...this.shape.slice(1)];
+    
+    		return new this.constructor(slicedData, slicedShape, this.dtype);
+    	}
+    
+    	/**
+    	 * Computes the sum of array elements over a given axis
+    	 * @param {number|null} axis - Axis along which to sum. If null, sum over all elements
+    	 * @returns {number|NDArray} Sum as scalar or NDArray depending on axis
+    	 */
+    	sum(axis = null) {
+    		axis = this._validateAxis(axis);
+    
+    		// Sum over all elements
+    		if (axis === null) {
+    			if (this._size === 0) return _isBigIntArray(this.data) ? 0n : 0;
+    			let total = this.data[0];
+    			for (let i = 1; i < this._size; i++) {
+    				total += this.data[i];
+    			}
+    			return total;
+    		}
+    
+    		// Sum along specific axis
+    		const newShape = this.shape.filter((_, i) => i !== axis);
+    		const newSize = newShape.reduce((acc, dim) => acc * dim, 1);
+    		const resultData = new this.data.constructor(newSize);
+    
+    		// Calculate strides for indexing
+    		const strides = new Array(this.ndim);
+    		strides[this.ndim - 1] = 1;
+    		for (let i = this.ndim - 2; i >= 0; i--) {
+    			strides[i] = strides[i + 1] * this.shape[i + 1];
+    		}
+    
+    		// Sum values along the specified axis
+    		for (let i = 0; i < this._size; i++) {
+    			// Convert flat index to multidimensional indices
+    			let remaining = i;
+    			const indices = new Array(this.ndim);
+    			for (let j = 0; j < this.ndim; j++) {
+    				indices[j] = Math.floor(remaining / strides[j]);
+    				remaining %= strides[j];
+    			}
+    
+    			// Calculate result index (excluding the axis dimension)
+    			let resultIdx = 0;
+    			let resultStride = 1;
+    			for (let j = this.ndim - 1; j >= 0; j--) {
+    				if (j !== axis) {
+    					resultIdx += indices[j] * resultStride;
+    					resultStride *= this.shape[j];
+    				}
+    			}
+    
+    			resultData[resultIdx] += this.data[i];
+    		}
+    
+    		return new this.constructor(resultData, newShape, this.dtype);
+    	}
+    
+    	/**
+    	 * Computes the mean of array elements over a given axis
+    	 * @param {number|null} axis - Axis along which to compute mean. If null, compute mean over all elements
+    	 * @returns {number|NDArray} Mean as scalar or NDArray depending on axis
+    	 */
+    	mean(axis = null) {
+    		axis = this._validateAxis(axis);
+    
+    		// Mean over all elements
+    		if (axis === null) {
+    			if (this._size === 0) {
+    				throw new Error("mean of empty slice is undefined");
+    			}
+    			const total = this.sum(null);
+    			return Number(total) / this._size;
+    		}
+    
+    		// Mean along specific axis
+    		const sumResult = this.sum(axis);
+    		if (this.shape[axis] === 0) {
+    			throw new Error("mean of empty slice is undefined");
+    		}
+    		const divisor = this.shape[axis];
+    		const isBigInt = _isBigIntArray(sumResult.data);
+    
+    		// Always return float for mean (convert BigInt sums to Number)
+    		const resultData = isBigInt
+    			? new Float64Array(sumResult.data.length)
+    			: new sumResult.data.constructor(sumResult.data.length);
+    		for (let i = 0; i < sumResult.data.length; i++) {
+    			resultData[i] =
+    				(isBigInt ? Number(sumResult.data[i]) : sumResult.data[i]) /
+    				divisor;
+    		}
+    
+    		return new this.constructor(
+    			resultData,
+    			sumResult.shape,
+    			isBigInt ? "float64" : this.dtype,
+    		);
+    	}
+    
+    	/**
+    	 * Computes both minimum and maximum of array elements over a given axis in a single pass
+    	 * @param {number|null} axis - Axis along which to find range. If null, find range over all elements
+    	 * @returns {NDArray} NDArray with shape [..., 2] where index 0 is min, index 1 is max
+    	 */
+    	range(axis = null) {
+    		axis = this._validateAxis(axis);
+    
+    		// Range over all elements - return [2] array
+    		if (axis === null) {
+    			if (this._size === 0) {
+    				throw new Error(
+    					"zero-size array to reduction operation range which has no identity",
+    				);
+    			}
+    			let minVal = this.data[0];
+    			let maxVal = this.data[0];
+    			for (let i = 1; i < this._size; i++) {
+    				if (this.data[i] < minVal) {
+    					minVal = this.data[i];
+    				}
+    				if (this.data[i] > maxVal) {
+    					maxVal = this.data[i];
+    				}
+    			}
+    			const resultData = new this.data.constructor(2);
+    			resultData[0] = minVal;
+    			resultData[1] = maxVal;
+    			return new this.constructor(resultData, [2], this.dtype);
+    		}
+    
+    		// Range along specific axis - result shape is [..., 2]
+    		if (this.shape[axis] === 0) {
+    			throw new Error(
+    				"zero-size array to reduction operation range which has no identity",
+    			);
+    		}
+    		const baseShape = this.shape.filter((_, i) => i !== axis);
+    		const newShape = [...baseShape, 2];
+    		const baseSize = baseShape.reduce((acc, dim) => acc * dim, 1);
+    		const newSize = baseSize * 2;
+    		const resultData = new this.data.constructor(newSize);
+    
+    		// Calculate strides for indexing
+    		const strides = new Array(this.ndim);
+    		strides[this.ndim - 1] = 1;
+    		for (let i = this.ndim - 2; i >= 0; i--) {
+    			strides[i] = strides[i + 1] * this.shape[i + 1];
+    		}
+    
+    		// Track whether each position has been initialized
+    		const initialized = new Uint8Array(baseSize);
+    
+    		// Find min and max values along the specified axis
+    		for (let i = 0; i < this._size; i++) {
+    			// Convert flat index to multidimensional indices
+    			let remaining = i;
+    			const indices = new Array(this.ndim);
+    			for (let j = 0; j < this.ndim; j++) {
+    				indices[j] = Math.floor(remaining / strides[j]);
+    				remaining %= strides[j];
+    			}
+    
+    			// Calculate result index (excluding the axis dimension)
+    			let resultIdx = 0;
+    			let resultStride = 1;
+    			for (let j = this.ndim - 1; j >= 0; j--) {
+    				if (j !== axis) {
+    					resultIdx += indices[j] * resultStride;
+    					resultStride *= this.shape[j];
+    				}
+    			}
+    
+    			// Seed with first value, then compare
+    			if (!initialized[resultIdx]) {
+    				resultData[resultIdx * 2] = this.data[i];
+    				resultData[resultIdx * 2 + 1] = this.data[i];
+    				initialized[resultIdx] = 1;
+    			} else {
+    				if (this.data[i] < resultData[resultIdx * 2]) {
+    					resultData[resultIdx * 2] = this.data[i];
+    				}
+    				if (this.data[i] > resultData[resultIdx * 2 + 1]) {
+    					resultData[resultIdx * 2 + 1] = this.data[i];
+    				}
+    			}
+    		}
+    
+    		return new this.constructor(resultData, newShape, this.dtype);
+    	}
+    
+    	/**
+    	 * Computes the minimum of array elements over a given axis
+    	 * @param {number|null} axis - Axis along which to find minimum. If null, find minimum over all elements
+    	 * @returns {number|NDArray} Minimum as scalar or NDArray depending on axis
+    	 */
+    	min(axis = null) {
+    		axis = this._validateAxis(axis);
+    		const rangeResult = this.range(axis);
+    
+    		if (axis === null) {
+    			return rangeResult.data[0];
+    		}
+    
+    		const baseSize = rangeResult.data.length / 2;
+    		const minData = new this.data.constructor(baseSize);
+    		for (let i = 0; i < baseSize; i++) {
+    			minData[i] = rangeResult.data[i * 2];
+    		}
+    
+    		const newShape = this.shape.filter((_, i) => i !== axis);
+    		return new this.constructor(minData, newShape, this.dtype);
+    	}
+    
+    	/**
+    	 * Computes the maximum of array elements over a given axis
+    	 * @param {number|null} axis - Axis along which to find maximum. If null, find maximum over all elements
+    	 * @returns {number|NDArray} Maximum as scalar or NDArray depending on axis
+    	 */
+    	max(axis = null) {
+    		axis = this._validateAxis(axis);
+    		const rangeResult = this.range(axis);
+    
+    		if (axis === null) {
+    			return rangeResult.data[1];
+    		}
+    
+    		const baseSize = rangeResult.data.length / 2;
+    		const maxData = new this.data.constructor(baseSize);
+    		for (let i = 0; i < baseSize; i++) {
+    			maxData[i] = rangeResult.data[i * 2 + 1];
+    		}
+    
+    		const newShape = this.shape.filter((_, i) => i !== axis);
+    		return new this.constructor(maxData, newShape, this.dtype);
+    	}
+    
+    	/**
+    	 * Returns a new array with a new shape
+    	 * @param {Array<number>} newShape - The new shape, can contain -1 for auto-calculation
+    	 * @returns {NDArray} Reshaped array
+    	 */
+    	reshape(newShape) {
+    		if (!Array.isArray(newShape)) {
+    			throw new Error("newShape must be an array");
+    		}
+    
+    		// Reject invalid negative dimensions (only -1 is allowed)
+    		for (const dim of newShape) {
+    			if (dim < -1) {
+    				throw new Error(
+    					`invalid dimension ${dim} in reshape (only -1 is allowed for auto-calculation)`,
+    				);
+    			}
+    		}
+    
+    		// Handle -1 for auto-calculation
+    		const autoIdx = newShape.indexOf(-1);
+    		let finalShape = [...newShape];
+    
+    		if (autoIdx !== -1) {
+    			// Check for multiple -1s
+    			if (newShape.indexOf(-1, autoIdx + 1) !== -1) {
+    				throw new Error("can only specify one unknown dimension (-1)");
+    			}
+    
+    			// Calculate the auto dimension
+    			const knownSize = newShape.reduce(
+    				(acc, dim) => (dim === -1 ? acc : acc * dim),
+    				1,
+    			);
+    			if (knownSize === 0) {
+    				finalShape[autoIdx] = 0;
+    			} else {
+    				if (this._size % knownSize !== 0) {
+    					throw new Error(
+    						`cannot reshape array of size ${this._size} into shape ${newShape}`,
+    					);
+    				}
+    				finalShape[autoIdx] = this._size / knownSize;
+    			}
+    		}
+    
+    		// Validate new shape has same total size
+    		const newSize = finalShape.reduce((acc, dim) => acc * dim, 1);
+    		if (newSize !== this._size) {
+    			throw new Error(
+    				`cannot reshape array of size ${this._size} into shape ${finalShape} (size ${newSize})`,
+    			);
+    		}
+    
+    		// Create new array with same data but different shape
+    		return new this.constructor(this.data, finalShape, this.dtype);
+    	}
+    
+    	/**
+    	 * Returns a transposed array
+    	 * @param {Array<number>|null} axes - Permutation of axes. If null, reverses all axes
+    	 * @returns {NDArray} Transposed array
+    	 */
+    	transpose(axes = null) {
+    		// Default: reverse all axes
+    		if (axes === null) {
+    			axes = Array.from(
+    				{ length: this.ndim },
+    				(_, i) => this.ndim - 1 - i,
+    			);
+    		}
+    
+    		// Validate axes
+    		if (!Array.isArray(axes) || axes.length !== this.ndim) {
+    			throw new Error(`axes must be array of length ${this.ndim}`);
+    		}
+    
+    		// Normalize negative axes
+    		axes = axes.map((ax) => (ax < 0 ? ax + this.ndim : ax));
+    
+    		// Check for valid permutation (all unique, in range)
+    		const axesSet = new Set(axes);
+    		if (axesSet.size !== this.ndim) {
+    			throw new Error("axes must be a permutation of dimensions");
+    		}
+    		for (const axis of axes) {
+    			if (axis < 0 || axis >= this.ndim) {
+    				throw new Error(
+    					`axis ${axis} is out of bounds for array with ${this.ndim} dimensions`,
+    				);
+    			}
+    		}
+    
+    		// Calculate new shape
+    		const newShape = axes.map((ax) => this.shape[ax]);
+    
+    		// Calculate old strides
+    		const oldStrides = new Array(this.ndim);
+    		oldStrides[this.ndim - 1] = 1;
+    		for (let i = this.ndim - 2; i >= 0; i--) {
+    			oldStrides[i] = oldStrides[i + 1] * this.shape[i + 1];
+    		}
+    
+    		// Create new data array
+    		const newData = new this.data.constructor(this._size);
+    
+    		// Calculate new strides
+    		const newStrides = new Array(this.ndim);
+    		newStrides[this.ndim - 1] = 1;
+    		for (let i = this.ndim - 2; i >= 0; i--) {
+    			newStrides[i] = newStrides[i + 1] * newShape[i + 1];
+    		}
+    
+    		// Copy data in transposed order
+    		for (let i = 0; i < this._size; i++) {
+    			// Convert flat index to old multidimensional indices
+    			let remaining = i;
+    			const oldIndices = new Array(this.ndim);
+    			for (let j = 0; j < this.ndim; j++) {
+    				oldIndices[j] = Math.floor(remaining / oldStrides[j]);
+    				remaining %= oldStrides[j];
+    			}
+    
+    			// Permute indices according to axes
+    			const newIndices = new Array(this.ndim);
+    			for (let j = 0; j < this.ndim; j++) {
+    				newIndices[j] = oldIndices[axes[j]];
+    			}
+    
+    			// Convert new multidimensional indices to flat index
+    			let newFlatIdx = 0;
+    			for (let j = 0; j < this.ndim; j++) {
+    				newFlatIdx += newIndices[j] * newStrides[j];
+    			}
+    
+    			newData[newFlatIdx] = this.data[i];
+    		}
+    
+    		return new this.constructor(newData, newShape, this.dtype);
+    	}
+    
+    	/**
+    	 * Converts multidimensional indices to flat index
+    	 *
+    	 * @param {Array<number|null>} indices - Array of indices, can contain null for slicing
+    	 * @returns {number|Array<number>} - Flat index or array of indices for slicing
+    	 * @private
+    	 */
+    	_getIndices(indices) {
+    		// Clone to avoid mutating caller's array
+    		indices = [...indices];
+    
+    		// Handle case where all dimensions are requested (no indices)
+    		if (indices.length === 0) {
+    			return [...Array(this._size).keys()];
+    		}
+    
+    		// Check that we don't have too many indices
+    		if (indices.filter((idx) => idx !== null).length > this.shape.length) {
+    			throw new Error(
+    				`Too many indices for array with shape ${this.shape}`,
+    			);
+    		}
+    
+    		// If we have exact indices (no nulls), calculate flat index
+    		if (!indices.includes(null) && indices.length === this.shape.length) {
+    			// Validate all indices
+    			for (let i = 0; i < indices.length; i++) {
+    				if (indices[i] < 0) {
+    					indices[i] = this.shape[i] + indices[i]; // Handle negative indices like numpy
+    				}
+    
+    				if (indices[i] < 0 || indices[i] >= this.shape[i]) {
+    					throw new Error(
+    						`Index ${indices[i]} is out of bounds for axis ${i} with size ${this.shape[i]}`,
+    					);
+    				}
+    			}
+    
+    			// Calculate flat index using strides
+    			let flatIndex = 0;
+    			let stride = 1;
+    
+    			for (let i = this.shape.length - 1; i >= 0; i--) {
+    				flatIndex += indices[i] * stride;
+    				stride *= this.shape[i];
+    			}
+    
+    			return flatIndex;
+    		}
+    
+    		// Handle slicing (when some indices are null)
+    		// This returns all flat indices that match the specified dimensions
+    		const resultIndices = [];
+    		const completeIndices = [...indices];
+    
+    		// Fill in missing indices with zeros
+    		while (completeIndices.length < this.shape.length) {
+    			completeIndices.push(0);
+    		}
+    
+    		// Find which dimensions need to be iterated over (those with null)
+    		const dimToIterate = [];
+    		for (let i = 0; i < this.shape.length; i++) {
+    			if (i >= indices.length || indices[i] === null) {
+    				dimToIterate.push(i);
+    			}
+    		}
+    
+    		// Generate all combinations of indices for the dimensions to iterate over
+    		const generateIndices = (currentDim, currentIndices) => {
+    			if (currentDim >= dimToIterate.length) {
+    				// Calculate flat index for this combination
+    				let flatIndex = 0;
+    				let stride = 1;
+    
+    				for (let i = this.shape.length - 1; i >= 0; i--) {
+    					flatIndex += currentIndices[i] * stride;
+    					stride *= this.shape[i];
+    				}
+    
+    				resultIndices.push(flatIndex);
+    				return;
+    			}
+    
+    			const dim = dimToIterate[currentDim];
+    			for (let i = 0; i < this.shape[dim]; i++) {
+    				currentIndices[dim] = i;
+    				generateIndices(currentDim + 1, currentIndices);
+    			}
+    		};
+    
+    		generateIndices(0, completeIndices);
+    		return resultIndices;
+    	}
+    
+    	/**
+    	 * Gets values at specified indices
+    	 *
+    	 * @param {...(number|null)} args - Indices for each dimension, null for full dimension
+    	 * @returns {any} - Value or subarray at the specified location
+    	 */
+    	get(...args) {
+    		// Handle case where args is array
+    		let indices = args;
+    		if (args.length === 1 && Array.isArray(args[0])) {
+    			indices = args[0];
+    		}
+    
+    		const flatIndices = this._getIndices(indices);
+    
+    		// If we got a single index, return the single value
+    		if (typeof flatIndices === "number") {
+    			return this.data[flatIndices];
+    		}
+    
+    		// Otherwise, create a new array with the values
+    		// We need to calculate the shape of the result
+    		const resultShape = [];
+    		for (let i = 0; i < this.shape.length; i++) {
+    			if (i >= indices.length || indices[i] === null) {
+    				resultShape.push(this.shape[i]);
+    			}
+    		}
+    
+    		// If result is empty, it means we want the entire array
+    		if (resultShape.length === 0) {
+    			return this;
+    		}
+    
+    		// Create new data array with the values at the flat indices
+    		const resultData = new this.data.constructor(flatIndices.length);
+    		for (let i = 0; i < flatIndices.length; i++) {
+    			resultData[i] = this.data[flatIndices[i]];
+    		}
+    
+    		return new this.constructor(resultData, resultShape, this.dtype);
+    	}
+    
+    	/**
+    	 * Sets values at specified indices
+    	 *
+    	 * @param {...*} args - Indices followed by value to set
+    	 */
+    	set(...args) {
+    		// Handle case where args is array
+    		let indices, value;
+    		if (args.length === 2 && Array.isArray(args[0])) {
+    			indices = args[0];
+    			value = args[1];
+    		} else {
+    			value = args[args.length - 1];
+    			indices = args.slice(0, args.length - 1);
+    		}
+    
+    		const flatIndices = this._getIndices(indices);
+    
+    		// If we got a single index, set the single value
+    		if (typeof flatIndices === "number") {
+    			this.data[flatIndices] = value;
+    			return;
+    		}
+    
+    		// Otherwise, set all indices to the value
+    		// If value is an array, distribute its values
+    		if (
+    			Array.isArray(value) ||
+    			ArrayBuffer.isView(value) ||
+    			value instanceof NDArray
+    		) {
+    			const valueArray = value instanceof NDArray ? value.data : value;
+    			if (valueArray.length !== flatIndices.length) {
+    				throw new Error(
+    					`Cannot broadcast ${valueArray.length} values to ${flatIndices.length} indices`,
+    				);
+    			}
+    
+    			for (let i = 0; i < flatIndices.length; i++) {
+    				this.data[flatIndices[i]] = valueArray[i];
+    			}
+    		} else {
+    			// Set all indices to the same value
+    			for (const idx of flatIndices) {
+    				this.data[idx] = value;
+    			}
+    		}
+    	}
+    
+    	/**
+    	 * Slice along an arbitrary dimension: extract [start, end) along the given axis.
+    	 * Returns a new contiguous NDArray.
+    	 *
+    	 * @param {number} dim - Axis to slice along (supports negative indexing)
+    	 * @param {number} start - Start index (inclusive)
+    	 * @param {number} end - End index (exclusive)
+    	 * @returns {NDArray} Sliced array
+    	 *
+    	 * @example
+    	 * const arr = new NDArray(data, [2, 3, 4], 'float32');
+    	 * const sliced = arr.sliceDim(1, 0, 2); // shape: [2, 2, 4]
+    	 */
+    	sliceDim(dim, start, end) {
+    		const shape = this.shape;
+    		const rank = shape.length;
+    
+    		// Handle negative dim
+    		if (dim < 0) dim = rank + dim;
+    
+    		if (dim < 0 || dim >= rank) {
+    			throw new Error(
+    				`dim ${dim} is out of bounds for array with ${rank} dimensions`,
+    			);
+    		}
+    		// Handle negative start/end
+    		if (start < 0) start = shape[dim] + start;
+    		if (end < 0) end = shape[dim] + end;
+    
+    		if (start < 0 || end > shape[dim] || start > end) {
+    			throw new Error(
+    				`Invalid slice [${start}, ${end}) for axis ${dim} with size ${shape[dim]}`,
+    			);
+    		}
+    
+    		const newShape = [...shape];
+    		newShape[dim] = end - start;
+    
+    		const outerSize = shape.slice(0, dim).reduce((a, b) => a * b, 1);
+    		const innerSize = shape.slice(dim + 1).reduce((a, b) => a * b, 1);
+    		const dimSize = shape[dim];
+    		const sliceSize = (end - start) * innerSize;
+    
+    		const out = new this.data.constructor(
+    			newShape.reduce((a, b) => a * b, 1),
+    		);
+    
+    		for (let outer = 0; outer < outerSize; outer++) {
+    			for (let d = start; d < end; d++) {
+    				const srcOff = (outer * dimSize + d) * innerSize;
+    				const dstOff = outer * sliceSize + (d - start) * innerSize;
+    				for (let inner = 0; inner < innerSize; inner++) {
+    					out[dstOff + inner] = this.data[srcOff + inner];
+    				}
+    			}
+    		}
+    
+    		return new this.constructor(out, newShape, this.dtype);
+    	}
+    
+    	/**
+    	 * Convert to a Tensor instance (requires tensor.js to be loaded).
+    	 * If dtype is already float32, shares the underlying data buffer.
+    	 *
+    	 * @param {string} [dtype='float32'] - Target dtype for the Tensor
+    	 * @returns {Tensor} Tensor instance
+    	 * @throws {ReferenceError} If tensor.js is not loaded
+    	 */
+    	toTensor(dtype = "float32") {
+    		if (typeof Tensor === "undefined") {
+    			throw new ReferenceError(
+    				"Tensor class not found — load tensor.js after array.js",
+    			);
+    		}
+    		if (!_DTYPE_BY_NAME[dtype]) {
+    			throw new Error(`Unsupported dtype: ${dtype}`);
+    		}
+    		let data;
+    		if (this.dtype === dtype) {
+    			data = this.data;
+    		} else {
+    			// If source has a converter (e.g. float16 → Uint16Array), decode first
+    			const srcInfo = _DTYPE_BY_NAME[this.dtype];
+    			const rawData =
+    				srcInfo && srcInfo.converter
+    					? srcInfo.converter(this.data)
+    					: this.data;
+    			data = new _DTYPE_BY_NAME[dtype].arrayConstructor(rawData);
+    		}
+    		return new Tensor(data, [...this.shape], dtype);
+    	}
+    
+    	/**
+    	 * Create an NDArray from a Tensor or plain tensor object {data, shape}.
+    	 *
+    	 * @param {Object} t - Tensor instance or plain object with data and shape properties
+    	 * @param {string} [dtype] - Override dtype (auto-detected from data if omitted)
+    	 * @returns {NDArray} NDArray instance
+    	 */
+    	static fromTensor(t, dtype) {
+    		if (!t || !t.data || !t.shape) {
+    			throw new Error("Expected object with data and shape properties");
+    		}
+    		const inferredDtype =
+    			dtype ||
+    			(t instanceof NDArray
+    				? t.dtype
+    				: _CONSTRUCTOR_TO_DTYPE.get(t.data.constructor) || "float32");
+    		return new NDArray(t.data, [...t.shape], inferredDtype);
+    	}
+    
+    	/**
+    	 * Returns a string representation of the array
+    	 *
+    	 * @returns {string} String representation of the array
+    	 */
+    	toString() {
+    		// Simple representation for 1D arrays
+    		if (this.shape.length === 1) {
+    			return `[${Array.from(this.data).join(", ")}]`;
+    		}
+    
+    		// For higher dimensions, we'll just show shape and type
+    		return `NDArray(${this.shape.join("X")}, ${this.dtype})`;
+    	}
+    
+    	static parse(arrayBufferContents) {
+    		const npy = new npyjs();
+    		const npyData = npy.parse(arrayBufferContents);
+    		if (!npyData) {
+    			throw new Error("Failed to parse NPY data");
+    		}
+    		// Convert data to NDArray
+    		return new NDArray(npyData.data, npyData.shape, npyData.dtype);
+    	}
+    
+    	static async load(filename, callback, fetchArgs) {
+    		if (filename.endsWith(".npz")) {
+    			throw new Error(
+    				"NDArray.load() does not support .npz files. Use NDArray.loadNPZ() instead.",
+    			);
+    		}
+    		const npy = new npyjs({ convertFloat16: true });
+    		const npyData = await npy.load(filename, null, fetchArgs);
+    		if (!npyData) {
+    			throw new Error("Failed to load NPY data");
+    		}
+    		return new NDArray(npyData.data, npyData.shape, npyData.dtype);
+    	}
+    
+    	/**
+    	 * Load an NPZ file and return a dict of NDArrays keyed by array name.
+    	 * Requires JSZip to be loaded globally.
+    	 *
+    	 * @param {string} filename - URL or path to the NPZ file
+    	 * @param {Object} [fetchArgs] - Additional fetch arguments
+    	 * @returns {Promise<Object<string, NDArray>>} - Dict of NDArrays
+    	 */
+    	static async loadNPZ(filename, fetchArgs) {
+    		const npy = new npyjs({ convertFloat16: true });
+    		const arrays = await npy.loadNPZ(filename, fetchArgs);
+    		const result = {};
+    		for (const [name, npyData] of Object.entries(arrays)) {
+    			result[name] = new NDArray(
+    				npyData.data,
+    				npyData.shape,
+    				npyData.dtype,
+    			);
+    		}
+    		return result;
+    	}
+    
+    	/**
+    	 * Load a slice of an NPY array using HTTP range requests.
+    	 * Only first-axis slicing is supported (contiguous bytes).
+    	 *
+    	 * @param {string} url - URL to the NPY file
+    	 * @param {Array<number>|number} slice - [start, end) range or single index for first axis
+    	 * @param {Object} [fetchArgs] - Additional fetch arguments
+    	 * @returns {Promise<NDArray>} - Sliced array
+    	 *
+    	 * @example
+    	 * // Load rows 100-199 of a 2D array
+    	 * const slice = await NDArray.loadSlice(url, [100, 200]);
+    	 * // Load single row
+    	 * const row = await NDArray.loadSlice(url, 50);
+    	 */
+    	static async loadSlice(url, slice, fetchArgs = {}) {
+    		// NPZ files are compressed archives - can't use range requests
+    		if (url.endsWith(".npz")) {
+    			throw new Error(
+    				"loadSlice does not support NPZ files (compressed archives)",
+    			);
+    		}
+    
+    		// Allow single int to get one row
+    		const [start, end] =
+    			typeof slice === "number" ? [slice, slice + 1] : slice;
+    
+    		// Fetch header to get array metadata
+    		const headerResult = await fetchNPYHeader(url, fetchArgs);
+    
+    		if (!headerResult.rangeSupported) {
+    			// Fall back to full download
+    			const fullBuffer = await headerResult.fullResponse.arrayBuffer();
+    			const fullArray = NDArray.parse(fullBuffer);
+    			return fullArray.slice(slice);
+    		}
+    
+    		const { info } = headerResult;
+    
+    		// Validate slice bounds
+    		if (start < 0 || end > info.shape[0] || start > end) {
+    			throw new Error(
+    				`Invalid slice [${start}, ${end}) for array with shape ${info.shape}`,
+    			);
+    		}
+    
+    		// Empty slice — return immediately without HTTP fetch
+    		if (start === end) {
+    			const slicedShape = [0, ...info.shape.slice(1)];
+    			const dtypeInfo = _DTYPE_BY_DESCRIPTOR[info.dtype];
+    			return new NDArray(
+    				new dtypeInfo.arrayConstructor(0),
+    				slicedShape,
+    				dtypeInfo.name,
+    			);
+    		}
+    
+    		// Calculate byte range for the slice
+    		const byteStart = info.dataOffset + start * info.firstAxisStride;
+    		const byteEnd = info.dataOffset + end * info.firstAxisStride - 1;
+    
+    		// Fetch the slice data
+    		const dataResponse = await fetch(url, {
+    			...fetchArgs,
+    			headers: {
+    				...fetchArgs.headers,
+    				Range: `bytes=${byteStart}-${byteEnd}`,
+    			},
+    		});
+    
+    		if (dataResponse.status !== 206) {
+    			// Range request failed, fall back to full download
+    			console.warn(
+    				"Range request for data failed, downloading full file",
+    			);
+    			const fullArray = await NDArray.load(url, null, fetchArgs);
+    			return fullArray.slice(slice);
+    		}
+    
+    		const dataBuffer = await dataResponse.arrayBuffer();
+    
+    		// Create typed array from the data
+    		const dtypeInfo = _DTYPE_BY_DESCRIPTOR[info.dtype];
+    		if (!dtypeInfo) {
+    			throw new Error(`Unsupported dtype: ${info.dtype}`);
+    		}
+    
+    		const nums = new dtypeInfo.arrayConstructor(dataBuffer);
+    		const data = dtypeInfo.converter ? dtypeInfo.converter(nums) : nums;
+    
+    		// Construct sliced shape
+    		const slicedShape = [end - start, ...info.shape.slice(1)];
+    
+    		return new NDArray(
+    			data,
+    			slicedShape,
+    			dtypeInfo.converter ? "float32" : dtypeInfo.name,
+    		);
+    	}
+    
+    	/**
+    	 * Infer the array format from a JSON object
+    	 * @param {Object} obj - JSON object potentially containing array data
+    	 * @returns {string|null} - Format name or null if not an array format
+    	 */
+    	static inferFormat(obj) {
+    		if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
+    			if (Array.isArray(obj)) return "list";
+    			return null;
+    		}
+    
+    		const fmt = obj[_FORMAT_KEY];
+    		if (!fmt || typeof fmt !== "string") return null;
+    
+    		// Format is like "numpy.ndarray:array_b64_meta" or "torch.Tensor:array_list_meta"
+    		if (fmt.includes(":")) {
+    			const suffix = fmt.split(":")[1];
+    			if (
+    				[
+    					"array_list_meta",
+    					"array_hex_meta",
+    					"array_b64_meta",
+    					"zero_dim",
+    				].includes(suffix)
+    			) {
+    				return suffix;
+    			}
+    		}
+    
+    		return null;
+    	}
+    
+    	/**
+    	 * Deserialize an NDArray from JSON in various formats
+    	 * @param {Object} obj - JSON object containing array data
+    	 * @param {string} [format] - Optional format override (auto-detected if not provided)
+    	 * @returns {NDArray} - Deserialized NDArray
+    	 */
+    	static fromJSON(obj, format = null) {
+    		// Auto-detect format if not provided
+    		if (!format) {
+    			format = NDArray.inferFormat(obj);
+    			if (!format) {
+    				throw new Error("Cannot infer array format from object");
+    			}
+    		}
+    
+    		// Handle plain list
+    		if (format === "list") {
+    			if (!Array.isArray(obj)) {
+    				throw new Error("Expected array for list format");
+    			}
+    			// Convert nested list to flat TypedArray
+    			const flatList = obj.flat(Infinity);
+    			const data = new Float64Array(flatList);
+    			// Infer shape by walking first elements at each nesting level
+    			const shape = [];
+    			let current = obj;
+    			while (Array.isArray(current)) {
+    				shape.push(current.length);
+    				current = current[0];
+    			}
+    			// Validate shape matches flat data (catches jagged arrays)
+    			const expectedSize = shape.reduce((a, b) => a * b, 1);
+    			if (flatList.length !== expectedSize) {
+    				throw new Error(
+    					`Jagged array: flat length ${flatList.length} does not match shape [${shape}] (expected ${expectedSize})`,
+    				);
+    			}
+    			return new NDArray(data, shape, "float64");
+    		}
+    
+    		// All other formats have metadata
+    		if (!obj.shape || !obj.dtype) {
+    			throw new Error(`Missing shape or dtype for format ${format}`);
+    		}
+    
+    		const shape = obj.shape;
+    		const dtypeName = obj.dtype;
+    		const dtypeInfo = _DTYPE_BY_NAME[dtypeName];
+    
+    		if (!dtypeInfo) {
+    			throw new Error(`Unsupported dtype: ${dtypeName}`);
+    		}
+    
+    		// Handle zero-dimensional arrays
+    		if (format === "zero_dim") {
+    			let dataValue = obj.data;
+    			// Convert to BigInt for 64-bit integer types
+    			if (dtypeName === "int64" || dtypeName === "uint64") {
+    				dataValue = BigInt(dataValue);
+    			}
+    			const data = new dtypeInfo.arrayConstructor([dataValue]);
+    			if (dtypeInfo.converter) {
+    				const converted = dtypeInfo.converter(data);
+    				return new NDArray(converted, shape, "float32");
+    			}
+    			return new NDArray(data, shape, dtypeName);
+    		}
+    
+    		// Handle array_list_meta
+    		if (format === "array_list_meta") {
+    			const flatList = obj.data.flat(Infinity);
+    			const expectedSize = shape.reduce((a, b) => a * b, 1);
+    			if (flatList.length !== expectedSize) {
+    				throw new Error(
+    					`Jagged array in ${format}: flat length ${flatList.length} does not match shape [${shape}] (expected ${expectedSize})`,
+    				);
+    			}
+    			// Convert to BigInt for 64-bit integer types
+    			const processedList =
+    				dtypeName === "int64" || dtypeName === "uint64"
+    					? flatList.map((v) => BigInt(v))
+    					: flatList;
+    			const data = new dtypeInfo.arrayConstructor(processedList);
+    			if (dtypeInfo.converter) {
+    				const converted = dtypeInfo.converter(data);
+    				return new NDArray(converted, shape, "float32");
+    			}
+    			return new NDArray(data, shape, dtypeName);
+    		}
+    
+    		// Handle array_hex_meta
+    		if (format === "array_hex_meta") {
+    			const hexString = obj.data;
+    			if (
+    				!hexString ||
+    				typeof hexString !== "string" ||
+    				hexString.length % 2 !== 0
+    			) {
+    				throw new Error(
+    					`Invalid hex string: must be non-empty with even length`,
+    				);
+    			}
+    			const bytes = new Uint8Array(
+    				hexString.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)),
+    			);
+    			const expectedBytes =
+    				shape.reduce((a, b) => a * b, 1) * (dtypeInfo.size / 8);
+    			if (bytes.length !== expectedBytes) {
+    				throw new Error(
+    					`Hex data size ${bytes.length} does not match shape [${shape}] with dtype ${dtypeName} (expected ${expectedBytes} bytes)`,
+    				);
+    			}
+    			const data = new dtypeInfo.arrayConstructor(bytes.buffer);
+    			if (dtypeInfo.converter) {
+    				const converted = dtypeInfo.converter(data);
+    				return new NDArray(converted, shape, "float32");
+    			}
+    			return new NDArray(data, shape, dtypeName);
+    		}
+    
+    		// Handle array_b64_meta
+    		if (format === "array_b64_meta") {
+    			const b64String = obj.data;
+    			const binaryString = atob(b64String);
+    			const expectedBytes =
+    				shape.reduce((a, b) => a * b, 1) * (dtypeInfo.size / 8);
+    			if (binaryString.length !== expectedBytes) {
+    				throw new Error(
+    					`Base64 decoded to ${binaryString.length} bytes but shape [${shape}] with dtype ${dtypeName} expects ${expectedBytes} bytes`,
+    				);
+    			}
+    			const bytes = new Uint8Array(binaryString.length);
+    			for (let i = 0; i < binaryString.length; i++) {
+    				bytes[i] = binaryString.charCodeAt(i);
+    			}
+    			const data = new dtypeInfo.arrayConstructor(bytes.buffer);
+    			if (dtypeInfo.converter) {
+    				const converted = dtypeInfo.converter(data);
+    				return new NDArray(converted, shape, "float32");
+    			}
+    			return new NDArray(data, shape, dtypeName);
+    		}
+    
+    		throw new Error(`Unsupported array format: ${format}`);
+    	}
+    }
+    
+    </script>
+    <!-- end '../../libs/array.js' -->
+        <!-- begin '../../attnpedia/src/head_embeds.js' -->
+    <script>
+    // TODO: fallback to getting from github?
+    // || "https://raw.githubusercontent.com/<TODO>";
+    
+    async function _load_dists_meta() {
+      const r = await fetch(CONFIG.headDistsmeta_url);
+      if (r.ok) {
+        const loaded = await r.json();
+        return loaded;
+      } else {
+        throw new Error(
+          `Failed to load head embeddings data from ${CONFIG.headDistsmeta_url}`,
+        );
+      }
+    }
+    
+    class HeadDistances {
+      constructor() {
+        this._meta_loaded = false;
+        this._meta_promise = null;
+        this.head_dists_meta = null;
+        this._rowCache = new Map();
+      }
+    
+      async _ensureMetaLoaded() {
+        if (this._meta_loaded) {
+          return;
+        }
+    
+        if (this._meta_promise) {
+          return this._meta_promise;
+        }
+    
+        this._meta_promise = (async () => {
+          try {
+            this.head_dists_meta = await _load_dists_meta();
+            this._meta_loaded = true;
+          } catch (error) {
+            NOTIF.error("Failed to load head distances metadata", error);
+            throw error;
+          }
+        })();
+    
+        return this._meta_promise;
+      }
+    
+      /** Fetch a single row from the distances matrix via HTTP range request */
+      async _loadRow(head_idx) {
+        if (this._rowCache.has(head_idx)) {
+          return this._rowCache.get(head_idx);
+        }
+        const promise = NDArray.loadSlice(CONFIG.headDistsnpy_url, head_idx);
+        this._rowCache.set(head_idx, promise);
+        return promise;
+      }
+    
+      isMetadataLoaded() {
+        return this.head_dists_meta !== null;
+      }
+    
+      get_head_idx(head_name) {
+        const idx = this.head_dists_meta.cls_values.indexOf(head_name);
+        if (idx === -1) {
+          throw new Error(`Head not found: ${head_name}`);
+        }
+        return idx;
+      }
+    
+      get_head_name(head_idx) {
+        if (head_idx < 0 || head_idx >= this.head_dists_meta.cls_values.length) {
+          throw new Error(`Invalid head index: ${head_idx}`);
+        }
+        return this.head_dists_meta.cls_values[head_idx];
+      }
+    
+      async getNearestHeads(head_name, n = 5) {
+        await this._ensureMetaLoaded();
+    
+        const head_idx = this.get_head_idx(head_name);
+        const distanceRow = await this._loadRow(head_idx);
+        const distanceArray = Array.from(distanceRow.data);
+    
+        // Sort distances and get indices of n nearest (excluding self)
+        const indexed_dists = Array.from(distanceArray, (dist, idx) => ({
+          dist,
+          idx,
+        }));
+        indexed_dists.sort((a, b) => a.dist - b.dist);
+        const best_n_items = indexed_dists.slice(1, n + 1);
+    
+        return {
+          head_names: best_n_items.map((item) => this.get_head_name(item.idx)),
+          distances: best_n_items.map((item) => item.dist),
+        };
+      }
+    
+      async getHeadDistance(head_name1, head_name2) {
+        await this._ensureMetaLoaded();
+        const head_idx1 = this.get_head_idx(head_name1);
+        const head_idx2 = this.get_head_idx(head_name2);
+    
+        const distanceRow = await this._loadRow(head_idx1);
+        return distanceRow.data[head_idx2];
+      }
+    
+      async getHeadDistances(head_name, head_names_list) {
+        await this._ensureMetaLoaded();
+        const head_idx = this.get_head_idx(head_name);
+        const distanceRow = await this._loadRow(head_idx);
+        const distanceArray = Array.from(distanceRow.data);
+    
+        return head_names_list.map((target_head) => {
+          const target_idx = this.get_head_idx(target_head);
+          const distance = distanceArray[target_idx];
+          return {
+            head_name: target_head,
+            distance: distance,
+          };
+        });
+      }
+    }
+    
+    </script>
+    <!-- end '../../attnpedia/src/head_embeds.js' -->
+  </head>
+  <body>
+    <nav class="nav-bar">
+      <div class="nav-bar-content">
+        <a href="../index.html">Home</a>
+        <a href="../vis/attnpedia/index.html">AttentionPedia</a>
+        <a href="../vis/embeds/patterns/index.html">Pattern Embeddings</a>
+        <a href="../vis/embeds/heads/index.html">Head Embeddings</a>
+        <a href="../figures/head_embed_table.html">Head Embed Table</a>
+        <a href="../figures/classifications.html">Classifications</a>
+        <a href="../vis/clustering/index.html">Clustering</a>
+        <a href="../vis/cluster_trends/index.html">Cluster Trends</a>
+        <a href="index.html">Ablation</a>
+        <span class="nav-current">Correlations</span>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h1>Ablation Correlations</h1>
+
+      <!-- Controls row -->
+      <div class="controls-row">
+        <div class="control-group" id="xaxis-mode-controls">
+          <label>X-Axis:</label>
+          <select id="xaxis-mode-select">
+            <option value="head">Distance to Head</option>
+            <option value="cluster">Distance to Cluster</option>
+          </select>
+          <span id="xaxis-head-controls">
+            <input
+              type="text"
+              id="target-head-input"
+              list="head-datalist"
+              placeholder="e.g. gpt2-small:L5:H5"
+            />
+            <datalist id="head-datalist"></datalist>
+          </span>
+          <span id="xaxis-cluster-controls" style="display: none">
+            <select id="target-cluster-select"></select>
+            <select id="cluster-agg-select">
+              <option value="mean">Mean</option>
+              <option value="median">Median</option>
+            </select>
+          </span>
+        </div>
+        <div class="control-group" id="clustering-controls">
+          <label>Clustering:</label>
+          <select id="cluster-method-select"></select>
+          <span id="cluster-hier-controls">
+            <input
+              type="range"
+              id="cut-height-slider"
+              min="0"
+              max="100"
+              step="0.01"
+              value="5"
+            />
+            <span id="cut-height-value">5.00</span>
+          </span>
+          <span id="cluster-param-controls" style="display: none">
+            <span id="cluster-param-label"></span>
+            <select id="cluster-param-select"></select>
+          </span>
+          <span id="n-clusters-label">(-- clusters)</span>
+          <span id="min-size-controls">
+            <label>Min Size:</label>
+            <input
+              type="range"
+              id="min-cluster-size"
+              min="0"
+              max="50"
+              value="0"
+            />
+            <span id="min-cluster-size-value" class="slider-value">0</span>
+          </span>
+        </div>
+        <div class="control-group">
+          <label>Models:</label>
+          <span id="model-family-buttons"></span>
+        </div>
+        <div class="control-group">
+          <label>Ablation:</label>
+          <select id="method-select"></select>
+        </div>
+        <div class="control-group">
+          <label>Width:</label>
+          <input
+            type="range"
+            id="chart-width-slider"
+            min="250"
+            max="800"
+            value="400"
+          />
+          <span id="chart-width-value" class="slider-value">400px</span>
+        </div>
+        <div class="control-group">
+          <label><input type="checkbox" id="log-x-toggle" /> Log X</label>
+        </div>
+      </div>
+
+      <!-- Cluster chips -->
+      <div class="cluster-chips-container">
+        <div class="cluster-chips" id="cluster-chips"></div>
+      </div>
+
+      <!-- Loading indicator -->
+      <div id="loading-indicator" style="display: none">
+        <p style="text-align: center; color: #888; padding: 20px">
+          Loading distances...
+        </p>
+      </div>
+
+      <!-- Scatterplot charts -->
+      <div class="charts-grid" id="charts-grid"></div>
+    </div>
+
+        <!-- begin 'app.js' -->
+    <script>
+    // === Configuration ===
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // CONFIG object used by ClusteringLoader and HeadDistances
+    const CONFIG = {
+      dataUrl: urlParams.get("data") || "ablation_results.json",
+      clustering_methods_url: "../features/clustering_methods.json",
+      clustering_meta_url: "../features/clustering/clustering_meta.json",
+      clustering_linkage_url: "../features/clustering/linkage.json",
+      cluster_labels_url: "../features/clustering/cluster_labels.json",
+      clustering_hdbscan_meta_url:
+        "../features/clustering_hdbscan/clustering_meta.json",
+      clustering_hdbscan_partitions_url:
+        "../features/clustering_hdbscan/partitions.json",
+      clustering_hdbscan_labels_url:
+        "../features/clustering_hdbscan/cluster_labels.json",
+      clustering_leiden_meta_url:
+        "../features/clustering_leiden/clustering_meta.json",
+      clustering_leiden_partitions_url:
+        "../features/clustering_leiden/partitions.json",
+      clustering_leiden_labels_url:
+        "../features/clustering_leiden/cluster_labels.json",
+      attnpedia_url: "../vis/attnpedia/ap.json",
+      headDistsnpy_url: "../features/head_dists_raw/distances_f32.npy",
+      headDistsmeta_url: "../features/head_dists_raw/dists_meta.json",
+    };
+    
+    const DEFAULT_HEAD = "gpt2-small:L5:H5";
+    const DEFAULT_CUT_HEIGHT = 5.0;
+    
+    // === Metric definitions ===
+    
+    const DISTRIBUTION_METRICS = [
+      "prefix_score",
+      "copying_score",
+      "loss_increase",
+      "ov_copying_score",
+      "icl_degradation",
+    ];
+    
+    const METRIC_DISPLAY_NAMES = {
+      loss_increase: "Loss Increase (\u0394 Loss)",
+      prefix_score: "Prefix Matching Score",
+      copying_score: "Copying Score",
+      ov_copying_score: "OV Copying Score",
+      icl_degradation: "ICL Degradation",
+    };
+    
+    const SCATTER_MARGIN = { top: 28, right: 20, bottom: 48, left: 54 };
+    
+    // === Helpers ===
+    
+    function escapeHTML(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+    
+    function median(arr) {
+      if (arr.length === 0) return NaN;
+      const sorted = [...arr].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 !== 0
+        ? sorted[mid]
+        : (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+    
+    function pearsonR(xs, ys) {
+      const n = xs.length;
+      if (n < 2) return NaN;
+      const mx = xs.reduce((a, b) => a + b, 0) / n;
+      const my = ys.reduce((a, b) => a + b, 0) / n;
+      let num = 0,
+        dx2 = 0,
+        dy2 = 0;
+      for (let i = 0; i < n; i++) {
+        const dx = xs[i] - mx;
+        const dy = ys[i] - my;
+        num += dx * dy;
+        dx2 += dx * dx;
+        dy2 += dy * dy;
+      }
+      const denom = Math.sqrt(dx2 * dy2);
+      return denom === 0 ? 0 : num / denom;
+    }
+    
+    // === State ===
+    
+    let allData = null;
+    let clustering = null;
+    let headDistances = null;
+    let currentDistances = null; // Map<head_name, distance>
+    let clusteringAvailable = false;
+    
+    let targetHead = urlParams.get("target") || DEFAULT_HEAD;
+    let selectedCluster = null;
+    let modelFilter = "all";
+    let selectedMethod = null;
+    let xAxisMode = "head"; // "head" | "cluster"
+    let targetClusterId = null; // cluster ID for cluster distance mode
+    let clusterAggregation = "mean"; // "mean" | "median"
+    
+    // === Model family helpers ===
+    
+    function getModelFamily(modelName) {
+      if (modelName.startsWith("gpt2") || modelName === "distillgpt2")
+        return "gpt2";
+      if (modelName.startsWith("pythia")) return "pythia";
+      return "other";
+    }
+    
+    function matchesModelFilter(modelName) {
+      if (modelFilter === "all") return true;
+      return getModelFamily(modelName) === modelFilter;
+    }
+    
+    // === Initialization ===
+    
+    async function init() {
+      clustering = new ClusteringLoader();
+      headDistances = new HeadDistances();
+    
+      let ablationResp;
+      try {
+        ablationResp = await fetch(CONFIG.dataUrl);
+      } catch {
+        showError("Failed to load data. Serve this directory over HTTP.");
+        return;
+      }
+      if (!ablationResp.ok) {
+        showError(`No data found at ${CONFIG.dataUrl}.`);
+        return;
+      }
+    
+      // Load ablation data, clustering, and head distances metadata in parallel
+      const [ablationData, clusteringReady] = await Promise.all([
+        ablationResp.json(),
+        clustering
+          ._ensureLoaded()
+          .then(() => clustering.isAvailable())
+          .catch(() => false),
+      ]);
+    
+      allData = ablationData;
+      clusteringAvailable = clusteringReady;
+    
+      // Load head distances metadata
+      try {
+        await headDistances._ensureMetaLoaded();
+      } catch {
+        showError("Failed to load head distances metadata.");
+        return;
+      }
+    
+      if (!clusteringReady) {
+        const el = document.getElementById("clustering-controls");
+        if (el)
+          el.innerHTML =
+            '<p style="color:#c33;font-size:13px;font-weight:bold;">\u26A0 Clustering data failed to load. Cluster features disabled.</p>';
+      }
+    
+      if (!allData.models || Object.keys(allData.models).length === 0) {
+        showError("No model results found in data.");
+        return;
+      }
+    
+      // Set up clustering
+      if (clusteringReady) {
+        await setupClusteringControls();
+      }
+    
+      // Collect all ablation methods
+      const methods = new Set();
+      for (const modelData of Object.values(allData.models)) {
+        for (const r of modelData.results) {
+          methods.add(r.ablation_method);
+        }
+      }
+      selectedMethod = [...methods].sort()[0] || null;
+      setupMethodSelect([...methods].sort());
+    
+      // Set up UI
+      setupTargetHeadInput();
+      setupXAxisModeControls();
+      if (clusteringReady) populateTargetClusterDropdown();
+      setupModelFamilyButtons();
+      setupChartWidthSlider();
+      document
+        .getElementById("log-x-toggle")
+        .addEventListener("change", () => renderAll());
+      if (clusteringReady) setupMinClusterSizeSlider();
+    
+      // Initial render
+      renderClusterChips();
+      setupClusterChipHandler();
+      await loadDistancesAndRender();
+    }
+    
+    function showError(msg) {
+      document.querySelector(".container").innerHTML =
+        `<p style="color:#999;text-align:center;padding:60px;">${msg}</p>`;
+    }
+    
+    // === Target Head Input ===
+    
+    function setupTargetHeadInput() {
+      const datalist = document.getElementById("head-datalist");
+      const allHeads = headDistances.head_dists_meta.cls_values;
+      datalist.innerHTML = allHeads.map((h) => `<option value="${h}">`).join("");
+    
+      const input = document.getElementById("target-head-input");
+      input.value = targetHead;
+    
+      // Validate initial value
+      if (!allHeads.includes(targetHead)) {
+        input.classList.add("invalid");
+      }
+    
+      input.addEventListener("change", async () => {
+        const newTarget = input.value.trim();
+        if (!allHeads.includes(newTarget)) {
+          input.classList.add("invalid");
+          return;
+        }
+        input.classList.remove("invalid");
+        targetHead = newTarget;
+    
+        // Update URL without reload
+        const url = new URL(window.location);
+        url.searchParams.set("target", targetHead);
+        window.history.replaceState({}, "", url);
+    
+        await loadDistancesAndRender();
+      });
+    }
+    
+    // === X-Axis Mode Controls ===
+    
+    function setupXAxisModeControls() {
+      const modeSelect = document.getElementById("xaxis-mode-select");
+      const headControls = document.getElementById("xaxis-head-controls");
+      const clusterControls = document.getElementById("xaxis-cluster-controls");
+      const aggSelect = document.getElementById("cluster-agg-select");
+      const targetClusterSelect = document.getElementById("target-cluster-select");
+    
+      // Disable cluster option if clustering is unavailable
+      if (!clusteringAvailable) {
+        const clusterOption = modeSelect.querySelector('option[value="cluster"]');
+        if (clusterOption) clusterOption.disabled = true;
+      }
+    
+      modeSelect.addEventListener("change", async () => {
+        xAxisMode = modeSelect.value;
+        headControls.style.display = xAxisMode === "head" ? "" : "none";
+        clusterControls.style.display = xAxisMode === "cluster" ? "" : "none";
+        if (xAxisMode === "cluster" && targetClusterId === null) {
+          // Auto-select first cluster
+          const firstOpt = targetClusterSelect.querySelector("option");
+          if (firstOpt) {
+            targetClusterId = parseInt(firstOpt.value);
+            targetClusterSelect.value = firstOpt.value;
+          }
+        }
+        await loadDistancesAndRender();
+      });
+    
+      aggSelect.addEventListener("change", async () => {
+        clusterAggregation = aggSelect.value;
+        if (xAxisMode === "cluster") {
+          await loadDistancesAndRender();
+        }
+      });
+    
+      targetClusterSelect.addEventListener("change", async () => {
+        targetClusterId = parseInt(targetClusterSelect.value);
+        if (xAxisMode === "cluster") {
+          await loadDistancesAndRender();
+        }
+      });
+    }
+    
+    function populateTargetClusterDropdown() {
+      const select = document.getElementById("target-cluster-select");
+      if (!clustering || !clustering._assignments) return;
+    
+      const sizes = {};
+      for (const [, cid] of Object.entries(clustering._assignments)) {
+        if (cid === -1) continue;
+        sizes[cid] = (sizes[cid] || 0) + 1;
+      }
+    
+      const sorted = Object.entries(sizes).sort((a, b) => b[1] - a[1]);
+    
+      const prevValue = targetClusterId;
+      select.innerHTML = sorted
+        .map(([cid, size]) => {
+          const id = parseInt(cid);
+          const label = clustering.getClusterLabel(id);
+          const name = label && label.name ? label.name : `${id}`;
+          return `<option value="${id}">${name} (${size} heads)</option>`;
+        })
+        .join("");
+    
+      // Preserve previous selection if still valid
+      if (prevValue !== null && sizes[prevValue] !== undefined) {
+        select.value = prevValue;
+      } else if (sorted.length > 0) {
+        targetClusterId = parseInt(sorted[0][0]);
+        select.value = targetClusterId;
+      }
+    }
+    
+    async function computeClusterDistances(clusterId) {
+      // Get heads in the target cluster
+      const headsInCluster = [];
+      for (const [headName, cid] of Object.entries(clustering._assignments)) {
+        if (cid === clusterId) headsInCluster.push(headName);
+      }
+    
+      if (headsInCluster.length === 0) return new Map();
+    
+      const allDistHeads = headDistances.head_dists_meta.cls_values;
+    
+      // Filter to cluster members that exist in the distance matrix
+      const validClusterHeads = headsInCluster.filter((h) =>
+        allDistHeads.includes(h),
+      );
+      if (validClusterHeads.length === 0) return new Map();
+    
+      // Load distance rows for all cluster members in parallel
+      const clusterIndices = validClusterHeads.map((h) =>
+        headDistances.get_head_idx(h),
+      );
+      const rows = await Promise.all(
+        clusterIndices.map((idx) => headDistances._loadRow(idx)),
+      );
+    
+      // For each ablation head, compute aggregated distance to cluster
+      const allAblationHeads = getAllHeadNames();
+      const validHeads = allAblationHeads.filter((h) => allDistHeads.includes(h));
+    
+      const distances = new Map();
+      const aggFn =
+        clusterAggregation === "median"
+          ? median
+          : (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+    
+      for (const headName of validHeads) {
+        const headIdx = headDistances.get_head_idx(headName);
+        const dists = rows.map((row) => row.data[headIdx]);
+        distances.set(headName, aggFn(dists));
+      }
+    
+      return distances;
+    }
+    
+    // === Distance Loading ===
+    
+    function showLoading(visible) {
+      document.getElementById("loading-indicator").style.display = visible
+        ? ""
+        : "none";
+      document.getElementById("charts-grid").style.display = visible ? "none" : "";
+    }
+    
+    function getAllHeadNames() {
+      const heads = new Set();
+      for (const modelData of Object.values(allData.models)) {
+        for (const r of modelData.results) {
+          heads.add(r.head);
+        }
+      }
+      return [...heads];
+    }
+    
+    async function loadDistancesAndRender() {
+      showLoading(true);
+    
+      try {
+        if (xAxisMode === "head") {
+          // Validate target head exists in distance matrix
+          const allDistHeads = headDistances.head_dists_meta.cls_values;
+          if (!allDistHeads.includes(targetHead)) {
+            showLoading(false);
+            showError(
+              `Target head "${escapeHTML(targetHead)}" not found in distance matrix.`,
+            );
+            return;
+          }
+    
+          const allAblationHeads = getAllHeadNames();
+          const validHeads = allAblationHeads.filter((h) =>
+            allDistHeads.includes(h),
+          );
+    
+          const distResults = await headDistances.getHeadDistances(
+            targetHead,
+            validHeads,
+          );
+    
+          currentDistances = new Map();
+          for (const { head_name, distance } of distResults) {
+            currentDistances.set(head_name, distance);
+          }
+        } else {
+          // Cluster mode
+          if (targetClusterId === null) {
+            showLoading(false);
+            return;
+          }
+          currentDistances = await computeClusterDistances(targetClusterId);
+        }
+      } catch (err) {
+        showLoading(false);
+        showError(`Failed to load distances: ${err.message}`);
+        return;
+      }
+    
+      showLoading(false);
+      createChartContainers();
+      renderAll();
+    }
+    
+    // === UI Setup (clustering, model filters) ===
+    
+    async function setupClusteringControls() {
+      const availableMethods = clustering.getAvailableMethods();
+      const methodSelect = document.getElementById("cluster-method-select");
+    
+      methodSelect.innerHTML = availableMethods
+        .map((m) => `<option value="${m}">${m}</option>`)
+        .join("");
+    
+      const savedMethod = ClusteringConfig.getMethod();
+      const initialMethod =
+        savedMethod && availableMethods.includes(savedMethod)
+          ? savedMethod
+          : availableMethods.includes("leiden")
+            ? "leiden"
+            : availableMethods[0];
+      methodSelect.value = initialMethod;
+    
+      if (initialMethod === "hierarchical") {
+        const savedCutHeight = ClusteringConfig.getCutHeight();
+        const initialCutHeight = savedCutHeight || DEFAULT_CUT_HEIGHT;
+        await clustering.setCutHeight(initialCutHeight);
+        setupCutHeightSlider(initialCutHeight);
+      } else {
+        clustering.setMethod(initialMethod);
+      }
+    
+      updateClusteringControlVisibility();
+      updateClusterStats();
+    
+      methodSelect.addEventListener("change", async () => {
+        clustering.setMethod(methodSelect.value);
+        if (clustering.isHierarchical()) {
+          const savedCutHeight = ClusteringConfig.getCutHeight();
+          const h = savedCutHeight || DEFAULT_CUT_HEIGHT;
+          await clustering.setCutHeight(h);
+          setupCutHeightSlider(h);
+        }
+        updateClusteringControlVisibility();
+        updateClusterStats();
+        selectedCluster = null;
+        populateTargetClusterDropdown();
+        renderClusterChips();
+        if (xAxisMode === "cluster") {
+          await loadDistancesAndRender();
+        } else {
+          renderAll();
+        }
+      });
+    }
+    
+    let _cutHeightSliderBound = false;
+    
+    function setupCutHeightSlider(initialValue) {
+      const slider = document.getElementById("cut-height-slider");
+      const maxH = clustering.getMaxCutHeight() || 20;
+      slider.min = 0;
+      slider.max = maxH;
+      slider.step = (maxH / 1000).toFixed(4);
+      slider.value = initialValue;
+      document.getElementById("cut-height-value").textContent =
+        initialValue.toFixed(2);
+    
+      if (_cutHeightSliderBound) return;
+      _cutHeightSliderBound = true;
+    
+      let _sliderTimeout = null;
+      slider.addEventListener("input", () => {
+        const h = parseFloat(slider.value);
+        document.getElementById("cut-height-value").textContent = h.toFixed(2);
+        clearTimeout(_sliderTimeout);
+        _sliderTimeout = setTimeout(async () => {
+          await clustering.setCutHeight(h);
+          ClusteringConfig.setCutHeight(h);
+          updateClusterStats();
+          selectedCluster = null;
+          populateTargetClusterDropdown();
+          renderClusterChips();
+          if (xAxisMode === "cluster") {
+            await loadDistancesAndRender();
+          } else {
+            renderAll();
+          }
+        }, 50);
+      });
+    }
+    
+    function updateClusteringControlVisibility() {
+      const isHier = clustering.isHierarchical();
+      document.getElementById("cluster-hier-controls").style.display = isHier
+        ? ""
+        : "none";
+      document.getElementById("cluster-param-controls").style.display = isHier
+        ? "none"
+        : "";
+    
+      if (!isHier) {
+        setupParamSelect();
+      }
+    }
+    
+    function setupParamSelect() {
+      const info = clustering.getFlatParamInfo();
+      if (!info) return;
+    
+      const paramLabel = document.getElementById("cluster-param-label");
+      const oldSelect = document.getElementById("cluster-param-select");
+    
+      paramLabel.textContent = info.paramName + ":";
+    
+      const paramSelect = oldSelect.cloneNode(false);
+      paramSelect.id = "cluster-param-select";
+      oldSelect.parentNode.replaceChild(paramSelect, oldSelect);
+    
+      paramSelect.innerHTML = info.paramKeys
+        .map((pk) => {
+          const meta = info.meta[pk];
+          const extra = meta
+            ? ` (${meta.n_clusters} clusters${meta.n_outliers ? `, ${meta.n_outliers} outliers` : ""})`
+            : "";
+          return `<option value="${pk}">${pk}${extra}</option>`;
+        })
+        .join("");
+    
+      const savedKey = ClusteringConfig.getParamKey();
+      paramSelect.value =
+        savedKey && info.paramKeys.includes(savedKey)
+          ? savedKey
+          : info.paramKeys[0];
+    
+      clustering.setParamKey(paramSelect.value);
+    
+      paramSelect.addEventListener("change", async () => {
+        await clustering.setParamKey(paramSelect.value);
+        updateClusterStats();
+        selectedCluster = null;
+        populateTargetClusterDropdown();
+        renderClusterChips();
+        if (xAxisMode === "cluster") {
+          await loadDistancesAndRender();
+        } else {
+          renderAll();
+        }
+      });
+    }
+    
+    function updateClusterStats() {
+      const n = clustering.getNClusters();
+      const unclustered = clustering.getUnclusteredCount();
+      let text = `(${n} clusters`;
+      if (unclustered > 0) text += `, ${unclustered} unclustered`;
+      text += ")";
+      document.getElementById("n-clusters-label").textContent = text;
+    }
+    
+    function setupMethodSelect(methods) {
+      const select = document.getElementById("method-select");
+      select.innerHTML = methods
+        .map(
+          (m) =>
+            `<option value="${m}" ${m === selectedMethod ? "selected" : ""}>${m}</option>`,
+        )
+        .join("");
+      select.addEventListener("change", () => {
+        selectedMethod = select.value;
+        renderAll();
+      });
+    }
+    
+    function setupModelFamilyButtons() {
+      const container = document.getElementById("model-family-buttons");
+      const families = ["all", "gpt2", "pythia"];
+      const labels = { all: "All", gpt2: "GPT-2", pythia: "Pythia" };
+      container.innerHTML = families
+        .map(
+          (f) =>
+            `<button class="family-btn${f === modelFilter ? " active" : ""}" data-family="${f}">${labels[f]}</button>`,
+        )
+        .join("");
+      container.addEventListener("click", (e) => {
+        const btn = e.target.closest(".family-btn");
+        if (!btn) return;
+        modelFilter = btn.dataset.family;
+        container
+          .querySelectorAll(".family-btn")
+          .forEach((b) =>
+            b.classList.toggle("active", b.dataset.family === modelFilter),
+          );
+        renderAll();
+      });
+    }
+    
+    function setupMinClusterSizeSlider() {
+      const slider = document.getElementById("min-cluster-size");
+      const label = document.getElementById("min-cluster-size-value");
+      if (!slider || !clustering) return;
+    
+      const initial = clustering.getMinClusterSize();
+      slider.value = initial;
+      label.textContent = initial;
+    
+      slider.addEventListener("input", async () => {
+        const n = parseInt(slider.value);
+        label.textContent = n;
+        await clustering.setMinClusterSize(n);
+        updateClusterStats();
+        selectedCluster = null;
+        populateTargetClusterDropdown();
+        renderClusterChips();
+        if (xAxisMode === "cluster") {
+          await loadDistancesAndRender();
+        } else {
+          renderAll();
+        }
+      });
+    }
+    
+    function setupChartWidthSlider() {
+      const slider = document.getElementById("chart-width-slider");
+      const label = document.getElementById("chart-width-value");
+      slider.addEventListener("input", () => {
+        const val = slider.value;
+        label.textContent = val + "px";
+        document
+          .querySelector(".charts-grid")
+          .style.setProperty("--chart-min-width", val + "px");
+        renderAll();
+      });
+    }
+    
+    // === Cluster Chips ===
+    
+    function renderClusterChips() {
+      const container = document.getElementById("cluster-chips");
+      if (!clustering || !clustering._is_loaded || !clustering._meta) {
+        container.innerHTML =
+          '<span style="color:#999">Clustering data not available</span>';
+        return;
+      }
+    
+      const sizes = {};
+      for (const [headId, cid] of Object.entries(clustering._assignments)) {
+        if (cid === -1) continue;
+        sizes[cid] = (sizes[cid] || 0) + 1;
+      }
+    
+      const sorted = Object.entries(sizes).sort((a, b) => b[1] - a[1]);
+      const totalHeads = Object.values(sizes).reduce((a, b) => a + b, 0);
+    
+      const showAllChip = `<button class="cluster-chip${selectedCluster === null ? " selected" : ""}" data-cluster="all" title="Show all clusters">All <span class="chip-count">${totalHeads}</span></button>`;
+    
+      const clusterChips = sorted
+        .map(([cid, size]) => {
+          const id = parseInt(cid);
+          const color = clustering.getClusterColor(id);
+          const label = clustering.getClusterLabel(id);
+          const name = label && label.name ? label.name : `${id}`;
+          const isSelected = id === selectedCluster;
+          return `<button class="cluster-chip${isSelected ? " selected" : ""}" data-cluster="${id}" style="--chip-color: ${color}" title="Cluster ${id}: ${size} heads">${name} <span class="chip-count">${size}</span></button>`;
+        })
+        .join("");
+    
+      container.innerHTML = showAllChip + clusterChips;
+    }
+    
+    function setupClusterChipHandler() {
+      const container = document.getElementById("cluster-chips");
+      container.addEventListener("click", (e) => {
+        const btn = e.target.closest(".cluster-chip");
+        if (!btn) return;
+        const val = btn.dataset.cluster;
+        selectedCluster = val === "all" ? null : parseInt(val);
+        renderClusterChips();
+        renderAll();
+      });
+    
+      container.addEventListener("auxclick", (e) => {
+        if (e.button !== 1) return;
+        const btn = e.target.closest(".cluster-chip");
+        if (!btn) return;
+        const val = btn.dataset.cluster;
+        if (val === "all") return;
+        e.preventDefault();
+        const id = parseInt(val);
+        ClusteringConfig.setHighlightCluster(id);
+        window.open(`../vis/clustering/index.html?highlight=${id}`, "_blank");
+      });
+    }
+    
+    // === Data helpers ===
+    
+    function getFilteredResults() {
+      if (!allData) return [];
+      const results = [];
+      for (const [modelName, modelData] of Object.entries(allData.models)) {
+        if (!matchesModelFilter(modelName)) continue;
+        for (const r of modelData.results) {
+          if (selectedMethod && r.ablation_method !== selectedMethod) continue;
+          results.push({ ...r, model: modelName });
+        }
+      }
+      return results;
+    }
+    
+    // === Render All ===
+    
+    function renderAll() {
+      renderCharts();
+    }
+    
+    // === Chart Rendering ===
+    
+    function createChartContainers() {
+      const grid = document.getElementById("charts-grid");
+      grid.innerHTML = "";
+      for (const metric of DISTRIBUTION_METRICS) {
+        const div = document.createElement("div");
+        div.className = "chart-cell";
+        div.id = `chart-${metric}`;
+        grid.appendChild(div);
+      }
+    }
+    
+    function renderCharts() {
+      if (!currentDistances) return;
+    
+      const results = getFilteredResults();
+    
+      for (const metric of DISTRIBUTION_METRICS) {
+        renderScatterplot(metric, results);
+      }
+    }
+    
+    function renderScatterplot(metric, results) {
+      const containerId = `chart-${metric}`;
+      const container = document.getElementById(containerId);
+      if (!container) return;
+    
+      const { svg, g, innerWidth, innerHeight } = createChartSVG(
+        containerId,
+        SCATTER_MARGIN,
+      );
+    
+      // Build data points, one per head
+      const points = [];
+      const seenHeads = new Set();
+      for (const r of results) {
+        if (seenHeads.has(r.head)) continue;
+        seenHeads.add(r.head);
+    
+        const dist = currentDistances.get(r.head);
+        const val = r[metric];
+        if (dist == null || val == null || isNaN(val)) continue;
+    
+        const cid =
+          clustering && clustering._assignments
+            ? (clustering._assignments[r.head] ?? -1)
+            : -1;
+        const color =
+          cid >= 0 && clustering ? clustering.getClusterColor(cid) : "#999";
+    
+        points.push({
+          head: r.head,
+          distance: dist,
+          value: val,
+          clusterId: cid,
+          color: color,
+        });
+      }
+    
+      if (points.length === 0) {
+        g.append("text")
+          .attr("x", innerWidth / 2)
+          .attr("y", innerHeight / 2)
+          .attr("text-anchor", "middle")
+          .attr("fill", "#999")
+          .attr("font-size", 13)
+          .text("No data");
+        return;
+      }
+    
+      // Scales
+      const logX = document.getElementById("log-x-toggle").checked;
+      const xMax = d3.max(points, (d) => d.distance) * 1.05;
+      let xScale;
+      if (logX) {
+        const xMin =
+          d3.min(
+            points.filter((d) => d.distance > 0),
+            (d) => d.distance,
+          ) || 0.1;
+        xScale = d3
+          .scaleLog()
+          .domain([xMin * 0.9, xMax || 1])
+          .range([0, innerWidth]);
+      } else {
+        xScale = d3
+          .scaleLinear()
+          .domain([0, xMax || 1])
+          .range([0, innerWidth]);
+      }
+    
+      const yExtent = d3.extent(points, (d) => d.value);
+      const yPad = (yExtent[1] - yExtent[0]) * 0.05 || 0.1;
+      const yScale = d3
+        .scaleLinear()
+        .domain([yExtent[0] - yPad, yExtent[1] + yPad])
+        .nice()
+        .range([innerHeight, 0]);
+    
+      // Axes
+      createXAxis(g, xScale, {
+        height: innerHeight,
+        label:
+          xAxisMode === "head"
+            ? `Distance to ${targetHead}`
+            : `${clusterAggregation === "mean" ? "Mean" : "Median"} Dist. to Cluster ${targetClusterId}`,
+        gridHeight: innerHeight,
+        ticks: 6,
+      });
+      createYAxis(g, yScale, {
+        label: METRIC_DISPLAY_NAMES[metric] || metric,
+        gridWidth: innerWidth,
+        ticks: 5,
+      });
+    
+      // Title
+      svg
+        .append("text")
+        .attr("x", SCATTER_MARGIN.left + innerWidth / 2)
+        .attr("y", 18)
+        .attr("text-anchor", "middle")
+        .attr("font-size", CHART_STYLES.titleFontSize)
+        .attr("font-weight", "bold")
+        .attr("fill", "#333")
+        .text(METRIC_DISPLAY_NAMES[metric] || metric);
+    
+      // Tooltip
+      const tooltip = createTooltip(containerId);
+    
+      // Sort points so selected-cluster dots draw on top
+      const sortedPoints = [...points].sort((a, b) => {
+        const aActive =
+          selectedCluster === null || a.clusterId === selectedCluster ? 1 : 0;
+        const bActive =
+          selectedCluster === null || b.clusterId === selectedCluster ? 1 : 0;
+        return aActive - bActive;
+      });
+    
+      // Draw dots
+      g.selectAll(".scatter-dot")
+        .data(sortedPoints)
+        .enter()
+        .append("circle")
+        .attr("class", "scatter-dot")
+        .attr("cx", (d) =>
+          xScale(logX ? Math.max(d.distance, xScale.domain()[0]) : d.distance),
+        )
+        .attr("cy", (d) => yScale(d.value))
+        .attr("r", 3.5)
+        .attr("fill", (d) => {
+          if (selectedCluster !== null && d.clusterId !== selectedCluster) {
+            return "#ddd";
+          }
+          return d.color;
+        })
+        .attr("stroke", (d) => {
+          if (selectedCluster !== null && d.clusterId !== selectedCluster) {
+            return "#ccc";
+          }
+          return d3.color(d.color)?.darker(0.5)?.toString() || "#666";
+        })
+        .attr("stroke-width", 0.5)
+        .attr("opacity", (d) => {
+          if (selectedCluster !== null && d.clusterId !== selectedCluster) {
+            return 0.2;
+          }
+          return 0.75;
+        })
+        .on("mouseover", function (event, d) {
+          d3.select(this).attr("r", 6).attr("opacity", 1);
+          tooltip.show(
+            event,
+            `<b>${escapeHTML(d.head)}</b><br>` +
+              `Distance: ${d.distance.toFixed(3)}<br>` +
+              `${METRIC_DISPLAY_NAMES[metric] || metric}: ${d.value.toFixed(4)}<br>` +
+              `Cluster: ${d.clusterId >= 0 ? d.clusterId : "none"}`,
+          );
+        })
+        .on("mousemove", function (event, d) {
+          tooltip.show(
+            event,
+            `<b>${escapeHTML(d.head)}</b><br>` +
+              `Distance: ${d.distance.toFixed(3)}<br>` +
+              `${METRIC_DISPLAY_NAMES[metric] || metric}: ${d.value.toFixed(4)}<br>` +
+              `Cluster: ${d.clusterId >= 0 ? d.clusterId : "none"}`,
+          );
+        })
+        .on("mouseout", function () {
+          const d = d3.select(this).datum();
+          const isActive =
+            selectedCluster === null || d.clusterId === selectedCluster;
+          d3.select(this)
+            .attr("r", 3.5)
+            .attr("opacity", isActive ? 0.75 : 0.2);
+          tooltip.hide();
+        });
+    
+      // Highlight target head with red ring (head mode only)
+      if (xAxisMode === "head") {
+        const targetPoint = points.find((d) => d.head === targetHead);
+        if (targetPoint) {
+          g.append("circle")
+            .attr(
+              "cx",
+              xScale(
+                logX
+                  ? Math.max(targetPoint.distance, xScale.domain()[0])
+                  : targetPoint.distance,
+              ),
+            )
+            .attr("cy", yScale(targetPoint.value))
+            .attr("r", 7)
+            .attr("fill", "none")
+            .attr("stroke", "#e74c3c")
+            .attr("stroke-width", 2)
+            .attr("class", "no-export");
+        }
+      }
+    
+      // Compute Pearson r for active points
+      const activePoints =
+        selectedCluster !== null
+          ? points.filter((d) => d.clusterId === selectedCluster)
+          : points;
+    
+      if (activePoints.length > 2) {
+        const r = pearsonR(
+          activePoints.map((d) => d.distance),
+          activePoints.map((d) => d.value),
+        );
+        svg
+          .append("text")
+          .attr("x", SCATTER_MARGIN.left + innerWidth - 4)
+          .attr("y", SCATTER_MARGIN.top + 14)
+          .attr("text-anchor", "end")
+          .attr("font-size", 11)
+          .attr("fill", Math.abs(r) >= 0.3 ? "#c0392b" : "#888")
+          .text(`r = ${r.toFixed(3)} (n=${activePoints.length})`);
+      }
+    
+      // SVG export
+      addExportButton(
+        containerId,
+        `correlation_${metric}_${targetHead.replace(/:/g, "_")}`,
+      );
+    }
+    
+    // === Entry point ===
+    
+    window.addEventListener("DOMContentLoaded", init);
+    
+    </script>
+    <!-- end 'app.js' -->
+  </body>
+</html>
