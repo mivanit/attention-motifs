@@ -261,7 +261,12 @@ def main(
 			results[model_name] = {"error": "missing architecture info in model table"}
 			continue
 
-		assert n_params_val is not None and n_layers_val is not None and n_heads_val is not None and d_model_val is not None
+		assert (
+			n_params_val is not None
+			and n_layers_val is not None
+			and n_heads_val is not None
+			and d_model_val is not None
+		)
 
 		est: BatchEstimate = estimate_max_batch(
 			n_params=int(n_params_val),

@@ -20,9 +20,15 @@ from attention_motifs.pipeline.s5_head_embed import (
 # ---------------------------------------------------------------------------
 
 MOCK_MODEL_TABLE: dict[str, ModelInfo] = {
-	"gpt2-small": ModelInfo(name="gpt2-small", n_params=85_000_000, n_layers=12, n_heads=12),
-	"gpt2-medium": ModelInfo(name="gpt2-medium", n_params=345_000_000, n_layers=24, n_heads=16),
-	"pythia-14m": ModelInfo(name="pythia-14m", n_params=14_000_000, n_layers=6, n_heads=8),
+	"gpt2-small": ModelInfo(
+		name="gpt2-small", n_params=85_000_000, n_layers=12, n_heads=12
+	),
+	"gpt2-medium": ModelInfo(
+		name="gpt2-medium", n_params=345_000_000, n_layers=24, n_heads=16
+	),
+	"pythia-14m": ModelInfo(
+		name="pythia-14m", n_params=14_000_000, n_layers=6, n_heads=8
+	),
 }
 
 
@@ -91,12 +97,17 @@ class TestAddModelMetadataColumns:
 		cols: list[str] = result.columns
 		# Base columns first
 		assert cols[:7] == [
-			"cls", "model", "layer", "head",
-			"model_family", "layer_depth", "model_size",
+			"cls",
+			"model",
+			"layer",
+			"head",
+			"model_family",
+			"layer_depth",
+			"model_size",
 		]
 		# Then type.* columns
 		type_start: int = 7
-		assert all(c.startswith("type.") for c in cols[type_start:type_start + 2])
+		assert all(c.startswith("type.") for c in cols[type_start : type_start + 2])
 		# Then embed.* columns
 		embed_cols: list[str] = [c for c in cols if c.startswith("embed.")]
 		assert len(embed_cols) == 2

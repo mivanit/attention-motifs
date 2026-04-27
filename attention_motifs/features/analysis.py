@@ -225,7 +225,9 @@ def pca_importance_table(
 		`PC0 … PCk`, `abs_sum`, `abs_mean`, `abs_max`, `abs_var`, `var_weighted`.
 	"""
 	# raw loadings → (n_features × n_components)
-	assert pca_obj.components_ is not None, "PCA must be fitted before calling pca_importance_table"
+	assert pca_obj.components_ is not None, (
+		"PCA must be fitted before calling pca_importance_table"
+	)
 	loadings = pca_obj.components_.T
 	comp_cols = [f"PC{i}" for i in range(pca_obj.n_components_)]
 	df = (

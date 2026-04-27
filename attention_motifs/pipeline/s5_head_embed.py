@@ -146,9 +146,7 @@ def add_model_metadata_columns(df: pl.DataFrame) -> pl.DataFrame:
 		"model_size",
 	]
 	type_cols: list[str] = [c for c in df.columns if c.startswith("type.")]
-	embed_cols_ordered: list[str] = [
-		c for c in df.columns if c.startswith("embed.")
-	]
+	embed_cols_ordered: list[str] = [c for c in df.columns if c.startswith("embed.")]
 	return df.select(base_cols + type_cols + embed_cols_ordered)
 
 
@@ -246,7 +244,9 @@ if __name__ == "__main__":
 				file=sys.stderr,
 			)
 			sys.exit(1)
-		path: str = sys.argv[2] if len(sys.argv) > 2 else "data/features/head_embed.jsonl"
+		path: str = (
+			sys.argv[2] if len(sys.argv) > 2 else "data/features/head_embed.jsonl"
+		)
 		if path.startswith("-"):
 			print(
 				f"Error: expected a file path, got flag '{path}'\n"

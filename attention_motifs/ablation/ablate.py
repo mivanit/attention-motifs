@@ -230,7 +230,11 @@ class HeadAblator:
 					# isinstance on batch[0] doesn't narrow the list type
 					tokens: Tensor = self.model.to_tokens(cast(list[str], batch))
 				else:
-					tokens = torch.stack(cast(list[Tensor], batch)) if isinstance(batch, list) else batch
+					tokens = (
+						torch.stack(cast(list[Tensor], batch))
+						if isinstance(batch, list)
+						else batch
+					)
 
 				# Run with hooks
 
