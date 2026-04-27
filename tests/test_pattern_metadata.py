@@ -201,23 +201,12 @@ class TestAddPatternMetadataColumns:
 
 
 class TestAddMetadataToPatternFiles:
-	def test_patches_jsonl(self, mock_model_table: object, tmp_path: Path) -> None:
-		"""JSONL files get metadata columns added."""
+	def test_patches_pca_web_csv(
+		self, mock_model_table: object, tmp_path: Path
+	) -> None:
+		"""pca_web.csv gets metadata columns added."""
 		df: pl.DataFrame = _make_pattern_df()
-		jsonl_path: Path = tmp_path / "raw.jsonl"
-		df.write_ndjson(jsonl_path)
-
-		add_metadata_to_pattern_files(tmp_path)
-
-		result: pl.DataFrame = pl.read_ndjson(jsonl_path)
-		assert "activation.model_family" in result.columns
-		assert "activation.model_size" in result.columns
-		assert result.shape[0] == df.shape[0]
-
-	def test_patches_csv(self, mock_model_table: object, tmp_path: Path) -> None:
-		"""CSV files get metadata columns added."""
-		df: pl.DataFrame = _make_pattern_df()
-		csv_path: Path = tmp_path / "pca.csv"
+		csv_path: Path = tmp_path / "pca_web.csv"
 		df.write_csv(csv_path, float_precision=6)
 
 		add_metadata_to_pattern_files(tmp_path)
@@ -227,36 +216,45 @@ class TestAddMetadataToPatternFiles:
 		assert "activation.model_size" in result.columns
 		assert result.shape[0] == df.shape[0]
 
-	def test_patches_parquet(self, mock_model_table: object, tmp_path: Path) -> None:
-		"""Parquet files get metadata columns added."""
-		df: pl.DataFrame = _make_pattern_df()
-		parquet_path: Path = tmp_path / "pca.parquet"
-		df.write_parquet(parquet_path)
-
-		add_metadata_to_pattern_files(tmp_path)
-
-		result: pl.DataFrame = pl.read_parquet(parquet_path)
-		assert "activation.model_family" in result.columns
-		assert "activation.model_size" in result.columns
-		assert result.shape[0] == df.shape[0]
-
 	def test_skips_missing_files(
 		self, mock_model_table: object, tmp_path: Path
 	) -> None:
-		"""Does not error when expected files are absent."""
-		# Empty directory — should just print skip messages, not raise
+		"""Does not error when pca_web.csv is absent."""
+		# Empty directory — should just print skip message, not raise
 		add_metadata_to_pattern_files(tmp_path)
 
 	def test_idempotent_file(self, mock_model_table: object, tmp_path: Path) -> None:
 		"""Running twice keeps column count stable."""
 		df: pl.DataFrame = _make_pattern_df()
-		jsonl_path: Path = tmp_path / "pca.jsonl"
-		df.write_ndjson(jsonl_path)
+		csv_path: Path = tmp_path / "pca_web.csv"
+		df.write_csv(csv_path, float_precision=6)
 
 		add_metadata_to_pattern_files(tmp_path)
-		cols_after_first: int = pl.read_ndjson(jsonl_path).shape[1]
+		cols_after_first: int = pl.read_csv(csv_path).shape[1]
 
 		add_metadata_to_pattern_files(tmp_path)
-		cols_after_second: int = pl.read_ndjson(jsonl_path).shape[1]
+		cols_after_second: int = pl.read_csv(csv_path).shape[1]
 
 		assert cols_after_first == cols_after_second
+
+	def test_does_not_touch_other_files(
+		self, mock_model_table: object, tmp_path: Path
+	) -> None:
+		"""Other data files in the directory are not modified."""
+		df: pl.DataFrame = _make_pattern_df()
+		# Write files that used to be patched
+		raw_path: Path = tmp_path / "raw.jsonl"
+		df.write_ndjson(raw_path)
+		pca_csv_path: Path = tmp_path / "pca.csv"
+		df.write_csv(pca_csv_path, float_precision=6)
+		# Write the target file
+		web_path: Path = tmp_path / "pca_web.csv"
+		df.write_csv(web_path, float_precision=6)
+
+		raw_before: bytes = raw_path.read_bytes()
+		pca_csv_before: bytes = pca_csv_path.read_bytes()
+
+		add_metadata_to_pattern_files(tmp_path)
+
+		assert raw_path.read_bytes() == raw_before
+		assert pca_csv_path.read_bytes() == pca_csv_before
