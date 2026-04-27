@@ -141,7 +141,7 @@ httpx==0.28.1
     # via
     #   datasets
     #   huggingface-hub
-huggingface-hub==1.11.0
+huggingface-hub==1.12.0
     # via
     #   accelerate
     #   datasets
@@ -164,7 +164,7 @@ ipykernel==7.2.0
     # via
     #   attention-motifs
     #   pattern-lens
-ipython==9.12.0
+ipython==9.13.0
     # via
     #   ipykernel
     #   ipywidgets
@@ -237,7 +237,7 @@ markupsafe==3.0.3
     #   nbconvert
     #   pdoc
     #   werkzeug
-matplotlib==3.10.8
+matplotlib==3.10.9
     # via
     #   attention-motifs
     #   pattern-lens
@@ -283,7 +283,7 @@ networkx==3.6.1
     # via torch
 nodejs-wheel-binaries==24.15.0
     # via basedpyright
-numba==0.65.0
+numba==0.65.1
     # via
     #   pynndescent
     #   umap-learn
@@ -347,7 +347,7 @@ nvidia-nvtx-cu12==12.4.127 ; platform_machine == 'x86_64' and sys_platform == 'l
     # via torch
 optype==0.17.0
     # via scipy-stubs
-packaging==26.1
+packaging==26.2
     # via
     #   accelerate
     #   datasets
@@ -370,7 +370,7 @@ pandocfilters==1.5.1
     # via nbconvert
 parso==0.8.6
     # via jedi
-pathspec==1.0.4
+pathspec==1.1.0
     # via mypy
 pattern-lens @ git+https://github.com/mivanit/pattern-lens@0c50ad2469d2ddb1e9200eae70b8c5a81e5d0cd5
     # via attention-motifs
@@ -413,6 +413,7 @@ psutil==7.2.2
     # via
     #   accelerate
     #   ipykernel
+    #   ipython
 ptyprocess==0.7.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
     # via pexpect
 pure-eval==0.2.3
@@ -494,7 +495,7 @@ rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
-ruff==0.15.11
+ruff==0.15.12
 safetensors==0.7.0
     # via
     #   accelerate
@@ -582,7 +583,7 @@ transformer-lens @ git+https://github.com/TransformerLensOrg/TransformerLens@2a7
     # via
     #   attention-motifs
     #   pattern-lens
-transformers==5.6.0
+transformers==5.6.2
     # via
     #   attention-motifs
     #   transformer-lens
@@ -599,7 +600,7 @@ typeguard==4.4.2
     #   attention-motifs
     #   pattern-lens
     #   transformer-lens
-typer==0.24.2
+typer==0.25.0
     # via
     #   huggingface-hub
     #   transformers
@@ -625,7 +626,7 @@ typing-extensions==4.12.2
     #   transformer-lens
     #   typeguard
     #   wandb
-tzdata==2026.1 ; sys_platform == 'emscripten' or sys_platform == 'win32'
+tzdata==2026.2 ; sys_platform == 'emscripten' or sys_platform == 'win32'
     # via pandas
 umap-learn==0.5.12
     # via attention-motifs
@@ -636,7 +637,7 @@ urllib3==2.6.3
     #   types-requests
 wadler-lindig==0.1.7
     # via jaxtyping
-wandb==0.26.0
+wandb==0.26.1
     # via transformer-lens
 wcmatch==10.1
     # via igittigitt
@@ -650,7 +651,7 @@ werkzeug==3.1.8
     # via tensorboard
 widgetsnbextension==4.0.15
     # via ipywidgets
-xxhash==3.6.0
+xxhash==3.7.0
     # via datasets
 yarl==1.23.0
     # via aiohttp
